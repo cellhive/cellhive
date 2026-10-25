@@ -15,9 +15,71 @@ concurrency:
 env:
   TURBO_TELEMETRY_DISABLED: '1'
 
+# Heavy jobs are skipped (not left out of the run) when a change touches documentation
+# only: a skipped job reports success, so a required check never waits on a job that a
+# workflow-level `paths-ignore` would have dropped. They need the `changes` job and test
+# its outputs with `!= 'false'`, so they still run when it failed (fail open).
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      # Anything other than documentation changed: every check runs.
+      code: ${{ steps.classify.outputs.code }}
+      # docs/SPEC.md changed: unit tests read it (formula catalogue and function names).
+      spec: ${{ steps.classify.outputs.spec }}
+      # Files Prettier checks outside docs/ changed (Markdown, issue templates).
+      format: ${{ steps.classify.outputs.format }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A pull request checks out its merge commit, whose first parent is the base branch.
+          fetch-depth: 2
+      # Documentation: docs/** (Prettier ignores it), *.md, LICENSE files and issue templates.
+      # No script reads docs/CONTRACTS.md (the permission matrix codes and openapi.json come
+      # from code and zod), so it is documentation too; docs/SPEC.md is not, for the unit
+      # tests. Context values go through env, never interpolated into the script.
+      - name: Classify changed files
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          run_all() {
+            echo "::notice::$1; running every job."
+            { echo code=true; echo spec=true; echo format=true; } >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          if [ "$EVENT_NAME" = pull_request ]; then
+            base=HEAD^1
+          elif [ -z "${PUSH_BEFORE:-}" ] || [ "$PUSH_BEFORE" = 0000000000000000000000000000000000000000 ]; then
+            run_all 'No previous commit for this push'
+          else
+            git fetch --no-tags --depth=1 origin "$PUSH_BEFORE" || run_all "Cannot fetch $PUSH_BEFORE"
+            base=$PUSH_BEFORE
+          fi
+          files=$(git diff --name-only "$base" HEAD) || run_all 'git diff failed'
+          code=false spec=false format=false
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            case "$file" in
+              docs/SPEC.md) spec=true ;;
+              docs/*) ;;
+              LICENSE | */LICENSE) ;;
+              *.md | .github/ISSUE_TEMPLATE/*) format=true ;;
+              *) code=true ;;
+            esac
+          done <<< "$files"
+          printf '%s\n' "$files"
+          echo "code=$code spec=$spec format=$format"
+          { echo "code=$code"; echo "spec=$spec"; echo "format=$format"; } >> "$GITHUB_OUTPUT"
+
   lint:
     name: Lint
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.outputs.code != 'false' || needs.changes.outputs.format == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -26,14 +88,18 @@ jobs:
         with:
           turbo-cache-key: lint
       # Type-aware ESLint over the whole repo needs more than V8's default heap; the root
-      # `lint` script raises it (8 GB), so local runs and CI behave the same.
+      # `lint` script raises it (8 GB), so local runs and CI behave the same. A change to
+      # Markdown only needs Prettier.
       - name: ESLint
+        if: needs.changes.outputs.code != 'false'
         run: pnpm lint
       - name: Prettier
         run: pnpm format:check
 
   typecheck:
     name: Typecheck
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,6 +111,8 @@ jobs:
 
   unit:
     name: Unit tests
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.outputs.code != 'false' || needs.changes.outputs.spec == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -70,19 +138,55 @@ jobs:
           retention-days: 14
 
   integration:
-    name: Integration tests
+    name: Integration tests (${{ matrix.shard }}/3)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     # ubuntu-latest ships a Docker daemon, which Testcontainers uses directly.
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Three shards, each on its own runner: every package with a `test:int` script runs its
+    # share of the test files (`vitest --shard`) on its own containers (global setup), as
+    # `pnpm test:int` does with all of them. One runner took about 12 minutes.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
+      # Warm-up only, in the background while dependencies install and build: Testcontainers
+      # pulls whatever is still missing (Docker joins a pull already in progress). Caching
+      # the images with `docker save`/`docker load` would not beat a registry pull here.
+      - name: Pre-pull container images
+        run: |
+          for image in postgres:18 valkey/valkey:8 dxflrs/garage:v2.4.1 curlimages/curl:8.22.0; do
+            docker pull --quiet "$image" > /dev/null 2>&1 &
+          done
       - uses: ./.github/actions/setup
         with:
           turbo-cache-key: integration
-      - run: pnpm test:int
+      # `pnpm test:int` is `turbo run test:int` (workspace dependencies built first, then
+      # every package at once). The shard argument must reach Vitest only, so build first,
+      # then run the packages through pnpm, all at once as turbo does.
+      - name: Run integration tests
+        env:
+          SHARD: ${{ matrix.shard }}/3
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(jq -r 'select(.scripts["test:int"]) | .name' apps/*/package.json packages/*/package.json tools/*/package.json)
+          build=()
+          run=()
+          for name in "${packages[@]}"; do
+            build+=("--filter=$name^...")
+            run+=("--filter=$name")
+          done
+          echo "Packages: ${packages[*]}"
+          pnpm exec turbo run build "${build[@]}" --output-logs=errors-only
+          pnpm --parallel --no-bail "${run[@]}" run test:int "--shard=$SHARD"
 
   build:
     name: Build
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -96,17 +200,19 @@ jobs:
         run: pnpm size
 
   e2e:
-    name: E2E (Playwright ${{ matrix.shard }}/2)
+    name: E2E (Playwright ${{ matrix.shard }}/4)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    # Two shards, each on its own runner with its own Testcontainers stack, and two
+    # Four shards, each on its own runner with its own Testcontainers stack, and two
     # Playwright workers per shard (each worker has its own seeded organization,
-    # FRONTEND §11.2): fewer runners than 4 × 1 for about the same wall time (BACKLOG T800).
+    # FRONTEND §11.2; BACKLOG T800). Two shards took about 20 minutes each.
     # `@perf` specs are not run here: `perf.yml` runs them nightly (BACKLOG T801).
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       # Guard from before T011: the job skips itself if the Playwright config is ever removed.
@@ -119,11 +225,31 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
             echo "::notice::No playwright.config.ts found; skipping e2e."
           fi
+      # Warm-up of the shared stack's images while dependencies install and the app builds;
+      # Testcontainers pulls whatever is still missing.
+      - name: Pre-pull container images
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          for image in postgres:18 valkey/valkey:8; do
+            docker pull --quiet "$image" > /dev/null 2>&1 &
+          done
       - if: steps.detect.outputs.present == 'true'
         uses: ./.github/actions/setup
         with:
           turbo-cache-key: e2e
-      # Playwright is a dependency of apps/web, not of the workspace root.
+      # Playwright is a dependency of apps/web, not of the workspace root. Browsers are cached
+      # per Playwright version; `install --with-deps` then skips the download and only
+      # installs the system libraries, which are not cached.
+      - name: Playwright version
+        id: playwright
+        if: steps.detect.outputs.present == 'true'
+        run: echo "version=$(pnpm --filter @cellhive/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Restore Playwright browsers
+        if: steps.detect.outputs.present == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Install Playwright browsers
         if: steps.detect.outputs.present == 'true'
         run: pnpm --filter @cellhive/web exec playwright install --with-deps chromium
@@ -136,12 +262,12 @@ jobs:
       # would make the dependencies of `instance` run in full on every shard.
       - name: Run Playwright
         if: steps.detect.outputs.present == 'true'
-        run: pnpm test:e2e --project=parallel --shard=${{ matrix.shard }}/2
+        run: pnpm test:e2e --project=parallel --shard=${{ matrix.shard }}/4
       - name: Run Playwright (instance project, one at a time)
         if: ${{ !cancelled() && steps.detect.outputs.present == 'true' }}
         env:
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report-instance
-        run: pnpm --filter @cellhive/web exec playwright test --project=instance --no-deps --shard=${{ matrix.shard }}/2 --pass-with-no-tests
+        run: pnpm --filter @cellhive/web exec playwright test --project=instance --no-deps --shard=${{ matrix.shard }}/4 --pass-with-no-tests
       - name: Upload Playwright report
         if: failure() && steps.detect.outputs.present == 'true'
         uses: actions/upload-artifact@v7
@@ -154,6 +280,8 @@ jobs:
 
   openapi:
     name: OpenAPI up to date
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -186,6 +314,8 @@ jobs:
 
   licenses:
     name: Dependency licenses
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
