@@ -1,0 +1,224 @@
+# Cellhive self-hosting (SPEC §20).
+#
+#   cp .env.example .env    # then fill in every value marked "required"
+#   docker compose --profile minimal up -d   # web, api+worker in one process, postgres, valkey, local files
+#   docker compose --profile full up -d      # web, api, worker, postgres, valkey, garage (S3)
+#
+# Application settings come from `.env` (validated at startup; see .env.example).
+# Variables used only by this file are interpolated from `.env` as well:
+#   POSTGRES_PASSWORD     required; URL-safe characters only (openssl rand -hex 24)
+#   GARAGE_RPC_SECRET     required for `full` (openssl rand -hex 32)
+#   GARAGE_ADMIN_TOKEN    required for `full` (openssl rand -base64 32)
+#   CELLHIVE_VERSION      image tag, default `latest`
+#   HTTP_PORT             host port of the web container, default 8080
+# Postgres and Garage refuse to start when their secret is empty.
+#
+# The api and web images are published from T005/T011 onward; until then build
+# the web image locally with `docker compose build web` (infra/docker/web.Dockerfile).
+# One image (`cellhive-api`) serves every server role, selected with MODE.
+name: cellhive
+
+x-server: &server
+  image: ghcr.io/cellhive/cellhive-api:${CELLHIVE_VERSION:-latest}
+  restart: unless-stopped
+  env_file:
+    - path: .env
+      required: false
+
+x-server-env: &server-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://cellhive:${POSTGRES_PASSWORD:-}@postgres:5432/cellhive
+  CACHE_URL: redis://valkey:6379
+
+# Liveness of the HTTP server (GET /healthz, SPEC §19); busybox wget ships in the image.
+x-http-healthcheck: &http-healthcheck
+  test: ['CMD-SHELL', 'wget -q -O /dev/null "http://127.0.0.1:$${PORT:-3000}/healthz" || exit 1']
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 20s
+
+x-local-storage-env: &local-storage-env
+  STORAGE_DRIVER: local
+  STORAGE_LOCAL_PATH: /data/files
+
+x-s3-storage-env: &s3-storage-env
+  STORAGE_DRIVER: s3
+  S3_ENDPOINT: ${S3_ENDPOINT:-http://garage:3900}
+  S3_REGION: ${S3_REGION:-garage}
+  S3_BUCKET: ${S3_BUCKET:-cellhive}
+  S3_FORCE_PATH_STYLE: 'true'
+
+services:
+  postgres:
+    image: postgres:18
+    profiles: ['minimal', 'full']
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cellhive
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: cellhive
+    # PostgreSQL 18+ keeps PGDATA under /var/lib/postgresql/18/docker (ADR-0019).
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cellhive -d cellhive']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:8
+    profiles: ['minimal', 'full']
+    restart: unless-stopped
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: meta migrations before any server process starts.
+  migrate:
+    <<: *server
+    profiles: ['minimal', 'full']
+    restart: 'no'
+    environment:
+      <<: *server-env
+      MODE: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # --- profile: minimal ------------------------------------------------------
+  app:
+    <<: *server
+    profiles: ['minimal']
+    networks:
+      default:
+        aliases: ['api'] # web proxies to `api` in both profiles
+    environment:
+      <<: [*server-env, *local-storage-env]
+      MODE: all
+    healthcheck: *http-healthcheck
+    volumes:
+      - files:/data/files
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  # --- profile: full ---------------------------------------------------------
+  garage:
+    image: dxflrs/garage:v2.4.1
+    profiles: ['full']
+    restart: unless-stopped
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-}
+    volumes:
+      - ./infra/garage/garage.prod.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    healthcheck:
+      test: ['CMD', '/garage', 'status']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  # One-shot, idempotent: layout, bucket, access key, CORS (ADR-0016).
+  storage-init:
+    image: curlimages/curl:8.22.0
+    profiles: ['full']
+    restart: 'no'
+    entrypoint: ['/bin/sh', '/storage-init.sh']
+    volumes:
+      - ./infra/garage/storage-init.sh:/storage-init.sh:ro
+    environment:
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_S3_URL: http://garage:3900
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-}
+      S3_BUCKET: ${S3_BUCKET:-cellhive}
+      S3_REGION: ${S3_REGION:-garage}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+    depends_on:
+      garage:
+        condition: service_healthy
+
+  api:
+    <<: *server
+    profiles: ['full']
+    environment:
+      <<: [*server-env, *s3-storage-env]
+      MODE: api
+    healthcheck: *http-healthcheck
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage-init:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  worker:
+    <<: *server
+    profiles: ['full']
+    environment:
+      <<: [*server-env, *s3-storage-env]
+      MODE: worker
+      # Bulk jobs (import, T308) allocate much short-lived garbage that V8 would
+      # otherwise let the heap grow into: a smaller young generation and a heap
+      # cap keep the worker's RSS low for a 50 000-row import (live set < 200 MB).
+      # The cap leaves headroom so one large job does not crash the worker for
+      # every other job; lower it on small hosts, raise it if a job needs more.
+      NODE_OPTIONS: --max-semi-space-size=4 --max-old-space-size=512
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage-init:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  # --- both profiles ---------------------------------------------------------
+  # nginx: serves the SPA and reverse-proxies /api and /ws to `api`.
+  web:
+    image: ghcr.io/cellhive/cellhive-web:${CELLHIVE_VERSION:-latest}
+    # `docker compose build web` builds the image from this checkout.
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    profiles: ['minimal', 'full']
+    restart: unless-stopped
+    ports:
+      - '${HTTP_PORT:-8080}:80'
+    environment:
+      API_UPSTREAM: api:3000
+      # Object storage the browser talks to (profile `full`, T418): allowed by the CSP.
+      STORAGE_PUBLIC_ORIGIN: ${S3_PUBLIC_ENDPOINT:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1/ || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      api:
+        condition: service_started
+        required: false
+      app:
+        condition: service_started
+        required: false
+
+volumes:
+  postgres-data:
+  valkey-data:
+  garage-meta:
+  garage-data:
+  files:

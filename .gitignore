@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test artifacts
+playwright-report/
+test-results/
+blob-report/
+perf-results.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local agent skills installed with `npx skills`
+.agents/
+.claude/skills/
+.claude/settings.local.json
+.claude/worktrees/
+
+# Maintainer-local: private planning repository checkout and local agent notes
+/internal/
+CLAUDE.local.md

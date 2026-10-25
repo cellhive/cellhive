@@ -1,0 +1,98 @@
+{
+  "bar": {
+    "label": "Các view của {{table}}",
+    "shared": "View chung",
+    "personal": "View cá nhân",
+    "more_other": "{{count, number}} view",
+    "moreLabel_other": "{{count, number}} view khác",
+    "switch": "Đổi view, đang mở: {{name}}"
+  },
+  "tab": {
+    "personal": "View cá nhân",
+    "locked": "View đã khoá",
+    "options": "Tuỳ chọn của view {{name}}"
+  },
+  "types": {
+    "grid": "Lưới",
+    "kanban": "Kanban",
+    "form": "Biểu mẫu"
+  },
+  "defaultName": {
+    "grid": "View lưới",
+    "kanban": "View Kanban",
+    "form": "View biểu mẫu"
+  },
+  "create": {
+    "button": "View mới",
+    "shared": "View chung",
+    "personal": "View cá nhân (chỉ bạn thấy)"
+  },
+  "menu": {
+    "rename": "Đổi tên",
+    "duplicate": "Nhân bản",
+    "duplicatePersonal": "Nhân bản thành view cá nhân",
+    "moveLeft": "Chuyển sang trái",
+    "moveRight": "Chuyển sang phải",
+    "lock": "Khoá view",
+    "unlock": "Mở khoá view",
+    "delete": "Xoá view",
+    "deleteLocked": "Xoá view (cần mở khoá trước)",
+    "deleteLast": "Xoá view (phải giữ view chung cuối cùng)"
+  },
+  "rename": {
+    "title": "Đổi tên view",
+    "name": "Tên",
+    "submit": "Đổi tên"
+  },
+  "delete": {
+    "title": "Xoá view {{name}}?",
+    "description": "Chỉ view bị xoá: các bản ghi vẫn còn trong bảng. Link chia sẻ của view này sẽ ngừng hoạt động.",
+    "submit": "Xoá view",
+    "done": "Đã xoá view {{name}}."
+  },
+  "lock": {
+    "locked": "View {{name}} đã khoá: không ai đổi được cài đặt cho tới khi mở khoá.",
+    "unlocked": "View {{name}} đã mở khoá."
+  },
+  "unsaved": {
+    "label": "Đã cấu hình",
+    "hintLocked": "View đang khoá. Thay đổi của bạn chỉ được giữ trên thiết bị này.",
+    "hintReadOnly": "Bạn không sửa được view này. Thay đổi của bạn chỉ được giữ trên thiết bị này.",
+    "hintSave": "Các thay đổi này chỉ được giữ trên thiết bị này cho tới khi bạn lưu.",
+    "save": "Lưu",
+    "saveAsPersonal": "Lưu thành view cá nhân",
+    "discard": "Huỷ",
+    "saved": "Đã lưu thay đổi vào view {{name}}.",
+    "savedAsPersonal": "Đã lưu thành view cá nhân {{name}}.",
+    "more": "Cách lưu khác",
+    "personalName": "{{name}} (cá nhân)",
+    "explainTitle": "Không lưu được thay đổi vào view này",
+    "explainLocked": "View đang khoá: cấu hình của view không đổi được cho tới khi mở khoá. Bạn có thể giữ thay đổi thành một view cá nhân chỉ mình bạn thấy.",
+    "explainReadOnly": "Bạn không có quyền sửa view chung này. Bạn có thể giữ thay đổi thành một view cá nhân chỉ mình bạn thấy.",
+    "explainCancel": "Để sau"
+  },
+  "gone": "View bạn đang xem đã bị xoá hoặc bạn không còn quyền xem.",
+  "dnd": {
+    "instructions": "Kéo tab view để đổi thứ tự. Với bàn phím, dùng Chuyển sang trái hoặc Chuyển sang phải trong tuỳ chọn của view.",
+    "start": "Đã chọn view {{name}}.",
+    "over": "View {{name}} đang ở trên view {{over}}.",
+    "end": "Đã thả view {{name}}.",
+    "cancel": "Đã huỷ di chuyển view {{name}}."
+  },
+  "placeholder": {
+    "kanban": {
+      "title": "View Kanban sắp có",
+      "description": "View này sẽ hiển thị bản ghi dạng thẻ, nhóm theo một trường. Trong lúc chờ, hãy mở một view lưới để làm việc với bản ghi."
+    },
+    "form": {
+      "title": "View biểu mẫu sắp có",
+      "description": "View này sẽ là một biểu mẫu thêm bản ghi vào bảng. Trong lúc chờ, hãy mở một view lưới để làm việc với bản ghi."
+    }
+  },
+  "none": {
+    "title": "Bạn không có view nào của bảng này",
+    "description": "Vai trò của bạn không hiển thị view chung nào của bảng này. Bạn có thể tạo view cá nhân: chỉ bạn thấy.",
+    "create": "Tạo view lưới cá nhân"
+  },
+  "breadcrumb": "Vị trí"
+}

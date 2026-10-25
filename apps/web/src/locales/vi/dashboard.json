@@ -1,0 +1,432 @@
+{
+  "page": {
+    "title": "Dashboard",
+    "backToBase": "Quay lại {{base}}",
+    "gone": {
+      "title": "Dashboard này không còn khả dụng",
+      "detail": "Dashboard đã bị xoá, hoặc bạn không còn quyền xem."
+    },
+    "empty": {
+      "title": "Chưa có widget",
+      "admin": "Chọn Chỉnh sửa để thêm con số, biểu đồ, bảng và văn bản.",
+      "member": "Hãy nhờ quản trị base thêm widget vào dashboard này."
+    }
+  },
+  "type": {
+    "kpi": "KPI",
+    "bar": "Biểu đồ cột",
+    "line": "Biểu đồ đường",
+    "pie": "Biểu đồ tròn",
+    "combo": "Biểu đồ kết hợp",
+    "table": "Bảng",
+    "text": "Văn bản",
+    "filter_control": "Bộ lọc"
+  },
+  "chart": {
+    "dimension": "Nhóm",
+    "summary_other": "{{kind}}: {{title}}, {{formatted}} nhóm. {{items}}",
+    "tableCaption": "Dữ liệu của {{title}}",
+    "showTable": "Xem dạng bảng",
+    "keyboard": {
+      "hint": "Phím mũi tên chuyển giữa các nhóm, Enter lọc dashboard theo nhóm, Shift+F10 mở thêm thao tác.",
+      "filtering": "Đang lọc dashboard."
+    },
+    "menu": {
+      "filter": "Lọc theo “{{value}}”",
+      "unfilter": "Bỏ lọc theo “{{value}}”",
+      "records": "Xem record của “{{value}}”"
+    }
+  },
+  "group": {
+    "empty": "(Trống)",
+    "other": "Khác",
+    "checked": "Đã chọn",
+    "unchecked": "Chưa chọn",
+    "noAccess": "(Không có quyền)",
+    "unknownUser": "Người dùng không xác định",
+    "weekOf": "Tuần từ {{date}}",
+    "quarter": "Q{{quarter}} {{year}}"
+  },
+  "metric": {
+    "count": "Số bản ghi",
+    "count_distinct": "Số {{field}} khác nhau",
+    "sum": "Tổng {{field}}",
+    "avg": "Trung bình {{field}}",
+    "min": "Nhỏ nhất {{field}}",
+    "max": "Lớn nhất {{field}}"
+  },
+  "kpi": {
+    "previous": "so với {{value}} kỳ trước",
+    "noPrevious": "Kỳ trước không có dữ liệu",
+    "progressLabel": "Tiến độ đến {{target}}",
+    "progress": "{{percent}}% của {{target}}"
+  },
+  "state": {
+    "retry": "Thử lại",
+    "renderFailed": "Không hiển thị được widget này",
+    "broken": {
+      "title": "Widget này cần được sửa",
+      "tableAdmin": "Bảng mà widget đọc đã bị xoá. Khôi phục bảng từ thùng rác của base, hoặc sửa widget.",
+      "fieldAdmin": "Một trường widget dùng đã bị xoá hoặc đổi kiểu. Sửa widget để chọn trường khác.",
+      "member": "Hãy nhờ quản trị base sửa widget."
+    },
+    "timeout": {
+      "title": "Widget này tải quá lâu",
+      "detail": "Dữ liệu lớn hoặc máy chủ đang bận. Thử lại sau giây lát."
+    },
+    "error": "Không tải được widget này",
+    "noPermission": "Bạn không có quyền xem dữ liệu của widget này",
+    "empty": {
+      "title": "Không có dữ liệu",
+      "filtered": "Không có bản ghi nào khớp bộ lọc của widget.",
+      "detail": "Bảng chưa có bản ghi nào để hiển thị ở đây.",
+      "live": "Không có record nào khớp bộ lọc của dashboard."
+    }
+  },
+  "table": {
+    "unknownField": "Trường không xác định"
+  },
+  "edit": {
+    "open": "Chỉnh sửa",
+    "subtitle": "Đang chỉnh sửa. Thay đổi được lưu ngay khi bạn làm.",
+    "toolbar": "Chỉnh sửa dashboard",
+    "add": "Thêm widget",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "undone": "Đã hoàn tác",
+    "redone": "Đã làm lại",
+    "saving": "Đang lưu…",
+    "saved": "Đã lưu mọi thay đổi",
+    "done": "Xong",
+    "limit": "Mỗi dashboard có tối đa {{max}} widget.",
+    "reloaded": "Dashboard này vừa được sửa ở nơi khác. Đang hiện phiên bản mới nhất.",
+    "conflict": {
+      "title": "Người khác vừa sửa dashboard này",
+      "message": "Thay đổi của họ đang được hiển thị. Thay đổi cuối của bạn chưa được lưu: làm lại nếu vẫn cần."
+    },
+    "empty": {
+      "title": "Chưa có widget",
+      "detail": "Thêm một con số, biểu đồ, bảng hoặc đoạn văn bản."
+    },
+    "widget": {
+      "actions": "Thao tác với {{name}}",
+      "settings": "Cài đặt",
+      "move": "Di chuyển bằng bàn phím",
+      "resize": "Đổi cỡ bằng bàn phím",
+      "duplicate": "Nhân bản",
+      "delete": "Xoá",
+      "adding": "Đang thêm…",
+      "added": "Đã thêm {{type}}",
+      "duplicated": "Đã nhân bản widget",
+      "deleted": "Đã xoá widget. Hoàn tác để lấy lại."
+    },
+    "keyboard": {
+      "moveStart": "Đang di chuyển. Dùng phím mũi tên, Enter để xong, Escape để huỷ.",
+      "resizeStart": "Đang đổi cỡ. Phải và trái đổi chiều rộng, xuống và lên đổi chiều cao. Enter để xong, Escape để huỷ.",
+      "moveHint": "Phím mũi tên để di chuyển. Enter: xong. Escape: huỷ.",
+      "resizeHint": "Phím mũi tên để đổi cỡ. Enter: xong. Escape: huỷ.",
+      "position": "{{name}}: cột {{column}}, hàng {{row}}",
+      "size": "{{name}}: rộng {{width}} cột, cao {{height}} hàng",
+      "cannotMove": "Không di chuyển thêm theo hướng đó được.",
+      "cannotResize": "Không đổi cỡ thêm theo hướng đó được.",
+      "done": "Đã giữ vị trí",
+      "cancelled": "Đã huỷ di chuyển"
+    },
+    "library": {
+      "title": "Thêm widget",
+      "description": "Chọn nội dung cần hiển thị. Bạn có thể chỉnh cài đặt ngay sau đó.",
+      "close": "Đóng",
+      "table": "Dữ liệu từ bảng",
+      "noTable": "Base này chưa có bảng nào để hiển thị.",
+      "noField": "Bảng này không có field nào dùng được cho {{type}}.",
+      "failed": "Không tải được các field của bảng. Hãy thử lại.",
+      "about": {
+        "kpi": "Một con số, kèm kỳ trước hoặc mục tiêu",
+        "bar": "So sánh các nhóm bằng cột, đặt cạnh hoặc chồng",
+        "line": "Xu hướng theo thời gian, dạng đường hoặc vùng",
+        "pie": "Tỉ trọng của từng nhóm trong tổng",
+        "combo": "Cột và đường trên hai trục",
+        "table": "Danh sách record, hoặc tổng hợp theo nhóm",
+        "text": "Ghi chú và tiêu đề bằng Markdown",
+        "filter_control": "Bộ lọc để người xem chọn giá trị"
+      }
+    },
+    "theme": {
+      "open": "Giao diện",
+      "title": "Giao diện dashboard",
+      "close": "Đóng",
+      "mode": "Chế độ màu",
+      "modes": {
+        "system": "Theo giao diện của từng người xem",
+        "light": "Sáng",
+        "dark": "Tối"
+      },
+      "palette": "Màu series",
+      "palettes": {
+        "default": "Màu của ứng dụng",
+        "colorblind": "An toàn cho người mù màu",
+        "classic": "Cổ điển",
+        "cool": "Gam lạnh"
+      },
+      "density": "Khoảng cách",
+      "densities": {
+        "comfortable": "Thoáng",
+        "compact": "Gọn"
+      }
+    },
+    "panel": {
+      "title": "Cài đặt: {{name}}",
+      "close": "Đóng cài đặt",
+      "saved": "Đã lưu",
+      "saving": "Đang lưu…",
+      "invalid": "Chưa lưu: hãy sửa các cài đặt được đánh dấu bên dưới",
+      "widgetTitle": "Tiêu đề",
+      "description": "Mô tả",
+      "table": "Bảng",
+      "tableGone": "(Bảng đã xoá)",
+      "filter": "Bộ lọc",
+      "filterHint": "Chỉ tính các record khớp. Người xem không thấy bộ lọc này.",
+      "filterEmpty": "Chưa có điều kiện: tính mọi record của bảng.",
+      "grouping": "Nhóm theo",
+      "dimension": "Nhóm record theo",
+      "dateBucket": "Nhóm ngày theo",
+      "buckets": {
+        "day": "Ngày",
+        "week": "Tuần",
+        "month": "Tháng",
+        "quarter": "Quý",
+        "year": "Năm"
+      },
+      "bucketWidth": "Độ rộng khoảng",
+      "bucketWidthHint": "Để trống để mỗi giá trị là một nhóm.",
+      "series": "Tách series theo",
+      "seriesNone": "Không tách series",
+      "seriesHint": "Khi có series, biểu đồ chỉ có một chỉ số.",
+      "metric": "Chỉ số",
+      "metrics": "Chỉ số",
+      "metricN": "Chỉ số {{position}}",
+      "removeMetric": "Bỏ chỉ số {{position}}",
+      "addMetric": "Thêm chỉ số",
+      "aggregation": "Phép tính",
+      "aggregations": {
+        "count": "Đếm record",
+        "count_distinct": "Đếm giá trị khác nhau",
+        "sum": "Tổng",
+        "avg": "Trung bình",
+        "min": "Nhỏ nhất",
+        "max": "Lớn nhất"
+      },
+      "metricField": "Của field",
+      "metricLabel": "Tên",
+      "drawAs": "Vẽ dạng",
+      "drawBar": "Cột",
+      "drawLine": "Đường",
+      "axis": "Trục",
+      "axisLeft": "Trái",
+      "axisRight": "Phải",
+      "color": "Màu",
+      "autoColor": "Tự động",
+      "sorting": "Sắp xếp và giới hạn",
+      "sort": "Sắp xếp theo",
+      "sorts": {
+        "metric_desc": "Lớn nhất trước",
+        "metric_asc": "Nhỏ nhất trước",
+        "dimension_asc": "Nhóm, A đến Z",
+        "dimension_desc": "Nhóm, Z đến A"
+      },
+      "limit": "Số nhóm hiển thị",
+      "limitHint": "Từ 1 đến {{max}}.",
+      "others": "Gộp phần còn lại vào “Khác”",
+      "display": "Hiển thị",
+      "orientation": "Cột",
+      "vertical": "Dọc",
+      "horizontal": "Ngang",
+      "stack": "Nhiều series",
+      "stacks": {
+        "grouped": "Đặt cạnh nhau",
+        "stacked": "Chồng lên nhau",
+        "percent": "Chồng 100 %"
+      },
+      "area": "Tô vùng dưới đường",
+      "smooth": "Đường cong mượt",
+      "donut": "Dạng vành khuyên",
+      "legend": "Hiện chú giải",
+      "values": "Hiện giá trị trên biểu đồ",
+      "numberFormat": "Định dạng số",
+      "formats": {
+        "field": "Theo field",
+        "number": "Số",
+        "currency": "Tiền tệ",
+        "percent": "Phần trăm"
+      },
+      "currency": "Mã tiền tệ",
+      "decimals": "Số chữ số thập phân",
+      "decimalsAuto": "Tự động",
+      "compact": "Số rút gọn (1,2 N)",
+      "emptyText": "Chữ khi không có dữ liệu",
+      "kpi": "So sánh và mục tiêu",
+      "compare": "So sánh với",
+      "compareNone": "Không so sánh",
+      "comparePrevious": "Kỳ trước",
+      "compareField": "Field ngày",
+      "compareRange": "Kỳ",
+      "ranges": {
+        "day": "Ngày",
+        "week": "Tuần",
+        "month": "Tháng",
+        "quarter": "Quý",
+        "year": "Năm"
+      },
+      "target": "Mục tiêu",
+      "prefix": "Trước con số",
+      "suffix": "Sau con số",
+      "thresholds": "Ngưỡng màu",
+      "thresholdsHint": "Con số lấy màu của ngưỡng đầu tiên mà nó nhỏ hơn.",
+      "thresholdBelow": "Ngưỡng {{position}}: nhỏ hơn",
+      "removeThreshold": "Bỏ ngưỡng {{position}}",
+      "addThreshold": "Thêm ngưỡng",
+      "tableSection": "Bảng",
+      "tableMode": "Hiển thị",
+      "tableModes": {
+        "records": "Danh sách record",
+        "pivot": "Tổng hợp theo nhóm"
+      },
+      "tableFields": "Field (tối đa {{max}})",
+      "recordSort": "Sắp xếp record theo",
+      "recordSortNone": "Không sắp xếp",
+      "direction": "Chiều",
+      "asc": "Tăng dần",
+      "desc": "Giảm dần",
+      "rows": "Số dòng hiển thị",
+      "markdown": "Văn bản",
+      "markdownHint": "Markdown: **đậm**, *nghiêng*, # tiêu đề, danh sách và liên kết.",
+      "preview": "Xem trước",
+      "previewLabel": "Xem trước văn bản",
+      "control": "Bộ lọc",
+      "controlKind": "Loại",
+      "controls": {
+        "date_range": "Khoảng ngày",
+        "select": "Lựa chọn",
+        "user": "Người",
+        "text": "Tìm theo chữ",
+        "number_range": "Khoảng số"
+      },
+      "controlField": "Field",
+      "parentControl": "Phụ thuộc bộ lọc",
+      "parentNone": "Không",
+      "parentHint": "Lựa chọn của nó thu hẹp theo bộ lọc kia.",
+      "defaultValue": "Giá trị mặc định",
+      "defaultNone": "Không có",
+      "defaultTextHint": "Ngăn cách nhiều giá trị bằng dấu phẩy.",
+      "defaultUser": "Bộ lọc theo người không có giá trị mặc định.",
+      "relative": {
+        "today": "Hôm nay",
+        "yesterday": "Hôm qua",
+        "last_7_days": "7 ngày qua",
+        "last_30_days": "30 ngày qua",
+        "this_week": "Tuần này",
+        "last_week": "Tuần trước",
+        "this_month": "Tháng này",
+        "last_month": "Tháng trước",
+        "this_quarter": "Quý này",
+        "this_year": "Năm nay",
+        "last_year": "Năm trước"
+      },
+      "range": {
+        "from": "Từ",
+        "to": "Đến"
+      },
+      "bound": "Widget được lọc",
+      "boundWait": "Dùng được khi bộ lọc đã lưu.",
+      "boundNone": "Không widget nào của dashboard đọc bảng này."
+    },
+    "globalFilters": {
+      "open": "Bộ lọc chung",
+      "title": "Bộ lọc chung",
+      "description": "Bộ lọc trên thanh ở đầu dashboard. Người xem chọn giá trị; mọi widget đọc bảng bạn chọn ở đây sẽ được lọc theo giá trị đó.",
+      "close": "Đóng",
+      "empty": "Chưa có bộ lọc chung nào.",
+      "add": "Thêm bộ lọc",
+      "remove": "Xoá {{name}}",
+      "name": "Tên",
+      "targets": "Trường được lọc ở mỗi bảng",
+      "notFiltered": "Không lọc",
+      "needTarget": "Chọn trường ở ít nhất một bảng.",
+      "cancel": "Huỷ",
+      "save": "Lưu"
+    }
+  },
+  "filters": {
+    "bar": "Bộ lọc dashboard",
+    "crossList": "Lọc chéo",
+    "crossChip": "Lọc theo: {{value}}",
+    "removeCross": "Bỏ lọc theo {{value}} (từ {{widget}})",
+    "clear": "Xoá lọc",
+    "any": "Tất cả",
+    "anyTime": "Mọi lúc",
+    "custom": "Tự chọn khoảng",
+    "fromOf": "{{label}}: từ ngày",
+    "toOf": "{{label}}: đến ngày",
+    "rangeInvalid": "Ngày bắt đầu không được sau ngày kết thúc.",
+    "min": "Từ",
+    "max": "Đến",
+    "minOf": "{{label}}: nhỏ nhất",
+    "maxOf": "{{label}}: lớn nhất",
+    "numberInvalid": "Nhập số, giá trị nhỏ nhất không lớn hơn giá trị lớn nhất.",
+    "textPlaceholder": "Có chứa…",
+    "search": "Tìm giá trị của {{label}}",
+    "searchPlaceholder": "Tìm…",
+    "selected_other": "Đã chọn {{count, number}}",
+    "noOptions": "Không có giá trị",
+    "moreOptions": "Còn nhiều giá trị khác. Hãy tìm để thấy giá trị cần chọn.",
+    "loadingOptions": "Đang tải giá trị…",
+    "optionsFailed": "Không tải được các giá trị.",
+    "clearControl": "Bỏ chọn",
+    "noPermission": "Bạn không có quyền dùng bộ lọc này",
+    "editing": "Bộ lọc {{kind}}. Người xem chọn giá trị; bộ lọc áp dụng khi không ở chế độ sửa.",
+    "globalUnnamed": "Bộ lọc {{position}}",
+    "offOnLink": "Bộ lọc đã tắt với link này."
+  },
+  "notice": {
+    "cross": "Lọc theo “{{value}}”",
+    "other_table": "{{name}} không áp dụng: bộ lọc này lọc bảng khác.",
+    "no_permission": "{{name}} chưa được áp dụng: bạn không xem được trường mà bộ lọc dùng.",
+    "broken": "{{name}} chưa được áp dụng: trường của bộ lọc đã bị xoá hoặc đổi.",
+    "not_bound": "{{name}} không áp dụng cho widget này.",
+    "self": "{{name}} đến từ chính widget này."
+  },
+  "widget": {
+    "actions": "Thao tác với {{name}}",
+    "viewRecords": "Xem record",
+    "downloadPng": "Tải về dạng PNG",
+    "downloadCsv": "Tải về dạng CSV",
+    "downloadFrame": "Tải widget"
+  },
+  "drill": {
+    "title": "Record: {{title}}",
+    "caption": "Các record đứng sau {{title}}",
+    "record": "Record",
+    "count_other": "{{formatted}} record",
+    "countEstimate_other": "Khoảng {{formatted}} record",
+    "empty": "Không có record nào bạn xem được",
+    "failed": "Không tải được record",
+    "more": "Xem thêm",
+    "close": "Đóng danh sách record"
+  },
+  "tv": {
+    "open": "Chế độ TV",
+    "exit": "Thoát chế độ TV",
+    "fullscreen": "Toàn màn hình",
+    "rotate": "Xoay vòng dashboard",
+    "rotateOff": "Tắt",
+    "seconds_other": "Mỗi {{count, number}} giây",
+    "minutes_other": "Mỗi {{count, number}} phút"
+  },
+  "shared": {
+    "refresh": "Làm mới",
+    "everySeconds_one": "Cập nhật mỗi {{count, number}} giây",
+    "everySeconds_other": "Cập nhật mỗi {{count, number}} giây",
+    "everyMinutes_one": "Cập nhật mỗi phút",
+    "everyMinutes_other": "Cập nhật mỗi {{count, number}} phút"
+  }
+}

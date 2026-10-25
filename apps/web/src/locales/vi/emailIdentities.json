@@ -1,0 +1,250 @@
+{
+  "page": {
+    "title": "Danh tính gửi",
+    "subtitle": "Địa chỉ như hr@ hay it@ để automation của {{org}} gửi thư nhân danh phòng ban, sau khi đã xác minh.",
+    "back": "Về {{name}}",
+    "add": "Thêm danh tính",
+    "loading": "Đang tải danh tính gửi",
+    "emptyTitle": "Chưa có danh tính gửi nào",
+    "empty": "Thư automation được gửi bằng người gửi hệ thống cho tới khi bạn thêm và xác minh một địa chỉ của tổ chức.",
+    "domains": "Địa chỉ thuộc {{domains}} gửi trực tiếp. Địa chỉ khác gửi thay: From là địa chỉ hệ thống kèm “(qua Cellhive)”, thư trả lời về địa chỉ của danh tính.",
+    "ownServer": "Danh tính có máy chủ SMTP riêng luôn gửi trực tiếp qua máy chủ đó.",
+    "noSmtpTitle": "Máy chủ email hệ thống chưa được cấu hình",
+    "noSmtp": "Chỉ danh tính có máy chủ SMTP riêng gửi được thư. Người vận hành instance đặt SMTP_URL và SMTP_FROM.",
+    "whoSees": "Chỉ chủ sở hữu và quản trị tổ chức thấy trang này. Tắt danh tính không tắt automation: bước gửi email của chúng lỗi cho tới khi danh tính dùng được trở lại."
+  },
+  "list": {
+    "caption": "Danh tính gửi",
+    "identity": "Danh tính",
+    "sending": "Cách gửi",
+    "status": "Trạng thái",
+    "scope": "Phạm vi base",
+    "automations": "Automation",
+    "actions": "Thao tác",
+    "usageLoading": "Đang tải"
+  },
+  "status": {
+    "verified": "Đã xác minh",
+    "pending": "Chờ xác minh",
+    "error": "Lỗi đăng nhập",
+    "disabled": "Đã tắt"
+  },
+  "statusLine": {
+    "verified_code": "Bằng mã · {{date}}",
+    "verified_link": "Bằng link · {{date}}",
+    "pendingUntil": "Đã gửi thư, hiệu lực tới {{date}}",
+    "pendingNone": "Không còn thư xác nhận hiệu lực: gửi thư mới",
+    "error_auth_failed": "Máy chủ SMTP liên tục từ chối tên đăng nhập hoặc mật khẩu",
+    "disabled": "Automation không gửi được bằng danh tính này"
+  },
+  "mode": {
+    "send_as": "Gửi trực tiếp",
+    "on_behalf": "Gửi thay"
+  },
+  "scope": {
+    "all": "Mọi base",
+    "selected": "Chọn base",
+    "none": "Không base nào",
+    "unknownBase": "Base bạn không thấy"
+  },
+  "row": {
+    "menu": "Thao tác cho {{name}}",
+    "edit": "Sửa",
+    "verify": "Xác minh",
+    "enterCode": "Nhập mã",
+    "resend": "Gửi lại thư",
+    "test": "Kiểm tra & xác minh",
+    "enable": "Bật lại",
+    "disable": "Tắt",
+    "delete": "Xoá",
+    "ownServer": "Máy chủ riêng: {{host}}",
+    "shownAs": "Thư hiển thị: {{from}}"
+  },
+  "transport": {
+    "system": "Máy chủ hệ thống",
+    "systemHint": "Gửi qua máy chủ SMTP của instance Cellhive này.",
+    "smtp": "Máy chủ SMTP riêng",
+    "smtpHint": "Cellhive đăng nhập máy chủ mail của tổ chức bằng chính hộp thư này."
+  },
+  "smtp": {
+    "title": "Máy chủ SMTP",
+    "host": "Máy chủ",
+    "hostHint": "Tên hoặc địa chỉ IP, không kèm cổng, vd mail.congty.vn.",
+    "hostPlaceholder": "mail.congty.vn",
+    "port": "Cổng",
+    "security": "Mã hoá",
+    "securityMode": {
+      "starttls": "STARTTLS",
+      "tls": "TLS",
+      "none": "Không"
+    },
+    "insecureTitle": "Không mã hoá",
+    "insecure": "Mật khẩu và mọi thư đi qua mạng dạng chữ thường. Chỉ dùng trong mạng nội bộ tin cậy.",
+    "insecureConfirm": "Tôi hiểu, vẫn dùng kết nối không mã hoá",
+    "username": "Tên đăng nhập",
+    "password": "Mật khẩu",
+    "passwordHint": "Được lưu mã hoá và không bao giờ hiện lại.",
+    "passwordNewHint": "Mật khẩu mới thay mật khẩu đã lưu; danh tính phải xác minh lại.",
+    "passwordSaved": "Đã lưu",
+    "changePassword": "Đổi mật khẩu",
+    "keepPassword": "Giữ mật khẩu đã lưu",
+    "yourDomain": "domain của bạn",
+    "spfTitle": "SPF và DKIM",
+    "spf": "Máy chủ này phải được phép gửi cho {{domain}} (SPF) và ký thư (DKIM), nếu không người nhận có thể từ chối thư (DMARC).",
+    "basicAuthTitle": "Microsoft 365 và Gmail",
+    "basicAuth": "Hai dịch vụ này ngày càng chặn đăng nhập SMTP bằng mật khẩu. Dùng mật khẩu ứng dụng (app password) nếu tổ chức cho phép; đăng nhập OAuth chưa được hỗ trợ."
+  },
+  "preview": {
+    "from": "Thư hiển thị: {{from}}",
+    "replyTo": "Thư trả lời về: {{replyTo}}",
+    "systemAddress": "địa chỉ hệ thống",
+    "whySmtp": "Gửi qua máy chủ riêng của bạn: From là chính địa chỉ này.",
+    "whyNoSmtp": "Máy chủ email hệ thống chưa cấu hình: địa chỉ này được gửi thay.",
+    "whySendAs": "{{domain}} nằm trong domain máy chủ hệ thống được gửi: From là chính địa chỉ này.",
+    "whyOnBehalf": "{{domain}} không thuộc domain máy chủ hệ thống được gửi: From là địa chỉ hệ thống kèm “(qua Cellhive)”, thư trả lời về địa chỉ này."
+  },
+  "form": {
+    "addTitle": "Thêm danh tính gửi",
+    "editTitle": "Sửa {{name}}",
+    "close": "Đóng",
+    "email": "Địa chỉ email",
+    "emailPlaceholder": "hr@congty.vn",
+    "displayName": "Tên hiển thị",
+    "displayNameHint": "Hiện là tên người gửi, vd Phòng Nhân sự.",
+    "transport": "Máy chủ gửi",
+    "replyTo": "Reply-To mặc định",
+    "replyToHint": "Không bắt buộc. Để trống: thư trả lời về địa chỉ của danh tính.",
+    "scope": "Base được dùng",
+    "scopeBases": "Các base",
+    "scopeHint": "Người quản lý automation của các base này chọn được danh tính.",
+    "noBases": "Tổ chức chưa có base nào.",
+    "signature": "Chữ ký",
+    "reverifyTitle": "Thay đổi này cần xác minh lại.",
+    "reverify_other": "{{name}} về Chờ xác minh. {{count, number}} automation đang dùng sẽ lỗi ở bước gửi email cho tới khi xác minh xong. Đổi tên, chữ ký hoặc phạm vi thì không cần.",
+    "footnote": "Thư xác nhận có link và mã 6 số gửi tới địa chỉ này, hết hạn sau 24 giờ.",
+    "footnoteSmtp": "Cellhive đăng nhập máy chủ rồi gửi thư xác nhận từ địa chỉ này tới chính nó (link và mã 6 số, hết hạn sau 24 giờ).",
+    "footnoteEdit": "Đổi tên, Reply-To, chữ ký và phạm vi base không cần xác minh lại.",
+    "cancel": "Huỷ",
+    "save": "Lưu",
+    "saveAndSend": "Lưu và gửi thư xác nhận",
+    "saveAndTest": "Lưu, kiểm tra & xác minh",
+    "saved": "Đã lưu {{name}}.",
+    "errors": {
+      "required": "Bắt buộc.",
+      "invalidEmail": "Nhập địa chỉ email hợp lệ.",
+      "tooLong": "Tối đa 100 ký tự.",
+      "confirmInsecure": "Xác nhận dùng kết nối không mã hoá, hoặc chọn STARTTLS hay TLS.",
+      "pickBase": "Chọn ít nhất một base."
+    }
+  },
+  "signature": {
+    "toolbar": "Định dạng chữ ký",
+    "format": {
+      "bold": "Đậm",
+      "italic": "Nghiêng",
+      "link": "Chèn link",
+      "list": "Danh sách"
+    },
+    "sample": {
+      "bold": "chữ đậm",
+      "italic": "chữ nghiêng",
+      "link": "chữ của link",
+      "list": "mục"
+    },
+    "help": "Markdown: **đậm**, _nghiêng_, [link](https://…), danh sách, tối đa 2 ảnh qua “Chèn ảnh” (nhúng trong thư, không dùng link). Không giá trị từ bản ghi.",
+    "count": "{{length}} / {{maximum}}",
+    "tooBig": "Tối đa {{maximum}} ký tự.",
+    "placeholder": "Chữ ký là chữ cố định: bỏ cặp ngoặc nhọn kép (không dùng placeholder).",
+    "imageSource": "Ảnh phải được chèn bằng “Chèn ảnh”: link ảnh và ảnh data: không được gửi.",
+    "tooManyImages_other": "Tối đa {{count, number}} ảnh.",
+    "preview": "Xem trước"
+  },
+  "verify": {
+    "title": "Xác minh {{email}}",
+    "close": "Đóng",
+    "intro": "Thư xác nhận có link và mã 6 số được gửi tới {{email}}. Người đọc hộp thư này bấm “Xác nhận” trong thư, hoặc đọc cho bạn mã 6 số.",
+    "introSmtp": "Cellhive đăng nhập {{host}} bằng {{username}}, rồi gửi thư xác nhận từ {{email}} tới chính địa chỉ này, có link và mã 6 số.",
+    "sent": "Đã gửi thư xác nhận tới {{email}}",
+    "sentExpires": "Link và mã có hiệu lực tới {{date}}.",
+    "rateLimited": "Đã gửi quá nhiều thư xác nhận.",
+    "smtpCode": "Máy chủ trả {{code}}",
+    "steps": {
+      "label": "Các bước kiểm tra",
+      "connect": "Kết nối tới {{host}}:{{port}}",
+      "tls": "Mã hoá kết nối (TLS)",
+      "auth": "Đăng nhập bằng {{username}}",
+      "send": "Gửi thư từ {{email}} tới chính nó"
+    },
+    "stepState": {
+      "done": "Thành công",
+      "failed": "Thất bại",
+      "skipped": "Bỏ qua: không mã hoá",
+      "not_run": "Chưa chạy"
+    },
+    "failure": {
+      "auth_failed": "Máy chủ từ chối tên đăng nhập hoặc mật khẩu",
+      "send_as_denied": "Tài khoản không có quyền gửi dưới địa chỉ này",
+      "host_not_allowed": "Máy chủ này trỏ tới địa chỉ nội bộ hoặc dành riêng",
+      "tls_failed": "Không thiết lập được kết nối mã hoá",
+      "connection_failed": "Không kết nối được tới máy chủ",
+      "timeout": "Máy chủ không trả lời kịp",
+      "smtp_not_configured": "Máy chủ email hệ thống chưa được cấu hình",
+      "rejected": "Máy chủ từ chối thư",
+      "temporary": "Máy chủ tạm thời không sẵn sàng",
+      "unknown": "Không gửi được thư xác nhận"
+    },
+    "fix": {
+      "auth_failed": "Kiểm tra tên đăng nhập và mật khẩu. Microsoft 365 và Gmail thường chặn đăng nhập bằng mật khẩu: dùng mật khẩu ứng dụng nếu được phép.",
+      "send_as_denied": "Cấp cho tài khoản hộp thư quyền gửi dưới địa chỉ này (Microsoft 365: “Send As”), hoặc đăng nhập bằng chính hộp thư của địa chỉ.",
+      "host_not_allowed": "Dùng tên công khai của máy chủ mail. Máy chủ trong mạng nội bộ cần SMTP_ALLOW_PRIVATE_HOSTS=true trên instance này.",
+      "tls_failed": "Kiểm tra cổng và kiểu mã hoá: TLS thường dùng cổng 465, STARTTLS cổng 587.",
+      "connection_failed": "Kiểm tra máy chủ và cổng, và máy chủ có nhận kết nối từ instance này.",
+      "timeout": "Kiểm tra máy chủ và cổng rồi thử lại.",
+      "smtp_not_configured": "Nhờ người vận hành instance đặt SMTP_URL và SMTP_FROM, hoặc dùng máy chủ SMTP riêng.",
+      "rejected": "Kiểm tra địa chỉ có tồn tại và nhận thư, rồi thử lại.",
+      "temporary": "Thử lại sau vài phút.",
+      "unknown": "Thử lại sau vài phút."
+    },
+    "codeLabel": "Mã 6 số",
+    "codeHint": "Dán hoặc gõ mã trong thư.",
+    "submit": "Xác minh",
+    "wrongCode": "Mã không đúng.",
+    "wrongCodeLeft_other": "Mã không đúng. Còn {{count, number}} lần thử.",
+    "lockedTitle": "Đã nhập sai 5 lần.",
+    "locked": "Mã này không dùng được nữa. Gửi lại thư để lấy mã mới.",
+    "resend": "Gửi lại thư",
+    "test": "Kiểm tra & xác minh",
+    "limits": "Tối đa {{perHour, number}} thư mỗi giờ cho mỗi danh tính, {{perDay, number}} thư mỗi ngày cho tổ chức.",
+    "linkNote": "Trang không tự cập nhật khi người khác xác nhận qua link; mở lại trang để thấy trạng thái mới.",
+    "errorFix": "Sửa thông tin máy chủ (Sửa) nếu đã đổi, rồi kiểm tra & xác minh lại.",
+    "disabled": "Danh tính đang tắt. Bật lại để xác minh.",
+    "done": "Đã xác minh {{email}}",
+    "doneHint": "Automation của các base trong phạm vi giờ gửi được bằng danh tính này.",
+    "toast": "Đã xác minh {{email}}."
+  },
+  "confirm": {
+    "disableTitle": "Tắt danh tính {{name}}?",
+    "disableDescription": "Automation đang gửi bằng {{email}} vẫn bật nhưng bước gửi email sẽ lỗi, không chuyển sang người gửi hệ thống.",
+    "deleteTitle": "Xoá danh tính {{name}}?",
+    "deleteDescription": "Không dùng được {{email}} nữa. Automation đang gửi bằng nó vẫn bật nhưng bước gửi email sẽ lỗi.",
+    "disable": "Tắt danh tính",
+    "delete": "Xoá danh tính",
+    "loadingUsages": "Đang tải automation đang dùng",
+    "noUsages": "Không automation nào gửi bằng danh tính này.",
+    "usages_other": "{{count, number}} automation đang gửi bằng danh tính này:",
+    "hiddenAutomation": "Automation của base bạn không thấy",
+    "moreUsages_other": "và {{count, number}} automation khác",
+    "open": "Mở"
+  },
+  "toast": {
+    "disabled": "Đã tắt {{name}}.",
+    "enabled": "Đã bật lại {{name}}.",
+    "deleted": "Đã xoá {{name}}."
+  },
+  "nameIssue": {
+    "badge": "Tên hiển thị cần sửa",
+    "fix": "Sửa tên hiển thị",
+    "title": "Tên hiển thị này không còn được chấp nhận",
+    "body": "Tên được lưu trước khi có quy tắc này nên vẫn được giữ: thư automation vẫn hiện tên này cho tới khi bạn đổi. Bạn vẫn lưu được các thay đổi khác mà không cần đổi tên."
+  }
+}

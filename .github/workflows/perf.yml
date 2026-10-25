@@ -1,0 +1,117 @@
+name: Perf
+
+# Performance budgets of FRONTEND §11.1 (`@perf` Playwright specs on 200 000 seeded
+# rows) on the reference machine, a GitHub `ubuntu-latest` runner (BACKLOG T801).
+# Nightly and on demand only: never on pull requests, so it does not gate a merge.
+on:
+  schedule:
+    # 03:27 UTC, away from the top of the hour when scheduled runs queue up.
+    - cron: '27 3 * * *'
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: Only run tests whose title matches this regular expression (empty = every @perf spec)
+        required: false
+        default: ''
+      repeat:
+        description: Run each test this many times (1–5); the summary and perf-results.json list every run (`Run` column, `repeat_index`)
+        required: false
+        default: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  perf:
+    name: Perf (@perf, ubuntu-latest)
+    runs-on: ubuntu-latest
+    # Build + 200 000-row bench seed + nine budgets: ~15 minutes; room for `repeat`.
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          turbo-cache-key: perf
+      - name: Install Playwright browsers
+        run: pnpm --filter @cellhive/web exec playwright install --with-deps chromium
+      # Hosted runners are not one machine: AMD EPYC 7763 and Intel Xeon 6973P-C were
+      # 1.3–1.4× apart on the same commit (BACKLOG T818). The CPU heads the summary and
+      # is in `perf-results.json` (`machine.cpu_*`, perf-reporter) and the perf issue.
+      - name: Machine
+        id: machine
+        run: |
+          model=$(lscpu | sed -n 's/^Model name:[[:space:]]*//p' | head -n1)
+          sockets=$(lscpu | sed -n 's/^Socket(s):[[:space:]]*//p' | head -n1)
+          per_socket=$(lscpu | sed -n 's/^Core(s) per socket:[[:space:]]*//p' | head -n1)
+          cpu="${model:-unknown CPU}, $(( ${sockets:-1} * ${per_socket:-0} )) cores / $(nproc) threads"
+          echo "cpu=$cpu" >> "$GITHUB_OUTPUT"
+          {
+            echo '## Machine'
+            echo
+            echo "**CPU: $cpu**"
+            echo
+            echo '```'
+            echo "nproc: $(nproc)"
+            lscpu | grep -E '^(Model name|Vendor ID|CPU\(s\)|Thread\(s\) per core|Core\(s\) per socket|Socket\(s\)|Hypervisor vendor|L3 cache):' || true
+            free -h
+            echo "image: ${ImageOS:-?} ${ImageVersion:-?}"
+            echo "node: $(node --version)"
+            pnpm --filter @cellhive/web exec playwright --version
+            ls "$HOME/.cache/ms-playwright"
+            echo '```'
+            echo
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      # Inputs go through env, never interpolated into the script.
+      - name: Run @perf specs
+        env:
+          PERF_GREP: ${{ inputs.grep }}
+          PERF_REPEAT: ${{ inputs.repeat }}
+        run: |
+          repeat="${PERF_REPEAT:-1}"
+          if ! [[ "$repeat" =~ ^[1-5]$ ]]; then
+            echo "::error::repeat must be a number from 1 to 5, got '$repeat'"
+            exit 1
+          fi
+          args=(--repeat-each "$repeat")
+          if [ -n "${PERF_GREP:-}" ]; then args+=(--grep "$PERF_GREP"); fi
+          pnpm test:e2e:perf "${args[@]}"
+      # The HTML report already holds the traces of failed tests (`test-results/` would double them).
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-${{ github.sha }}
+          path: |
+            apps/web/perf-results.json
+            apps/web/playwright-report/
+          if-no-files-found: warn
+          retention-days: 30
+      # A red budget on the reference machine is a regression to look into; the job
+      # never changes a budget. One open issue at a time: later red nights comment on it.
+      - name: Open a perf issue
+        if: failure() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUNNER_CPU: ${{ steps.machine.outputs.cpu }}
+        run: |
+          gh label create perf --color D93F0B --description 'Performance budget (FRONTEND §11.1)' 2>/dev/null || true
+          body="The nightly perf job failed on \`${GITHUB_SHA}\`: ${RUN_URL}
+          Runner CPU: ${RUNNER_CPU:-unknown}.
+          Numbers and machine: artifact \`perf-${GITHUB_SHA}\` (\`perf-results.json\`) and the run summary."
+          open=$(gh issue list --label perf --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "$body"
+          else
+            gh issue create --title "Perf budget red on main ($(date -u +%F))" --label perf --body "$body"
+          fi

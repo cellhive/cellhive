@@ -1,0 +1,29 @@
+{
+  "name": "@cellhive/markdown",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Narrow Markdown for Cellhive: one parser for the web and email, template placeholders substituted as text, allowlist HTML and plain-text renderers",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@cellhive/formula-engine": "workspace:*"
+  }
+}

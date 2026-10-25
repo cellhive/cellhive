@@ -1,0 +1,31 @@
+/* Grid adapter styles (FRONTEND §1.3). Loaded with the grid chunk only. */
+
+/*
+ * Glide's overlay editors (T203) are positioned against the viewport. They
+ * stay under the app's overlays — the sidebar drawer and its backdrop
+ * (z 30/40), the record panel and its backdrop (z 40/50), menus — as part
+ * of the page (T322a: an editor was drawn over the record panel).
+ */
+#portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+}
+
+/*
+ * Our editors place their popover themselves (above the cell near the bottom
+ * of the window, `editors/shell.tsx`): glide's overlay container must not cap
+ * their height to the room below the cell nor clip them.
+ */
+#portal div:has(> .gdg-clip-region),
+#portal .gdg-clip-region {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Keyboard focus on the canvas (FRONTEND §9.2); glide draws the focused cell itself. */
+.ob-grid :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}

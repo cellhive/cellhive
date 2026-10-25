@@ -1,0 +1,31 @@
+{
+  "name": "@cellhive/permissions",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure permission model for Cellhive: role config schema, system role presets, role normalisation and effective access resolution",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@cellhive/contracts": "workspace:*",
+    "@cellhive/filter-dsl": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

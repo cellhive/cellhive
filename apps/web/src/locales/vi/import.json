@@ -1,0 +1,203 @@
+{
+  "title": {
+    "create": "Nhập thành bảng mới",
+    "append": "Nhập vào {{table}}"
+  },
+  "description": "Đưa bản ghi vào từ tệp CSV, TSV hoặc Excel (.xlsx).",
+  "file": "Tệp: {{name}}",
+  "close": "Đóng nhập dữ liệu",
+  "percent": "{{percent}}%",
+  "steps": {
+    "label": "Các bước nhập dữ liệu",
+    "upload": "Tệp",
+    "preview": "Xem trước",
+    "mapping": "Cột",
+    "run": "Nhập",
+    "result": "Kết quả",
+    "done": "(xong)"
+  },
+  "headings": {
+    "upload": "Chọn tệp",
+    "preview": "Kiểm tra cách đọc tệp",
+    "mapping": "Chọn cách dùng từng cột",
+    "run": "Đang nhập",
+    "result": "Đã nhập xong"
+  },
+  "menu": {
+    "button": "Nhập",
+    "createButton": "Nhập từ tệp",
+    "append": "Nhập vào {{table}}…",
+    "appendDenied": "Bạn không thể thêm bản ghi vào bảng này.",
+    "create": "Nhập thành bảng mới…",
+    "createDenied": "Chỉ quản trị base mới tạo được bảng."
+  },
+  "upload": {
+    "drop": "Thả tệp vào đây, hoặc chọn tệp",
+    "choose": "Chọn tệp",
+    "limits": "CSV, TSV hoặc Excel (.xlsx), tối đa {{size}} MB và {{rows}} dòng.",
+    "uploading": "Đang tải lên {{name}}…",
+    "progress": "Tiến độ tải lên {{name}}",
+    "cancel": "Huỷ tải lên",
+    "problems": {
+      "empty": "{{name}} là tệp rỗng.",
+      "tooLarge": "Tệp lớn hơn {{size}} MB. Hãy chia thành các tệp nhỏ hơn.",
+      "unsupported": "{{name}} không phải tệp CSV, TSV hoặc Excel (.xlsx).",
+      "legacyExcel": "{{name}} là định dạng bảng tính cũ. Hãy lưu lại dạng Excel Workbook (.xlsx) hoặc CSV rồi nhập."
+    }
+  },
+  "preview": {
+    "encoding": "Bảng mã",
+    "delimiter": "Dấu phân cách",
+    "sheet": "Trang tính",
+    "headerRow": "Dòng đầu tiên là tên cột",
+    "detected": "{{value}} (tự nhận)",
+    "loading": "Đang đọc lại tệp…",
+    "dismiss": "Giữ bản xem trước cũ",
+    "caption": "{{shown}} dòng đầu trên tổng {{total}} dòng",
+    "region": "Xem trước tệp",
+    "rowNumber": "Dòng",
+    "true": "Có",
+    "false": "Không"
+  },
+  "encodings": {
+    "utf-8": "UTF-8",
+    "utf-8-bom": "UTF-8 có BOM",
+    "windows-1258": "Windows-1258 (tiếng Việt)"
+  },
+  "delimiters": {
+    "comma": "Dấu phẩy ( , )",
+    "semicolon": "Dấu chấm phẩy ( ; )",
+    "tab": "Tab",
+    "pipe": "Gạch đứng ( | )"
+  },
+  "types": {
+    "text": "Văn bản",
+    "number": "Số",
+    "select": "Chọn một",
+    "datetime": "Ngày",
+    "checkbox": "Hộp kiểm"
+  },
+  "mapping": {
+    "tableName": "Tên bảng",
+    "tableNameRequired": "Hãy nhập tên bảng.",
+    "tableNameTaken": "Base đã có bảng trùng tên.",
+    "createHint": "Mỗi cột được nhập thành một trường. Kiểu được đoán từ 200 dòng đầu; giá trị không khớp kiểu của trường sẽ bị bỏ qua và ghi vào báo cáo.",
+    "appendHint": "Chọn trường mà mỗi cột điền vào. Chỉ có các trường bạn được ghi; cột không chọn sẽ không được nhập.",
+    "columnsRegion": "Các cột của tệp",
+    "column": "Cột",
+    "import": "Nhập",
+    "fieldName": "Tên trường",
+    "fieldType": "Kiểu trường",
+    "targetField": "Trường",
+    "statusHeading": "Trạng thái",
+    "primary": "Trường chính",
+    "primaryText": "Trường chính luôn là văn bản.",
+    "guessed": "Đoán từ tệp",
+    "importColumn": "Nhập cột {{column}}",
+    "fieldNameOf": "Tên trường cho cột {{column}}",
+    "fieldTypeOf": "Kiểu trường cho cột {{column}}",
+    "targetOf": "Trường cho cột {{column}}",
+    "fieldNameRequired": "Hãy nhập tên trường.",
+    "fieldNameDuplicate": "Đã có cột khác dùng tên này.",
+    "noColumns": "Hãy chọn ít nhất một cột để nhập.",
+    "skip": "Không nhập",
+    "requiredField": "{{name}} (bắt buộc)",
+    "duplicateField": "Trường này đã được một cột khác điền.",
+    "missingRequired": "Trường bắt buộc chưa có cột: {{fields}}. Mọi dòng sẽ bị bỏ qua.",
+    "nothingMapped": "Chưa có cột nào được gán vào trường.",
+    "status": {
+      "mapped": "Điền vào {{field}}",
+      "mappedLink": "Điền vào {{field}} theo tiêu đề bản ghi; nhiều tiêu đề cách nhau bằng dấu phẩy, tiêu đề có dấu phẩy đặt trong ngoặc kép",
+      "mappedParent": "Điền vào {{field}} bản ghi cha có tiêu đề này",
+      "unsupported": "Không nhập: {{field}} chứa tệp, không nhập được tệp",
+      "computed": "Không nhập: {{field}} được tính bằng công thức hoặc tra cứu",
+      "skipped": "Không nhập",
+      "readOnly": "Không nhập: bạn không được ghi {{field}}",
+      "noMatch": "Không nhập: không có trường cùng tên"
+    },
+    "unsupportedGroup": "Không nhập được",
+    "attachmentOption": "{{name}} (không nhập được tệp)",
+    "filesNote_one": "{{fields}} chứa tệp: không nhập tệp từ bảng tính được. Hãy thêm tệp trên grid sau khi nhập.",
+    "filesNote_other": "{{fields}} chứa tệp: không nhập tệp từ bảng tính được. Hãy thêm tệp trên grid sau khi nhập.",
+    "titles": {
+      "heading": "Cột điền theo tiêu đề bản ghi",
+      "link": "{{column}} → {{field}}: tiêu đề bản ghi của bảng {{table}}",
+      "parent": "{{column}} → {{field}}: tiêu đề bản ghi cha trong bảng {{table}}",
+      "unknownTable": "một bảng bạn không xem được",
+      "exact": "Tiêu đề là trường chính của bản ghi, ghi đúng từng chữ, và phải khớp đúng một bản ghi bạn xem được (và điều kiện của trường, nếu có).",
+      "separator": "Nhiều bản ghi: các tiêu đề cách nhau bằng dấu phẩy. Tiêu đề có dấu phẩy đặt trong ngoặc kép, vd: An Phát, \"Nguyễn, An\".",
+      "parentRule": "Mỗi ô một tiêu đề bản ghi cha; bản ghi cha phải có sẵn trước khi nhập (không phải một dòng của cùng tệp).",
+      "ids": "Ghi mã bản ghi (rec_…) cũng được.",
+      "skipped": "Dòng có tiêu đề không khớp bản ghi nào, hoặc khớp nhiều bản ghi, sẽ bị bỏ qua và ghi trong báo cáo lỗi."
+    }
+  },
+  "actions": {
+    "otherFile": "Chọn tệp khác",
+    "next": "Tiếp",
+    "back": "Quay lại",
+    "start_other": "Nhập {{count, number}} dòng",
+    "openTable": "Mở bảng",
+    "done": "Xong"
+  },
+  "run": {
+    "queued": "Đang chờ một lượt nhập khác của tổ chức chạy xong…",
+    "running": "Đã xử lý {{done}} / {{total}} dòng",
+    "progress": "Tiến độ nhập",
+    "background": "Bạn có thể đóng cửa sổ này: việc nhập vẫn tiếp tục và sẽ có thông báo khi xong.",
+    "cancel": "Huỷ nhập",
+    "confirmTitle": "Huỷ lượt nhập này?",
+    "confirmAppend": "Các dòng đã nhập vẫn được giữ trong bảng.",
+    "confirmCreate": "Bảng mới cùng các dòng đã nhập sẽ vào thùng rác.",
+    "confirmCancel": "Huỷ nhập",
+    "keepGoing": "Tiếp tục nhập"
+  },
+  "result": {
+    "success": "Mọi dòng đã được nhập.",
+    "partial": "Đã nhập xong nhưng một số dòng bị bỏ qua.",
+    "done": "Đã nhập xong.",
+    "imported": "Đã nhập",
+    "skipped": "Bỏ qua",
+    "read": "Số dòng đọc",
+    "errorsHeading": "Dòng bị bỏ qua",
+    "row": "Dòng",
+    "column": "Cột",
+    "problem": "Lỗi",
+    "wholeRow": "Cả dòng",
+    "moreErrors": "Ở đây chỉ liệt kê {{shown}} lỗi đầu; báo cáo có đầy đủ.",
+    "downloadReport": "Tải báo cáo lỗi (CSV)",
+    "reportUntil": "Tải được tới {{time}}",
+    "reportGone": "Báo cáo lỗi không còn tải được.",
+    "truncated": "Báo cáo chỉ gồm 100.000 lỗi đầu tiên.",
+    "cancelled": "Đã huỷ lượt nhập.",
+    "cancelledAppend": "Các dòng nhập trước khi huỷ vẫn được giữ trong bảng.",
+    "cancelledCreate": "Bảng mới đã được chuyển vào thùng rác; bạn có thể khôi phục trong 30 ngày.",
+    "failedAppend": "Các dòng nhập trước khi gặp lỗi vẫn được giữ trong bảng.",
+    "failedCreate": "Bảng mới đã được chuyển vào thùng rác.",
+    "rowOf": "Dòng dữ liệu {{dataRow}} (dòng {{fileRow}} trong tệp)",
+    "reportHint": "Báo cáo liệt kê mọi dòng bị bỏ qua kèm giá trị bị từ chối. Chỉ bạn tải được báo cáo này.",
+    "linkSummaryNotFound_other": "{{formatted}} liên kết không tìm thấy bản ghi.",
+    "linkSummaryAmbiguous_other": "{{formatted}} liên kết trùng tiêu đề với nhiều bản ghi.",
+    "moreInRow_other": "Thêm {{formatted}} lỗi khác ở dòng này",
+    "linkSummary_one": "{{count, number}} liên kết không khớp: {{notFound}} không tìm thấy, {{ambiguous}} trùng tiêu đề với nhiều bản ghi.",
+    "linkSummary_other": "{{count, number}} liên kết không khớp: {{notFound}} không tìm thấy, {{ambiguous}} trùng tiêu đề với nhiều bản ghi.",
+    "link": {
+      "LINK_TARGET_NOT_FOUND": "Không có bản ghi mang tiêu đề này",
+      "LINK_TARGET_AMBIGUOUS": "Nhiều bản ghi trùng tiêu đề này"
+    },
+    "linkFix": {
+      "LINK_TARGET_NOT_FOUND": "Kiểm tra chính tả so với trường chính của bản ghi; bản ghi bạn không xem được hoặc ngoài điều kiện của trường thì không khớp.",
+      "LINK_TARGET_AMBIGUOUS": "Đặt tiêu đề khác nhau cho các bản ghi, hoặc ghi mã bản ghi (rec_…) trong tệp."
+    }
+  },
+  "background": {
+    "running": "Đang nhập bản ghi…",
+    "succeeded": "Đã nhập xong.",
+    "failed": "Lượt nhập không hoàn tất."
+  },
+  "leave": {
+    "title": "Rời khỏi lượt nhập?",
+    "description": "Các cột bạn đã chọn ở đây sẽ mất; tệp vẫn được giữ 24 giờ.",
+    "stay": "Tiếp tục chọn cột",
+    "confirm": "Rời đi"
+  }
+}

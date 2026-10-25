@@ -1,0 +1,13 @@
+# Security headers of the web client. Must match apps/web/security-headers.ts
+# (also applied by `vite preview` in the E2E tests); a unit test compares them.
+# A template: the nginx image renders ${STORAGE_PUBLIC_ORIGIN} (the origin of
+# S3_PUBLIC_ENDPOINT, empty for STORAGE_DRIVER=local) into img-src, media-src and
+# connect-src at start-up (T418: uploads and files go to object storage directly).
+# Included in every location that sets headers, because nginx drops inherited
+# add_header directives as soon as a location defines its own.
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: ${STORAGE_PUBLIC_ORIGIN}; media-src 'self' blob: ${STORAGE_PUBLIC_ORIGIN}; font-src 'self' data:; connect-src 'self' ${STORAGE_PUBLIC_ORIGIN}; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;

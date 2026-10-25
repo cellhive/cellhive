@@ -1,0 +1,407 @@
+{
+  "nav": {
+    "label": "Cài đặt base",
+    "title": "Cài đặt base",
+    "items": {
+      "general": "Chung",
+      "members": "Thành viên",
+      "roles": "Vai trò",
+      "shareLinks": "Liên kết chia sẻ",
+      "webhooks": "Webhook",
+      "audit": "Nhật ký"
+    }
+  },
+  "page": {
+    "back": "Về {{name}}",
+    "close": "Đóng",
+    "cancel": "Huỷ"
+  },
+  "general": {
+    "title": "Chung",
+    "subtitle": "Những nơi quản lý {{base}}.",
+    "entries": {
+      "members": {
+        "title": "Thành viên",
+        "description": "Ai mở được base và với vai trò nào."
+      },
+      "roles": {
+        "title": "Vai trò",
+        "description": "Vai trò có sẵn, vai trò riêng và người được gán."
+      },
+      "shareLinks": {
+        "title": "Liên kết chia sẻ",
+        "description": "Liên kết tới view và form của base."
+      },
+      "webhooks": {
+        "title": "Webhook",
+        "description": "Địa chỉ hệ thống khác gọi để chạy automation."
+      },
+      "automations": {
+        "title": "Automation",
+        "description": "Quy tắc chạy khi bản ghi thay đổi hoặc theo lịch."
+      },
+      "trash": {
+        "title": "Thùng rác",
+        "description": "Bảng đã xoá, khôi phục được trong 30 ngày."
+      },
+      "audit": {
+        "title": "Nhật ký",
+        "description": "Ai đã thay đổi gì trong base, và khi nào."
+      }
+    }
+  },
+  "roles": {
+    "title": "Vai trò",
+    "subtitle": "Người và nhóm thấy và làm được gì trong {{base}}. Mỗi người hoặc nhóm giữ một vai trò ở đây.",
+    "note": "Vai trò chỉ có tác dụng khi được gán cho người hoặc nhóm.",
+    "toMembers": "Gán vai trò ở trang Thành viên",
+    "caption": "Vai trò của base",
+    "columns": {
+      "role": "Vai trò",
+      "assigned": "Gán cho",
+      "actions": "Thao tác"
+    },
+    "builtIn": "Có sẵn",
+    "system": {
+      "system_admin": {
+        "name": "Quản trị",
+        "description": "Toàn quyền: dữ liệu, bảng, view, automation, vai trò và chia sẻ. Không sửa hoặc xoá được."
+      },
+      "system_editor": {
+        "name": "Biên tập",
+        "description": "Thêm và sửa bản ghi. Thu hẹp được, không bao giờ vượt quá sửa dữ liệu."
+      },
+      "system_reader": {
+        "name": "Người xem",
+        "description": "Chỉ đọc bản ghi: không bao giờ thêm, sửa hay xoá."
+      }
+    },
+    "nobody": "Chưa gán cho ai",
+    "people_other": "{{count, number}} người",
+    "groups_other": "{{count, number}} nhóm",
+    "namesMore_other": "{{names}} và {{count, number}} khác",
+    "name": "Tên",
+    "nameTaken": "Base đã có vai trò mang tên này.",
+    "create": {
+      "action": "Vai trò mới",
+      "title": "Vai trò mới",
+      "description": "Vai trò mới chưa có quyền với bảng nào: cấp quyền cho nó rồi gán cho người hoặc nhóm.",
+      "submit": "Tạo vai trò"
+    },
+    "rename": {
+      "action": "Đổi tên",
+      "label": "Đổi tên {{name}}",
+      "title": "Đổi tên vai trò",
+      "submit": "Đổi tên"
+    },
+    "delete": {
+      "action": "Xoá",
+      "label": "Xoá {{name}}",
+      "title": "Xoá vai trò “{{name}}”?",
+      "description": "Không ai giữ vai trò này. Xoá rồi không hoàn tác được.",
+      "confirm": "Xoá vai trò"
+    },
+    "inUse": {
+      "title": "“{{name}}” vẫn đang được gán",
+      "description": "Hãy đổi vai trò khác hoặc gỡ quyền của những người và nhóm này trước khi xoá:",
+      "listLabel": "Ai đang giữ {{name}}"
+    },
+    "created": "Đã tạo vai trò “{{name}}”.",
+    "renamed": "Đã đổi tên vai trò thành “{{name}}”.",
+    "deleted": "Đã xoá vai trò “{{name}}”.",
+    "permissions": {
+      "action": "Phân quyền",
+      "label": "Phân quyền của {{name}}"
+    }
+  },
+  "members": {
+    "title": "Thành viên",
+    "subtitle": "Người và nhóm của tổ chức cùng vai trò của họ trong {{base}}.",
+    "rules": {
+      "title": "Quyền được quyết định thế nào",
+      "direct": "Vai trò gán trực tiếp cho một người thắng vai trò của các nhóm người đó thuộc.",
+      "groups": "Người thuộc nhiều nhóm có vai trò ở đây được mọi thứ mà bất kỳ vai trò nào trong số đó cho phép.",
+      "full": "Chủ sở hữu và quản trị viên tổ chức, quản trị viên workspace và chủ base luôn có toàn quyền. Điều này không đổi ở đây được."
+    },
+    "search": {
+      "label": "Tìm người và nhóm",
+      "placeholder": "Tên hoặc email"
+    },
+    "caption": "Người và nhóm cùng vai trò",
+    "columns": {
+      "name": "Tên",
+      "type": "Loại",
+      "role": "Vai trò",
+      "access": "Quyền"
+    },
+    "type": {
+      "user": "Người",
+      "group": "Nhóm"
+    },
+    "roleOf": "Vai trò của {{name}}",
+    "noAccess": "Không có quyền",
+    "saving": "Đang lưu…",
+    "fullAccess": {
+      "org_owner": "Toàn quyền · chủ sở hữu tổ chức",
+      "org_admin": "Toàn quyền · quản trị viên tổ chức",
+      "base_owner": "Toàn quyền · chủ base",
+      "workspace_admin": "Toàn quyền · quản trị viên workspace"
+    },
+    "empty": "Tổ chức chưa có thành viên hay nhóm nào.",
+    "noMatch": "Không có người hay nhóm nào khớp “{{q}}”.",
+    "more": "Tải thêm",
+    "assigned": "{{name}} giờ có vai trò {{role}}.",
+    "removed": "{{name}} không còn vai trò nào trong base này.",
+    "remove": {
+      "title": "Gỡ quyền của {{name}}?",
+      "user": "{{name}} sẽ không mở được {{base}} nữa, trừ khi một nhóm của họ có vai trò ở đây.",
+      "group": "Thành viên của {{name}} mất quyền mà nhóm này cho trong {{base}}, trừ khi họ có vai trò riêng hoặc qua nhóm khác.",
+      "confirm": "Gỡ quyền"
+    },
+    "viewAccess": "Xem quyền",
+    "viewAccessOf": "Xem quyền của {{name}}"
+  },
+  "editor": {
+    "title": "Vai trò",
+    "backToRoles": "Mọi vai trò",
+    "roleNav": "Vai trò của base",
+    "missing": "Vai trò này không còn tồn tại.",
+    "assignedTo": "Gán cho {{names}}",
+    "ceiling": {
+      "system_admin": "Vai trò Quản trị có toàn quyền và không sửa được. Hãy gán vai trò hẹp hơn cho người không cần quản lý base.",
+      "system_editor": "Vai trò Biên tập có sẵn: thu hẹp được, không bao giờ vượt quá sửa dữ liệu. “Quản lý” bị tắt: biên tập viên không đổi bảng, trường hay view của bảng.",
+      "system_reader": "Vai trò Người xem có sẵn: chỉ đọc. “Quản lý”, “Sửa”, thêm và xoá bản ghi, sửa trường đều bị tắt."
+    },
+    "adjusted": {
+      "title_other": "Hệ thống đã tự điều chỉnh {{count, number}} quyền khi lưu"
+    },
+    "saved": "Đã lưu phân quyền của “{{name}}”.",
+    "savedAdjusted_other": "Đã lưu phân quyền của “{{name}}”, {{count, number}} quyền được điều chỉnh: xem lý do bên cạnh.",
+    "unsaved": {
+      "label": "Chưa lưu",
+      "blocked_other": "{{count, number}} bảng cần sửa trước khi lưu.",
+      "cancel": "Huỷ",
+      "save": "Lưu"
+    },
+    "leave": {
+      "title": "Rời trang khi chưa lưu?",
+      "description": "Thay đổi của vai trò này chưa được lưu. Rời trang sẽ mất các thay đổi đó.",
+      "confirm": "Rời trang, không lưu"
+    },
+    "reasons": {
+      "computed_field_max_read": "{{field}} được hạ xuống {{to}}: trường tính toán tối đa là Xem.",
+      "filter_field_min_read": "{{field}} được nâng lên {{to}} vì dùng trong điều kiện bản ghi.",
+      "filter_field_min_create": "{{field}} được nâng lên {{to}} vì dùng trong điều kiện bản ghi và vai trò được thêm bản ghi (bản ghi mới vẫn phải khớp điều kiện).",
+      "operations_require_edit": "{{table}}: bỏ thêm và xoá bản ghi ({{from}}): cần quyền Sửa hoặc Quản lý.",
+      "reader_ceiling": "{{table}} được hạ xuống {{to}}: vai trò Người xem chỉ đọc.",
+      "editor_ceiling": "{{table}} được hạ xuống {{to}}: vai trò Biên tập không vượt quá Sửa."
+    },
+    "tableLevels": {
+      "manage": "Quản lý",
+      "edit": "Sửa",
+      "read_only": "Chỉ xem",
+      "no_perm": "Không truy cập"
+    },
+    "fieldLevels": {
+      "edit": "Sửa",
+      "create": "Chỉ tạo",
+      "read": "Xem",
+      "no_perm": "Không"
+    },
+    "blocked": {
+      "admin_read_only": "Vai trò Quản trị không sửa được.",
+      "editor_ceiling": "Không dành cho vai trò Biên tập: không vượt quá Sửa.",
+      "reader_ceiling": "Không dành cho vai trò Người xem: chỉ đọc.",
+      "table_read_only": "Bảng đang Chỉ xem: hãy cho quyền Sửa hoặc Quản lý trước.",
+      "table_no_access": "Vai trò không truy cập bảng này."
+    },
+    "issues": {
+      "filter_invalid": "Một điều kiện bản ghi không hợp lệ.",
+      "filter_incomplete": "Một điều kiện bản ghi còn thiếu giá trị: điền nốt hoặc xoá đi.",
+      "read_filter_missing": "“Bản ghi khớp điều kiện” cần ít nhất một điều kiện."
+    },
+    "baseRule": {
+      "title": "Quyền chung",
+      "description": "Vai trò được làm gì với dữ liệu nó đọc được, trên mọi bảng.",
+      "copy": {
+        "label": "Sao chép",
+        "hint": "Sao chép ô và bản ghi vào bộ nhớ tạm. Tắt: không sao chép được từ lưới."
+      },
+      "download": {
+        "label": "Tải xuống và xuất",
+        "hint": "Xuất CSV/XLSX, in, nhân bản base, tải tệp."
+      },
+      "share_link": {
+        "label": "Tạo link chia sẻ",
+        "hint": "Chia sẻ view và form bằng link. Ai có link đều thấy những gì vai trò này đọc được."
+      }
+    },
+    "matrix": {
+      "title": "Bảng",
+      "hint": "Bảng để “Không truy cập” bị ẩn với vai trò: không hiện tên, ô liên kết tới bảng đó chỉ hiện biểu tượng khoá.",
+      "hintSystem": "Bảng tạo sau nhận mức mặc định của vai trò này.",
+      "caption": "Quyền của vai trò trên từng bảng",
+      "empty": "Base chưa có bảng nào.",
+      "columns": {
+        "table": "Bảng",
+        "level": "Quyền",
+        "details": "Chi tiết"
+      },
+      "levelOf": "Quyền trên {{name}}",
+      "details": "Chi tiết",
+      "detailsOf": "Chi tiết của {{name}}: view, bản ghi và trường",
+      "fieldsAdjusted_other": "{{count, number}} trường được điều chỉnh khi lưu: xem Chi tiết.",
+      "summary": {
+        "noAccess": "Ẩn với vai trò",
+        "allRecords": "Mọi bản ghi",
+        "someRecords": "Một phần bản ghi",
+        "hiddenFields_other": "{{count, number}} trường bị ẩn",
+        "views_other": "{{count, number}} view"
+      }
+    },
+    "dashboards": {
+      "title": "Dashboard",
+      "hint": "Dashboard để “Không truy cập” bị ẩn với vai trò này. Dashboard mới tạo bắt đầu ở “Không truy cập” với vai trò này: cấp quyền tại đây.",
+      "hintSystem": "Vai trò có sẵn: xem mọi dashboard của base, kể cả dashboard tạo sau. Không đổi được ở đây.",
+      "hintAdmin": "Vai trò Quản trị xem và sửa mọi dashboard của base.",
+      "caption": "Quyền của vai trò trên từng dashboard",
+      "empty": "Base chưa có dashboard nào.",
+      "levelOf": "Quyền trên dashboard {{name}}",
+      "levels": {
+        "read_only": "Xem",
+        "no_perm": "Không truy cập"
+      },
+      "readAll": "Xem tất cả",
+      "noneAll": "Không truy cập tất cả",
+      "widgets": "Widget vẫn áp quyền bảng, trường và bản ghi của vai trò này: widget trên dữ liệu vai trò không đọc được sẽ hiện “Không có quyền”."
+    },
+    "detail": {
+      "back": "Mọi bảng",
+      "noAccess": "Vai trò không truy cập bảng này. Chọn một mức ở trên để đặt view, bản ghi và trường."
+    },
+    "views": {
+      "title": "View",
+      "description": "Vai trò thấy view chung nào và có được sửa chúng không. View cá nhân luôn là của chính người đó.",
+      "allowEdit": "Tạo và sửa view chung",
+      "allowEditHint": "Tạo, đổi tên, đổi thứ tự và xoá view chung của bảng.",
+      "all": "Mọi view",
+      "only": "Chỉ các view này",
+      "onlyHint": "View khác bị ẩn và không truy vấn được, kể cả qua API.",
+      "listLabel": "View được thấy"
+    },
+    "records": {
+      "title": "Bản ghi",
+      "description": "Vai trò sửa và đọc bản ghi nào. Điều kiện dùng được người dùng hiện tại, nhóm của họ và bản ghi liên kết.",
+      "operations": "Thêm và xoá",
+      "ops": {
+        "add": "Thêm bản ghi",
+        "delete": "Xoá bản ghi",
+        "none": "Không"
+      },
+      "editScope": "Bản ghi được sửa",
+      "editAll": "Mọi bản ghi",
+      "editWhere": "Bản ghi khớp điều kiện",
+      "where": "Bản ghi có",
+      "editEmpty": "Chưa có điều kiện: sửa được mọi bản ghi.",
+      "readEmpty": "Chưa có điều kiện: hãy thêm một điều kiện.",
+      "readScope": "Bản ghi được xem",
+      "read": {
+        "all": "Mọi bản ghi",
+        "editable": "Chỉ bản ghi được sửa",
+        "filter": "Bản ghi khớp điều kiện"
+      },
+      "linkWarning": "Một điều kiện dùng “không có” hoặc “trống” trên trường liên kết. Chỉ bản ghi liên kết còn ngoài thùng rác mới được tính: đưa bản ghi liên kết vào thùng rác hoặc xoá hẳn sẽ đổi những bản ghi vai trò này đọc hoặc sửa được."
+    },
+    "fields": {
+      "title": "Trường",
+      "description": "Vai trò được làm gì với từng trường của bản ghi nó đọc được.",
+      "mode": "Trường",
+      "modes": {
+        "all_edit": "Sửa mọi trường",
+        "all_read": "Xem mọi trường",
+        "specify": "Chọn theo từng trường",
+        "no_perm": "Không trường nào"
+      },
+      "modeHint": "Chọn “Chọn theo từng trường” để đổi từng trường.",
+      "bulk": "Mọi trường:",
+      "bulkTo": {
+        "edit": "Sửa",
+        "read": "Xem",
+        "no_perm": "Không"
+      },
+      "caption": "Quyền theo trường trong {{name}}",
+      "columns": {
+        "field": "Trường",
+        "level": "Quyền"
+      },
+      "levelOf": "Quyền trên {{name}}",
+      "computed": "Trường tính toán: tối đa là Xem (Sửa và Chỉ tạo được lưu thành Xem).",
+      "inFilter": "Dùng trong điều kiện bản ghi: tối thiểu Xem khi lưu.",
+      "inFilterCreate": "Dùng trong điều kiện bản ghi: tối thiểu Chỉ tạo khi lưu (vai trò được thêm bản ghi).",
+      "options": "Thêm lựa chọn",
+      "optionsHint": "Trường mà vai trò được thêm lựa chọn mới khi nhập. Mặc định chỉ quản trị được.",
+      "downloads": "Tải tệp",
+      "downloadsHint": "Chỉ tải được tệp của các trường được chọn; trường khác vẫn xem được.",
+      "downloadsAll": "Tải được tệp của mọi trường đọc được. Chọn theo từng trường để giới hạn."
+    },
+    "summary": {
+      "and": "và",
+      "or": "hoặc",
+      "not": "không phải ({{condition}})",
+      "listMore_other": "{{items}} và {{count, number}} khác",
+      "records_other": "{{count, number}} bản ghi",
+      "unknownField": "(trường đã xoá)",
+      "unknownTable": "(bảng đã xoá)",
+      "noAccess": "Vai trò không thấy bảng này.",
+      "editNone": "Không sửa bản ghi nào.",
+      "editAll": "Sửa được mọi bản ghi.",
+      "editWhere": "Sửa được bản ghi có {{condition}}.",
+      "readAll": "Xem được mọi bản ghi.",
+      "readEditable": "Chỉ xem được bản ghi sửa được.",
+      "readEditableAll": "Xem được bản ghi sửa được (mọi bản ghi, vì không có điều kiện).",
+      "readWhere": "Xem được bản ghi có {{condition}}.",
+      "addDelete": "Được thêm và xoá bản ghi.",
+      "addOnly": "Được thêm bản ghi, không được xoá.",
+      "deleteOnly": "Được xoá bản ghi, không được thêm.",
+      "noAddDelete": "Không được thêm hay xoá bản ghi."
+    }
+  },
+  "access": {
+    "title": "Quyền của {{name}}",
+    "description": "Người này mở và làm được gì trong base, theo cách máy chủ giải quyết lúc này.",
+    "notPreview": "Bản tóm tắt chỉ đọc, không phải xem trước toàn ứng dụng: chỉ cho thấy kết quả của các vai trò, không phải màn hình người đó thấy.",
+    "sourceTitle": "Quyền đến từ đâu",
+    "source": {
+      "org_admin": "Chủ sở hữu hoặc quản trị viên tổ chức: toàn quyền mọi base.",
+      "base_owner": "Chủ base: toàn quyền.",
+      "workspace_admin": "Quản trị viên workspace chứa base: toàn quyền.",
+      "direct_role": "Vai trò {{roles}}, gán trực tiếp (thắng vai trò của nhóm).",
+      "group_roles": "Qua nhóm {{groups}}: {{roles}}.",
+      "none": "Không có quyền: không có vai trò trong base này, kể cả qua nhóm."
+    },
+    "baseRule": "Quyền chung",
+    "allowed": "{{what}}: có",
+    "denied": "{{what}}: không",
+    "tables": "Bảng",
+    "allTables": "Toàn quyền: mọi bảng, bản ghi, trường và cấu trúc.",
+    "operations": "Bản ghi",
+    "readScope": "Xem",
+    "scopes": {
+      "all": "Mọi bản ghi",
+      "editable": "Chỉ bản ghi sửa được",
+      "filter": "Bản ghi khớp điều kiện"
+    },
+    "records": "Hiện có",
+    "counts": "Xem {{readable, number}} · sửa {{editable, number}}",
+    "notCounted": "Không đếm (chỉ đếm 20 bảng đầu)",
+    "countTimeout": "Đếm quá lâu",
+    "hidden": "Trường bị ẩn",
+    "readOnly": "Trường chỉ xem",
+    "none": "Không có",
+    "noAccessTables": "Không truy cập: {{names}}",
+    "dashboards": "Dashboard",
+    "allDashboards": "Mọi dashboard của base.",
+    "noDashboards": "Không có dashboard nào.",
+    "noAccessDashboards": "Không truy cập: {{names}}"
+  }
+}

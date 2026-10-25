@@ -1,0 +1,177 @@
+{
+  "page": {
+    "title": "API token",
+    "subtitle": "Cho script và tích hợp gọi API của Cellhive thay bạn, chỉ với quyền bạn chọn.",
+    "back": "Về {{name}}",
+    "loading": "Đang tải…",
+    "close": "Đóng",
+    "cancel": "Huỷ",
+    "loadMore": "Tải thêm",
+    "tabs": "Các mục API token",
+    "tab": {
+      "mine": "Của tôi",
+      "all": "Tất cả token",
+      "policy": "Chính sách"
+    }
+  },
+  "list": {
+    "label": "API token",
+    "never": "Chưa dùng",
+    "noExpiry": "Không hết hạn",
+    "allBases": "Mọi base của bạn",
+    "unknownBase": "Một base bạn không mở được",
+    "expires": "Hết hạn {{date}}",
+    "expired": "Đã hết hạn {{date}}",
+    "revokedOn": "Đã thu hồi {{date}}",
+    "lastUsed": "Lần dùng cuối: {{value}}",
+    "owner": "Chủ token: {{name}}",
+    "scopes": "Phạm vi",
+    "bases": "Base",
+    "status": {
+      "active": "Đang dùng",
+      "revoked": "Đã thu hồi",
+      "expired": "Đã hết hạn"
+    },
+    "warning": {
+      "expiresSoon": "Hết hạn trong chưa đầy 7 ngày",
+      "expired": "Đã hết hạn: request dùng token này bị từ chối"
+    },
+    "rename": "Đổi tên",
+    "renameLabel": "Đổi tên {{name}}",
+    "revoke": "Thu hồi",
+    "revokeLabel": "Thu hồi {{name}}"
+  },
+  "mine": {
+    "title": "Token của bạn",
+    "intro": "Token hành động thay bạn trong tổ chức này: không bao giờ làm được nhiều hơn bạn, và chỉ trong phạm vi đã chọn.",
+    "create": "Token mới",
+    "empty": "Bạn chưa có API token nào trong tổ chức này.",
+    "disabled": "Tổ chức đã tắt API token: không tạo được token mới và các token hiện có không dùng được. Hãy liên hệ quản trị viên tổ chức."
+  },
+  "all": {
+    "title": "Token của tổ chức",
+    "intro": "Token của mọi thành viên. Không bao giờ hiện giá trị; thu hồi làm token ngừng ngay.",
+    "member": "Thành viên",
+    "anyMember": "Mọi thành viên",
+    "status": "Trạng thái",
+    "anyStatus": "Mọi trạng thái",
+    "empty": "Không có token nào khớp."
+  },
+  "scopes": {
+    "records": {
+      "read": "Đọc bản ghi",
+      "write": "Sửa bản ghi"
+    },
+    "schema": {
+      "read": "Đọc cấu trúc",
+      "write": "Sửa cấu trúc"
+    },
+    "automations": {
+      "read": "Đọc automation",
+      "write": "Sửa automation"
+    }
+  },
+  "create": {
+    "title": "API token mới",
+    "description": "Token chỉ hiện một lần sau khi tạo.",
+    "name": "Tên",
+    "nameHint": "Thứ gì dùng token, ví dụ \"Xuất dữ liệu CI\".",
+    "access": "Quyền truy cập",
+    "accessHint": "Chọn một mẫu rồi điều chỉnh. Quyền ghi không bao gồm quyền đọc.",
+    "preset": {
+      "read": "Đọc dữ liệu",
+      "readHint": "Đọc bản ghi và cấu trúc các bảng.",
+      "readWrite": "Đọc/ghi dữ liệu",
+      "readWriteHint": "Đọc, tạo, sửa và xoá bản ghi.",
+      "schema": "Quản trị schema",
+      "schemaHint": "Tạo và sửa bảng, trường, view; đọc bản ghi.",
+      "automation": "Automation",
+      "automationHint": "Đọc và sửa automation; đọc được giá trị bản ghi (xem trước, gửi thử, chi tiết lần chạy)."
+    },
+    "groups": {
+      "records": "Bản ghi",
+      "recordsHint": "Các dòng của bảng, tệp, nhập và xuất dữ liệu.",
+      "schema": "Cấu trúc",
+      "schemaHint": "Workspace, base, bảng, trường và view.",
+      "automations": "Automation",
+      "automationsHint": "Automation và các lần chạy."
+    },
+    "read": "Đọc",
+    "write": "Ghi",
+    "bases": "Base",
+    "allBases": "Mọi base tôi mở được",
+    "someBases": "Chỉ các base này",
+    "basesLegend": "Base của token",
+    "noBases": "Bạn chưa mở được base nào.",
+    "expiry": "Thời hạn",
+    "expiryChoice": {
+      "7": "7 ngày",
+      "30": "30 ngày",
+      "90": "90 ngày",
+      "365": "1 năm",
+      "custom": "Chọn ngày",
+      "none": "Không hết hạn"
+    },
+    "customDate": "Hết hạn vào cuối ngày",
+    "tooLong": "Không được phép: tổ chức giới hạn token tối đa {{days}} ngày.",
+    "required": "Không được phép: tổ chức yêu cầu token phải có hạn.",
+    "noneWarning": "Token không hết hạn sẽ dùng được tới khi có người thu hồi. Nên đặt thời hạn và tạo token mới khi hết hạn.",
+    "expiresOn": "Hết hạn {{date}}",
+    "submit": "Tạo token",
+    "errors": {
+      "nameRequired": "Hãy nhập tên.",
+      "nameInvalid": "Tối đa 100 ký tự.",
+      "scopesRequired": "Hãy chọn ít nhất một phạm vi.",
+      "basesRequired": "Hãy chọn ít nhất một base.",
+      "expiryRequired": "Hãy chọn ngày.",
+      "expiryInvalid": "Hãy chọn ngày từ {{min}} đến {{max}}."
+    }
+  },
+  "reveal": {
+    "title": "Sao chép token mới",
+    "description": "Đã tạo “{{name}}”.",
+    "warningTitle": "Đây là lần duy nhất bạn xem được token",
+    "warning": "Cellhive chỉ lưu dấu vân tay của token. Nếu làm mất, hãy thu hồi và tạo token mới.",
+    "label": "Token",
+    "example": "Request mẫu",
+    "exampleHint": "Gửi token trong header Authorization. Đừng để token trong kho mã nguồn hay log.",
+    "confirm": "Tôi đã lưu token ở nơi an toàn",
+    "nag": "Hãy xác nhận đã lưu token trước khi đóng.",
+    "done": "Xong"
+  },
+  "copy": {
+    "action": "Sao chép",
+    "done": "Đã sao chép",
+    "label": "Sao chép {{label}}",
+    "announce": "Đã sao chép {{label}} vào bộ nhớ tạm."
+  },
+  "rename": {
+    "title": "Đổi tên token",
+    "save": "Lưu"
+  },
+  "revoke": {
+    "title": "Thu hồi “{{name}}”?",
+    "description": "Tích hợp và script dùng token này sẽ ngừng hoạt động ngay. Không hoàn tác được.",
+    "descriptionOther": "Tích hợp và script của {{owner}} dùng token này sẽ ngừng hoạt động ngay. Không hoàn tác được.",
+    "confirm": "Thu hồi token"
+  },
+  "policy": {
+    "title": "Chính sách",
+    "intro": "Áp dụng cho mọi thành viên của tổ chức.",
+    "enabled": "Cho phép API token",
+    "enabledHint": "Khi tắt, không tạo được token và mọi token hiện có ngừng hoạt động cho tới khi bật lại. Token không bị thu hồi.",
+    "offWarning": "Lưu sẽ tắt mọi API token của tổ chức: các tích hợp dùng chúng ngừng ngay.",
+    "lifetime": "Thời hạn tối đa của token mới",
+    "noLimit": "Không giới hạn (token có thể không hết hạn)",
+    "limit": "Tối đa",
+    "days": "ngày",
+    "lifetimeHint": "Token hiện có giữ nguyên thời hạn.",
+    "lifetimeInvalid": "Hãy nhập số nguyên từ 1 đến 3650.",
+    "save": "Lưu chính sách",
+    "saved": "Đã lưu chính sách."
+  },
+  "toast": {
+    "renamed": "Đã đổi tên token.",
+    "revoked": "Đã thu hồi “{{name}}”."
+  }
+}

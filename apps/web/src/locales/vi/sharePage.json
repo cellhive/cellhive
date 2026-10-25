@@ -1,0 +1,84 @@
+{
+  "loading": "Đang mở link chia sẻ…",
+  "status": {
+    "notFound": {
+      "title": "Không tìm thấy link",
+      "description": "Link này không tồn tại. Hãy kiểm tra đã sao chép đủ link chưa, hoặc hỏi lại người đã chia sẻ."
+    },
+    "gone": {
+      "title": "Link không còn hiệu lực",
+      "description": "Link đã bị tắt, hết hạn hoặc được thay bằng link mới. Hãy xin người đã chia sẻ một link mới."
+    },
+    "rateLimited": {
+      "title": "Quá nhiều yêu cầu",
+      "description": "Vui lòng đợi một chút rồi thử lại."
+    },
+    "error": {
+      "title": "Không mở được link",
+      "description": "Hãy kiểm tra kết nối rồi thử lại."
+    },
+    "retry": "Thử lại"
+  },
+  "password": {
+    "title": "Link được bảo vệ",
+    "description": "Nhập mật khẩu bạn nhận được cùng link.",
+    "label": "Mật khẩu",
+    "submit": "Mở",
+    "submitting": "Đang kiểm tra…",
+    "required": "Hãy nhập mật khẩu.",
+    "invalid": "Sai mật khẩu. Hãy thử lại.",
+    "locked": "Nhập sai mật khẩu quá nhiều lần."
+  },
+  "view": {
+    "kind": {
+      "grid": "View được chia sẻ",
+      "kanban": "Bảng được chia sẻ"
+    },
+    "records_one": "{{formattedCount}} bản ghi",
+    "records_other": "{{formattedCount}} bản ghi",
+    "recordsEstimated": "Khoảng {{formattedCount}} bản ghi",
+    "refresh": "Làm mới",
+    "updated": "Cập nhật lúc {{time}}",
+    "readOnly": "Chỉ đọc: link này không cho phép thay đổi.",
+    "empty": "Không có bản ghi nào.",
+    "loadFailed": "Không tải được một số bản ghi.",
+    "retry": "Thử lại",
+    "copyOff": "Link này không cho phép sao chép.",
+    "tools": "Công cụ của view"
+  },
+  "group": {
+    "empty": "(Trống)",
+    "header": "{{field}}: {{value}} ({{count, number}})"
+  },
+  "cards": {
+    "loading": "Đang tải…",
+    "untitled": "Chưa đặt tên",
+    "list": "Bản ghi",
+    "viewFiles_one": "{{field}}: xem {{count, number}} tệp",
+    "viewFiles_other": "{{field}}: xem {{count, number}} tệp"
+  },
+  "board": {
+    "label": "Bảng, nhóm theo {{field}}",
+    "noValue": "Chưa phân loại",
+    "noGroup": "Bảng này không có trường nhóm mà link hiển thị: mọi thẻ được liệt kê chung.",
+    "all": "Mọi thẻ",
+    "column": "{{name}}, {{count, number}} thẻ",
+    "empty": "Không có thẻ",
+    "shown": "Đang hiện {{shown}}/{{count, number}}",
+    "loadMore": "Tải thêm thẻ",
+    "loading": "Đang tải thẻ…"
+  },
+  "record": {
+    "title": "Chi tiết bản ghi",
+    "close": "Đóng",
+    "loading": "Đang tải bản ghi…",
+    "gone": "Bản ghi này không còn trong view được chia sẻ.",
+    "failed": "Không tải được bản ghi."
+  },
+  "export": {
+    "button": "Tải xuống",
+    "csv": "CSV",
+    "xlsx": "Excel (XLSX)",
+    "frame": "Tải view được chia sẻ"
+  }
+}

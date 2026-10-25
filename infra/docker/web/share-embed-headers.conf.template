@@ -1,0 +1,11 @@
+# Headers of an embedded share page `/s/{token}?embed=1` (T809) that do not
+# depend on its link: those of share-page-headers.conf.template without
+# Content-Security-Policy and X-Frame-Options, which the API answers per
+# link (`location = /_share/embed` in default.conf.template).
+# Must match SHARE_EMBED_PAGE_HEADERS in apps/web/security-headers.ts; a
+# unit test compares them.
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "no-referrer" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header X-Robots-Tag "noindex, nofollow" always;

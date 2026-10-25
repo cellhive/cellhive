@@ -1,0 +1,418 @@
+{
+  "nav": {
+    "label": "Base settings",
+    "title": "Base settings",
+    "items": {
+      "general": "General",
+      "members": "Members",
+      "roles": "Roles",
+      "shareLinks": "Share links",
+      "webhooks": "Webhooks",
+      "audit": "Audit log"
+    }
+  },
+  "page": {
+    "back": "Back to {{name}}",
+    "close": "Close",
+    "cancel": "Cancel"
+  },
+  "general": {
+    "title": "General",
+    "subtitle": "Where {{base}} is managed.",
+    "entries": {
+      "members": {
+        "title": "Members",
+        "description": "Who can open the base, and with which role."
+      },
+      "roles": {
+        "title": "Roles",
+        "description": "The built-in roles and your own, and who holds them."
+      },
+      "shareLinks": {
+        "title": "Share links",
+        "description": "Links to views and forms of the base."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "URLs other systems call to start automations."
+      },
+      "automations": {
+        "title": "Automations",
+        "description": "Rules that run when records change or on a schedule."
+      },
+      "trash": {
+        "title": "Trash",
+        "description": "Deleted tables, restored within 30 days."
+      },
+      "audit": {
+        "title": "Audit log",
+        "description": "Who changed what in the base, and when."
+      }
+    }
+  },
+  "roles": {
+    "title": "Roles",
+    "subtitle": "What people and groups can see and do in {{base}}. Each one holds a single role here.",
+    "note": "A role does nothing until it is given to people or groups.",
+    "toMembers": "Give roles on the Members page",
+    "caption": "Roles of the base",
+    "columns": {
+      "role": "Role",
+      "assigned": "Assigned to",
+      "actions": "Actions"
+    },
+    "builtIn": "Built-in",
+    "system": {
+      "system_admin": {
+        "name": "Admin",
+        "description": "Full access: data, tables, views, automations, roles and sharing. Cannot be changed or deleted."
+      },
+      "system_editor": {
+        "name": "Editor",
+        "description": "Adds and edits records. Can be narrowed, never widened beyond editing data."
+      },
+      "system_reader": {
+        "name": "Reader",
+        "description": "Reads records only: never adds, edits or deletes."
+      }
+    },
+    "nobody": "Not assigned",
+    "people_one": "{{count, number}} person",
+    "people_other": "{{count, number}} people",
+    "groups_one": "{{count, number}} group",
+    "groups_other": "{{count, number}} groups",
+    "namesMore_one": "{{names}} and {{count, number}} more",
+    "namesMore_other": "{{names}} and {{count, number}} more",
+    "name": "Name",
+    "nameTaken": "A role of this base already has this name.",
+    "create": {
+      "action": "New role",
+      "title": "New role",
+      "description": "It starts with no access to any table: give it permissions, then give it to people or groups.",
+      "submit": "Create role"
+    },
+    "rename": {
+      "action": "Rename",
+      "label": "Rename {{name}}",
+      "title": "Rename role",
+      "submit": "Rename"
+    },
+    "delete": {
+      "action": "Delete",
+      "label": "Delete {{name}}",
+      "title": "Delete the role “{{name}}”?",
+      "description": "Nobody holds it. Deleting cannot be undone.",
+      "confirm": "Delete role"
+    },
+    "inUse": {
+      "title": "“{{name}}” is still assigned",
+      "description": "Give these people and groups another role, or remove their access, before deleting it:",
+      "listLabel": "Who holds {{name}}"
+    },
+    "created": "Role “{{name}}” created.",
+    "renamed": "Role renamed to “{{name}}”.",
+    "deleted": "Role “{{name}}” deleted.",
+    "permissions": {
+      "action": "Permissions",
+      "label": "Permissions of {{name}}"
+    }
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "People and groups of the organization, and their role in {{base}}.",
+    "rules": {
+      "title": "How access is decided",
+      "direct": "A role given to a person directly wins over the roles of their groups.",
+      "groups": "Someone in several groups with roles here gets everything any of these roles allows.",
+      "full": "Organization owners and admins, workspace admins and the base owner always have full access. That is not changed here."
+    },
+    "search": {
+      "label": "Search people and groups",
+      "placeholder": "Name or email"
+    },
+    "caption": "People and groups with their role",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "role": "Role",
+      "access": "Access"
+    },
+    "type": {
+      "user": "Person",
+      "group": "Group"
+    },
+    "roleOf": "Role of {{name}}",
+    "noAccess": "No access",
+    "saving": "Saving…",
+    "fullAccess": {
+      "org_owner": "Full access · organization owner",
+      "org_admin": "Full access · organization admin",
+      "base_owner": "Full access · base owner",
+      "workspace_admin": "Full access · workspace admin"
+    },
+    "empty": "The organization has no members or groups yet.",
+    "noMatch": "No person or group matches “{{q}}”.",
+    "more": "Load more",
+    "assigned": "{{name}} now has the role {{role}}.",
+    "removed": "{{name}} no longer has a role in this base.",
+    "remove": {
+      "title": "Remove the access of {{name}}?",
+      "user": "{{name}} can no longer open {{base}}, unless one of their groups has a role here.",
+      "group": "Members of {{name}} lose the access this group gives to {{base}}, unless they hold a role of their own or through another group.",
+      "confirm": "Remove access"
+    },
+    "viewAccess": "View access",
+    "viewAccessOf": "View the access of {{name}}"
+  },
+  "editor": {
+    "title": "Role",
+    "backToRoles": "All roles",
+    "roleNav": "Roles of the base",
+    "missing": "This role does not exist any more.",
+    "assignedTo": "Given to {{names}}",
+    "ceiling": {
+      "system_admin": "The Admin role has full access and cannot be changed. Give a narrower role to people who should not manage the base.",
+      "system_editor": "Built-in Editor role: it can be narrowed, never widened beyond editing data. “Manage” is off: editors never change tables, fields or views of a table.",
+      "system_reader": "Built-in Reader role: it reads only. “Manage”, “Edit”, adding and deleting records, and editing fields are off."
+    },
+    "adjusted": {
+      "title_one": "The server adjusted {{count, number}} permission when saving",
+      "title_other": "The server adjusted {{count, number}} permissions when saving"
+    },
+    "saved": "Permissions of “{{name}}” saved.",
+    "savedAdjusted_one": "Permissions of “{{name}}” saved, {{count, number}} adjusted: see why next to it.",
+    "savedAdjusted_other": "Permissions of “{{name}}” saved, {{count, number}} adjusted: see why next to each.",
+    "unsaved": {
+      "label": "Unsaved changes",
+      "blocked_one": "{{count, number}} table needs a fix before saving.",
+      "blocked_other": "{{count, number}} tables need a fix before saving.",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "leave": {
+      "title": "Leave without saving?",
+      "description": "The changes to this role are not saved. They are lost if you leave.",
+      "confirm": "Leave without saving"
+    },
+    "reasons": {
+      "computed_field_max_read": "{{field}} was lowered to {{to}}: computed fields are at most Read.",
+      "filter_field_min_read": "{{field}} was raised to {{to}} because a record condition uses it.",
+      "filter_field_min_create": "{{field}} was raised to {{to}} because a record condition uses it and the role can add records (new records must still match).",
+      "operations_require_edit": "{{table}}: adding and deleting records were removed ({{from}}): they need Edit or Manage.",
+      "reader_ceiling": "{{table}} was lowered to {{to}}: the Reader role only reads.",
+      "editor_ceiling": "{{table}} was lowered to {{to}}: the Editor role never goes above Edit."
+    },
+    "tableLevels": {
+      "manage": "Manage",
+      "edit": "Edit",
+      "read_only": "Read only",
+      "no_perm": "No access"
+    },
+    "fieldLevels": {
+      "edit": "Edit",
+      "create": "Create only",
+      "read": "Read",
+      "no_perm": "None"
+    },
+    "blocked": {
+      "admin_read_only": "The Admin role cannot be changed.",
+      "editor_ceiling": "Not for the Editor role: it never goes above Edit.",
+      "reader_ceiling": "Not for the Reader role: it only reads.",
+      "table_read_only": "The table is Read only: give it Edit or Manage first.",
+      "table_no_access": "The role has no access to this table."
+    },
+    "issues": {
+      "filter_invalid": "A record condition is not valid.",
+      "filter_incomplete": "A record condition misses a value: complete it or remove it.",
+      "read_filter_missing": "“Records matching conditions” needs at least one condition."
+    },
+    "baseRule": {
+      "title": "General permissions",
+      "description": "What the role may do with the data it reads, in every table.",
+      "copy": {
+        "label": "Copy",
+        "hint": "Copy cells and records to the clipboard. Off: copying from the grid is blocked."
+      },
+      "download": {
+        "label": "Download and export",
+        "hint": "Export to CSV/XLSX, print, duplicate the base, download files."
+      },
+      "share_link": {
+        "label": "Create share links",
+        "hint": "Share views and forms by link. Anyone with the link sees what this role reads."
+      }
+    },
+    "matrix": {
+      "title": "Tables",
+      "hint": "A table left at “No access” is hidden from the role: its name never shows and links to it show only a lock.",
+      "hintSystem": "Tables created later get this role's default level.",
+      "caption": "Access of the role to each table",
+      "empty": "The base has no table yet.",
+      "columns": {
+        "table": "Table",
+        "level": "Access",
+        "details": "Details"
+      },
+      "levelOf": "Access to {{name}}",
+      "details": "Details",
+      "detailsOf": "Details of {{name}}: views, records and fields",
+      "fieldsAdjusted_one": "{{count, number}} field adjusted when saving: see Details.",
+      "fieldsAdjusted_other": "{{count, number}} fields adjusted when saving: see Details.",
+      "summary": {
+        "noAccess": "Hidden from the role",
+        "allRecords": "Every record",
+        "someRecords": "Some records",
+        "hiddenFields_one": "{{count, number}} hidden field",
+        "hiddenFields_other": "{{count, number}} hidden fields",
+        "views_one": "{{count, number}} view",
+        "views_other": "{{count, number}} views"
+      }
+    },
+    "dashboards": {
+      "title": "Dashboards",
+      "hint": "A dashboard left at “No access” is hidden from the role. New dashboards start at “No access” for this role: give access here.",
+      "hintSystem": "Built-in role: it views every dashboard of the base, including new ones. This cannot be changed here.",
+      "hintAdmin": "The Admin role views and edits every dashboard of the base.",
+      "caption": "Access of the role to each dashboard",
+      "empty": "The base has no dashboard yet.",
+      "levelOf": "Access to the dashboard {{name}}",
+      "levels": {
+        "read_only": "View",
+        "no_perm": "No access"
+      },
+      "readAll": "View all",
+      "noneAll": "No access to any",
+      "widgets": "Widgets still apply this role's table, field and record permissions: a widget over data the role cannot read shows “No permission”."
+    },
+    "detail": {
+      "back": "All tables",
+      "noAccess": "The role has no access to this table. Choose a level above to set views, records and fields."
+    },
+    "views": {
+      "title": "Views",
+      "description": "Which shared views the role sees, and whether it may change them. Personal views are always the person's own.",
+      "allowEdit": "Create and edit shared views",
+      "allowEditHint": "Create, rename, reorder and delete the table's shared views.",
+      "all": "Every view",
+      "only": "Only these views",
+      "onlyHint": "Other views are hidden and cannot be queried, also through the API.",
+      "listLabel": "Visible views"
+    },
+    "records": {
+      "title": "Records",
+      "description": "Which records the role edits and reads. Conditions can use the current user, their groups and linked records.",
+      "operations": "Adding and deleting",
+      "ops": {
+        "add": "Add records",
+        "delete": "Delete records",
+        "none": "None"
+      },
+      "editScope": "Records it can edit",
+      "editAll": "Every record",
+      "editWhere": "Records matching conditions",
+      "where": "Records where",
+      "editEmpty": "No condition yet: every record can be edited.",
+      "readEmpty": "No condition yet: add one.",
+      "readScope": "Records it can read",
+      "read": {
+        "all": "Every record",
+        "editable": "Only the records it can edit",
+        "filter": "Records matching conditions"
+      },
+      "linkWarning": "A condition uses “has none of” or “is empty” on a link field. Only linked records that are not in the trash count: moving a linked record to the trash or deleting it changes which records this role reads or edits."
+    },
+    "fields": {
+      "title": "Fields",
+      "description": "What the role may do with each field of the records it reads.",
+      "mode": "Fields",
+      "modes": {
+        "all_edit": "Edit every field",
+        "all_read": "Read every field",
+        "specify": "Choose per field",
+        "no_perm": "No field"
+      },
+      "modeHint": "Choose “Choose per field” to change fields one by one.",
+      "bulk": "Every field:",
+      "bulkTo": {
+        "edit": "Edit",
+        "read": "Read",
+        "no_perm": "None"
+      },
+      "caption": "Field permissions in {{name}}",
+      "columns": {
+        "field": "Field",
+        "level": "Permission"
+      },
+      "levelOf": "Permission on {{name}}",
+      "computed": "Computed: at most Read (Edit and Create only are saved as Read).",
+      "inFilter": "Used in a record condition: at least Read when saved.",
+      "inFilterCreate": "Used in a record condition: at least Create only when saved (the role adds records).",
+      "options": "Add options",
+      "optionsHint": "Fields where the role may add new options while typing. Off for everyone but admins by default.",
+      "downloads": "Download files",
+      "downloadsHint": "Only files of the checked fields can be downloaded; the others can still be viewed.",
+      "downloadsAll": "Files of every readable field can be downloaded. Choose per field to limit it."
+    },
+    "summary": {
+      "and": "and",
+      "or": "or",
+      "not": "not ({{condition}})",
+      "listMore_one": "{{items}} and {{count, number}} more",
+      "listMore_other": "{{items}} and {{count, number}} more",
+      "records_one": "{{count, number}} record",
+      "records_other": "{{count, number}} records",
+      "unknownField": "(deleted field)",
+      "unknownTable": "(deleted table)",
+      "noAccess": "The role does not see this table.",
+      "editNone": "Edits no record.",
+      "editAll": "Edits every record.",
+      "editWhere": "Edits records where {{condition}}.",
+      "readAll": "Reads every record.",
+      "readEditable": "Reads only the records it can edit.",
+      "readEditableAll": "Reads the records it can edit (every record, without a condition).",
+      "readWhere": "Reads records where {{condition}}.",
+      "addDelete": "Can add and delete records.",
+      "addOnly": "Can add records, not delete them.",
+      "deleteOnly": "Can delete records, not add them.",
+      "noAddDelete": "Cannot add or delete records."
+    }
+  },
+  "access": {
+    "title": "Access of {{name}}",
+    "description": "What this person can open and do in the base, as the server resolves it now.",
+    "notPreview": "Read-only summary, not a preview of the whole app: it shows the result of their roles, not the screens they see.",
+    "sourceTitle": "Where it comes from",
+    "source": {
+      "org_admin": "Organization owner or admin: full access to every base.",
+      "base_owner": "Owner of the base: full access.",
+      "workspace_admin": "Admin of the base's workspace: full access.",
+      "direct_role": "The role {{roles}}, given to them directly (it wins over group roles).",
+      "group_roles": "Through their groups {{groups}}: {{roles}}.",
+      "none": "No access: no role in this base, directly or through a group."
+    },
+    "baseRule": "General permissions",
+    "allowed": "{{what}}: yes",
+    "denied": "{{what}}: no",
+    "tables": "Tables",
+    "allTables": "Full access: every table, record and field, and the schema.",
+    "operations": "Records",
+    "readScope": "Reads",
+    "scopes": {
+      "all": "Every record",
+      "editable": "Only the records they can edit",
+      "filter": "Records matching conditions"
+    },
+    "records": "Records now",
+    "counts": "Reads {{readable, number}} · edits {{editable, number}}",
+    "notCounted": "Not counted (only the first 20 tables are)",
+    "countTimeout": "Counting took too long",
+    "hidden": "Hidden fields",
+    "readOnly": "Read-only fields",
+    "none": "None",
+    "noAccessTables": "No access: {{names}}",
+    "dashboards": "Dashboards",
+    "allDashboards": "Every dashboard of the base.",
+    "noDashboards": "No dashboard.",
+    "noAccessDashboards": "No access: {{names}}"
+  }
+}

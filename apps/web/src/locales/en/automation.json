@@ -1,0 +1,192 @@
+{
+  "page": {
+    "title": "Automations",
+    "breadcrumb": "Location",
+    "summary": "{{base}} · {{count, number}}",
+    "create": "Create automation",
+    "search": "Search automations",
+    "statusLabel": "Filter by status",
+    "status": {
+      "all": "All",
+      "on": "On",
+      "off": "Off",
+      "errors": "Errors in 24 h"
+    },
+    "mobileNote": "Edit automations on a screen at least 768 px wide.",
+    "loading": "Loading automations",
+    "caption": "Automations of {{base}}",
+    "runs": "Run history"
+  },
+  "column": {
+    "enabled": "On",
+    "automation": "Automation",
+    "runAs": "Runs as",
+    "lastRun": "Last run",
+    "errors": "Errors 24h",
+    "actions": "Actions"
+  },
+  "row": {
+    "switch": "Turn on {{name}}",
+    "menu": "Actions for {{name}}",
+    "neverRun": "Never run",
+    "takeOver": "Take over",
+    "delete": "Delete",
+    "runAsYou": "{{name}} (you)",
+    "runs": "Run history",
+    "errorsLink_one": "{{count, number}} failed run in the last 24 hours: view",
+    "errorsLink_other": "{{count, number}} failed runs in the last 24 hours: view",
+    "duplicate": "Duplicate"
+  },
+  "runStatus": {
+    "queued": "Queued",
+    "running": "Running",
+    "waiting": "Waiting",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "skipped": "Skipped",
+    "cancelled": "Cancelled"
+  },
+  "disabled": {
+    "circuit_breaker": {
+      "title": "Turned off automatically: 50 runs in a row failed, or it started more than 100 times within a minute.",
+      "short": "Turned off: too many runs failed",
+      "detail": "Check what went wrong, then turn it back on.",
+      "action": "Turn back on"
+    },
+    "run_as_lost_access": {
+      "title": "Turned off automatically: {{name}} (who it runs as) no longer has the permissions it needs.",
+      "short": "Turned off: the person it runs as lost access",
+      "detail": "It will run with the permissions of whoever takes it over.",
+      "action": "Take over"
+    },
+    "toast": {
+      "circuit_breaker": "“{{name}}” just turned off: too many runs failed.",
+      "run_as_lost_access": "“{{name}}” just turned off: the person it runs as lost access.",
+      "view": "View"
+    },
+    "viewRuns": "View run history",
+    "viewDetails": "View details"
+  },
+  "empty": {
+    "title": "No automations in this base yet",
+    "description": "Automations do repetitive work for you: email when an order is paid, a reminder before a contract ends, a Telegram message when a ticket turns urgent.",
+    "noMatch": "No automations match the search or filter.",
+    "clear": "Clear filters"
+  },
+  "forbidden": {
+    "title": "You don’t manage any automation in this base",
+    "description": "Creating, editing, turning on or off an automation needs base admin rights, or manage rights on the table that triggers it."
+  },
+  "create": {
+    "title": "Create automation",
+    "name": "Name",
+    "nameRequired": "Enter a name.",
+    "trigger": "Starts when",
+    "unavailable": {
+      "schedule": "Only base admins can create scheduled automations.",
+      "webhook": "Only base admins can create automations started by a webhook."
+    },
+    "note": "Next you set up its trigger and steps. It is created, off, when you first save it.",
+    "cancel": "Cancel",
+    "continue": "Continue"
+  },
+  "enable": {
+    "title": "Turn on automation?",
+    "runsAs": "“{{name}}” runs with the permissions of <strong>{{user}}</strong>.",
+    "warning": "Once on, it will run with your permissions instead of {{user}}’s.",
+    "detail": "Every step that reads, writes or sends uses your current permissions in base {{base}}.",
+    "confirm": "Turn on and run with my permissions",
+    "cancel": "Cancel"
+  },
+  "takeOver": {
+    "title": "Take over “{{name}}”?",
+    "lost": "It was turned off because {{user}} no longer has the permissions it needs.",
+    "runsAs": "It runs with the permissions of {{user}}.",
+    "scope": "Permissions used when it runs",
+    "reads": "Read: {{tables}}",
+    "writes": "Write: {{tables}}",
+    "nothing": "nothing",
+    "writeFields": "{{table}} (fields {{fields}})",
+    "add": "add records",
+    "delete": "delete records",
+    "enable": "Turn it back on right after",
+    "confirm": "Take over",
+    "cancel": "Cancel",
+    "done": "You now manage “{{name}}”."
+  },
+  "delete": {
+    "title": "Delete “{{name}}”?",
+    "body": "The automation and its run history will be deleted. Waiting runs are cancelled. This cannot be undone.",
+    "confirm": "Delete automation",
+    "cancel": "Cancel",
+    "done": "Deleted “{{name}}”."
+  },
+  "toast": {
+    "enabled": "“{{name}}” is on.",
+    "disabled": "“{{name}}” is off.",
+    "conflict": "“{{name}}” was changed elsewhere meanwhile. The list is up to date now; try again.",
+    "gone": "“{{name}}” no longer exists or you can no longer manage it."
+  },
+  "trigger": {
+    "type": {
+      "record.created": "When a record is created",
+      "record.updated": "When a record is updated",
+      "record.deleted": "When a record is deleted",
+      "record.matches": "When a record starts matching conditions",
+      "form.submitted": "When a form is submitted",
+      "schedule": "On a schedule",
+      "record.date_reached": "When a date in a record is reached",
+      "button.clicked": "When a button is clicked",
+      "webhook.received": "When a webhook request is received"
+    },
+    "watching": "watching {{fields}}",
+    "watchingMore": "watching {{fields}} +{{count, number}}",
+    "dateReached": "{{offset}} {{field}}",
+    "offset": {
+      "on": "on",
+      "days_before_one": "{{count, number}} day before",
+      "days_before_other": "{{count, number}} days before",
+      "days_after_one": "{{count, number}} day after",
+      "days_after_other": "{{count, number}} days after",
+      "hours_before_one": "{{count, number}} hour before",
+      "hours_before_other": "{{count, number}} hours before",
+      "hours_after_one": "{{count, number}} hour after",
+      "hours_after_other": "{{count, number}} hours after",
+      "minutes_before_one": "{{count, number}} minute before",
+      "minutes_before_other": "{{count, number}} minutes before",
+      "minutes_after_one": "{{count, number}} minute after",
+      "minutes_after_other": "{{count, number}} minutes after"
+    },
+    "cron": {
+      "minutes_one": "Every minute",
+      "minutes_other": "Every {{count, number}} minutes",
+      "hourly": "Every hour at :{{minute}}",
+      "daily": "Every day, {{time}}",
+      "weekdays": "Monday to Friday, {{time}}",
+      "weekly": "Every {{day}}, {{time}}",
+      "monthly": "Day {{day}} of every month, {{time}}",
+      "raw": "cron {{cron}}",
+      "orgZone": "organization time zone"
+    },
+    "button": "button {{field}}",
+    "minPermission": {
+      "edit": "people who can edit",
+      "read": "people who can view"
+    },
+    "unknownTable": "a table no longer available",
+    "unknownField": "a field no longer available",
+    "unknownForm": "a form no longer available"
+  },
+  "duplicate": {
+    "done": "«{{name}}» created. The copy is off and will run with your permissions.",
+    "failedTitle": "Could not duplicate «{{name}}»",
+    "failure": {
+      "permissions": "The copy would run with your permissions, and this automation uses tables, fields or senders you cannot use. Nothing was created.",
+      "invalid": "This automation no longer saves as it is, so no copy was made. Fix it first, then duplicate it.",
+      "forbidden": "You no longer manage this automation."
+    },
+    "openSource": "Open the automation",
+    "close": "Close",
+    "saveFirst": "Save or discard your changes first: the copy is made from the saved version."
+  }
+}

@@ -1,0 +1,390 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* Shared components live in packages/ui; scan them for utilities too. */
+@source '../../../../packages/ui/src';
+
+/*
+ * Tailwind reads the design tokens (FRONTEND §9.3). The default palette,
+ * radii, shadows, fonts and sizes are removed so that a hard-coded color
+ * such as `bg-red-500` does not exist.
+ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+}
+
+@theme inline {
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  /* Borders of form controls: ≥ 3:1 against the surfaces (WCAG 1.4.11, T322b). */
+  --color-line-control: var(--border-control);
+  --color-fg: var(--text);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-subtle: var(--text-subtle);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-overlay: var(--overlay);
+  /* Select option data colors (chips, swatches): background + text of the same hue. */
+  --color-option-0: var(--option-0-bg);
+  --color-on-option-0: var(--option-0-fg);
+  --color-option-1: var(--option-1-bg);
+  --color-on-option-1: var(--option-1-fg);
+  --color-option-2: var(--option-2-bg);
+  --color-on-option-2: var(--option-2-fg);
+  --color-option-3: var(--option-3-bg);
+  --color-on-option-3: var(--option-3-fg);
+  --color-option-4: var(--option-4-bg);
+  --color-on-option-4: var(--option-4-fg);
+  --color-option-5: var(--option-5-bg);
+  --color-on-option-5: var(--option-5-fg);
+  --color-option-6: var(--option-6-bg);
+  --color-on-option-6: var(--option-6-fg);
+  --color-option-7: var(--option-7-bg);
+  --color-on-option-7: var(--option-7-fg);
+  /* User avatars (DOM): solid color, white initials. */
+  --color-avatar-0: var(--avatar-0);
+  --color-avatar-1: var(--avatar-1);
+  --color-avatar-2: var(--avatar-2);
+  --color-avatar-3: var(--avatar-3);
+  --color-avatar-4: var(--avatar-4);
+  --color-avatar-5: var(--avatar-5);
+  --color-avatar-6: var(--avatar-6);
+  --color-avatar-7: var(--avatar-7);
+  --color-on-avatar: var(--on-avatar);
+  /* Inverse surface (selection bars). */
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
+  --color-danger-on-inverse: var(--danger-on-inverse);
+  /* File viewer (T418): the same dark stage in both themes. */
+  --color-viewer: var(--viewer-bg);
+  --color-viewer-fg: var(--viewer-fg);
+  --color-viewer-muted: var(--viewer-fg-muted);
+  --color-viewer-line: var(--viewer-line);
+  --color-viewer-control: var(--viewer-control);
+  --color-viewer-card: var(--viewer-card);
+  --color-viewer-card-line: var(--viewer-card-line);
+  --color-viewer-accent: var(--viewer-accent);
+  --color-on-viewer-accent: var(--on-viewer-accent);
+  --color-viewer-danger: var(--viewer-danger);
+
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-code);
+
+  --text-title: var(--font-size-title);
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 600;
+  --text-heading: var(--font-size-heading);
+  --text-heading--line-height: 22px;
+  --text-heading--font-weight: 600;
+  --text-body: var(--font-size-body);
+  --text-body--line-height: 20px;
+  --text-label: var(--font-size-label);
+  --text-label--line-height: 16px;
+  --text-label--font-weight: 500;
+  --text-mono: var(--font-size-mono);
+  --text-mono--line-height: 16px;
+
+  --radius-sm: var(--radius-chip);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-frame);
+
+  --shadow-popover: var(--elevation-popover);
+
+  /*
+   * Motion (T322b): overlays enter in 160 ms and leave faster (110 ms),
+   * opacity plus a small scale or slide. The reduced-motion rule below cuts
+   * every animation and transition to ~0.
+   */
+  --animate-pop-in: ob-pop-in var(--motion-enter) var(--ease-enter);
+  --animate-pop-out: ob-pop-out var(--motion-exit) var(--ease-exit) forwards;
+  --animate-sheet-in: ob-sheet-in var(--motion-sheet) var(--ease-enter);
+  --animate-sheet-out: ob-sheet-out var(--motion-exit) var(--ease-exit) forwards;
+  --animate-fade-in: ob-fade-in var(--motion-enter) var(--ease-enter);
+  --animate-fade-out: ob-fade-out var(--motion-exit) var(--ease-exit) forwards;
+
+  @keyframes ob-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(-2px);
+    }
+  }
+  @keyframes ob-pop-out {
+    to {
+      opacity: 0;
+      transform: scale(0.97) translateY(-2px);
+    }
+  }
+  @keyframes ob-sheet-in {
+    from {
+      opacity: 0.6;
+      transform: translateY(24px);
+    }
+  }
+  @keyframes ob-sheet-out {
+    to {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+  @keyframes ob-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes ob-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+@utility h-control {
+  height: var(--control-height);
+}
+
+@utility w-control {
+  width: var(--control-height);
+}
+
+@utility min-w-control {
+  min-width: var(--control-height);
+}
+
+@utility min-h-control {
+  min-height: var(--control-height);
+}
+
+@utility size-control {
+  width: var(--control-height);
+  height: var(--control-height);
+}
+
+/*
+ * iOS Safari zooms into a focused field whose text is under 16 px: on
+ * touch-sized screens every field (including plain text areas, grid
+ * editors, the type-to-edit buffer) uses 16 px (T322a). Outside any layer,
+ * so it wins over the `text-*` utilities of the fields.
+ */
+@media (max-width: 1023.98px) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@layer base {
+  html {
+    font-family: var(--font-ui);
+    background-color: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-size: var(--font-size-body);
+    line-height: 20px;
+  }
+
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-code);
+    font-size: var(--font-size-mono);
+  }
+
+  /* One visible focus indicator for every focusable element (FRONTEND §9.2). */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Native check boxes (not switches): drawn with tokens so that the box
+   * reaches 3:1 when off (`--border-control`, WCAG 1.4.11) and uses the
+   * accent when on. Still the native input: Space, forms, screen readers.
+   * Utilities (size, margin) override these base styles.
+   */
+  input[type='checkbox']:not([role='switch']) {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-chip);
+    background-color: var(--surface);
+    cursor: pointer;
+  }
+  input[type='checkbox']:not([role='switch'])::before {
+    content: '';
+    width: 9px;
+    height: 5px;
+    border-bottom: 2px solid var(--on-accent);
+    border-left: 2px solid var(--on-accent);
+    transform: translateY(-1px) rotate(-45deg) scale(0);
+  }
+  input[type='checkbox']:not([role='switch']):checked,
+  input[type='checkbox']:not([role='switch']):indeterminate {
+    border-color: var(--accent);
+    background-color: var(--accent);
+  }
+  input[type='checkbox']:not([role='switch']):checked::before {
+    transform: translateY(-1px) rotate(-45deg) scale(1);
+  }
+  input[type='checkbox']:not([role='switch']):indeterminate::before {
+    height: 0;
+    border-left: 0;
+    transform: none;
+  }
+  input[type='checkbox']:not([role='switch']):disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /*
+   * Native radios (T421b): the same tokens as the check boxes instead of the
+   * browser's blue — a 3:1 ring when off (`--border-control`), the accent
+   * ring and dot when on. Utilities (size, margin) override these.
+   */
+  input[type='radio'] {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-control);
+    border-radius: 9999px;
+    background-color: var(--surface);
+    cursor: pointer;
+  }
+  input[type='radio']::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background-color: var(--accent);
+    transform: scale(0);
+  }
+  input[type='radio']:checked {
+    border-color: var(--accent);
+  }
+  input[type='radio']:checked::before {
+    transform: scale(1);
+  }
+  input[type='radio']:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /*
+   * Native modal dialogs (packages/ui Dialog): fade and scale in from
+   * `@starting-style`, out while `display`/`overlay` stay until the end.
+   */
+  dialog[data-motion] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity var(--motion-enter) var(--ease-enter),
+      transform var(--motion-enter) var(--ease-enter),
+      overlay var(--motion-enter) allow-discrete,
+      display var(--motion-enter) allow-discrete;
+  }
+  dialog[data-motion]:not([open]) {
+    opacity: 0;
+    transform: scale(0.97);
+    transition-duration: var(--motion-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+  @starting-style {
+    dialog[data-motion][open] {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  dialog[data-motion]::backdrop {
+    transition:
+      background-color var(--motion-enter) var(--ease-enter),
+      overlay var(--motion-enter) allow-discrete,
+      display var(--motion-enter) allow-discrete;
+  }
+  dialog[data-motion]:not([open])::backdrop {
+    background-color: transparent;
+  }
+  @starting-style {
+    dialog[data-motion][open]::backdrop {
+      background-color: transparent;
+    }
+  }
+  /* Phones: dialogs marked as sheets (and drawers) rise from the bottom edge. */
+  @media (max-width: 767.98px) {
+    dialog[data-motion='sheet']:not([open]),
+    dialog[data-motion='drawer']:not([open]) {
+      transform: translateY(24px);
+    }
+    @starting-style {
+      dialog[data-motion='sheet'][open],
+      dialog[data-motion='drawer'][open] {
+        transform: translateY(24px);
+      }
+    }
+  }
+  /* From 768 px drawers slide in from the right edge. */
+  @media (min-width: 768px) {
+    dialog[data-motion='drawer']:not([open]) {
+      transform: translateX(24px);
+    }
+    @starting-style {
+      dialog[data-motion='drawer'][open] {
+        transform: translateX(24px);
+      }
+    }
+  }
+
+  /* Set for one frame while the theme changes (lib/theme/theme.ts). */
+  :root[data-theme-switching] *,
+  :root[data-theme-switching] *::before,
+  :root[data-theme-switching] *::after {
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Dragging a dashboard widget (T812, react-grid-layout → react-draggable):
+ * no text selection shows while dragging. react-draggable would inject this
+ * rule as an inline <style>, which the CSP (`style-src 'self'`) blocks; the
+ * editor renders an element with its id so it does not try, and the rule
+ * lives here instead.
+ */
+.react-draggable-transparent-selection *::selection {
+  all: inherit;
+}

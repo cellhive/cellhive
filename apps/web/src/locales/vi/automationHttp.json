@@ -1,0 +1,177 @@
+{
+  "method": {
+    "label": "Phương thức"
+  },
+  "url": {
+    "label": "URL",
+    "hint": "http hoặc https. Mỗi giá trị chèn vào được mã hoá nên không đổi được host hay thêm đường dẫn. Địa chỉ nội bộ và cổng khác 80/443 cần allowlist của tổ chức."
+  },
+  "query": {
+    "title": "Tham số query",
+    "name": "Tên tham số",
+    "value": "Giá trị tham số",
+    "add": "Thêm tham số",
+    "row": "Tham số {{number}}"
+  },
+  "headers": {
+    "title": "Header",
+    "name": "Tên header",
+    "value": "Giá trị header",
+    "add": "Thêm header",
+    "row": "Header {{number}}",
+    "invalid": "Tên header chỉ gồm chữ, số và - _ . ! # $ % & ' * + ^ ` | ~.",
+    "forbidden": "Cellhive tự đặt {{name}}: hãy bỏ header này.",
+    "duplicate": "{{name}} đã có (hoặc là header xác thực): chỉ giữ một."
+  },
+  "pairs": {
+    "count": "{{count, number}} / {{max, number}}",
+    "remove": "Bỏ {{name}}"
+  },
+  "auth": {
+    "title": "Xác thực",
+    "none": "Không",
+    "secret": "Header dùng secret",
+    "header": "Tên header",
+    "headerHint": "Giá trị của secret được gửi trong header này, vd Authorization: Bearer … hoặc X-Api-Key.",
+    "secretLabel": "Secret",
+    "secretHint": "Secret header của tổ chức dùng được trong base này. Giá trị không bao giờ hiện ở đây."
+  },
+  "body": {
+    "title": "Body",
+    "none": "Không",
+    "json": "JSON",
+    "form": "Form",
+    "text": "Văn bản",
+    "get": "Request GET không có body: chọn phương thức khác hoặc bỏ body.",
+    "jsonLabel": "Body JSON",
+    "jsonHint": "Giá trị chèn vào được escape như chuỗi JSON: đặt giá trị chữ trong ngoặc kép, vd \"name\": \"{{ … }}\".",
+    "jsonInvalid": "Đây không phải JSON hợp lệ.",
+    "jsonInvalidAt": "Đây không phải JSON hợp lệ (gần ký tự thứ {{position, number}}).",
+    "textLabel": "Body văn bản",
+    "digestKept": "Body này là danh sách bản ghi được đặt ngoài builder: giữ nguyên."
+  },
+  "form": {
+    "name": "Tên trường",
+    "value": "Giá trị trường",
+    "add": "Thêm trường",
+    "row": "Trường {{number}}"
+  },
+  "signing": {
+    "label": "Ký request",
+    "hint": "Có secret ký thì request mang header Standard Webhooks (webhook-signature) để bên nhận kiểm tra.",
+    "none": "Không ký"
+  },
+  "failOnError": {
+    "label": "Báo lỗi bước khi gặp lỗi HTTP",
+    "hint": "Tắt: phản hồi 4xx hoặc 5xx vẫn kết thúc bước thành công và các bước sau đọc được mã trạng thái. Lỗi tạm thời vẫn được thử lại."
+  },
+  "secret": {
+    "choose": "Chọn…",
+    "unknown": "Secret không còn dùng được ở đây",
+    "none": {
+      "http_header": "Chưa có secret header nào dùng được trong base này",
+      "webhook_signing": "Chưa có secret ký nào dùng được trong base này"
+    },
+    "askAdmin": "Nhờ owner hoặc admin của tổ chức thêm trong trang tích hợp của tổ chức.",
+    "addThere": "Thêm trong trang tích hợp của tổ chức.",
+    "openIntegrations": "Mở trang tích hợp"
+  },
+  "paths": {
+    "title": "Giá trị cho bước sau",
+    "hint": "Các bước sau dùng được những phần này của phản hồi qua nút \"+\". Chọn thêm từ phản hồi gửi thử, hoặc gõ đường dẫn.",
+    "inputLabel": "Đường dẫn trong phản hồi",
+    "add": "Thêm",
+    "remove": "Thôi đưa ra {{path}}",
+    "invalid": "Viết đường dẫn bắt đầu bằng body, vd body.id hoặc body.items[0].sku."
+  },
+  "test": {
+    "title": "Gửi thử",
+    "hint": "Gửi bước này đúng như đang thấy, bằng quyền của bạn, qua cùng các bước kiểm tra như lần chạy thật. Các bước trước không chạy: giá trị của chúng rỗng.",
+    "webhookSample": "Giá trị từ request webhook lấy từ request mẫu nhận lúc {{time}}.",
+    "webhookNoSample": "Webhook này chưa có request mẫu: giá trị từ request webhook sẽ rỗng. Hãy nghe request mẫu ở phần trigger trước.",
+    "noSampleSent": "Đã gửi khi chưa có request mẫu: giá trị từ request webhook rỗng.",
+    "record": "Bản ghi mẫu",
+    "loading": "Đang tải…",
+    "noMatch": "Không tìm thấy bản ghi",
+    "search": "Tìm bản ghi",
+    "send": "Gửi thử",
+    "notSaved": "Hãy lưu automation một lần để gửi thử.",
+    "incomplete": "Hãy hoàn tất bước trước (xem các lỗi ở trên).",
+    "noRecords": "Table kích hoạt chưa có bản ghi nào để thử."
+  },
+  "result": {
+    "sending": "Đang gửi tới {{host}}…",
+    "retrying": "Lần thử {{attempts, number}} / {{max, number}} không thành công: sắp thử lại…",
+    "succeeded": "Đã giao tới {{host}}",
+    "failed": "Không giao được tới {{host}}",
+    "cancelled": "Lần gửi thử đã bị huỷ.",
+    "allowlistHint": "{{host}} là địa chỉ nội bộ: owner hoặc admin của tổ chức có thể thêm vào allowlist.",
+    "askAdmin": "Hãy nhờ họ.",
+    "openAllowlist": "Mở allowlist",
+    "status": "Mã trạng thái",
+    "contentType": "Kiểu nội dung",
+    "body": "Body phản hồi",
+    "empty": "Trống",
+    "truncated": "Cắt sau 10 KB đầu.",
+    "pathsTitle": "Dùng ở bước sau",
+    "pathsHint": "Đưa một giá trị của phản hồi này vào menu \"+\" của các bước sau.",
+    "use": "Dùng",
+    "used": "Đang dùng",
+    "usePath": "Dùng {{path}} ở bước sau"
+  },
+  "error": {
+    "ssrf": {
+      "invalid_url": "URL này không gọi được (scheme, tên đăng nhập, độ dài hoặc ký tự).",
+      "port_not_allowed": "Cổng này không được mở: chỉ 80 và 443, trừ khi host và cổng có trong allowlist.",
+      "private_address": "Host này nằm trong mạng nội bộ.",
+      "blocked_address": "Địa chỉ này không bao giờ gọi được (metadata cloud, broadcast hoặc dành riêng): hãy dùng URL khác.",
+      "unresolvable": "Không tìm thấy tên host này: hãy kiểm tra lại.",
+      "unknown": "Lời gọi bị chặn bởi quy tắc mạng ra."
+    },
+    "http_status": "Đích trả về HTTP {{status}}.",
+    "rate_limited": "Đích yêu cầu chờ từ {{seconds, number}} giây trở lên.",
+    "http_timeout": "Đích không trả lời kịp.",
+    "http_network": "Không kết nối được tới đích.",
+    "http_response_too_large": "Phản hồi lớn hơn 1 MB.",
+    "http_request_too_large": "Body của request lớn hơn 1 MB.",
+    "secret_unavailable": "Một secret của bước này không còn dùng được trong base này.",
+    "invalid_value": "Không dùng được một giá trị của bước này (URL không phải chữ, hoặc body JSON không đọc được).",
+    "unknown": "Gửi thử không thành công ({{code}}).",
+    "secret_host_not_allowed": "URL của bước HTTP này không thuộc các host được phép của secret (URL http thường cần mục có cổng): không có gì được gửi đi. Nếu đó là bên nhận thật, hãy thêm host vào secret trong cài đặt tổ chức.",
+    "secret_host_not_allowed_legacy_expired": "Secret của bước HTTP này được tạo trước khi có host được phép và đã hết hạn chuyển đổi: hãy đặt host được phép cho secret trong cài đặt tổ chức."
+  },
+  "n8n": {
+    "intro": "Gửi bản ghi kích hoạt sang một workflow n8n: POST có chữ ký với payload JSON chuẩn, dựng bằng quyền của người mà automation chạy thay.",
+    "url": "URL webhook",
+    "urlHint": "URL production của node Webhook (…/webhook/…), phương thức POST.",
+    "secret": "Secret ký",
+    "secretHint": "Bắt buộc. Trong n8n, kiểm tra header webhook-id, webhook-timestamp và webhook-signature (Standard Webhooks) bằng cùng secret.",
+    "fields": "Trường được gửi",
+    "fieldsAll": "Mọi trường đọc được",
+    "fieldsChosen": "Trường đã chọn",
+    "fieldsAllHint": "Mọi trường automation đọc được lúc chạy, kể cả trường thêm sau.",
+    "fieldsCount": "{{count, number}} / {{max, number}} trường",
+    "fieldsSearch": "Tìm trường",
+    "noRecord": "Trigger này không có bản ghi: payload có event, automation và base, còn record là null.",
+    "changes": "Gửi các thay đổi",
+    "changesHint": "Giá trị cũ và mới của các trường được gửi đã thay đổi.",
+    "preview": {
+      "title": "Payload ví dụ",
+      "hint": "Giá trị chỉ là chỗ giữ. Payload thật chỉ có những gì {{name}} đọc được lúc bước chạy.",
+      "automation": "Automation này"
+    }
+  },
+  "secretHosts": {
+    "sentTo": "Secret này chỉ được gửi tới: {{hosts}}.",
+    "unchecked": "URL lấy từ giá trị được kiểm khi bước chạy.",
+    "notListedTitle": "{{host}} không thuộc host được phép của secret này",
+    "ipTitle": "Địa chỉ IP không bao giờ khớp host được phép của secret",
+    "plainHttpTitle": "Secret này không được gửi qua http thường",
+    "plainHttp": "{{host}} chỉ được phép qua https: http thường sẽ gửi secret không mã hoá, nên lưu sẽ bị từ chối. Dùng https://, hoặc thêm {{host}}:{{port}} vào secret trong cài đặt tổ chức nếu bên nhận này thật sự không có https.",
+    "notListed": "Lưu sẽ bị từ chối, và không có gì được gửi tới đó. Host được phép: {{hosts}}. Dùng một host trong đó, hoặc thêm {{host}} vào secret trong cài đặt tổ chức.",
+    "legacyTitle": "Secret này chưa có host được phép",
+    "legacy": "Secret được tạo trước khi có host được phép và vẫn được gửi tới mọi host cho tới {{date}}; sau đó bước này sẽ lỗi. Hãy đặt host cho secret trong cài đặt tổ chức.",
+    "expiredTitle": "Secret này đã ngừng gửi",
+    "expired": "Secret được tạo trước khi có host được phép và đã hết hạn chuyển đổi: lưu bị từ chối và bước này lỗi khi chạy cho tới khi đặt host được phép."
+  }
+}

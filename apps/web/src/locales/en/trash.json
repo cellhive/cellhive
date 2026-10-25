@@ -1,0 +1,139 @@
+{
+  "heading": "Trash of {{table}}",
+  "backToTable": "Back to table {{table}}",
+  "subtitle": "Deleted items are kept for 30 days, then removed for good.",
+  "tabs": {
+    "label": "Trash content",
+    "records": "Records",
+    "fields": "Fields"
+  },
+  "daysLeft_one": "{{count, number}} day left",
+  "daysLeft_other": "{{count, number}} days left",
+  "system": "System",
+  "unknownUser": "Unknown user",
+  "loadMore": "Load more",
+  "records": {
+    "caption": "Deleted records of {{table}}",
+    "record": "Record",
+    "deletedBy": "Deleted by",
+    "deletedAt": "Deleted",
+    "daysLeft": "Time left",
+    "actions": "Actions",
+    "selectAll": "Select all loaded records",
+    "select": "Select {{title}}",
+    "untitled": "Untitled record",
+    "restore": "Restore",
+    "restoreOne": "Restore {{title}}",
+    "restoreSelected": "Restore selected records",
+    "selected_one": "{{count, number}} record selected",
+    "selected_other": "{{count, number}} records selected",
+    "clearSelection": "Clear selection",
+    "restored_one": "{{count, number}} record restored.",
+    "restored_other": "{{count, number}} records restored.",
+    "failed_one": "{{count, number}} record could not be restored. The reason is shown on its row.",
+    "failed_other": "{{count, number}} records could not be restored. The reason is shown on each row.",
+    "notRestored": "Not restored: {{message}}",
+    "empty": {
+      "title": "The trash is empty",
+      "description": "Records deleted from this table appear here for 30 days."
+    },
+    "noAccess": {
+      "title": "No access to deleted records",
+      "description": "Only people who can delete records of this table can see and restore them."
+    },
+    "branchSize_one": "+{{count, number}} sub-record",
+    "branchSize_other": "+{{count, number}} sub-records",
+    "restoreBranch": "Restore branch",
+    "restoreBranchOne": "Restore {{title}} with its sub-records"
+  },
+  "fields": {
+    "caption": "Deleted fields of {{table}}",
+    "field": "Field",
+    "deletedAt": "Deleted",
+    "daysLeft": "Time left",
+    "actions": "Actions",
+    "restore": "Restore",
+    "restoreOne": "Restore field {{name}}",
+    "restored": "Field {{name}} restored with its data.",
+    "expired": "Field {{name}} can no longer be restored: it was deleted more than 30 days ago.",
+    "empty": {
+      "title": "No deleted fields",
+      "description": "Fields deleted from this table can be restored here, with their data, for 30 days."
+    }
+  },
+  "purge": {
+    "action": "Delete permanently",
+    "one": "Delete {{title}} permanently",
+    "selected": "Delete selected records permanently",
+    "title_one": "Delete {{count, number}} record permanently?",
+    "title_other": "Delete {{count, number}} records permanently?",
+    "description_one": "The record, its links and its files will be deleted for good.",
+    "description_other": "These records, their links and their files will be deleted for good.",
+    "irreversible": "This cannot be undone. The change history stays in the audit log.",
+    "branch_one": "Also delete the {{count, number}} sub-record deleted with it",
+    "branch_other": "Also delete the {{count, number}} sub-records deleted with them",
+    "branchHint": "Otherwise the sub-records stay in the trash as top-level records.",
+    "cancel": "Cancel",
+    "confirm_one": "Delete {{count, number}} record permanently",
+    "confirm_other": "Delete {{count, number}} records permanently",
+    "done_one": "{{count, number}} record deleted permanently.",
+    "done_other": "{{count, number}} records deleted permanently."
+  },
+  "tables": {
+    "heading": "Trash",
+    "back": "Back to {{base}}",
+    "subtitle": "Deleted tables are kept for 30 days, then deleted for good.",
+    "tab": "Tables",
+    "note": "Deleted records and fields stay in the trash of their table.",
+    "caption": "Deleted tables of the base",
+    "table": "Table",
+    "linksColumn": "Links",
+    "links_one": "{{formatted}} link from another table",
+    "links_other": "{{formatted}} links from other tables",
+    "noLinks": "No links",
+    "fieldCount_one": "{{formatted}} field",
+    "fieldCount_other": "{{formatted}} fields",
+    "restore": "Restore",
+    "restoreOne": "Restore table {{name}}",
+    "purgeOne": "Delete table {{name}} permanently",
+    "restored": "Table {{name}} restored.",
+    "purged_one": "Table {{name}} and its {{formatted}} record deleted permanently.",
+    "purged_other": "Table {{name}} and its {{formatted}} records deleted permanently.",
+    "empty": {
+      "title": "No deleted tables",
+      "description": "Tables deleted from this base can be restored here for 30 days."
+    },
+    "purge": {
+      "title": "Delete table {{name}} permanently?",
+      "description_one": "Its {{formatted}} field, its records, views, share links and files are deleted for good.",
+      "description_other": "Its {{formatted}} fields, its records, views, share links and files are deleted for good.",
+      "irreversible": "This cannot be undone.",
+      "partners_one": "{{formatted}} link field in another table is deleted and cannot be restored",
+      "partners_other": "{{formatted}} link fields in other tables are deleted and cannot be restored",
+      "partnerInTrash": "In the trash: it can no longer be restored",
+      "partnerKind": {
+        "one_way": "One-way link",
+        "two_way": "Other side of a two-way link"
+      },
+      "typeName": "Type <strong>{{name}}</strong> to confirm",
+      "mismatch": "The name does not match. Type it exactly as shown.",
+      "adminsOnly": "Only base admins see this action.",
+      "confirm": "Delete permanently"
+    }
+  },
+  "dashboards": {
+    "tab": "Dashboards",
+    "subtitle": "Deleted dashboards are kept for 30 days with their widgets, then deleted for good.",
+    "caption": "Deleted dashboards of the base",
+    "dashboard": "Dashboard",
+    "widgetCount_one": "{{formatted}} widget",
+    "widgetCount_other": "{{formatted}} widgets",
+    "restoreOne": "Restore dashboard {{name}}",
+    "restored": "Dashboard {{name}} restored.",
+    "open": "Open",
+    "empty": {
+      "title": "No deleted dashboards",
+      "description": "Dashboards deleted from this base can be restored here for 30 days."
+    }
+  }
+}

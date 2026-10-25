@@ -1,0 +1,16 @@
+{
+  "insert": "Insert image",
+  "upload": "Upload an image",
+  "fields": "Images of a field of the record",
+  "uploading": "Uploading {{name}}…",
+  "inserted": "{{name}} inserted.",
+  "issue": {
+    "MIME_NOT_ACCEPTED": "Choose a PNG, JPEG, GIF or WebP image (SVG is not allowed).",
+    "FILE_TOO_LARGE": "This image is too large (at most 10 MB, and 2 MB once resized).",
+    "IMAGE_UNREADABLE": "This file is not a readable image.",
+    "CONTENT_MISMATCH": "The content of the file does not match its type.",
+    "DENIED": "You cannot add images here.",
+    "NETWORK": "No connection. Try again.",
+    "FAILED": "The image could not be uploaded. Try again."
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "page": {
+    "title": "Incoming webhooks",
+    "back": "Back to {{name}}",
+    "subtitle": "URLs other systems call to send data into this base. Each request can start the automations that use the webhook.",
+    "add": "New webhook",
+    "listHeading": "Webhooks",
+    "limit": "This base has the maximum of {{max, number}} webhooks. Delete one to add another.",
+    "loading": "Loading webhooks",
+    "emptyTitle": "No incoming webhook yet",
+    "empty": "Create a webhook, give its URL and secret to the sending system (a shop, a form tool, n8n…), then choose the webhook as the trigger of an automation.",
+    "whoSees": "Only base admins see this page. Bodies of received requests are kept for 7 days and never shown here."
+  },
+  "list": {
+    "noUsages": "Not used by any automation",
+    "usages_one": "Used by {{count, number}} automation: {{names}}",
+    "usages_other": "Used by {{count, number}} automations: {{names}}",
+    "never": "No request in the last 7 days",
+    "lastPrefix": "Last request",
+    "manage": "Manage {{name}}",
+    "manageShort": "Manage"
+  },
+  "usages": {
+    "hidden": "An automation you cannot see",
+    "open": "Open",
+    "openNamed": "Open {{name}}",
+    "none": "No automation is triggered by this webhook yet."
+  },
+  "status": {
+    "on": "Receiving",
+    "off": "Paused"
+  },
+  "auth": {
+    "short": {
+      "signature": "Signature",
+      "bearer": "Bearer token",
+      "both": "Bearer + signature",
+      "none": "No authentication"
+    },
+    "long": {
+      "signature": "Signature (Standard Webhooks)",
+      "bearer": "Bearer token",
+      "both": "Bearer token and signature",
+      "none": "No authentication"
+    },
+    "explain": {
+      "signature": "The sender signs each request with a shared secret (headers webhook-id, webhook-timestamp, webhook-signature). Blocks replayed and altered requests.",
+      "bearer": "The sender adds the header Authorization: Bearer <token>. Works with almost any tool.",
+      "both": "Both checks: the strongest choice when the sender supports signatures.",
+      "none": "Anyone who knows the URL can send data."
+    },
+    "noneWarningTitle": "Anyone with the URL can call this webhook",
+    "noneWarning": "Requests are accepted without a token or a signature. If the URL leaks — in logs, a browser history, a shared screenshot — anyone can create or change data through your automations."
+  },
+  "copy": {
+    "label": "Copy {{label}}",
+    "action": "Copy",
+    "done": "Copied",
+    "announce": "{{label}} copied to the clipboard"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "create": {
+    "title": "New incoming webhook",
+    "description": "You get a URL, and the secrets of the checks you choose — shown once, right after creating.",
+    "auth": "How requests are checked",
+    "recommended": "Recommended",
+    "noneAck": "I understand that anyone with the URL can send data.",
+    "submit": "Create webhook"
+  },
+  "form": {
+    "name": "Name",
+    "nameHint": "What automation builders choose, e.g. “Shop orders”.",
+    "rate": "Requests per second",
+    "rateHint": "Short bursts of up to {{burst, number}}× this are accepted; more get “429 Too Many Requests”. The server may set a lower maximum.",
+    "errors": {
+      "required": "Required.",
+      "tooLong": "At most 100 characters.",
+      "rate": "Enter a whole number from 1 to 1,000.",
+      "ack": "Confirm that you understand the risk, or choose a check."
+    }
+  },
+  "reveal": {
+    "title": {
+      "created": "Webhook created — save its secrets now",
+      "rotated": "New signing secret",
+      "bearer": "New Bearer token"
+    },
+    "description": {
+      "created": "Give these values to the system that will call “{{name}}”.",
+      "rotated": "Give the new secret to the system that calls “{{name}}”.",
+      "bearer": "Give the new token to the system that calls “{{name}}”."
+    },
+    "close": "Close",
+    "warningTitle": "Shown only once",
+    "warning_one": "Copy the secret now and store it somewhere safe, such as a password manager or the sending system. Cellhive keeps it encrypted and will never show it again — if it is lost, you must issue a new one.",
+    "warning_other": "Copy the secrets now and store them somewhere safe, such as a password manager or the sending system. Cellhive keeps them encrypted and will never show them again — if they are lost, you must issue new ones.",
+    "label": {
+      "url": "Webhook URL",
+      "signing_secret": "Signing secret",
+      "bearer_token": "Bearer token"
+    },
+    "hint": {
+      "url": "You can see the URL again later in the webhook's settings.",
+      "signing_secret": "Used to sign requests (Standard Webhooks: webhook-id, webhook-timestamp, webhook-signature).",
+      "bearer_token": "Send it as the header Authorization: Bearer <token>.",
+      "rotated": "The previous secret keeps working until {{date}}, so you can update the sender without losing requests."
+    },
+    "confirm_one": "I have stored the secret somewhere safe.",
+    "confirm_other": "I have stored the secrets somewhere safe.",
+    "nag_one": "Confirm that you stored the secret first: it cannot be shown again.",
+    "nag_other": "Confirm that you stored the secrets first: they cannot be shown again.",
+    "done": "Done"
+  },
+  "drawer": {
+    "description": "Settings and received requests of this webhook.",
+    "tabs": "Webhook sections",
+    "tab": {
+      "settings": "Settings",
+      "requests": "Request log"
+    }
+  },
+  "settings": {
+    "receive": "Status",
+    "enabled": "Receive requests",
+    "enabledOn": "Requests are accepted and start automations.",
+    "enabledOff": "Paused: the URL answers “404 Not Found” and nothing is stored.",
+    "url": "URL",
+    "urlLabel": "Webhook URL",
+    "urlHint": "Treat it like a password: anyone who has it can reach this webhook.",
+    "regenerate": "Get a new URL",
+    "auth": "Authentication",
+    "general": "General",
+    "usages": "Automations",
+    "danger": "Delete"
+  },
+  "check": {
+    "on": "On",
+    "off": "Off",
+    "remove": "Remove",
+    "signature": {
+      "name": "Signing secret",
+      "explain": "Requests must carry a valid Standard Webhooks signature made with this secret.",
+      "rotating": "The previous secret is still accepted until {{date}}.",
+      "rotate": "Rotate secret",
+      "add": "Add a signing secret"
+    },
+    "bearer": {
+      "name": "Bearer token",
+      "explain": "Requests must carry the header Authorization: Bearer <token>.",
+      "replace": "Replace token",
+      "add": "Add a Bearer token"
+    }
+  },
+  "confirm": {
+    "rotate": {
+      "title": "Rotate the signing secret?",
+      "body": "A new secret is issued and shown once. The current secret keeps working for 24 hours, so you can update the sender in the meantime. Rotating again within 24 hours drops the oldest secret.",
+      "confirm": "Rotate secret"
+    },
+    "addSignature": {
+      "title": "Require a signature?",
+      "body": "A signing secret is issued and shown once. From now on, requests without a valid signature are refused (401).",
+      "confirm": "Add signing secret"
+    },
+    "removeSignature": {
+      "title": "Stop checking signatures?",
+      "body": "The signing secret is deleted. Requests are no longer checked for a signature.",
+      "confirm": "Remove signature check"
+    },
+    "replaceBearer": {
+      "title": "Replace the Bearer token?",
+      "body": "A new token is issued and shown once. The current token stops working immediately: requests that still send it are refused (401) until the sender uses the new one.",
+      "confirm": "Replace token"
+    },
+    "addBearer": {
+      "title": "Require a Bearer token?",
+      "body": "A token is issued and shown once. From now on, requests without it are refused (401).",
+      "confirm": "Add Bearer token"
+    },
+    "removeBearer": {
+      "title": "Stop checking the Bearer token?",
+      "body": "The token is deleted. Requests are no longer checked for it.",
+      "confirm": "Remove token check"
+    },
+    "regenerate": {
+      "title": "Get a new URL?",
+      "body": "The current URL stops working immediately: every system that calls it gets “404 Not Found” until you give it the new URL. Secrets do not change.",
+      "confirm": "Get a new URL"
+    },
+    "leavesNone": "This is the last check: afterwards anyone with the URL can call this webhook."
+  },
+  "toast": {
+    "enabled": "“{{name}}” receives requests again.",
+    "disabled": "“{{name}}” is paused.",
+    "saved": "Saved “{{name}}”.",
+    "deleted": "Deleted “{{name}}”.",
+    "removeSignature": "“{{name}}” no longer checks signatures.",
+    "removeBearer": "“{{name}}” no longer checks a Bearer token.",
+    "regenerate": "“{{name}}” has a new URL. The old one no longer works."
+  },
+  "delete": {
+    "action": "Delete webhook",
+    "title": "Delete “{{name}}”?",
+    "body": "Its URL stops working immediately. The request log stays until it is 7 days old.",
+    "confirm": "Delete webhook",
+    "inUse_one": "{{count, number}} automation is triggered by this webhook. Change its trigger or delete it first:",
+    "inUse_other": "{{count, number}} automations are triggered by this webhook. Change their trigger or delete them first:"
+  },
+  "log": {
+    "note": "Requests of the last {{days, number}} days, newest first. Bodies and headers are never shown.",
+    "refresh": "Refresh",
+    "loading": "Loading requests",
+    "empty": "No request received in the last 7 days.",
+    "listLabel": "Requests received by {{name}}",
+    "size": "Size {{size}}",
+    "duplicate": "Replay — already received, ignored",
+    "causation": "Continues an automation chain",
+    "runs": "Run history",
+    "runsFor": "Run history for the request of {{time}}",
+    "more": "Load more"
+  }
+}

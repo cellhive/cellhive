@@ -1,0 +1,485 @@
+{
+  "label": "Bản ghi của {{table}}",
+  "tables": "Các bảng",
+  "trash": "Thùng rác",
+  "newRows_other": "{{count, number}} dòng mới",
+  "rowsChanged": "Dữ liệu đã thay đổi — làm mới",
+  "trashOf": "Thùng rác của {{table}}",
+  "realtime": {
+    "recordGone": "Bản ghi này đã bị xoá hoặc bạn không còn quyền xem."
+  },
+  "toolbar": {
+    "label": "Tuỳ chọn hiển thị",
+    "density": "Chiều cao dòng",
+    "densities": {
+      "compact": "Gọn",
+      "comfortable": "Thoáng"
+    },
+    "more": "Thêm thao tác"
+  },
+  "footer": {
+    "records_other": "{{formatted}} bản ghi",
+    "estimated": "Khoảng {{formatted}} bản ghi",
+    "loading": "Đang đếm bản ghi…",
+    "matchingFilter": "/ {{total}} · khớp bộ lọc",
+    "matchingSearch": "/ {{total}} · khớp tìm kiếm",
+    "shown_other": "{{formatted}} đang hiện",
+    "selected_other": "{{count, number}} dòng đang chọn",
+    "groups_other": "{{formatted}} nhóm",
+    "withGroups": "{{records}} · {{groups}}"
+  },
+  "empty": {
+    "title": "Chưa có bản ghi",
+    "description": "Bản ghi của bảng này sẽ hiện ở đây.",
+    "filteredTitle": "Chưa có bản ghi nào khớp bộ lọc",
+    "filteredHint": "Thử bỏ bớt điều kiện lọc hoặc đổi từ khoá tìm kiếm.",
+    "searchTitle": "Không có bản ghi nào khớp tìm kiếm",
+    "clearFilter": "Xoá bộ lọc"
+  },
+  "error": {
+    "retry": "Thử lại"
+  },
+  "formerMember": "Cựu thành viên",
+  "header": {
+    "label": "{{name}}, {{type}}",
+    "primaryLabel": "{{name}}, {{type}}, trường chính",
+    "readOnly": "{{label}}, chỉ đọc",
+    "computedError": "{{label}}, lỗi {{token}}",
+    "computedLocked": "{{label}}, không có quyền xem dữ liệu nguồn",
+    "computing": "{{label}}, đang tính lại {{percent}}%",
+    "computedFilling": "{{label}}, đang tính {{percent}}%",
+    "withHint": "{{label}}, {{hint}}"
+  },
+  "types": {
+    "text": "văn bản",
+    "text_url": "URL",
+    "text_email": "email",
+    "text_phone": "số điện thoại",
+    "text_barcode": "mã vạch",
+    "number": "số",
+    "number_percentage": "phần trăm",
+    "number_currency": "tiền tệ",
+    "number_progress": "tiến độ",
+    "number_rating": "đánh giá",
+    "select": "chọn một",
+    "select_multiple": "chọn nhiều",
+    "datetime": "ngày",
+    "checkbox": "hộp kiểm",
+    "user": "người dùng",
+    "created_at": "thời điểm tạo",
+    "updated_at": "thời điểm sửa gần nhất",
+    "created_by": "người tạo",
+    "updated_by": "người sửa gần nhất",
+    "auto_number": "số tự tăng",
+    "link": "liên kết tới bảng khác",
+    "parent": "bản ghi cha",
+    "lookup": "tra cứu",
+    "formula": "công thức",
+    "attachment": "tệp đính kèm",
+    "button": "nút"
+  },
+  "actions": {
+    "add": "Thêm bản ghi",
+    "addShortcut": "{{key}}+Shift+Enter",
+    "delete": "Xoá",
+    "deleteCount_other": "Xoá {{count, number}} bản ghi",
+    "confirmTitle_other": "Xoá {{count, number}} bản ghi?",
+    "confirmDescription_other": "Bản ghi được chuyển vào thùng rác của {{table}} và có thể khôi phục trong 30 ngày.",
+    "confirmDelete_other": "Xoá {{count, number}} bản ghi",
+    "cancel": "Huỷ",
+    "addShort": "Bản ghi"
+  },
+  "edit": {
+    "search": "Tìm…",
+    "remove": "Bỏ {{value}}",
+    "createOption": "Thêm lựa chọn “{{name}}”",
+    "noOptions": "Chưa có lựa chọn nào.",
+    "noMatch": "Không tìm thấy.",
+    "loadingMembers": "Đang tải thành viên…",
+    "membersFailed": "Không tải được danh sách thành viên.",
+    "dateFormat": "Định dạng: {{format}}",
+    "previousMonth": "Tháng trước",
+    "nextMonth": "Tháng sau",
+    "emptyValue": "(trống)",
+    "conflict": {
+      "title": "Người khác vừa sửa",
+      "message": "{{name}} đã sửa “{{field}}” trong lúc bạn đang sửa.",
+      "someone": "Một người khác",
+      "theirs": "Giá trị của họ",
+      "mine": "Giá trị của bạn",
+      "keepTheirs": "Giữ giá trị của họ",
+      "writeMine": "Ghi giá trị của tôi"
+    },
+    "recordGone": "Bản ghi này đã bị xoá hoặc bạn không còn quyền xem.",
+    "retry": "Thử lại",
+    "deleted_other": "Đã chuyển {{count, number}} bản ghi vào thùng rác.",
+    "schemaLocked": "Bảng đang được cập nhật cấu trúc. Tạm dừng sửa; thay đổi của bạn sẽ được thử lại.",
+    "unlock": "Sửa lại",
+    "readOnlyHint": "Bạn không có quyền sửa trường này.",
+    "lockedHint": "Tạm dừng sửa trong lúc bảng cập nhật cấu trúc.",
+    "offlineHint": "Bạn đang ngoại tuyến: tạm dừng sửa."
+  },
+  "undo": {
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "undoKeys": "{{mod}}+Z",
+    "redoKeys": "Shift+{{mod}}+Z",
+    "conflict": "Không thể hoàn tác vì ô đã được sửa sau đó.",
+    "invalid": "Không thể hoàn tác: giá trị trước đó không còn hợp lệ.",
+    "gone": "Không thể hoàn tác: các bản ghi không còn nữa."
+  },
+  "clipboard": {
+    "copyBlocked": "Vai trò của bạn trong base này không được phép sao chép.",
+    "readOnly": "Bạn không thể sửa các ô này.",
+    "busy": "Vui lòng đợi thay đổi trước được lưu xong.",
+    "tooLarge": "Chỉ chọn tối đa {{max}} dòng mỗi lần.",
+    "skipped_other": "Đã bỏ qua {{count, number}} ô chỉ đọc.",
+    "invalid_other": "Chưa lưu gì: {{count, number}} ô có giá trị không hợp lệ.",
+    "conflict": "Người khác vừa sửa các bản ghi này. Chưa lưu gì; các dòng đã hiện giá trị mới nhất.",
+    "progress": "Đang lưu {{done}}/{{total}} bản ghi…",
+    "addRowsTitle_other": "Thêm {{formatted}} dòng mới?",
+    "addRowsDescription_other": "Dữ liệu dán vượt quá dòng cuối. Thêm {{formatted}} dòng cho phần này, hoặc chỉ dán vào các dòng đang có.",
+    "addRowsYes_other": "Thêm {{formatted}} dòng",
+    "addRowsNo": "Chỉ dán vào dòng đang có"
+  },
+  "shortcuts": {
+    "title": "Phím tắt",
+    "open": "Phím tắt",
+    "close": "Đóng",
+    "action": "Thao tác",
+    "keysHeading": "Phím",
+    "or": "hoặc",
+    "actions": {
+      "move": "Di chuyển giữa các ô",
+      "edit": "Sửa ô; Enter lần nữa để lưu và xuống ô dưới",
+      "cancel": "Huỷ sửa hoặc bỏ chọn",
+      "clear": "Xoá giá trị các ô đang chọn",
+      "copy": "Sao chép",
+      "cut": "Cắt",
+      "paste": "Dán",
+      "fillDown": "Điền xuống từ ô đầu vùng chọn",
+      "undo": "Hoàn tác",
+      "redo": "Làm lại",
+      "openRecord": "Mở bản ghi",
+      "selectRow": "Chọn cả dòng",
+      "search": "Tìm trong view",
+      "saveView": "Lưu thay đổi của view",
+      "addBelow": "Thêm bản ghi dưới dòng đang chọn",
+      "addRecord": "Thêm bản ghi",
+      "help": "Hiện bảng phím tắt",
+      "groupHeader": "Trên header nhóm: thu gọn hoặc mở nhóm; mở menu nhóm",
+      "treeToggle": "Ở cột đầu của dạng cây: mở hoặc thu gọn nhánh",
+      "treeIndent": "Dạng cây: làm con của dòng trên",
+      "treeOutdent": "Dạng cây: đưa lên một cấp"
+    },
+    "keys": {
+      "ctrl": "Ctrl",
+      "shift": "Shift",
+      "enter": "Enter",
+      "esc": "Esc",
+      "tab": "Tab",
+      "space": "Phím cách",
+      "delete": "Delete",
+      "backspace": "Backspace",
+      "arrows": "Phím mũi tên",
+      "f2": "F2",
+      "f10": "F10",
+      "alt": "Alt"
+    }
+  },
+  "addField": "Thêm trường",
+  "columnMenu": {
+    "label": "Menu trường: {{name}}",
+    "edit": "Sửa trường",
+    "rename": "Đổi tên",
+    "insertLeft": "Chèn trường bên trái",
+    "insertRight": "Chèn trường bên phải",
+    "sortAsc": "Sắp xếp tăng dần",
+    "sortDesc": "Sắp xếp giảm dần",
+    "freeze": "Cố định tới trường này",
+    "hide": "Ẩn trường",
+    "delete": "Xoá trường",
+    "primaryNotDeletable": "Không thể xoá trường chính",
+    "converting": "Đang đổi kiểu, thử lại khi xong",
+    "revert_other": "Hoàn tác đổi kiểu (còn {{count, number}} ngày)",
+    "progress": "Xem tiến độ",
+    "computedError": "Chi tiết lỗi",
+    "editFormula": "Sửa công thức"
+  },
+  "hiddenFields": {
+    "none": "Ẩn trường",
+    "count_other": "Ẩn {{count, number}} trường",
+    "heading": "Trường được hiển thị",
+    "showAll": "Hiện tất cả",
+    "hideAll": "Ẩn tất cả",
+    "list": "Các trường của view",
+    "search": "Tìm trường",
+    "noMatch": "Không có trường nào khớp “{{query}}”.",
+    "searchNoDrag": "Xoá nội dung tìm để sắp xếp lại các trường.",
+    "shownCount": "Hiện {{count, number}}/{{total, number}}",
+    "primary": "Trường chính",
+    "show": "Hiện {{field}}",
+    "drag": "Đổi vị trí {{field}}",
+    "dnd": {
+      "instructions": "Để đổi vị trí một trường, nhấn Space hoặc Enter trên tay nắm, di chuyển bằng phím mũi tên lên và xuống, rồi nhấn Space hoặc Enter để thả, hoặc Escape để huỷ.",
+      "start": "Đã nhấc trường {{field}}.",
+      "over": "Trường {{field}} đang ở trên {{over}}.",
+      "end": "Đã thả trường {{field}}.",
+      "cancel": "Đã huỷ di chuyển trường {{field}}."
+    }
+  },
+  "sort": {
+    "asc": "Sắp theo {{name}}, tăng dần",
+    "desc": "Sắp theo {{name}}, giảm dần",
+    "clear": "Bỏ sắp xếp"
+  },
+  "value": {
+    "deletedOption": "Tuỳ chọn đã xoá",
+    "deletedUser": "Người dùng đã xoá",
+    "deletedRecord": "Bản ghi đã xoá",
+    "checked": "Đã chọn",
+    "noAccess": "Không có quyền xem",
+    "moreLinks_other": "và {{count, number}} bản ghi khác"
+  },
+  "cellMenu": {
+    "label": "Menu ô: {{name}}",
+    "expand": "Mở chi tiết bản ghi",
+    "history": "Xem lịch sử ô",
+    "follow": "Theo dõi bản ghi",
+    "unfollow": "Bỏ theo dõi bản ghi",
+    "followed": "Bạn đang theo dõi “{{title}}”. Bạn sẽ nhận thông báo khi người khác sửa bản ghi này.",
+    "unfollowed": "Bạn đã bỏ theo dõi “{{title}}”.",
+    "undo": "Hoàn tác"
+  },
+  "expandRecord": "Mở chi tiết bản ghi",
+  "cards": {
+    "label": "Bản ghi của {{table}}",
+    "loading": "Đang tải bản ghi…",
+    "untitled": "Bản ghi chưa có tên"
+  },
+  "group": {
+    "empty": "(Trống)",
+    "rest": "Các nhóm khác (chưa đếm)",
+    "a11yExpanded_one": "{{field}} {{value}}: {{formatted}} bản ghi, đang mở",
+    "a11yExpanded_other": "{{field}} {{value}}: {{formatted}} bản ghi, đang mở",
+    "a11yCollapsed_one": "{{field}} {{value}}: {{formatted}} bản ghi, đã thu gọn",
+    "a11yCollapsed_other": "{{field}} {{value}}: {{formatted}} bản ghi, đã thu gọn",
+    "collapseAll": "Thu gọn mọi nhóm",
+    "expandAll": "Mở rộng mọi nhóm",
+    "countsError": "Không tải được số bản ghi của các nhóm.",
+    "records_other": "{{formatted}} bản ghi",
+    "addRecord": "Thêm bản ghi vào {{group}}",
+    "stickyPath": "Nhóm hiện tại"
+  },
+  "groupMenu": {
+    "label": "Menu nhóm: {{group}}",
+    "collapse": "Thu gọn nhóm này",
+    "expand": "Mở rộng nhóm này",
+    "collapseSubgroups": "Thu gọn các nhóm con",
+    "expandSubgroups": "Mở rộng các nhóm con",
+    "add": "Thêm bản ghi vào nhóm này"
+  },
+  "link": {
+    "noAccess": "Không có quyền xem",
+    "count_other": "{{count, number}} liên kết",
+    "add": "Thêm liên kết",
+    "lockedHint": "Bạn không xem được bảng liên kết nên không đổi được các liên kết này.",
+    "targetDeletedHint": "Bảng liên kết đang ở thùng rác: thêm liên kết lại được khi bảng được khôi phục."
+  },
+  "files": {
+    "uploadHint": "Kéo thả hoặc bấm để tải lên",
+    "dropHere_other": "Thả để tải lên {{count, number}} tệp",
+    "attachFailed": "Không gắn được tệp vừa tải lên vào bản ghi (bản ghi đã bị xoá hoặc bạn không còn quyền sửa)."
+  },
+  "conversion": {
+    "running": "Đang đổi kiểu {{field}} từ {{from}} sang {{to}}",
+    "succeeded": "Đã đổi {{field}} sang {{to}}.",
+    "failed": "Đổi kiểu {{field}} không thành công.",
+    "failedBody": "Dữ liệu vẫn như trước khi đổi. Không có ô nào bị mất.",
+    "link": {
+      "to_two_way": {
+        "running": "Đang bật liên kết hai chiều cho {{field}}",
+        "succeeded": "Đã bật liên kết hai chiều cho {{field}}.",
+        "failed": "Bật liên kết hai chiều cho {{field}} không thành công."
+      },
+      "to_one_way": {
+        "running": "Đang tắt liên kết hai chiều của {{field}}",
+        "succeeded": "Đã tắt liên kết hai chiều của {{field}}.",
+        "failed": "Tắt liên kết hai chiều của {{field}} không thành công."
+      },
+      "to_single": {
+        "running": "Đang chuyển {{field}} sang một bản ghi mỗi ô",
+        "succeeded": "{{field}} đã chuyển sang một bản ghi mỗi ô.",
+        "failed": "Chuyển {{field}} sang một bản ghi mỗi ô không thành công."
+      }
+    },
+    "by": "bởi {{name}}",
+    "progressLabel": "Tiến độ đổi kiểu {{field}}",
+    "percent": "{{percent}}%",
+    "etaSeconds_other": "còn khoảng {{count, number}} giây",
+    "etaMinutes_other": "còn khoảng {{count, number}} phút",
+    "note": "Chạy nền. Bạn vẫn sửa được các ô khác.",
+    "noteLink": "Chạy nền. Vẫn sửa được liên kết.",
+    "counts_other": "{{converted}} ô chuyển xong, {{lost}} ô bị xoá.",
+    "countsNoLoss_other": "{{converted}} ô chuyển xong.",
+    "revertibleUntil": "Hoàn tác được tới {{date}}.",
+    "undo_other": "Hoàn tác (còn {{count, number}} ngày)",
+    "retry": "Thử lại",
+    "dismiss": "Ẩn thông báo",
+    "lockedHint": "Trường đang được đổi kiểu. Thử lại sau khi xong."
+  },
+  "invalidFormat": {
+    "email": "Không đúng định dạng email",
+    "phone": "Không đúng định dạng số điện thoại"
+  },
+  "summary": {
+    "bar": "Thanh thống kê",
+    "column": "Thống kê cột {{field}}",
+    "placeholder": "Thống kê",
+    "none": "Không",
+    "unavailable": "chưa có",
+    "timeout": "Chưa tính được. Truy vấn quá thời gian cho phép (QUERY_TIMEOUT). Số khác trên thanh vẫn đúng. Mở ô để thử lại.",
+    "failed": "Chưa tính được thống kê này. Mở ô để thử lại.",
+    "current": "Hiện tại: {{summary}}",
+    "close": "Đóng",
+    "sheetHint": "Chọn là áp dụng tạm. Lưu cho mọi người ở thanh Xoá / Lưu của view (cần quyền sửa view).",
+    "days_other": "({{count, number}} ngày)",
+    "groups": {
+      "count": "Đếm",
+      "percent": "Phần trăm",
+      "number": "Số",
+      "date": "Ngày",
+      "checkbox": "Checkbox"
+    },
+    "menu": {
+      "count_all": "Tất cả",
+      "filled": "Đã điền",
+      "empty": "Trống",
+      "unique": "Giá trị khác nhau",
+      "percent_filled": "Đã điền",
+      "percent_empty": "Trống",
+      "sum": "Tổng",
+      "avg": "Trung bình",
+      "min": "Nhỏ nhất",
+      "max": "Lớn nhất",
+      "range": "Khoảng",
+      "earliest": "Sớm nhất",
+      "latest": "Muộn nhất",
+      "date_range": "Khoảng ngày",
+      "checked": "Đã tick",
+      "unchecked": "Chưa tick",
+      "percent_checked": "% đã tick"
+    },
+    "short": {
+      "count_all": "Tất cả",
+      "filled": "Đã điền",
+      "empty": "Trống",
+      "unique": "Khác nhau",
+      "percent_filled": "Đã điền",
+      "percent_empty": "Trống",
+      "sum": "Tổng",
+      "avg": "Trung bình",
+      "min": "Nhỏ nhất",
+      "max": "Lớn nhất",
+      "range": "Khoảng",
+      "earliest": "Sớm nhất",
+      "latest": "Muộn nhất",
+      "date_range": "Khoảng ngày",
+      "checked": "Đã tick",
+      "unchecked": "Chưa tick",
+      "percent_checked": "Đã tick"
+    }
+  },
+  "computed": {
+    "lockedCell": "Bạn không có quyền xem dữ liệu dùng để tính giá trị này.",
+    "lockedShort": "Không có quyền xem",
+    "errorCell": "Lỗi cấp trường: xem cảnh báo trên tiêu đề cột.",
+    "pendingCell": "Đang tính…",
+    "subject": {
+      "formula": "Công thức",
+      "lookup": "Tra cứu"
+    },
+    "what": {
+      "formula": "công thức",
+      "lookup": "cấu hình tra cứu"
+    },
+    "title": {
+      "REF": "Tham chiếu bị xoá",
+      "CIRCLE": "Vòng tham chiếu",
+      "TIMEOUT": "Tính quá lâu",
+      "INVALID_CONFIG": "Cấu hình không còn hợp lệ"
+    },
+    "error": {
+      "deleted": "{{subject}} dùng trường <b>{{names}}</b>, đã bị xoá. Ô hiện {{token}} cho tới khi khôi phục hoặc sửa {{what}}.",
+      "deletedAt": "{{subject}} dùng trường <b>{{names}}</b>, đã bị xoá lúc {{when}}. Ô hiện {{token}} cho tới khi khôi phục hoặc sửa {{what}}.",
+      "indirect": "{{subject}} dùng trường <b>{{names}}</b>, trường này cũng đang lỗi. Sửa trường đó thì trường này tự hết lỗi.",
+      "hidden": "{{subject}} dùng một trường hoặc bảng đã bị xoá mà bạn không xem được. Ô hiện {{token}} cho tới khi khôi phục hoặc sửa {{what}}.",
+      "circle": "Các trường <b>{{names}}</b> tham chiếu vòng lẫn nhau, thường do khôi phục trường hoặc đổi chiều liên kết. Sửa một trường trong vòng để phá vòng.",
+      "timeout": "Một lô tính quá 30 giây nên đã dừng. Đơn giản {{what}} rồi lưu lại, hoặc thử lại.",
+      "config": "Đổi kiểu trường <b>{{names}}</b> làm {{what}} sai kiểu. Sửa bằng cách cấu hình lại.",
+      "configHidden": "Một lần đổi kiểu làm {{what}} sai kiểu. Sửa bằng cách cấu hình lại."
+    },
+    "close": "Đóng",
+    "actions": {
+      "restore": "Khôi phục trường",
+      "restoreNamed": "Khôi phục {{name}}",
+      "retry": "Thử lại",
+      "edit": {
+        "formula": "Sửa công thức",
+        "lookup": "Sửa tra cứu"
+      }
+    },
+    "askManager": "Nhờ người quản lý bảng này sửa.",
+    "restored": "Đã khôi phục “{{name}}”. Giá trị đang được tính lại.",
+    "retrying": "Đang tính lại…",
+    "banner": {
+      "title": "Kết quả có thể chưa cập nhật.",
+      "body": "{{uses}} đang dùng {{names}}, cột này đang tính lại",
+      "end": ". Danh sách tự làm mới khi xong.",
+      "refresh": "Làm mới ngay",
+      "parts": {
+        "filter": "bộ lọc",
+        "sort": "sắp xếp",
+        "group": "nhóm"
+      }
+    }
+  },
+  "button": {
+    "running": "Đang chạy",
+    "readyState": "bấm được",
+    "disabledState": "không bấm được",
+    "shareHint": "Mở bản ghi trong Cellhive để dùng nút.",
+    "reason": {
+      "no_automation": "Nút chưa gắn automation.",
+      "automation_disabled": "Nút đang tắt vì automation của nút đã tắt.",
+      "permission": "Bạn cần quyền sửa bản ghi này để bấm nút.",
+      "condition": "Bản ghi này chưa đủ điều kiện để bấm nút."
+    },
+    "finished": {
+      "succeeded": "Đã chạy «{{label}}» cho {{record}}.",
+      "failed": "«{{label}}» chạy lỗi với {{record}}.",
+      "skipped": "«{{label}}» đã bỏ qua {{record}}.",
+      "cancelled": "Lần chạy «{{label}}» cho {{record}} đã bị huỷ."
+    },
+    "viewRun": "Xem lần chạy",
+    "rateLimited_other": "Bạn bấm quá nhanh. Thử lại sau {{count, number}} giây.",
+    "gone": "Bạn không còn xem được bản ghi này."
+  },
+  "reminder": {
+    "onTime": "đúng lúc",
+    "onDay": "trong ngày",
+    "before": "trước {{amount}}",
+    "after": "sau {{amount}}",
+    "units": {
+      "days_other": "{{count, number}} ngày",
+      "hours_other": "{{count, number}} giờ",
+      "minutes_other": "{{count, number}} phút"
+    },
+    "atTime": "{{offset}}, lúc {{time}}",
+    "header": "Nhắc hạn: {{timing}} · {{to}}",
+    "toField": "gửi người trong {{field}}",
+    "toAField": "gửi người trong một trường",
+    "toMembers_other": "gửi {{count, number}} thành viên",
+    "headerBroken": "Nhắc hạn không được gửi: trường người nhận đã bị xoá hoặc đổi kiểu. Sửa trường để chọn trường khác."
+  }
+}

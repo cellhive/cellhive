@@ -1,0 +1,135 @@
+# Cellhive web: serves the SPA and reverse-proxies the API (SPEC §20).
+# Rendered by the nginx image's envsubst step at start-up:
+#   API_UPSTREAM    host:port of the API, default api:3000
+#   NGINX_RESOLVER  DNS server used to look up API_UPSTREAM, default 127.0.0.11
+#                   (Docker's embedded DNS). Resolving per request lets nginx
+#                   start before the API container and follow its restarts.
+#   STORAGE_PUBLIC_ORIGIN  origin of S3_PUBLIC_ENDPOINT, allowed by the CSP of the
+#                   snippets (uploads, images, video); empty for local storage.
+
+# Keep the scheme seen by a TLS-terminating proxy in front of this container;
+# the API derives the cookie `Secure` flag from it (COOKIE_SECURE=auto).
+map $http_x_forwarded_proto $app_forwarded_proto {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+map $http_upgrade $app_connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# `/s/{token}?embed=1` (T809): an embedded share page, see `location /s/`.
+map $arg_embed $share_page_embed {
+    default 0;
+    1       1;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Uploads are sent to object storage directly; this bounds JSON and
+    # multipart requests handled by the API (base import, CONTRACTS §12.2).
+    client_max_body_size 110m;
+
+    resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
+    set $app_api http://${API_UPSTREAM};
+
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json
+               application/problem+json image/svg+xml font/ttf;
+
+    # Security headers are added per location below: the API sets its own
+    # (helmet), and nginx drops inherited add_header once a location adds one.
+
+    location /api/ {
+        proxy_pass $app_api;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $app_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 120s;
+    }
+
+    location = /ws {
+        proxy_pass $app_api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $app_connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $app_forwarded_proto;
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+    }
+
+    # Hashed build output: cache forever. A missing asset is a 404, never the SPA.
+    location /assets/ {
+        try_files $uri =404;
+        include /etc/nginx/conf.d/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    # The Vite manifest is a build artifact, not part of the site.
+    location /.vite/ {
+        return 404;
+    }
+
+    # An embedded share page `/s/{token}?embed=1` (T809, ADR-38 §4) may be
+    # framed by the origins its link allows, so its headers depend on the
+    # link: the API answers them (`GET /api/v1/shares/{token}/page`) with
+    # `X-Accel-Redirect: /_share/embed`, and that internal location serves
+    # `share.html` with the API's Content-Security-Policy (`frame-ancestors`
+    # of the link, else 'none') and X-Frame-Options (DENY unless framed).
+    # `if` holds only a `rewrite ... last`, its one safe use.
+    if ($share_page_embed) {
+        rewrite "^/s/([A-Za-z0-9_-]{43})/?$" /api/v1/shares/$1/page last;
+    }
+
+    location = /_share/embed {
+        internal;
+        try_files /share.html =404;
+        include /etc/nginx/conf.d/snippets/share-embed-headers.conf;
+        add_header Content-Security-Policy $upstream_http_content_security_policy always;
+        add_header X-Frame-Options $upstream_http_x_frame_options always;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # Share pages (SPEC §15A.3): their own light entry `share.html` (T317),
+    # never indexed and never sending a Referer (the token is in the URL).
+    # `/api/v1/shares/*` gets the same headers from the API.
+    # `/share.html` is not the last try_files argument, so it is served from
+    # this location (with these headers) instead of an internal redirect.
+    location /s/ {
+        try_files /share.html =404;
+        include /etc/nginx/conf.d/snippets/share-page-headers.conf;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # Sender verification page (T533, ADR-33 §2): served by the same light entry,
+    # with the same headers (the verification token is in the query string).
+    location = /verify-sender {
+        try_files /share.html =404;
+        include /etc/nginx/conf.d/snippets/share-page-headers.conf;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # SPA fallback: client-side routes are served index.html, never cached,
+    # so a new release is picked up on the next navigation.
+    location / {
+        try_files $uri /index.html;
+        include /etc/nginx/conf.d/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+    }
+}

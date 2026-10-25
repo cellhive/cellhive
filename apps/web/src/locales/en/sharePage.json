@@ -1,0 +1,84 @@
+{
+  "loading": "Opening the shared link…",
+  "status": {
+    "notFound": {
+      "title": "Link not found",
+      "description": "This link does not exist. Check that you copied all of it, or ask the person who shared it."
+    },
+    "gone": {
+      "title": "This link is no longer available",
+      "description": "It was turned off, has expired or was replaced by a new link. Ask the person who shared it for a new one."
+    },
+    "rateLimited": {
+      "title": "Too many requests",
+      "description": "Wait a moment, then try again."
+    },
+    "error": {
+      "title": "The link could not be opened",
+      "description": "Check your connection, then try again."
+    },
+    "retry": "Try again"
+  },
+  "password": {
+    "title": "This link is protected",
+    "description": "Enter the password you received with the link.",
+    "label": "Password",
+    "submit": "Open",
+    "submitting": "Checking…",
+    "required": "Enter the password.",
+    "invalid": "Wrong password. Try again.",
+    "locked": "Too many wrong passwords."
+  },
+  "view": {
+    "kind": {
+      "grid": "Shared view",
+      "kanban": "Shared board"
+    },
+    "records_one": "{{formattedCount}} record",
+    "records_other": "{{formattedCount}} records",
+    "recordsEstimated": "About {{formattedCount}} records",
+    "refresh": "Refresh",
+    "updated": "Updated {{time}}",
+    "readOnly": "Read-only: this link does not allow changes.",
+    "empty": "No records to show.",
+    "loadFailed": "Some records could not be loaded.",
+    "retry": "Try again",
+    "copyOff": "Copying is turned off for this link.",
+    "tools": "View tools"
+  },
+  "group": {
+    "empty": "(Empty)",
+    "header": "{{field}}: {{value}} ({{count, number}})"
+  },
+  "cards": {
+    "loading": "Loading…",
+    "untitled": "Untitled",
+    "list": "Records",
+    "viewFiles_one": "{{field}}: view {{count, number}} file",
+    "viewFiles_other": "{{field}}: view {{count, number}} files"
+  },
+  "board": {
+    "label": "Board, grouped by {{field}}",
+    "noValue": "No value",
+    "noGroup": "This board has no grouping field that the link shows: all cards are listed together.",
+    "all": "All cards",
+    "column": "{{name}}, {{count, number}} cards",
+    "empty": "No cards",
+    "shown": "{{shown}} of {{count, number}} shown",
+    "loadMore": "Load more cards",
+    "loading": "Loading cards…"
+  },
+  "record": {
+    "title": "Record details",
+    "close": "Close",
+    "loading": "Loading the record…",
+    "gone": "This record is no longer in the shared view.",
+    "failed": "The record could not be loaded."
+  },
+  "export": {
+    "button": "Download",
+    "csv": "CSV",
+    "xlsx": "Excel (XLSX)",
+    "frame": "Download of the shared view"
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "page": {
+    "title": "Webhook nhận vào",
+    "back": "Về {{name}}",
+    "subtitle": "Các URL mà hệ thống khác gọi để gửi dữ liệu vào base này. Mỗi request có thể chạy các automation dùng webhook đó.",
+    "add": "Webhook mới",
+    "listHeading": "Danh sách webhook",
+    "limit": "Base này đã có tối đa {{max, number}} webhook. Hãy xoá bớt một webhook để thêm mới.",
+    "loading": "Đang tải webhook",
+    "emptyTitle": "Chưa có webhook nhận vào",
+    "empty": "Tạo một webhook, đưa URL và secret cho hệ thống gửi (cửa hàng, công cụ form, n8n…), rồi chọn webhook làm trigger của một automation.",
+    "whoSees": "Chỉ quản trị base thấy trang này. Nội dung request nhận được lưu 7 ngày và không bao giờ hiện ở đây."
+  },
+  "list": {
+    "noUsages": "Chưa automation nào dùng",
+    "usages_one": "{{count, number}} automation dùng: {{names}}",
+    "usages_other": "{{count, number}} automation dùng: {{names}}",
+    "never": "Không có request nào trong 7 ngày qua",
+    "lastPrefix": "Request gần nhất",
+    "manage": "Quản lý {{name}}",
+    "manageShort": "Quản lý"
+  },
+  "usages": {
+    "hidden": "Một automation bạn không xem được",
+    "open": "Mở",
+    "openNamed": "Mở {{name}}",
+    "none": "Chưa có automation nào chạy từ webhook này."
+  },
+  "status": {
+    "on": "Đang nhận",
+    "off": "Tạm dừng"
+  },
+  "auth": {
+    "short": {
+      "signature": "Chữ ký",
+      "bearer": "Bearer token",
+      "both": "Bearer + chữ ký",
+      "none": "Không xác thực"
+    },
+    "long": {
+      "signature": "Chữ ký (Standard Webhooks)",
+      "bearer": "Bearer token",
+      "both": "Bearer token và chữ ký",
+      "none": "Không xác thực"
+    },
+    "explain": {
+      "signature": "Bên gửi ký mỗi request bằng một secret dùng chung (header webhook-id, webhook-timestamp, webhook-signature). Chặn request bị gửi lại hoặc bị sửa.",
+      "bearer": "Bên gửi thêm header Authorization: Bearer <token>. Dùng được với hầu hết công cụ.",
+      "both": "Cả hai cách kiểm: an toàn nhất khi bên gửi hỗ trợ chữ ký.",
+      "none": "Ai biết URL đều gửi được dữ liệu."
+    },
+    "noneWarningTitle": "Ai có URL đều gọi được webhook này",
+    "noneWarning": "Request được nhận mà không cần token hay chữ ký. Nếu URL bị lộ — trong log, lịch sử trình duyệt, ảnh chụp màn hình — bất kỳ ai cũng tạo hoặc sửa được dữ liệu qua automation của bạn."
+  },
+  "copy": {
+    "label": "Sao chép {{label}}",
+    "action": "Sao chép",
+    "done": "Đã sao chép",
+    "announce": "Đã sao chép {{label}} vào bộ nhớ tạm"
+  },
+  "common": {
+    "close": "Đóng",
+    "cancel": "Huỷ",
+    "save": "Lưu"
+  },
+  "create": {
+    "title": "Webhook nhận vào mới",
+    "description": "Bạn nhận một URL và secret của các cách kiểm đã chọn — chỉ hiện một lần, ngay sau khi tạo.",
+    "auth": "Cách kiểm tra request",
+    "recommended": "Khuyên dùng",
+    "noneAck": "Tôi hiểu rằng ai có URL đều gửi được dữ liệu.",
+    "submit": "Tạo webhook"
+  },
+  "form": {
+    "name": "Tên",
+    "nameHint": "Tên người làm automation sẽ chọn, ví dụ “Đơn từ shop”.",
+    "rate": "Số request mỗi giây",
+    "rateHint": "Chấp nhận dồn ngắn tới {{burst, number}} lần mức này; vượt quá nhận “429 Too Many Requests”. Máy chủ có thể đặt mức tối đa thấp hơn.",
+    "errors": {
+      "required": "Bắt buộc.",
+      "tooLong": "Tối đa 100 ký tự.",
+      "rate": "Nhập số nguyên từ 1 đến 1.000.",
+      "ack": "Xác nhận bạn hiểu rủi ro, hoặc chọn một cách kiểm."
+    }
+  },
+  "reveal": {
+    "title": {
+      "created": "Đã tạo webhook — hãy lưu secret ngay",
+      "rotated": "Secret ký mới",
+      "bearer": "Bearer token mới"
+    },
+    "description": {
+      "created": "Đưa các giá trị này cho hệ thống sẽ gọi “{{name}}”.",
+      "rotated": "Đưa secret mới cho hệ thống đang gọi “{{name}}”.",
+      "bearer": "Đưa token mới cho hệ thống đang gọi “{{name}}”."
+    },
+    "close": "Đóng",
+    "warningTitle": "Chỉ hiện một lần",
+    "warning_one": "Hãy sao chép secret ngay và cất ở nơi an toàn, như trình quản lý mật khẩu hoặc hệ thống gửi. Cellhive lưu nó dạng mã hoá và sẽ không bao giờ hiện lại — nếu mất, bạn phải cấp secret mới.",
+    "warning_other": "Hãy sao chép các secret ngay và cất ở nơi an toàn, như trình quản lý mật khẩu hoặc hệ thống gửi. Cellhive lưu chúng dạng mã hoá và sẽ không bao giờ hiện lại — nếu mất, bạn phải cấp secret mới.",
+    "label": {
+      "url": "URL webhook",
+      "signing_secret": "Secret ký",
+      "bearer_token": "Bearer token"
+    },
+    "hint": {
+      "url": "Bạn xem lại được URL sau này trong cài đặt của webhook.",
+      "signing_secret": "Dùng để ký request (Standard Webhooks: webhook-id, webhook-timestamp, webhook-signature).",
+      "bearer_token": "Gửi dưới dạng header Authorization: Bearer <token>.",
+      "rotated": "Secret cũ vẫn dùng được tới {{date}}, để bạn cập nhật bên gửi mà không mất request."
+    },
+    "confirm_one": "Tôi đã cất secret ở nơi an toàn.",
+    "confirm_other": "Tôi đã cất các secret ở nơi an toàn.",
+    "nag_one": "Hãy xác nhận đã cất secret trước: nó không thể hiện lại.",
+    "nag_other": "Hãy xác nhận đã cất các secret trước: chúng không thể hiện lại.",
+    "done": "Xong"
+  },
+  "drawer": {
+    "description": "Cài đặt và các request đã nhận của webhook này.",
+    "tabs": "Các phần của webhook",
+    "tab": {
+      "settings": "Cài đặt",
+      "requests": "Nhật ký request"
+    }
+  },
+  "settings": {
+    "receive": "Trạng thái",
+    "enabled": "Nhận request",
+    "enabledOn": "Request được nhận và chạy automation.",
+    "enabledOff": "Tạm dừng: URL trả “404 Not Found” và không lưu gì.",
+    "url": "URL",
+    "urlLabel": "URL webhook",
+    "urlHint": "Hãy giữ như mật khẩu: ai có URL đều gọi được webhook này.",
+    "regenerate": "Tạo URL mới",
+    "auth": "Xác thực",
+    "general": "Chung",
+    "usages": "Automation",
+    "danger": "Xoá"
+  },
+  "check": {
+    "on": "Bật",
+    "off": "Tắt",
+    "remove": "Bỏ",
+    "signature": {
+      "name": "Secret ký",
+      "explain": "Request phải có chữ ký Standard Webhooks hợp lệ tạo bằng secret này.",
+      "rotating": "Secret cũ vẫn được chấp nhận tới {{date}}.",
+      "rotate": "Xoay secret",
+      "add": "Thêm secret ký"
+    },
+    "bearer": {
+      "name": "Bearer token",
+      "explain": "Request phải có header Authorization: Bearer <token>.",
+      "replace": "Thay token",
+      "add": "Thêm Bearer token"
+    }
+  },
+  "confirm": {
+    "rotate": {
+      "title": "Xoay secret ký?",
+      "body": "Một secret mới được cấp và chỉ hiện một lần. Secret hiện tại vẫn dùng được 24 giờ để bạn kịp cập nhật bên gửi. Xoay lại trong 24 giờ sẽ bỏ secret cũ nhất.",
+      "confirm": "Xoay secret"
+    },
+    "addSignature": {
+      "title": "Yêu cầu chữ ký?",
+      "body": "Một secret ký được cấp và chỉ hiện một lần. Từ giờ, request không có chữ ký hợp lệ bị từ chối (401).",
+      "confirm": "Thêm secret ký"
+    },
+    "removeSignature": {
+      "title": "Ngừng kiểm chữ ký?",
+      "body": "Secret ký bị xoá. Request không còn được kiểm chữ ký.",
+      "confirm": "Bỏ kiểm chữ ký"
+    },
+    "replaceBearer": {
+      "title": "Thay Bearer token?",
+      "body": "Một token mới được cấp và chỉ hiện một lần. Token hiện tại ngừng hoạt động ngay: request còn gửi token cũ bị từ chối (401) cho tới khi bên gửi dùng token mới.",
+      "confirm": "Thay token"
+    },
+    "addBearer": {
+      "title": "Yêu cầu Bearer token?",
+      "body": "Một token được cấp và chỉ hiện một lần. Từ giờ, request không có token bị từ chối (401).",
+      "confirm": "Thêm Bearer token"
+    },
+    "removeBearer": {
+      "title": "Ngừng kiểm Bearer token?",
+      "body": "Token bị xoá. Request không còn được kiểm token.",
+      "confirm": "Bỏ kiểm token"
+    },
+    "regenerate": {
+      "title": "Tạo URL mới?",
+      "body": "URL hiện tại ngừng hoạt động ngay: mọi hệ thống đang gọi nó nhận “404 Not Found” cho tới khi bạn đưa URL mới. Secret không đổi.",
+      "confirm": "Tạo URL mới"
+    },
+    "leavesNone": "Đây là cách kiểm cuối cùng: sau đó ai có URL đều gọi được webhook này."
+  },
+  "toast": {
+    "enabled": "“{{name}}” đã nhận request trở lại.",
+    "disabled": "Đã tạm dừng “{{name}}”.",
+    "saved": "Đã lưu “{{name}}”.",
+    "deleted": "Đã xoá “{{name}}”.",
+    "removeSignature": "“{{name}}” không còn kiểm chữ ký.",
+    "removeBearer": "“{{name}}” không còn kiểm Bearer token.",
+    "regenerate": "“{{name}}” đã có URL mới. URL cũ không còn hoạt động."
+  },
+  "delete": {
+    "action": "Xoá webhook",
+    "title": "Xoá “{{name}}”?",
+    "body": "URL của webhook ngừng hoạt động ngay. Nhật ký request còn giữ tới khi đủ 7 ngày.",
+    "confirm": "Xoá webhook",
+    "inUse_one": "{{count, number}} automation đang chạy từ webhook này. Hãy đổi trigger hoặc xoá automation đó trước:",
+    "inUse_other": "{{count, number}} automation đang chạy từ webhook này. Hãy đổi trigger hoặc xoá các automation đó trước:"
+  },
+  "log": {
+    "note": "Request trong {{days, number}} ngày qua, mới nhất trước. Không bao giờ hiện nội dung và header.",
+    "refresh": "Làm mới",
+    "loading": "Đang tải request",
+    "empty": "Không nhận request nào trong 7 ngày qua.",
+    "listLabel": "Request mà {{name}} đã nhận",
+    "size": "Kích thước {{size}}",
+    "duplicate": "Gửi lại — đã nhận trước đó, bỏ qua",
+    "causation": "Tiếp nối một chuỗi automation",
+    "runs": "Lịch sử chạy",
+    "runsFor": "Lịch sử chạy của request lúc {{time}}",
+    "more": "Tải thêm"
+  }
+}

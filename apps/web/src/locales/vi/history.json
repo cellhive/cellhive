@@ -1,0 +1,70 @@
+{
+  "timeline": "Các thay đổi",
+  "changes": "Các trường đã đổi",
+  "loading": "Đang tải lịch sử…",
+  "retry": "Thử lại",
+  "none": "Chưa có thay đổi nào.",
+  "noneForField": "Trường này chưa thay đổi lần nào.",
+  "loadMore": "Tải thay đổi cũ hơn",
+  "before": "Trước:",
+  "after": "Sau:",
+  "empty": "(trống)",
+  "showAll": "Xem cả {{count, number}} thay đổi",
+  "showLess": "Thu gọn",
+  "batch_other": "Thuộc một đợt sửa {{count, number}} bản ghi",
+  "cellTitle": "Lịch sử của {{field}}",
+  "close": "Đóng lịch sử",
+  "actor": {
+    "user": "Người dùng đã xoá",
+    "api_token": "API token",
+    "automation": "Automation",
+    "shareLinkNamed": "Link chia sẻ của “{{name}}”",
+    "share_link": "Link chia sẻ",
+    "system": "Hệ thống"
+  },
+  "via": {
+    "app": "Trong ứng dụng",
+    "automation": "Qua automation",
+    "apiToken": "Qua API token",
+    "shareLink": "Qua link chia sẻ hoặc form",
+    "import": "Qua nhập dữ liệu",
+    "revert": "Khôi phục từ một thay đổi trước"
+  },
+  "verb": {
+    "created": "đã tạo bản ghi này",
+    "deleted": "đã xoá bản ghi này",
+    "restored": "đã khôi phục bản ghi này từ thùng rác",
+    "reverted": "đã khôi phục giá trị cũ",
+    "changedField": "đã sửa {{field}}",
+    "changedFields_other": "đã sửa {{count, number}} trường"
+  },
+  "revert": {
+    "action_other": "Khôi phục giá trị cũ",
+    "confirmTitle_other": "Khôi phục giá trị cũ?",
+    "confirmDescription_other": "Giá trị trước lần sửa này được ghi lại thành một thay đổi mới. Các lần sửa sau đó của trường này sẽ bị thay thế.",
+    "cancel": "Huỷ",
+    "confirm": "Khôi phục",
+    "done": "Đã khôi phục giá trị cũ.",
+    "doneSkipped_other": "Đã khôi phục giá trị cũ. {{count, number}} bản ghi liên kết đã bị xoá nên không được liên kết lại.",
+    "gone": "Bạn không còn quyền xem bản ghi này.",
+    "notFound": "Không khôi phục được thay đổi này: bản ghi hoặc thay đổi không còn tồn tại.",
+    "retry": "Thử lại",
+    "conflict": {
+      "title": "Bản ghi vừa được sửa",
+      "message": "{{name}} đã sửa bản ghi này sau khi lịch sử được tải. Giá trị mới nhất đang hiển thị.",
+      "someone": "Một người khác",
+      "keep": "Giữ giá trị hiện tại",
+      "restoreAnyway": "Vẫn khôi phục"
+    }
+  },
+  "files": {
+    "added": "đã thêm",
+    "removed": "đã gỡ",
+    "reordered": "Đổi thứ tự tệp"
+  },
+  "links": {
+    "added": "đã liên kết",
+    "removed": "đã gỡ liên kết",
+    "reordered": "Đổi thứ tự bản ghi liên kết"
+  }
+}

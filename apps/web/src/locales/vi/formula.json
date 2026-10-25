@@ -1,0 +1,203 @@
+{
+  "editor": {
+    "title": "Trình soạn công thức",
+    "subtitle": "{{field}} · bảng {{table}}",
+    "newField": "Trường mới",
+    "reformat": "Định dạng lại",
+    "guide": "Hướng dẫn",
+    "label": "Công thức",
+    "newlineHint": "Shift+Enter xuống dòng",
+    "placeholder": "Gõ [ để chọn trường, bảng, hoặc gõ tên hàm",
+    "confirm": "Xác nhận"
+  },
+  "field": {
+    "empty": "Chưa có công thức",
+    "missing": "Hãy viết công thức cho trường này.",
+    "write": "Soạn công thức",
+    "edit": "Sửa công thức",
+    "mobileTitle": "Sửa trên màn hình ≥ 768 px",
+    "mobileBody": "Trên điện thoại chỉ xem công thức và kết quả. Mở base này trên máy tính hoặc máy tính bảng để sửa.",
+    "copy": "Sao chép công thức",
+    "copied": "Đã sao chép công thức.",
+    "copyFailed": "Không sao chép được công thức.",
+    "uses": "Dùng dữ liệu từ"
+  },
+  "catalogue": {
+    "groups": "Nhóm",
+    "tabs": {
+      "fields": "Trường",
+      "tables": "Bảng",
+      "variables": "Biến",
+      "logic": "Logic",
+      "number": "Số",
+      "text": "Văn bản",
+      "date": "Ngày",
+      "list": "Danh sách"
+    },
+    "search": "Tìm hàm hoặc trường",
+    "results": "Kết quả tìm",
+    "empty": "Không có mục nào khớp.",
+    "phase2": "Chưa hỗ trợ",
+    "phase2Doc": "Chưa hỗ trợ: công thức dùng hàm này chưa lưu được.",
+    "fieldCount_other": "{{count, number}} trường",
+    "docs": "Tài liệu",
+    "insert": "Chèn",
+    "table": "Bảng",
+    "fieldDoc": "Giá trị của trường này ở cùng bản ghi.",
+    "options": "Lựa chọn: {{list}}.",
+    "linkDoc": "Trường liên kết: [Liên kết].[Trường] trả về giá trị của các bản ghi được liên kết dạng danh sách.",
+    "tableDoc": "Mọi bản ghi của bảng. [Bảng].[Trường] trả về cả cột dạng danh sách; [Bảng].FILTER(…) giữ các bản ghi khớp điều kiện.",
+    "currentValueDoc": "Trong FILTER, MAP, COUNTIF, SUMIF hoặc SORTBY: bản ghi (khi phạm vi là bảng) hoặc giá trị (khi phạm vi là danh sách) đang xét. CurrentValue.[Trường] đọc một trường của bản ghi đó.",
+    "letDoc": "Biến đã khai báo trước đó trong LET.",
+    "syntax": "Cú pháp",
+    "examples": "Ví dụ",
+    "exampleResult": "Kết quả: {{result}}",
+    "returns": "Trả về: {{type}}",
+    "insertExample": "Chèn ví dụ",
+    "volatile": "Giá trị đổi theo thời gian: công thức dùng hàm này được tính mỗi lần đọc, không lưu."
+  },
+  "guide": {
+    "title": "Viết công thức",
+    "fields": "Trường của bảng này: [Tên trường].",
+    "links": "Qua liên kết: [Liên kết].[Trường] trả về giá trị của các bản ghi được liên kết.",
+    "tables": "Bảng khác: [Bảng].FILTER(CurrentValue.[Trường] = [Trường]).[Trường].SUM().",
+    "text": "Chữ đặt trong nháy kép: \"Xong\". Số dùng dấu chấm: 0.1.",
+    "operators": "Toán tử: + - * / % & = != > >= < <= && ||.",
+    "keyboard": "Bàn phím",
+    "keys": {
+      "suggest": "Ctrl+Space",
+      "accept": "Tab / Enter",
+      "close": "Esc",
+      "newline": "Shift+Enter",
+      "confirm": "Ctrl+Enter"
+    },
+    "actions": {
+      "suggest": "Mở gợi ý",
+      "accept": "Chèn gợi ý đang chọn",
+      "close": "Đóng gợi ý",
+      "newline": "Xuống dòng",
+      "confirm": "Xác nhận công thức"
+    }
+  },
+  "suggest": {
+    "label": "Gợi ý",
+    "fields": "Trường · {{table}}",
+    "tables": "Bảng",
+    "variables": "Biến",
+    "tableFunctions": "Hàm cho bảng",
+    "table": "Bảng",
+    "variable": "Biến",
+    "tab": "Tab"
+  },
+  "errors": {
+    "count_other": "{{count, number}} lỗi",
+    "at": "Dòng và cột",
+    "none": "Không có lỗi",
+    "UNCLOSED_CALL": "Thiếu dấu ) để đóng {{function}}(.",
+    "UNKNOWN_FIELD_named": "Không có trường “{{name}}” ở đây (hoặc bạn không xem được).",
+    "UNKNOWN_FUNCTION_named": "Không có hàm {{name}}.",
+    "UNSUPPORTED_FUNCTION_named": "Hàm {{name}} chưa được hỗ trợ.",
+    "WRONG_ARGUMENT_COUNT": "{{function}} nhận từ {{min, number}} đến {{max, number}} đối số, không phải {{actual, number}}.",
+    "WRONG_ARGUMENT_COUNT_exact": "{{function}} nhận {{min, number}} đối số, không phải {{actual, number}}.",
+    "WRONG_ARGUMENT_COUNT_open": "{{function}} cần ít nhất {{min, number}} đối số, không phải {{actual, number}}.",
+    "TYPE_MISMATCH_text": "Các kết quả phải cùng một kiểu. Bọc kết quả này trong TEXT() để chuyển nó thành văn bản."
+  },
+  "preview": {
+    "empty": "Viết công thức để xem kết quả.",
+    "noRows": "Không có bản ghi nào để xem trước.",
+    "timeout": "Xem trước quá lâu. Hãy rút gọn công thức hoặc thử lại.",
+    "failed": "Không tính được bản xem trước.",
+    "blank": "rỗng",
+    "blankHint": "Bản ghi này cho ô rỗng: dữ liệu trống, hoặc công thức lỗi ở dòng này (chia cho 0…). Công thức vẫn lưu được; dùng IFERROR(…, 0) để hiện giá trị khác.",
+    "previous": "Bản ghi trước",
+    "next": "Bản ghi sau",
+    "row": "Dòng {{index, number}} / {{count, number}} · {{title}}",
+    "untitled": "Chưa đặt tên",
+    "records_other": "{{count, number}} bản ghi"
+  },
+  "perf": {
+    "virtual": "Công thức này có thể chậm khi bảng lớn: truy vấn bảng khác không qua trường liên kết và được tính mỗi lần đọc. Nếu được, hãy lọc qua trường liên kết.",
+    "wrapped": "Công thức này có thể chậm khi bảng lớn: truy vấn bảng khác không qua trường liên kết, và điều kiện bọc hàm quanh CurrentValue.[…]. Hãy so trực tiếp CurrentValue.[trường] với giá trị hoặc trường.",
+    "footer": "1 cảnh báo, vẫn lưu được"
+  },
+  "signature": {
+    "label": "Chữ ký hàm"
+  },
+  "paramKinds": {
+    "number": "một số.",
+    "boolean": "một điều kiện đúng hoặc sai.",
+    "date": "một ngày.",
+    "text": "một giá trị, đọc dạng chữ.",
+    "single": "một giá trị.",
+    "value": "một giá trị hoặc danh sách.",
+    "numbers": "các số, hoặc danh sách số.",
+    "number_list": "một danh sách số.",
+    "dates": "các ngày, hoặc danh sách ngày.",
+    "list": "một danh sách.",
+    "items": "một danh sách hoặc một bảng.",
+    "range": "bảng hoặc danh sách cần duyệt.",
+    "rows": "các bản ghi của một bảng.",
+    "values": "một giá trị hoặc danh sách.",
+    "lists": "các danh sách cần gộp.",
+    "condition": "biểu thức đúng/sai cho từng bản ghi hoặc giá trị; CurrentValue là mục đang xét.",
+    "mapping": "giá trị tính cho từng phần tử; CurrentValue là phần tử đó."
+  },
+  "result": {
+    "label": "Kết quả",
+    "type": "Kiểu kết quả",
+    "unknown": "Biết được khi công thức hợp lệ.",
+    "list": "Danh sách {{kind}}",
+    "kinds": {
+      "text": "Văn bản",
+      "number": "Số",
+      "boolean": "Có / không",
+      "date": "Ngày",
+      "datetime": "Ngày giờ",
+      "user": "Người dùng",
+      "attachment": "Tệp",
+      "record": "Bản ghi",
+      "null": "Rỗng"
+    }
+  },
+  "mode": {
+    "label": "Chế độ tính",
+    "stored": "Lưu giá trị, tự tính lại khi dữ liệu nguồn đổi.",
+    "virtual": "Tính mỗi lần đọc (không lưu).",
+    "virtualVolatile": "Tính mỗi lần đọc (không lưu), vì {{function}}() đổi theo thời gian.",
+    "virtualDependency": "Tính mỗi lần đọc (không lưu), vì dùng “{{field}}” là trường được tính khi đọc."
+  },
+  "style": {
+    "number": "Định dạng số",
+    "kinds": {
+      "plain": "Số",
+      "currency": "Tiền tệ",
+      "percentage": "Phần trăm"
+    },
+    "currency": "Đơn vị tiền",
+    "precision": "Chữ số thập phân",
+    "thousands": "Tách hàng nghìn",
+    "shown": "Hiển thị",
+    "date": "Định dạng ngày",
+    "format": "Kiểu hiển thị",
+    "defaultFormat": "Mặc định",
+    "timeZone": "Ngày theo múi giờ tổ chức ({{zone}}).",
+    "none": "Kiểu kết quả này không có định dạng."
+  },
+  "discard": {
+    "title": "Bỏ các thay đổi của công thức?",
+    "keep": "Tiếp tục sửa",
+    "discard": "Bỏ thay đổi"
+  },
+  "footer": {
+    "length": "{{count, number}} / {{limit, number}} ký tự",
+    "filters": "{{count, number}} / {{limit, number}} FILTER chéo bảng",
+    "dependencies": "Phụ thuộc: {{list}}",
+    "fixToConfirm_other": "Sửa {{count, number}} lỗi để xác nhận",
+    "writeToConfirm": "Viết công thức để xác nhận"
+  },
+  "popover": {
+    "title": "Sửa công thức",
+    "expand": "Mở trình soạn đầy đủ",
+    "guide": "Hướng dẫn công thức"
+  }
+}

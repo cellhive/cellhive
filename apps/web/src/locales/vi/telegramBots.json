@@ -1,0 +1,147 @@
+{
+  "page": {
+    "title": "Bot Telegram",
+    "subtitle": "Bot mà automation dùng để gửi tin Telegram. Người dựng automation chỉ thấy tên bot, không bao giờ thấy token.",
+    "back": "Quay lại {{name}}",
+    "add": "Thêm bot",
+    "loading": "Đang tải danh sách bot",
+    "emptyTitle": "Chưa có bot Telegram",
+    "empty": "Tạo bot bằng @BotFather, thêm bot vào nhóm hoặc kênh, rồi dán token vào đây.",
+    "scopeLine": "Base: {{scope}}",
+    "addedBy": "{{name}} thêm · {{date}}",
+    "unknownUser": "một thành viên cũ",
+    "edit": "Sửa {{name}}",
+    "editShort": "Sửa",
+    "delete": "Xoá {{name}}",
+    "whoSees": "Chỉ chủ sở hữu và quản trị viên tổ chức thấy trang này. Bước của base không còn được dùng chung bot sẽ lỗi cho tới khi bot được chia sẻ lại hoặc bước được đổi.",
+    "listHeading": "Danh sách bot"
+  },
+  "scope": {
+    "all": "Mọi base",
+    "selected": "Các base được chọn",
+    "none": "chưa có",
+    "unknownBase": "Base không xác định"
+  },
+  "form": {
+    "addTitle": "Thêm bot Telegram",
+    "editTitle": "Sửa {{name}}",
+    "description": "Token được lưu đã mã hoá và không bao giờ hiện lại.",
+    "name": "Tên",
+    "nameHint": "Tên người dựng automation sẽ chọn, ví dụ “Kinh doanh” hoặc “Hỗ trợ IT”.",
+    "token": "Token bot",
+    "tokenHint": "Lấy từ @BotFather, dạng 123456789:AAH…",
+    "tokenKeepHint": "Để trống để giữ token đã lưu; nhập token mới để thay.",
+    "tokenSaved": "Đã lưu — đang ẩn",
+    "scope": "Dùng được ở",
+    "scopeBases": "Base",
+    "scopeHint": "Automation của base khác không chọn được bot này.",
+    "noBases": "Tổ chức chưa có base nào.",
+    "add": "Thêm bot",
+    "save": "Lưu",
+    "cancel": "Huỷ",
+    "close": "Đóng",
+    "errors": {
+      "required": "Bắt buộc.",
+      "format": "Đây không phải token bot Telegram (dạng 123456789:AAH…).",
+      "bases": "Hãy chọn ít nhất một base."
+    }
+  },
+  "delete": {
+    "title": "Xoá {{name}}?",
+    "description": "Automation sẽ không gửi được bằng bot này nữa. Bot còn được automation dùng thì không xoá được.",
+    "loadingUsages": "Đang tải các automation dùng bot này",
+    "noUsages": "Không automation nào dùng bot này.",
+    "usages_one": "{{count, number}} automation đang dùng bot này: hãy đổi automation đó trước.",
+    "usages_other": "{{count, number}} automation đang dùng bot này: hãy đổi các automation đó trước.",
+    "notificationBot": "Bot này đang gửi thông báo cá nhân cho thành viên tổ chức. Hãy chọn bot thông báo khác trước (mục “Bot gửi thông báo” phía trên).",
+    "hiddenAutomation": "Một automation bạn không xem được",
+    "open": "Mở",
+    "confirm": "Xoá bot",
+    "notificationBotBlockedTitle": "Đây là bot gửi thông báo",
+    "notificationBotBlocked": "Không xoá được khi bot đang gửi thông báo cho thành viên. Hãy chọn bot khác hoặc bỏ bot ở mục “Bot gửi thông báo” trước."
+  },
+  "toast": {
+    "added": "Đã thêm bot “{{name}}”.",
+    "saved": "Đã lưu bot “{{name}}”.",
+    "deleted": "Đã xoá bot “{{name}}”."
+  },
+  "notificationBot": {
+    "title": "Bot gửi thông báo",
+    "description": "Thành viên liên kết Telegram cá nhân với bot này để nhận thông báo qua Telegram. Mỗi tổ chức một bot; automation vẫn dùng bot này được.",
+    "loading": "Đang tải bot gửi thông báo",
+    "none": "Chưa có bot gửi thông báo: thành viên chưa nhận được thông báo qua Telegram.",
+    "secretName": "Bot “{{name}}”",
+    "label": "Bot thông báo",
+    "select": "Bot gửi thông báo",
+    "noneOption": "Không — không gửi thông báo qua Telegram",
+    "save": "Lưu",
+    "hintFirst": "Thành viên liên kết được Telegram sau khi có bot. Lưu không gửi gì cho ai.",
+    "hintChange": "Đổi hoặc bỏ bot sẽ huỷ liên kết của mọi người: từng thành viên phải liên kết lại Telegram.",
+    "noBots": "Hãy thêm một bot ở danh sách bên dưới trước, rồi chọn nó ở đây.",
+    "tokenHint": "Đây là bot gửi thông báo: thay bằng token của một bot khác thì mọi thành viên phải liên kết lại Telegram.",
+    "status": {
+      "ok": "Đang hoạt động",
+      "webhook_conflict": "Có webhook ở nơi khác",
+      "invalid_token": "Token bị từ chối",
+      "unknown": "Chưa kiểm tra"
+    },
+    "webhookConflict": {
+      "title": "Telegram đang gửi tin của bot này tới nơi khác",
+      "body": "Bot đang đặt webhook của một hệ thống khác nên Cellhive không nhận được lệnh /start. Hãy gỡ webhook đó (deleteWebhook) hoặc tạo một bot riêng cho Cellhive bằng @BotFather rồi chọn ở đây."
+    },
+    "invalidToken": {
+      "title": "Telegram từ chối token của bot",
+      "body": "Có thể token đã bị thu hồi ở @BotFather. Dán token mới bằng nút “Sửa” ở danh sách bên dưới, hoặc chọn bot khác."
+    },
+    "confirm": {
+      "changeTitle": "Đổi bot gửi thông báo?",
+      "removeTitle": "Ngừng gửi thông báo qua Telegram?",
+      "description": "Mọi thành viên đã liên kết Telegram sẽ bị huỷ liên kết.",
+      "changeBody": "Thông báo sẽ được gửi từ “{{name}}”. Thành viên phải liên kết lại Telegram trong cài đặt thông báo; tới lúc đó họ không nhận gì qua Telegram.",
+      "removeBody": "Không ai nhận thông báo qua Telegram nữa và các liên kết thành viên đã tạo sẽ ngừng hoạt động.",
+      "change": "Đổi bot",
+      "remove": "Ngừng gửi qua Telegram"
+    },
+    "toast": {
+      "saved": "@{{username}} đang gửi thông báo.",
+      "removed": "Đã ngừng gửi thông báo qua Telegram."
+    },
+    "mode": {
+      "legend": "Nhận tin bằng",
+      "current": "(đang dùng)",
+      "polling": "Poll (mặc định)",
+      "pollingHint": "Cellhive hỏi Telegram tin mới. Chạy trên mọi máy chủ; lệnh /stop được xử lý trong vòng 15 phút.",
+      "webhook": "Webhook",
+      "webhookHint": "Telegram gửi từng tin tới Cellhive ngay. Máy chủ này phải truy cập được từ internet qua HTTPS (PUBLIC_URL).",
+      "apply": "Áp dụng",
+      "unavailable": "Không dùng được webhook: máy chủ này không truy cập được qua HTTPS. Với thành viên, chế độ poll hoạt động như nhau.",
+      "webhookStatusLabel": "Webhook:",
+      "webhookStatus": {
+        "ok": "Đang hoạt động",
+        "error": "Lỗi giao tin",
+        "unknown": "Chưa kiểm tra"
+      },
+      "webhookError": {
+        "title": "Telegram không giao được tin tới Cellhive",
+        "body": "Telegram báo lỗi giao tin, hoặc webhook đã bị đổi ở nơi khác. Hãy kiểm tra PUBLIC_URL truy cập được từ internet, rồi chọn lại Webhook — hoặc chuyển về Poll."
+      },
+      "publicUrl": {
+        "title": "Máy chủ này không truy cập được qua HTTPS",
+        "body": "Webhook cần PUBLIC_URL là địa chỉ https ở cổng 443, 80, 88 hoặc 8443. Hãy giữ Poll — thành viên vẫn nhận thông báo như nhau — hoặc hỏi người vận hành máy chủ."
+      },
+      "conflict": {
+        "title": "Bot này đang gửi tin tới một webhook khác",
+        "intro": "Cellhive không bao giờ thay webhook do hệ thống khác đặt. Để dùng chế độ webhook:",
+        "step1": "Gỡ webhook đó ở nơi đã đặt (công cụ bot khác, n8n…), hoặc tạo một bot riêng cho Cellhive bằng @BotFather rồi chọn nó ở trên.",
+        "step2": "Sau đó chọn Webhook và bấm Áp dụng lại.",
+        "meanwhile": "Trong lúc đó bot vẫn nhận tin bằng poll."
+      },
+      "tokenHintWebhook": "Nếu token mới là của bot khác, cách nhận tin quay về poll: hãy chọn lại Webhook sau đó.",
+      "toast": {
+        "webhook": "Telegram giờ gửi tin của bot này thẳng tới Cellhive (webhook).",
+        "polling": "Cellhive lại hỏi Telegram tin của bot này (poll).",
+        "fellBack": "Token là của bot khác nên cách nhận tin đã về poll. Chọn lại Webhook ở mục “Bot gửi thông báo” nếu cần."
+      }
+    }
+  }
+}

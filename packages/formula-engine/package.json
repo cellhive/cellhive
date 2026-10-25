@@ -1,0 +1,35 @@
+{
+  "name": "@cellhive/formula-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Formula engine for Cellhive: lexer, Pratt parser, AST, name/ID resolution, type system, function catalogue, dependency analysis and TS evaluator",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./template/split": {
+      "types": "./dist/template/split.d.ts",
+      "default": "./dist/template/split.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@cellhive/contracts": "workspace:*",
+    "@cellhive/field-types": "workspace:*",
+    "@cellhive/filter-dsl": "workspace:*"
+  }
+}

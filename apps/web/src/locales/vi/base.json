@@ -1,0 +1,34 @@
+{
+  "createdAt": "Tạo lúc {{date}}",
+  "empty": {
+    "title": "Chưa có bảng nào",
+    "description": "Các bảng, chế độ xem và bản ghi của base này sẽ hiển thị ở đây."
+  },
+  "tables": {
+    "heading": "Bảng",
+    "trash": "Thùng rác",
+    "trashOf": "Thùng rác của bảng {{table}}"
+  },
+  "deleteTable": {
+    "title": "Xoá bảng “{{name}}”?",
+    "description": "Bảng vào thùng rác của base cùng bản ghi, trường và view. Bạn có thể khôi phục trong vòng 30 ngày.",
+    "submit": "Xoá bảng",
+    "done": "Đã xoá bảng {{name}}. Giữ trong thùng rác 30 ngày.",
+    "undo": "Hoàn tác",
+    "restored": "Đã khôi phục bảng {{name}}."
+  },
+  "dashboards": {
+    "defaultName": "Dashboard chưa đặt tên",
+    "createTitle": "Dashboard mới",
+    "renameTitle": "Đổi tên dashboard",
+    "name": "Tên",
+    "create": "Tạo",
+    "save": "Lưu",
+    "deleteTitle": "Xoá dashboard {{name}}?",
+    "deleteDescription": "Dashboard và các widget được giữ trong thùng rác của base 30 ngày. Dữ liệu trong các bảng không thay đổi.",
+    "deleteSubmit": "Xoá",
+    "deleted": "Đã xoá dashboard {{name}}. Giữ trong thùng rác 30 ngày.",
+    "undo": "Hoàn tác",
+    "restored": "Đã khôi phục dashboard {{name}}."
+  }
+}

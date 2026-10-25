@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "Cellhive"
+  },
+  "loading": "Đang tải…",
+  "actions": {
+    "cancel": "Huỷ",
+    "close": "Đóng",
+    "signOut": "Đăng xuất"
+  },
+  "nav": {
+    "baseSettings": "Cài đặt base",
+    "automations": "Automation",
+    "skipToContent": "Bỏ qua tới nội dung",
+    "sidebar": "Thanh bên",
+    "open": "Mở điều hướng",
+    "close": "Đóng điều hướng",
+    "workspaces": "Không gian làm việc",
+    "createWorkspace": "Tạo không gian làm việc",
+    "expand": "Hiện các base của {{name}}",
+    "collapse": "Ẩn các base của {{name}}",
+    "noWorkspaces": "Chưa có không gian làm việc",
+    "noBases": "Chưa có base nào",
+    "loadFailed": "Không tải được",
+    "tables": "Bảng",
+    "tableMenu": "Thao tác với bảng {{table}}",
+    "deleteTable": "Xoá bảng",
+    "dashboards": "Dashboard",
+    "newDashboard": "Dashboard mới",
+    "dashboardMenu": "Thao tác với dashboard {{name}}",
+    "renameDashboard": "Đổi tên",
+    "duplicateDashboard": "Nhân bản",
+    "deleteDashboard": "Xoá dashboard",
+    "trash": "Thùng rác",
+    "baseMenu": "Thao tác cho base {{name}}"
+  },
+  "orgSwitcher": {
+    "label": "Chuyển tổ chức, hiện tại: {{name}}",
+    "heading": "Tổ chức"
+  },
+  "userMenu": {
+    "label": "Menu tài khoản của {{name}}",
+    "connections": "Tài khoản đã kết nối",
+    "apiTokens": "API token"
+  },
+  "preferences": {
+    "menu": "Hiển thị",
+    "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "themes": {
+      "light": "Sáng",
+      "dark": "Tối",
+      "system": "Theo hệ thống"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "description": "Trang này không tồn tại, hoặc bạn không có quyền truy cập.",
+    "home": "Về trang chủ"
+  },
+  "errorPage": {
+    "title": "Đã xảy ra lỗi",
+    "description": "Không hiển thị được trang. Hãy tải lại để thử lần nữa.",
+    "reload": "Tải lại"
+  },
+  "connection": {
+    "offline": "Bạn đang ngoại tuyến. Dữ liệu chỉ xem được cho tới khi có kết nối lại.",
+    "reconnecting": "Đang kết nối lại…"
+  },
+  "toast": {
+    "region": "Thông báo",
+    "dismiss": "Đóng thông báo"
+  },
+  "share": {
+    "button": "Chia sẻ",
+    "buttonLabel": "Chia sẻ view {{name}}",
+    "dashboardLabel": "Chia sẻ dashboard {{name}}"
+  },
+  "dependents": {
+    "ref_other": "{{formatted}} công thức và tra cứu sẽ báo #REF!",
+    "value_other": "{{formatted}} công thức và tra cứu sẽ báo #VALUE!",
+    "unnamed": "Một trường",
+    "inTable": "ở {{table}}",
+    "formula": "Công thức",
+    "lookup": "Tra cứu",
+    "computed": "Công thức hoặc tra cứu",
+    "tokenLabel": "Các ô sẽ hiện {{token}}",
+    "hidden_other": "và {{formatted}} trường bạn không xem được"
+  },
+  "notifications": {
+    "bell": "Thông báo",
+    "bellUnread_other": "Thông báo, {{formatted}} chưa đọc"
+  },
+  "automationTabs": {
+    "label": "Automation",
+    "config": "Cấu hình",
+    "runs": "Lịch sử chạy"
+  }
+}

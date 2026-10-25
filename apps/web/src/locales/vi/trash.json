@@ -1,0 +1,123 @@
+{
+  "heading": "Thùng rác của bảng {{table}}",
+  "backToTable": "Quay lại bảng {{table}}",
+  "subtitle": "Mục đã xoá được giữ 30 ngày rồi tự xoá vĩnh viễn.",
+  "tabs": {
+    "label": "Nội dung thùng rác",
+    "records": "Bản ghi",
+    "fields": "Trường"
+  },
+  "daysLeft_other": "Còn {{count, number}} ngày",
+  "system": "Hệ thống",
+  "unknownUser": "Người dùng không xác định",
+  "loadMore": "Tải thêm",
+  "records": {
+    "caption": "Bản ghi đã xoá của bảng {{table}}",
+    "record": "Bản ghi",
+    "deletedBy": "Người xoá",
+    "deletedAt": "Thời điểm xoá",
+    "daysLeft": "Thời gian còn lại",
+    "actions": "Thao tác",
+    "selectAll": "Chọn mọi bản ghi đã tải",
+    "select": "Chọn {{title}}",
+    "untitled": "Bản ghi chưa có tên",
+    "restore": "Khôi phục",
+    "restoreOne": "Khôi phục {{title}}",
+    "restoreSelected": "Khôi phục các bản ghi đã chọn",
+    "selected_other": "Đã chọn {{count, number}} bản ghi",
+    "clearSelection": "Bỏ chọn",
+    "restored_other": "Đã khôi phục {{count, number}} bản ghi.",
+    "failed_other": "Không khôi phục được {{count, number}} bản ghi. Lý do hiển thị ở từng dòng.",
+    "notRestored": "Chưa khôi phục: {{message}}",
+    "empty": {
+      "title": "Thùng rác trống",
+      "description": "Bản ghi bị xoá khỏi bảng này sẽ nằm ở đây trong 30 ngày."
+    },
+    "noAccess": {
+      "title": "Không có quyền xem bản ghi đã xoá",
+      "description": "Chỉ người có quyền xoá bản ghi của bảng này mới xem và khôi phục được."
+    },
+    "branchSize_other": "+{{count, number}} sub-record",
+    "restoreBranch": "Khôi phục cả nhánh",
+    "restoreBranchOne": "Khôi phục {{title}} cùng các sub-record"
+  },
+  "fields": {
+    "caption": "Trường đã xoá của bảng {{table}}",
+    "field": "Trường",
+    "deletedAt": "Thời điểm xoá",
+    "daysLeft": "Thời gian còn lại",
+    "actions": "Thao tác",
+    "restore": "Khôi phục",
+    "restoreOne": "Khôi phục trường {{name}}",
+    "restored": "Đã khôi phục trường {{name}} cùng dữ liệu.",
+    "expired": "Không thể khôi phục trường {{name}} nữa: trường đã bị xoá hơn 30 ngày.",
+    "empty": {
+      "title": "Không có trường đã xoá",
+      "description": "Trường bị xoá khỏi bảng này khôi phục được ở đây, cùng dữ liệu, trong 30 ngày."
+    }
+  },
+  "purge": {
+    "action": "Xoá vĩnh viễn",
+    "one": "Xoá vĩnh viễn {{title}}",
+    "selected": "Xoá vĩnh viễn các bản ghi đã chọn",
+    "title_other": "Xoá vĩnh viễn {{count, number}} bản ghi?",
+    "description_other": "Bản ghi, liên kết và tệp đính kèm của chúng sẽ bị xoá hẳn.",
+    "irreversible": "Không thể hoàn tác. Lịch sử thay đổi vẫn được giữ trong nhật ký kiểm tra.",
+    "branch_other": "Xoá luôn {{count, number}} sub-record đã bị xoá cùng",
+    "branchHint": "Nếu không, các sub-record vẫn nằm trong thùng rác dưới dạng bản ghi gốc.",
+    "cancel": "Huỷ",
+    "confirm_other": "Xoá vĩnh viễn {{count, number}} bản ghi",
+    "done_other": "Đã xoá vĩnh viễn {{count, number}} bản ghi."
+  },
+  "tables": {
+    "heading": "Thùng rác",
+    "back": "Quay lại {{base}}",
+    "subtitle": "Bảng đã xoá được giữ 30 ngày rồi tự xoá vĩnh viễn.",
+    "tab": "Bảng",
+    "note": "Bản ghi và trường đã xoá vẫn ở thùng rác của từng bảng.",
+    "caption": "Bảng đã xoá của base",
+    "table": "Bảng",
+    "linksColumn": "Liên kết",
+    "links_other": "{{formatted}} liên kết từ bảng khác",
+    "noLinks": "Không có liên kết",
+    "fieldCount_other": "{{formatted}} trường",
+    "restore": "Khôi phục",
+    "restoreOne": "Khôi phục bảng {{name}}",
+    "purgeOne": "Xoá vĩnh viễn bảng {{name}}",
+    "restored": "Đã khôi phục bảng {{name}}.",
+    "purged_other": "Đã xoá vĩnh viễn bảng {{name}} và {{formatted}} bản ghi.",
+    "empty": {
+      "title": "Không có bảng nào đã xoá",
+      "description": "Bảng bị xoá khỏi base này được khôi phục ở đây trong 30 ngày."
+    },
+    "purge": {
+      "title": "Xoá vĩnh viễn bảng {{name}}?",
+      "description_other": "{{formatted}} trường, bản ghi, view, link chia sẻ và tệp đính kèm của bảng bị xoá hẳn.",
+      "irreversible": "Không khôi phục được.",
+      "partners_other": "{{formatted}} trường liên kết ở bảng khác bị xoá, không khôi phục được",
+      "partnerInTrash": "Đang trong thùng rác, sẽ không khôi phục được nữa",
+      "partnerKind": {
+        "one_way": "Liên kết một chiều",
+        "two_way": "Phía kia của liên kết hai chiều"
+      },
+      "typeName": "Gõ <strong>{{name}}</strong> để xác nhận",
+      "mismatch": "Tên không khớp. Hãy gõ đúng như tên bảng.",
+      "adminsOnly": "Chỉ quản trị base thấy thao tác này.",
+      "confirm": "Xoá vĩnh viễn"
+    }
+  },
+  "dashboards": {
+    "tab": "Dashboard",
+    "subtitle": "Dashboard đã xoá được giữ 30 ngày cùng các widget, sau đó bị xoá hẳn.",
+    "caption": "Dashboard đã xoá của base",
+    "dashboard": "Dashboard",
+    "widgetCount_other": "{{formatted}} widget",
+    "restoreOne": "Khôi phục dashboard {{name}}",
+    "restored": "Đã khôi phục dashboard {{name}}.",
+    "open": "Mở",
+    "empty": {
+      "title": "Không có dashboard đã xoá",
+      "description": "Dashboard bị xoá khỏi base này có thể khôi phục tại đây trong 30 ngày."
+    }
+  }
+}

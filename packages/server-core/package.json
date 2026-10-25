@@ -1,0 +1,125 @@
+{
+  "name": "@cellhive/server-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Server-side building blocks shared by the Cellhive api and worker",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./audit": {
+      "types": "./dist/audit/index.d.ts",
+      "import": "./dist/audit/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "import": "./dist/db/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js"
+    },
+    "./query": {
+      "types": "./dist/query/index.d.ts",
+      "import": "./dist/query/index.js"
+    },
+    "./events": {
+      "types": "./dist/events/index.d.ts",
+      "import": "./dist/events/index.js"
+    },
+    "./import": {
+      "types": "./dist/import/index.d.ts",
+      "import": "./dist/import/index.js"
+    },
+    "./jobs": {
+      "types": "./dist/jobs/index.d.ts",
+      "import": "./dist/jobs/index.js"
+    },
+    "./mail": {
+      "types": "./dist/mail/index.d.ts",
+      "import": "./dist/mail/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js"
+    },
+    "./records": {
+      "types": "./dist/records/index.d.ts",
+      "import": "./dist/records/index.js"
+    },
+    "./realtime": {
+      "types": "./dist/realtime/index.d.ts",
+      "import": "./dist/realtime/index.js"
+    },
+    "./views": {
+      "types": "./dist/views/index.d.ts",
+      "import": "./dist/views/index.js"
+    },
+    "./share-links": {
+      "types": "./dist/share-links/index.d.ts",
+      "import": "./dist/share-links/index.js"
+    },
+    "./forms": {
+      "types": "./dist/forms/index.d.ts",
+      "import": "./dist/forms/index.js"
+    },
+    "./export": {
+      "types": "./dist/export/index.d.ts",
+      "import": "./dist/export/index.js"
+    },
+    "./formula": {
+      "types": "./dist/formula/index.d.ts",
+      "import": "./dist/formula/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:int": "vitest run -c vitest.int.config.ts",
+    "migrations:lock": "pnpm run build && node scripts/lock-migrations.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1138.0",
+    "@aws-sdk/s3-request-presigner": "^3.1138.0",
+    "@cellhive/contracts": "workspace:*",
+    "@cellhive/field-types": "workspace:*",
+    "@cellhive/filter-dsl": "workspace:*",
+    "@cellhive/formula-engine": "workspace:*",
+    "@cellhive/markdown": "workspace:*",
+    "@cellhive/permissions": "workspace:*",
+    "graphile-worker": "^0.18.0",
+    "hucre": "1.1.0",
+    "kysely": "^0.29.6",
+    "nodemailer": "^10.0.10",
+    "pg": "^8.23.0",
+    "sanitize-html": "^2.18.0",
+    "saxes": "^6.0.0",
+    "yauzl": "^3.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^12.1.0",
+    "@types/pg": "^8.23.1",
+    "@types/sanitize-html": "^2.16.2",
+    "@types/smtp-server": "^3.5.13",
+    "@types/yauzl": "^3.4.0",
+    "smtp-server": "^3.19.13",
+    "testcontainers": "^12.1.0"
+  }
+}

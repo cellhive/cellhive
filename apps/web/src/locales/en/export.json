@@ -1,0 +1,17 @@
+{
+  "button": "Export",
+  "menu": "Export view {{name}}",
+  "formats": {
+    "csv": "CSV (.csv)",
+    "xlsx": "Excel (.xlsx)"
+  },
+  "savedNote": "The file holds the records and fields of this view, with its saved filter, sort and hidden fields.",
+  "unsavedNote": "This view has unsaved changes: the file follows the saved view. Save the changes first to export them.",
+  "started": "Exporting {{name}} as {{format}}. The download starts in a moment.",
+  "failed": "The export could not start",
+  "busy": "Another export of yours is still running. Try again when it has finished.",
+  "denied": "Your role does not allow downloading data from this base.",
+  "frame": "Export download",
+  "localeNote": "Numbers and dates are written as your account shows them ({{locale}}, {{timeZone}}).",
+  "relationsNote": "Linked records are written as the titles you can see, attachments as file names."
+}

@@ -1,0 +1,503 @@
+{
+  "defaults": {
+    "table": "Dữ liệu",
+    "rowId": "rec_row0000000000000",
+    "tz": "Asia/Ho_Chi_Minh",
+    "now": "2026-09-28T07:30:00.000Z",
+    "locale": "und"
+  },
+  "tables": [
+    {
+      "id": "tbl_data000000000000",
+      "name": "Dữ liệu",
+      "primary": "Tên",
+      "fields": [
+        {
+          "id": "fld_name000000000000",
+          "name": "Tên",
+          "type": "text"
+        },
+        {
+          "id": "fld_num0000000000000",
+          "name": "Số",
+          "type": "number",
+          "options": {
+            "style": {
+              "type": "plain"
+            }
+          }
+        },
+        {
+          "id": "fld_numb000000000000",
+          "name": "Số B",
+          "type": "number",
+          "options": {
+            "style": {
+              "type": "plain"
+            }
+          }
+        },
+        {
+          "id": "fld_text000000000000",
+          "name": "Chữ",
+          "type": "text"
+        },
+        {
+          "id": "fld_textb00000000000",
+          "name": "Chữ B",
+          "type": "text"
+        },
+        {
+          "id": "fld_flag000000000000",
+          "name": "Có",
+          "type": "checkbox"
+        },
+        {
+          "id": "fld_status0000000000",
+          "name": "Trạng thái",
+          "type": "select",
+          "options": {
+            "multiple": false,
+            "options": [
+              {
+                "id": "opt_new0000000000000",
+                "name": "Mới"
+              },
+              {
+                "id": "opt_done000000000000",
+                "name": "Xong"
+              },
+              {
+                "id": "opt_shipped000000000",
+                "name": "Đã giao"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_tags000000000000",
+          "name": "Nhãn",
+          "type": "select",
+          "options": {
+            "multiple": true,
+            "options": [
+              {
+                "id": "opt_vip0000000000000",
+                "name": "VIP"
+              },
+              {
+                "id": "opt_internal00000000",
+                "name": "Nội bộ"
+              },
+              {
+                "id": "opt_wholesale0000000",
+                "name": "Sỉ"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_day0000000000000",
+          "name": "Ngày",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy"
+            }
+          }
+        },
+        {
+          "id": "fld_dayb000000000000",
+          "name": "Ngày B",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy"
+            }
+          }
+        },
+        {
+          "id": "fld_at00000000000000",
+          "name": "Thời điểm",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy HH:mm"
+            }
+          }
+        },
+        {
+          "id": "fld_atny000000000000",
+          "name": "Giờ NY",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy HH:mm"
+            },
+            "timezone": "America/New_York"
+          }
+        },
+        {
+          "id": "fld_user000000000000",
+          "name": "Người",
+          "type": "user",
+          "options": {
+            "multiple": true
+          }
+        },
+        {
+          "id": "fld_customer00000000",
+          "name": "Khách",
+          "type": "link",
+          "linkTableId": "tbl_customers0000000"
+        },
+        {
+          "id": "fld_ititle0000000000",
+          "name": "Title",
+          "type": "text"
+        },
+        {
+          "id": "fld_iname00000000000",
+          "name": "Name",
+          "type": "text"
+        },
+        {
+          "id": "fld_inote00000000000",
+          "name": "Note",
+          "type": "text"
+        },
+        {
+          "id": "fld_iamount000000000",
+          "name": "Amount",
+          "type": "number"
+        },
+        {
+          "id": "fld_iqty000000000000",
+          "name": "Qty",
+          "type": "number"
+        },
+        {
+          "id": "fld_idone00000000000",
+          "name": "Done",
+          "type": "checkbox"
+        },
+        {
+          "id": "fld_istatus000000000",
+          "name": "Status",
+          "type": "select",
+          "options": {
+            "multiple": false,
+            "options": [
+              {
+                "id": "opt_moi0000000000000",
+                "name": "Mới"
+              },
+              {
+                "id": "opt_xong000000000000",
+                "name": "Xong"
+              },
+              {
+                "id": "opt_dagiao0000000000",
+                "name": "Đã giao"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_itags00000000000",
+          "name": "Tags",
+          "type": "select",
+          "options": {
+            "multiple": true,
+            "options": [
+              {
+                "id": "opt_tvip000000000000",
+                "name": "VIP"
+              },
+              {
+                "id": "opt_noibo00000000000",
+                "name": "Nội bộ"
+              },
+              {
+                "id": "opt_khan000000000000",
+                "name": "Khẩn"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_idue000000000000",
+          "name": "Due",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy"
+            }
+          }
+        },
+        {
+          "id": "fld_iat0000000000000",
+          "name": "At",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy HH:mm"
+            }
+          }
+        },
+        {
+          "id": "fld_iowner0000000000",
+          "name": "Owner",
+          "type": "user",
+          "options": {
+            "multiple": true
+          }
+        },
+        {
+          "id": "fld_ifiles0000000000",
+          "name": "Files",
+          "type": "attachment"
+        }
+      ]
+    },
+    {
+      "id": "tbl_customers0000000",
+      "name": "Khách hàng",
+      "primary": "Tên KH",
+      "fields": [
+        {
+          "id": "fld_cname00000000000",
+          "name": "Tên KH",
+          "type": "text"
+        },
+        {
+          "id": "fld_tier000000000000",
+          "name": "Hạng",
+          "type": "select",
+          "options": {
+            "multiple": false,
+            "options": [
+              {
+                "id": "opt_gold000000000000",
+                "name": "Vàng"
+              },
+              {
+                "id": "opt_silver0000000000",
+                "name": "Bạc"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_points0000000000",
+          "name": "Điểm",
+          "type": "number",
+          "options": {
+            "style": {
+              "type": "plain"
+            }
+          }
+        },
+        {
+          "id": "fld_ctags00000000000",
+          "name": "Nhãn KH",
+          "type": "select",
+          "options": {
+            "multiple": true,
+            "options": [
+              {
+                "id": "opt_cvip000000000000",
+                "name": "VIP"
+              },
+              {
+                "id": "opt_cwholesale000000",
+                "name": "Sỉ"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_cstate0000000000",
+          "name": "Trạng thái KH",
+          "type": "select",
+          "options": {
+            "multiple": false,
+            "options": [
+              {
+                "id": "opt_cdone00000000000",
+                "name": "Done"
+              },
+              {
+                "id": "opt_cdonelower000000",
+                "name": "done"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_cflags0000000000",
+          "name": "Cờ KH",
+          "type": "select",
+          "options": {
+            "multiple": true,
+            "options": [
+              {
+                "id": "opt_fdone00000000000",
+                "name": "Done"
+              },
+              {
+                "id": "opt_fdonelower000000",
+                "name": "done"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tbl_orders0000000000",
+      "name": "Đơn hàng",
+      "primary": "Mã",
+      "fields": [
+        {
+          "id": "fld_code000000000000",
+          "name": "Mã",
+          "type": "text"
+        },
+        {
+          "id": "fld_ocust00000000000",
+          "name": "Khách",
+          "type": "link",
+          "linkTableId": "tbl_customers0000000"
+        },
+        {
+          "id": "fld_amount0000000000",
+          "name": "Số tiền",
+          "type": "number",
+          "options": {
+            "style": {
+              "type": "plain"
+            }
+          }
+        },
+        {
+          "id": "fld_ostatus000000000",
+          "name": "TT",
+          "type": "select",
+          "options": {
+            "multiple": false,
+            "options": [
+              {
+                "id": "opt_onew000000000000",
+                "name": "Mới"
+              },
+              {
+                "id": "opt_oshipped00000000",
+                "name": "Đã giao"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld_odate00000000000",
+          "name": "Ngày đặt",
+          "type": "datetime",
+          "options": {
+            "style": {
+              "format": "dd/MM/yyyy"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "records": {
+    "Khách hàng": [
+      {
+        "id": "rec_an00000000000000",
+        "fields": {
+          "Tên KH": "An",
+          "Hạng": "opt_gold000000000000",
+          "Điểm": 10,
+          "Nhãn KH": ["opt_cvip000000000000"],
+          "Trạng thái KH": "opt_cdone00000000000",
+          "Cờ KH": ["opt_fdone00000000000"]
+        }
+      },
+      {
+        "id": "rec_binh000000000000",
+        "fields": {
+          "Tên KH": "Bình",
+          "Hạng": "opt_silver0000000000",
+          "Điểm": 5,
+          "Nhãn KH": ["opt_cwholesale000000"],
+          "Trạng thái KH": "opt_cdonelower000000",
+          "Cờ KH": ["opt_fdonelower000000"]
+        }
+      },
+      {
+        "id": "rec_chi0000000000000",
+        "fields": {
+          "Tên KH": "Chi",
+          "Hạng": "opt_gold000000000000",
+          "Điểm": null,
+          "Nhãn KH": ["opt_cvip000000000000", "opt_cwholesale000000"],
+          "Trạng thái KH": null,
+          "Cờ KH": []
+        }
+      }
+    ],
+    "Đơn hàng": [
+      {
+        "id": "rec_o100000000000000",
+        "fields": {
+          "Mã": "Đ1",
+          "Khách": ["rec_an00000000000000"],
+          "Số tiền": 100,
+          "TT": "opt_oshipped00000000",
+          "Ngày đặt": "2026-09-01"
+        }
+      },
+      {
+        "id": "rec_o200000000000000",
+        "fields": {
+          "Mã": "Đ2",
+          "Khách": ["rec_an00000000000000"],
+          "Số tiền": 250,
+          "TT": "opt_onew000000000000",
+          "Ngày đặt": "2026-09-10"
+        }
+      },
+      {
+        "id": "rec_o300000000000000",
+        "fields": {
+          "Mã": "Đ3",
+          "Khách": ["rec_binh000000000000"],
+          "Số tiền": "75.5",
+          "TT": "opt_oshipped00000000",
+          "Ngày đặt": "2026-08-20"
+        }
+      },
+      {
+        "id": "rec_o400000000000000",
+        "fields": {
+          "Mã": "Đ4",
+          "Khách": ["rec_chi0000000000000"],
+          "Số tiền": null,
+          "TT": "opt_oshipped00000000",
+          "Ngày đặt": null
+        }
+      },
+      {
+        "id": "rec_o500000000000000",
+        "fields": {
+          "Mã": "Đ5",
+          "Khách": [],
+          "Số tiền": 40,
+          "TT": "opt_onew000000000000",
+          "Ngày đặt": "2026-09-15"
+        }
+      }
+    ]
+  }
+}

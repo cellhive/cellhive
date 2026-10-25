@@ -1,0 +1,17 @@
+{
+  "button": "Xuất",
+  "menu": "Xuất view {{name}}",
+  "formats": {
+    "csv": "CSV (.csv)",
+    "xlsx": "Excel (.xlsx)"
+  },
+  "savedNote": "Tệp gồm các bản ghi và trường của view này, theo bộ lọc, sắp xếp và trường ẩn đã lưu.",
+  "unsavedNote": "View có thay đổi chưa lưu: tệp theo view đã lưu. Hãy lưu thay đổi trước nếu muốn xuất theo chúng.",
+  "started": "Đang xuất {{name}} dạng {{format}}. Tệp sẽ bắt đầu tải về trong giây lát.",
+  "failed": "Không thể bắt đầu xuất dữ liệu",
+  "busy": "Bạn đang có một lượt xuất khác chưa xong. Hãy thử lại khi lượt đó kết thúc.",
+  "denied": "Vai trò của bạn không cho phép tải dữ liệu của base này.",
+  "frame": "Tải tệp xuất",
+  "localeNote": "Số và ngày được ghi theo định dạng tài khoản của bạn ({{locale}}, {{timeZone}}).",
+  "relationsNote": "Bản ghi liên kết được ghi bằng tiêu đề bạn xem được, tệp đính kèm bằng tên tệp."
+}

@@ -1,0 +1,368 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > auto_number 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "TK-20260920-0042",
+  "data": "TK-20260920-0042",
+  "displayData": "TK-20260920-0042",
+  "kind": "text",
+  "readonly": true,
+  "themeOverride": {
+    "baseFontStyle": "12px",
+    "fontFamily": "'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace",
+  },
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > checkbox off 1`] = `
+{
+  "allowOverlay": false,
+  "contentAlign": "center",
+  "copyData": "",
+  "data": false,
+  "kind": "boolean",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > checkbox on 1`] = `
+{
+  "allowOverlay": false,
+  "contentAlign": "center",
+  "copyData": "✓",
+  "data": true,
+  "kind": "boolean",
+  "readonly": true,
+  "themeOverride": {
+    "textMedium": "#0f766e",
+  },
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > created_at 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "2026-09-20 10:15",
+  "data": "2026-09-20 10:15",
+  "displayData": "2026-09-20 10:15",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > created_by 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "Phạm Ngọc Lan",
+  "data": {
+    "kind": "ob-users",
+    "users": [
+      {
+        "color": {
+          "bg": "#b45309",
+          "fg": "#ffffff",
+        },
+        "initials": "PL",
+        "name": "Phạm Ngọc Lan",
+      },
+    ],
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > datetime date 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "25/09/2026",
+  "data": "25/09/2026",
+  "displayData": "25/09/2026",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > datetime field zone 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "2026-09-25 02:00",
+  "data": "2026-09-25 02:00",
+  "displayData": "2026-09-25 02:00",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > datetime time 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "25/09/2026 09:00",
+  "data": "25/09/2026 09:00",
+  "displayData": "25/09/2026 09:00",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > link (S4, fallback) 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "An Phát",
+  "data": "An Phát",
+  "displayData": "An Phát",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > number currency 1`] = `
+{
+  "allowOverlay": false,
+  "contentAlign": "right",
+  "copyData": "₫1,500,000",
+  "data": 1500000,
+  "displayData": "₫1,500,000",
+  "kind": "number",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > number percentage 1`] = `
+{
+  "allowOverlay": false,
+  "contentAlign": "right",
+  "copyData": "20%",
+  "data": 0.2,
+  "displayData": "20%",
+  "kind": "number",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > number plain 1`] = `
+{
+  "allowOverlay": false,
+  "contentAlign": "right",
+  "copyData": "1,234.50",
+  "data": 1234.5,
+  "displayData": "1,234.50",
+  "kind": "number",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > number progress 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "65%",
+  "data": {
+    "color": "#0f766e",
+    "fraction": 0.65,
+    "kind": "ob-progress",
+    "label": "65%",
+    "track": "#f1f3f5",
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > number rating 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "3",
+  "data": {
+    "color": "#b54708",
+    "empty": "#f1f3f5",
+    "kind": "ob-rating",
+    "max": 5,
+    "symbol": "★",
+    "value": 3,
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > select multiple 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "Mới, Đã xong, Gone",
+  "data": {
+    "chips": [
+      {
+        "color": {
+          "bg": "#eef1f4",
+          "fg": "#3f4854",
+        },
+        "label": "Mới",
+      },
+      {
+        "color": {
+          "bg": "#ccfbf1",
+          "fg": "#115e59",
+        },
+        "label": "Đã xong",
+      },
+      {
+        "color": {
+          "bg": "#eef1f4",
+          "fg": "#3f4854",
+        },
+        "label": "Gone",
+      },
+    ],
+    "kind": "ob-chips",
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > select single 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "Đang xử lý",
+  "data": {
+    "chips": [
+      {
+        "color": {
+          "bg": "#fef3c7",
+          "fg": "#92400e",
+        },
+        "label": "Đang xử lý",
+      },
+    ],
+    "kind": "ob-chips",
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > text barcode 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "8934563138165",
+  "data": "8934563138165",
+  "displayData": "8934563138165",
+  "kind": "text",
+  "readonly": true,
+  "themeOverride": {
+    "baseFontStyle": "12px",
+    "fontFamily": "'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace",
+  },
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > text email 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "an@example.test",
+  "data": "an@example.test",
+  "displayData": "an@example.test",
+  "hoverEffect": true,
+  "kind": "uri",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > text phone 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "+84 90 123 4567",
+  "data": "+84 90 123 4567",
+  "displayData": "+84 90 123 4567",
+  "hoverEffect": true,
+  "kind": "uri",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > text plain 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "Máy POS lỗi in",
+  "data": "Máy POS lỗi in",
+  "displayData": "Máy POS lỗi in",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > text url 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "cellhive.io/docs",
+  "data": "cellhive.io/docs",
+  "displayData": "cellhive.io/docs",
+  "hoverEffect": true,
+  "kind": "uri",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > updated_at 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "21/09/2026",
+  "data": "21/09/2026",
+  "displayData": "21/09/2026",
+  "kind": "text",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > updated_by 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "Former member",
+  "data": {
+    "kind": "ob-users",
+    "users": [
+      {
+        "color": {
+          "bg": "#b45309",
+          "fg": "#ffffff",
+        },
+        "initials": "?",
+        "name": "Former member",
+      },
+    ],
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;
+
+exports[`cell renderers (FRONTEND §1.3, §11.2 snapshot of GridCell) > user 1`] = `
+{
+  "allowOverlay": false,
+  "copyData": "Phạm Ngọc Lan, Former member",
+  "data": {
+    "kind": "ob-users",
+    "users": [
+      {
+        "color": {
+          "bg": "#b45309",
+          "fg": "#ffffff",
+        },
+        "initials": "PL",
+        "name": "Phạm Ngọc Lan",
+      },
+      {
+        "color": {
+          "bg": "#b45309",
+          "fg": "#ffffff",
+        },
+        "initials": "?",
+        "name": "Former member",
+      },
+    ],
+  },
+  "kind": "custom",
+  "readonly": true,
+}
+`;

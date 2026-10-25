@@ -1,0 +1,114 @@
+{
+  "save": "Save field",
+  "noDefinition": "You cannot see how this lookup is set up: it uses a table or field you cannot read. You can still rename it or change its description.",
+  "source": {
+    "legend": "Get data from",
+    "table": "Source table",
+    "field": "Field to get",
+    "chooseTable": "Choose a table",
+    "chooseField": "Choose a field",
+    "thisTable": "{{table}} (this table)"
+  },
+  "shortcut": {
+    "label": "Shortcut: through a link field",
+    "hint": "Takes the records linked to each record of {{table}}; the first condition is made for you.",
+    "choose": "Choose a link field…",
+    "optionOut": "{{field}} → {{table}}",
+    "optionIn": "{{field}} (field of {{table}})",
+    "via": "Through the link field",
+    "ofThisTable": "of this table.",
+    "ofTable": "of the {{table}} table.",
+    "generated": "The first condition is made for you.",
+    "change": "Change",
+    "changeLabel": "Change the link field"
+  },
+  "conditions": {
+    "label": "Conditions",
+    "chooseSource": "Choose the source table first.",
+    "hint": "One level, up to 5 conditions, at least 1.",
+    "matchBefore": "Get records when",
+    "matchAfter": "conditions match",
+    "all": "all",
+    "any": "any",
+    "field": "Field of condition {{position}}",
+    "fieldUnknown": "Unknown field",
+    "remove": "Remove condition {{position}} on {{field}}",
+    "valueSource": "Compare {{field}} with",
+    "constant": "A fixed value",
+    "chooseRef": "Choose a field of this table…",
+    "thisTable": "Table {{table}}",
+    "thisRecord": "This record",
+    "auto": "auto",
+    "autoHint": "“This record” is the {{table}} record being computed.",
+    "incomplete": "Choose a value for this condition.",
+    "atLeastOne": "Add at least one condition: a lookup never takes the whole table.",
+    "noFields": "No field of this table can be used in a condition.",
+    "add": "Add condition",
+    "count": "{{count, number}} / {{max, number}}",
+    "countLabel": "{{count, number}} of at most {{max, number}} conditions",
+    "advanced": "These conditions were made through the API and cannot be edited here. They stay as they are unless you replace them.",
+    "replaceAdvanced": "Replace with new conditions",
+    "recordOf": "Record of {{table}}",
+    "recordHint": "“{{field}}” is one of the records this record links to."
+  },
+  "aggregate": {
+    "label": "Show as",
+    "options": {
+      "raw_value": "Values",
+      "unique": "Unique values",
+      "unique_counta": "Count unique",
+      "sum": "Sum",
+      "counta": "Count",
+      "average": "Average",
+      "max": "Largest",
+      "min": "Smallest"
+    }
+  },
+  "format": {
+    "label": "Format",
+    "source": "{{style}} (as the source)",
+    "sourceLocked": "{{style}} (as the source field)",
+    "default": "Whole number (default)",
+    "lockedHint": "Values keep the format of {{field}} in {{table}}. To change it, edit the source field.",
+    "none": "no format",
+    "number": "Number",
+    "decimal": "Number, 2 decimals",
+    "percent": "Percent",
+    "currencyOf": "Currency {{code}}",
+    "progress": "Progress bar",
+    "rating": "Rating",
+    "custom": "Current format"
+  },
+  "preview": {
+    "title": "Preview of the first 5 records",
+    "idle": "Choose the source table, the field to get and at least one condition to see a preview.",
+    "loading": "Loading the preview",
+    "invalid": "This setup cannot be computed yet: see the messages on the left.",
+    "retry": "Try again",
+    "empty": "You cannot read any record of this table yet.",
+    "result": "Result",
+    "record": "Record",
+    "untitled": "(untitled)",
+    "blank": "(empty)",
+    "records_one": "{{count, number}} record",
+    "records_other": "{{count, number}} records",
+    "mode": {
+      "stored": "Values are stored and computed again when the source changes.",
+      "virtual": "Values are computed each time they are read (not stored)."
+    },
+    "perfWarning": "Every read of this field scans the source table: it may be slow on large tables.",
+    "lockedTitle": "People who cannot read the {{table}} table see an empty cell with a lock.",
+    "lockedHint": "Nothing of the source table is revealed."
+  },
+  "cycle": {
+    "title": "This lookup would depend on itself through other fields:",
+    "chain": "Reference cycle",
+    "hidden": "a field you cannot see",
+    "hint": "Choose another field or change one of the fields of the cycle."
+  },
+  "footer": {
+    "background_one": "Once saved, the column is computed for {{count, number}} record in the background.",
+    "background_other": "Once saved, the column is computed for {{count, number}} records in the background.",
+    "virtual": "Values are computed when read, nothing to wait for."
+  }
+}

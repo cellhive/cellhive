@@ -1,0 +1,517 @@
+{
+  "label": "Records of {{table}}",
+  "tables": "Tables",
+  "trash": "Trash",
+  "trashOf": "Trash of {{table}}",
+  "realtime": {
+    "recordGone": "This record was deleted or is no longer available to you."
+  },
+  "newRows_one": "{{count, number}} new row",
+  "newRows_other": "{{count, number}} new rows",
+  "rowsChanged": "Rows changed — refresh",
+  "toolbar": {
+    "label": "View options",
+    "density": "Row height",
+    "densities": {
+      "compact": "Compact",
+      "comfortable": "Comfortable"
+    },
+    "more": "More actions"
+  },
+  "footer": {
+    "records_one": "{{formatted}} record",
+    "records_other": "{{formatted}} records",
+    "estimated": "About {{formatted}} records",
+    "loading": "Counting records…",
+    "matchingFilter": "of {{total}} · match the filter",
+    "matchingSearch": "of {{total}} · match the search",
+    "shown_one": "{{formatted}} shown",
+    "shown_other": "{{formatted}} shown",
+    "selected_one": "{{count, number}} row selected",
+    "selected_other": "{{count, number}} rows selected",
+    "groups_one": "{{formatted}} group",
+    "groups_other": "{{formatted}} groups",
+    "withGroups": "{{records}} · {{groups}}"
+  },
+  "empty": {
+    "title": "No records yet",
+    "description": "Records of this table will appear here.",
+    "filteredTitle": "No records match the filter",
+    "filteredHint": "Try removing some conditions or changing the search words.",
+    "searchTitle": "No records match the search",
+    "clearFilter": "Clear filter"
+  },
+  "error": {
+    "retry": "Try again"
+  },
+  "formerMember": "Former member",
+  "header": {
+    "label": "{{name}}, {{type}}",
+    "primaryLabel": "{{name}}, {{type}}, primary field",
+    "readOnly": "{{label}}, read-only",
+    "computedError": "{{label}}, error {{token}}",
+    "computedLocked": "{{label}}, no access to the source data",
+    "computing": "{{label}}, recomputing {{percent}}%",
+    "computedFilling": "{{label}}, computing {{percent}}%",
+    "withHint": "{{label}}, {{hint}}"
+  },
+  "types": {
+    "text": "text",
+    "text_url": "URL",
+    "text_email": "email",
+    "text_phone": "phone number",
+    "text_barcode": "barcode",
+    "number": "number",
+    "number_percentage": "percentage",
+    "number_currency": "currency",
+    "number_progress": "progress",
+    "number_rating": "rating",
+    "select": "single select",
+    "select_multiple": "multiple select",
+    "datetime": "date",
+    "checkbox": "checkbox",
+    "user": "user",
+    "created_at": "created time",
+    "updated_at": "last modified time",
+    "created_by": "created by",
+    "updated_by": "last modified by",
+    "auto_number": "auto number",
+    "link": "link to another table",
+    "parent": "parent record",
+    "lookup": "lookup",
+    "formula": "formula",
+    "attachment": "attachment",
+    "button": "button"
+  },
+  "actions": {
+    "add": "Add record",
+    "addShortcut": "{{key}}+Shift+Enter",
+    "delete": "Delete",
+    "deleteCount_one": "Delete {{count, number}} record",
+    "deleteCount_other": "Delete {{count, number}} records",
+    "confirmTitle_one": "Delete {{count, number}} record?",
+    "confirmTitle_other": "Delete {{count, number}} records?",
+    "confirmDescription_one": "It moves to the trash of {{table}}, where it can be restored for 30 days.",
+    "confirmDescription_other": "They move to the trash of {{table}}, where they can be restored for 30 days.",
+    "confirmDelete_one": "Delete record",
+    "confirmDelete_other": "Delete {{count, number}} records",
+    "cancel": "Cancel",
+    "addShort": "Record"
+  },
+  "edit": {
+    "search": "Search…",
+    "remove": "Remove {{value}}",
+    "createOption": "Add option “{{name}}”",
+    "noOptions": "No options yet.",
+    "noMatch": "Nothing found.",
+    "loadingMembers": "Loading members…",
+    "membersFailed": "The members could not be loaded.",
+    "dateFormat": "Format: {{format}}",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "emptyValue": "(empty)",
+    "conflict": {
+      "title": "Changed by someone else",
+      "message": "{{name}} changed “{{field}}” while you were editing it.",
+      "someone": "Someone",
+      "theirs": "Their value",
+      "mine": "Your value",
+      "keepTheirs": "Keep their value",
+      "writeMine": "Write my value"
+    },
+    "recordGone": "This record was deleted or is no longer available to you.",
+    "retry": "Try again",
+    "deleted_one": "{{count, number}} record moved to the trash.",
+    "deleted_other": "{{count, number}} records moved to the trash.",
+    "schemaLocked": "The table structure is being updated. Editing is paused; your change will be tried again.",
+    "unlock": "Edit again",
+    "readOnlyHint": "You cannot edit this field.",
+    "lockedHint": "Editing is paused while the table structure is updated.",
+    "offlineHint": "You are offline: editing is paused."
+  },
+  "undo": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoKeys": "{{mod}}+Z",
+    "redoKeys": "Shift+{{mod}}+Z",
+    "conflict": "Could not undo because the cell was changed afterwards.",
+    "invalid": "Could not undo: the earlier value is no longer accepted.",
+    "gone": "Could not undo: the records are no longer available."
+  },
+  "clipboard": {
+    "copyBlocked": "Copying is turned off for your role in this base.",
+    "readOnly": "You cannot edit these cells.",
+    "busy": "Please wait until the previous change is saved.",
+    "tooLarge": "Select at most {{max}} rows at a time.",
+    "skipped_one": "{{count, number}} cell was skipped: it is read-only.",
+    "skipped_other": "{{count, number}} cells were skipped: they are read-only.",
+    "invalid_one": "Nothing was saved: {{count, number}} cell has a value that is not accepted.",
+    "invalid_other": "Nothing was saved: {{count, number}} cells have values that are not accepted.",
+    "conflict": "Someone changed these records meanwhile. Nothing was saved; the rows now show their current values.",
+    "progress": "Saving {{done}} of {{total}} records…",
+    "addRowsTitle_one": "Add {{formatted}} new row?",
+    "addRowsTitle_other": "Add {{formatted}} new rows?",
+    "addRowsDescription_one": "The pasted cells go past the last row. Add {{formatted}} row for them, or paste only into the existing rows.",
+    "addRowsDescription_other": "The pasted cells go past the last row. Add {{formatted}} rows for them, or paste only into the existing rows.",
+    "addRowsYes_one": "Add {{formatted}} row",
+    "addRowsYes_other": "Add {{formatted}} rows",
+    "addRowsNo": "Paste into existing rows"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "open": "Keyboard shortcuts",
+    "close": "Close",
+    "action": "Action",
+    "keysHeading": "Keys",
+    "or": "or",
+    "actions": {
+      "move": "Move between cells",
+      "edit": "Edit the cell; Enter again saves and moves down",
+      "cancel": "Cancel editing or clear the selection",
+      "clear": "Empty the selected cells",
+      "copy": "Copy",
+      "cut": "Cut",
+      "paste": "Paste",
+      "fillDown": "Fill down from the first cell of the selection",
+      "undo": "Undo",
+      "redo": "Redo",
+      "openRecord": "Open the record",
+      "selectRow": "Select the whole row",
+      "search": "Search the view",
+      "saveView": "Save the changes of the view",
+      "addBelow": "Add a record below the selected row",
+      "addRecord": "Add a record",
+      "help": "Show keyboard shortcuts",
+      "groupHeader": "On a group header: collapse or expand it; open its menu",
+      "treeToggle": "On the first column of a tree: open or close a branch",
+      "treeIndent": "Tree: make a sub-record of the row above",
+      "treeOutdent": "Tree: move up one level"
+    },
+    "keys": {
+      "ctrl": "Ctrl",
+      "shift": "Shift",
+      "enter": "Enter",
+      "esc": "Esc",
+      "tab": "Tab",
+      "space": "Space",
+      "delete": "Delete",
+      "backspace": "Backspace",
+      "arrows": "Arrow keys",
+      "f2": "F2",
+      "f10": "F10",
+      "alt": "Alt"
+    }
+  },
+  "addField": "Add field",
+  "columnMenu": {
+    "label": "Field menu: {{name}}",
+    "edit": "Edit field",
+    "rename": "Rename",
+    "insertLeft": "Insert field left",
+    "insertRight": "Insert field right",
+    "sortAsc": "Sort ascending",
+    "sortDesc": "Sort descending",
+    "freeze": "Freeze up to this field",
+    "hide": "Hide field",
+    "delete": "Delete field",
+    "primaryNotDeletable": "The primary field cannot be deleted",
+    "converting": "Converting, try again when done",
+    "revert_one": "Undo type change ({{count, number}} day left)",
+    "revert_other": "Undo type change ({{count, number}} days left)",
+    "progress": "Show progress",
+    "computedError": "Error details",
+    "editFormula": "Edit formula"
+  },
+  "hiddenFields": {
+    "none": "Hide fields",
+    "count_one": "{{count, number}} hidden field",
+    "count_other": "{{count, number}} hidden fields",
+    "heading": "Shown fields",
+    "showAll": "Show all",
+    "hideAll": "Hide all",
+    "list": "Fields of the view",
+    "search": "Find a field",
+    "noMatch": "No field matches “{{query}}”.",
+    "searchNoDrag": "Clear the search to reorder fields.",
+    "shownCount": "{{count, number}} of {{total, number}} shown",
+    "primary": "Primary",
+    "show": "Show {{field}}",
+    "drag": "Reorder {{field}}",
+    "dnd": {
+      "instructions": "To reorder a field, press Space or Enter on its handle, move it with the up and down arrow keys, then press Space or Enter to drop it, or Escape to cancel.",
+      "start": "Picked up field {{field}}.",
+      "over": "Field {{field}} is over {{over}}.",
+      "end": "Field {{field}} was dropped.",
+      "cancel": "Moving field {{field}} was cancelled."
+    }
+  },
+  "sort": {
+    "asc": "Sorted by {{name}}, ascending",
+    "desc": "Sorted by {{name}}, descending",
+    "clear": "Clear sort"
+  },
+  "value": {
+    "deletedOption": "Deleted option",
+    "deletedUser": "Deleted user",
+    "deletedRecord": "Deleted record",
+    "checked": "Checked",
+    "noAccess": "No access",
+    "moreLinks_one": "and {{count, number}} more",
+    "moreLinks_other": "and {{count, number}} more"
+  },
+  "cellMenu": {
+    "label": "Cell menu: {{name}}",
+    "expand": "Expand record",
+    "history": "View cell history",
+    "follow": "Follow record",
+    "unfollow": "Unfollow record",
+    "followed": "You follow “{{title}}”. You will be notified when someone else changes it.",
+    "unfollowed": "You no longer follow “{{title}}”.",
+    "undo": "Undo"
+  },
+  "expandRecord": "Expand record",
+  "cards": {
+    "label": "Records of {{table}}",
+    "loading": "Loading record…",
+    "untitled": "Untitled record"
+  },
+  "group": {
+    "empty": "(Empty)",
+    "rest": "Other groups (not counted)",
+    "a11yExpanded_one": "{{field}} {{value}}: {{formatted}} record, expanded",
+    "a11yExpanded_other": "{{field}} {{value}}: {{formatted}} records, expanded",
+    "a11yCollapsed_one": "{{field}} {{value}}: {{formatted}} record, collapsed",
+    "a11yCollapsed_other": "{{field}} {{value}}: {{formatted}} records, collapsed",
+    "collapseAll": "Collapse all groups",
+    "expandAll": "Expand all groups",
+    "countsError": "Group counts could not be loaded.",
+    "records_one": "{{formatted}} record",
+    "records_other": "{{formatted}} records",
+    "addRecord": "Add a record to {{group}}",
+    "stickyPath": "Current group"
+  },
+  "groupMenu": {
+    "label": "Group menu: {{group}}",
+    "collapse": "Collapse this group",
+    "expand": "Expand this group",
+    "collapseSubgroups": "Collapse subgroups",
+    "expandSubgroups": "Expand subgroups",
+    "add": "Add a record to this group"
+  },
+  "link": {
+    "noAccess": "No access",
+    "count_one": "{{count, number}} link",
+    "count_other": "{{count, number}} links",
+    "add": "Link records",
+    "lockedHint": "You cannot see the linked table, so you cannot change these links.",
+    "targetDeletedHint": "The linked table is in the trash: links can be added again once it is restored."
+  },
+  "files": {
+    "uploadHint": "Drag files here or click to upload",
+    "dropHere_one": "Drop to upload {{count, number}} file",
+    "dropHere_other": "Drop to upload {{count, number}} files",
+    "attachFailed": "A finished upload could not be added to its record (deleted, or no longer yours to edit)."
+  },
+  "conversion": {
+    "running": "Converting {{field}} from {{from}} to {{to}}",
+    "succeeded": "{{field}} was converted to {{to}}.",
+    "failed": "Converting {{field}} failed.",
+    "failedBody": "The data is as it was before. No cell was lost.",
+    "link": {
+      "to_two_way": {
+        "running": "Turning on the two-way link of {{field}}",
+        "succeeded": "The two-way link of {{field}} is on.",
+        "failed": "Turning on the two-way link of {{field}} failed."
+      },
+      "to_one_way": {
+        "running": "Turning off the two-way link of {{field}}",
+        "succeeded": "The two-way link of {{field}} is off.",
+        "failed": "Turning off the two-way link of {{field}} failed."
+      },
+      "to_single": {
+        "running": "Keeping one record per cell of {{field}}",
+        "succeeded": "{{field}} now keeps one record per cell.",
+        "failed": "Keeping one record per cell of {{field}} failed."
+      }
+    },
+    "by": "by {{name}}",
+    "progressLabel": "Progress of the conversion of {{field}}",
+    "percent": "{{percent}}%",
+    "etaSeconds_one": "about {{count, number}} second left",
+    "etaSeconds_other": "about {{count, number}} seconds left",
+    "etaMinutes_one": "about {{count, number}} minute left",
+    "etaMinutes_other": "about {{count, number}} minutes left",
+    "note": "Runs in the background. You can still edit the other cells.",
+    "noteLink": "Runs in the background. Links can still be edited.",
+    "counts_one": "{{converted}} cells converted, {{lost}} emptied.",
+    "counts_other": "{{converted}} cells converted, {{lost}} emptied.",
+    "countsNoLoss_one": "{{converted}} cell converted.",
+    "countsNoLoss_other": "{{converted}} cells converted.",
+    "revertibleUntil": "Can be undone until {{date}}.",
+    "undo_one": "Undo ({{count, number}} day left)",
+    "undo_other": "Undo ({{count, number}} days left)",
+    "retry": "Try again",
+    "dismiss": "Hide this message",
+    "lockedHint": "This field is being converted to a new type. Try again once it is done."
+  },
+  "invalidFormat": {
+    "email": "Not a valid email",
+    "phone": "Not a valid phone number"
+  },
+  "summary": {
+    "bar": "Summary bar",
+    "column": "Summary of {{field}}",
+    "placeholder": "Summary",
+    "none": "None",
+    "unavailable": "not available",
+    "timeout": "Could not compute: the query took too long (QUERY_TIMEOUT). The other numbers are right. Open the cell to retry.",
+    "failed": "Could not compute this summary. Open the cell to retry.",
+    "current": "Now: {{summary}}",
+    "close": "Close",
+    "sheetHint": "Choosing applies it for you now. Save it for everyone with the view's Save bar (needs the right to edit the view).",
+    "days_one": "({{count, number}} day)",
+    "days_other": "({{count, number}} days)",
+    "groups": {
+      "count": "Count",
+      "percent": "Percent",
+      "number": "Number",
+      "date": "Date",
+      "checkbox": "Checkbox"
+    },
+    "menu": {
+      "count_all": "All",
+      "filled": "Filled",
+      "empty": "Empty",
+      "unique": "Unique values",
+      "percent_filled": "Filled",
+      "percent_empty": "Empty",
+      "sum": "Sum",
+      "avg": "Average",
+      "min": "Min",
+      "max": "Max",
+      "range": "Range",
+      "earliest": "Earliest",
+      "latest": "Latest",
+      "date_range": "Date range",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "percent_checked": "% checked"
+    },
+    "short": {
+      "count_all": "All",
+      "filled": "Filled",
+      "empty": "Empty",
+      "unique": "Unique",
+      "percent_filled": "Filled",
+      "percent_empty": "Empty",
+      "sum": "Sum",
+      "avg": "Average",
+      "min": "Min",
+      "max": "Max",
+      "range": "Range",
+      "earliest": "Earliest",
+      "latest": "Latest",
+      "date_range": "Range",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "percent_checked": "Checked"
+    }
+  },
+  "computed": {
+    "lockedCell": "You cannot read the data this value is computed from.",
+    "lockedShort": "No access",
+    "errorCell": "Field-level error: see the warning on the column header.",
+    "pendingCell": "Computing…",
+    "subject": {
+      "formula": "The formula",
+      "lookup": "The lookup"
+    },
+    "what": {
+      "formula": "the formula",
+      "lookup": "the lookup"
+    },
+    "title": {
+      "REF": "Reference deleted",
+      "CIRCLE": "Circular reference",
+      "TIMEOUT": "Took too long",
+      "INVALID_CONFIG": "Configuration no longer valid"
+    },
+    "error": {
+      "deleted": "{{subject}} uses <b>{{names}}</b>, which was deleted. Cells show {{token}} until it is restored or {{what}} is edited.",
+      "deletedAt": "{{subject}} uses <b>{{names}}</b>, deleted at {{when}}. Cells show {{token}} until it is restored or {{what}} is edited.",
+      "indirect": "{{subject}} uses <b>{{names}}</b>, which is in error itself. Fixing it clears this one too.",
+      "hidden": "{{subject}} uses a field or table that was deleted and that you cannot see. Cells show {{token}} until it is restored or {{what}} is edited.",
+      "circle": "The fields <b>{{names}}</b> refer to each other in a loop, usually after a field was restored or a link changed direction. Edit one of them to break the loop.",
+      "timeout": "A batch took more than 30 seconds, so computing stopped. Simplify {{what}} and save it again, or retry.",
+      "config": "Changing the type of <b>{{names}}</b> made {{what}} invalid. Configure it again to fix it.",
+      "configHidden": "A type change made {{what}} invalid. Configure it again to fix it."
+    },
+    "close": "Close",
+    "actions": {
+      "restore": "Restore field",
+      "restoreNamed": "Restore {{name}}",
+      "retry": "Retry",
+      "edit": {
+        "formula": "Edit formula",
+        "lookup": "Edit lookup"
+      }
+    },
+    "askManager": "Ask a manager of this table to fix it.",
+    "restored": "“{{name}}” restored. Values are computed again.",
+    "retrying": "Computing again…",
+    "banner": {
+      "title": "Results may be out of date.",
+      "body": "{{uses}} use {{names}}, which is being recomputed",
+      "end": ". The list refreshes itself when it is done.",
+      "refresh": "Refresh now",
+      "parts": {
+        "filter": "the filter",
+        "sort": "the sort",
+        "group": "the grouping"
+      }
+    }
+  },
+  "button": {
+    "running": "Running…",
+    "readyState": "available",
+    "disabledState": "unavailable",
+    "shareHint": "Open this record in Cellhive to use the button.",
+    "reason": {
+      "no_automation": "No automation runs from this button yet.",
+      "automation_disabled": "This button is off because its automation is turned off.",
+      "permission": "You need permission to edit this record to use this button.",
+      "condition": "This record does not meet the button's condition."
+    },
+    "finished": {
+      "succeeded": "«{{label}}» finished for {{record}}.",
+      "failed": "«{{label}}» failed for {{record}}.",
+      "skipped": "«{{label}}» was skipped for {{record}}.",
+      "cancelled": "«{{label}}» was cancelled for {{record}}."
+    },
+    "viewRun": "View run",
+    "rateLimited_one": "You clicked too fast. Try again in {{count, number}} second.",
+    "rateLimited_other": "You clicked too fast. Try again in {{count, number}} seconds.",
+    "gone": "This record is no longer available to you."
+  },
+  "reminder": {
+    "onTime": "at the time",
+    "onDay": "on the day",
+    "before": "{{amount}} before",
+    "after": "{{amount}} after",
+    "units": {
+      "days_one": "{{count, number}} day",
+      "days_other": "{{count, number}} days",
+      "hours_one": "{{count, number}} hour",
+      "hours_other": "{{count, number}} hours",
+      "minutes_one": "{{count, number}} minute",
+      "minutes_other": "{{count, number}} minutes"
+    },
+    "atTime": "{{offset}}, at {{time}}",
+    "header": "Reminder: {{timing}} · {{to}}",
+    "toField": "to the people in {{field}}",
+    "toAField": "to the people in a field",
+    "toMembers_one": "to {{count, number}} member",
+    "toMembers_other": "to {{count, number}} members",
+    "headerBroken": "Reminder not sent: its recipient field was deleted or changed type. Edit the field to choose another one."
+  }
+}

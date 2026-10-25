@@ -1,0 +1,32 @@
+{
+  "name": "@cellhive/filter-dsl",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Filter DSL for Cellhive: AST schema, validation against table meta, tuple normalisation and variable resolution",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "gen:unaccent": "node scripts/generate-unaccent-rules.ts"
+  },
+  "dependencies": {
+    "@cellhive/contracts": "workspace:*",
+    "@cellhive/field-types": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

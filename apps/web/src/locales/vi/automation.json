@@ -1,0 +1,184 @@
+{
+  "page": {
+    "title": "Automation",
+    "breadcrumb": "Vị trí",
+    "summary": "{{base}} · {{count, number}}",
+    "create": "Tạo automation",
+    "search": "Tìm automation",
+    "statusLabel": "Lọc trạng thái",
+    "status": {
+      "all": "Tất cả",
+      "on": "Đang bật",
+      "off": "Đã tắt",
+      "errors": "Có lỗi 24h"
+    },
+    "mobileNote": "Sửa automation trên màn hình rộng ≥ 768 px.",
+    "loading": "Đang tải automation",
+    "caption": "Automation của base {{base}}",
+    "runs": "Lịch sử chạy"
+  },
+  "column": {
+    "enabled": "Bật",
+    "automation": "Automation",
+    "runAs": "Chạy bằng quyền",
+    "lastRun": "Lần chạy cuối",
+    "errors": "Lỗi 24h",
+    "actions": "Thao tác"
+  },
+  "row": {
+    "switch": "Bật {{name}}",
+    "menu": "Thao tác cho {{name}}",
+    "neverRun": "Chưa chạy",
+    "takeOver": "Nhận quản lý",
+    "delete": "Xoá",
+    "runAsYou": "{{name}} (bạn)",
+    "runs": "Lịch sử chạy",
+    "errorsLink_other": "{{count, number}} run lỗi trong 24 giờ qua: xem",
+    "duplicate": "Nhân bản"
+  },
+  "runStatus": {
+    "queued": "Đang chờ chạy",
+    "running": "Đang chạy",
+    "waiting": "Đang đợi",
+    "succeeded": "Thành công",
+    "failed": "Lỗi",
+    "skipped": "Bỏ qua",
+    "cancelled": "Đã huỷ"
+  },
+  "disabled": {
+    "circuit_breaker": {
+      "title": "Tự tắt: 50 lần kích hoạt liên tiếp đều thất bại, hoặc bị kích hoạt hơn 100 lần trong một phút.",
+      "short": "Tự tắt: quá nhiều lần thất bại",
+      "detail": "Kiểm tra nguyên nhân rồi bật lại.",
+      "action": "Bật lại"
+    },
+    "run_as_lost_access": {
+      "title": "Tự tắt: {{name}} (người chạy) không còn đủ quyền để chạy automation này.",
+      "short": "Tự tắt: người chạy mất quyền",
+      "detail": "Automation sẽ chạy bằng quyền của người nhận quản lý.",
+      "action": "Nhận quản lý"
+    },
+    "toast": {
+      "circuit_breaker": "«{{name}}» vừa tự tắt: quá nhiều lần thất bại.",
+      "run_as_lost_access": "«{{name}}» vừa tự tắt: người chạy mất quyền.",
+      "view": "Xem"
+    },
+    "viewRuns": "Xem lịch sử chạy",
+    "viewDetails": "Xem chi tiết"
+  },
+  "empty": {
+    "title": "Chưa có automation nào trong base này",
+    "description": "Automation tự làm việc lặp lại: gửi email khi đơn được thanh toán, nhắc hạn hợp đồng, báo Telegram khi ticket chuyển Khẩn.",
+    "noMatch": "Không có automation nào khớp tìm kiếm hoặc bộ lọc.",
+    "clear": "Xoá bộ lọc"
+  },
+  "forbidden": {
+    "title": "Bạn không quản lý automation nào trong base này",
+    "description": "Cần quyền quản lý bảng của trigger hoặc base admin để tạo, sửa, bật hoặc tắt automation."
+  },
+  "create": {
+    "title": "Tạo automation",
+    "name": "Tên",
+    "nameRequired": "Nhập tên.",
+    "trigger": "Bắt đầu khi",
+    "unavailable": {
+      "schedule": "Chỉ quản trị base tạo được automation theo lịch.",
+      "webhook": "Chỉ quản trị base mới tạo được automation chạy khi nhận webhook."
+    },
+    "note": "Tiếp theo bạn cấu hình trigger và các bước. Automation được tạo, ở trạng thái tắt, khi bạn lưu lần đầu.",
+    "cancel": "Huỷ",
+    "continue": "Tiếp tục"
+  },
+  "enable": {
+    "title": "Bật automation?",
+    "runsAs": "«{{name}}» đang chạy bằng quyền của <strong>{{user}}</strong>.",
+    "warning": "Sau khi bật, automation sẽ chạy bằng quyền của bạn thay cho {{user}}.",
+    "detail": "Mọi bước đọc, ghi và gửi đi dùng quyền hiện tại của bạn trên base {{base}}.",
+    "confirm": "Bật và chạy bằng quyền của tôi",
+    "cancel": "Huỷ"
+  },
+  "takeOver": {
+    "title": "Nhận quản lý «{{name}}»?",
+    "lost": "Automation đã tắt vì {{user}} không còn đủ quyền để chạy.",
+    "runsAs": "Automation đang chạy bằng quyền của {{user}}.",
+    "scope": "Quyền sẽ dùng khi chạy",
+    "reads": "Đọc: {{tables}}",
+    "writes": "Ghi: {{tables}}",
+    "nothing": "không có",
+    "writeFields": "{{table}} (trường {{fields}})",
+    "add": "thêm bản ghi",
+    "delete": "xoá bản ghi",
+    "enable": "Bật lại ngay sau khi nhận",
+    "confirm": "Nhận quản lý",
+    "cancel": "Huỷ",
+    "done": "Bạn đã nhận quản lý «{{name}}»."
+  },
+  "delete": {
+    "title": "Xoá «{{name}}»?",
+    "body": "Automation và lịch sử chạy sẽ bị xoá. Run đang chờ sẽ bị huỷ. Không hoàn tác được.",
+    "confirm": "Xoá automation",
+    "cancel": "Huỷ",
+    "done": "Đã xoá «{{name}}»."
+  },
+  "toast": {
+    "enabled": "Đã bật «{{name}}».",
+    "disabled": "Đã tắt «{{name}}».",
+    "conflict": "«{{name}}» vừa được sửa ở nơi khác. Danh sách đã cập nhật, hãy thử lại.",
+    "gone": "«{{name}}» không còn tồn tại hoặc bạn không còn quản lý được."
+  },
+  "trigger": {
+    "type": {
+      "record.created": "Khi bản ghi được tạo",
+      "record.updated": "Khi bản ghi được sửa",
+      "record.deleted": "Khi bản ghi bị xoá",
+      "record.matches": "Khi bản ghi bắt đầu khớp điều kiện",
+      "form.submitted": "Khi gửi form",
+      "schedule": "Theo lịch",
+      "record.date_reached": "Khi đến ngày trong bản ghi",
+      "button.clicked": "Khi bấm nút",
+      "webhook.received": "Khi webhook nhận request"
+    },
+    "watching": "theo dõi {{fields}}",
+    "watchingMore": "theo dõi {{fields}} +{{count, number}}",
+    "dateReached": "{{offset}} {{field}}",
+    "offset": {
+      "on": "vào",
+      "days_before_other": "{{count, number}} ngày trước",
+      "days_after_other": "{{count, number}} ngày sau",
+      "hours_before_other": "{{count, number}} giờ trước",
+      "hours_after_other": "{{count, number}} giờ sau",
+      "minutes_before_other": "{{count, number}} phút trước",
+      "minutes_after_other": "{{count, number}} phút sau"
+    },
+    "cron": {
+      "minutes_other": "Mỗi {{count, number}} phút",
+      "hourly": "Mỗi giờ, phút {{minute}}",
+      "daily": "Hằng ngày, {{time}}",
+      "weekdays": "Thứ Hai đến thứ Sáu, {{time}}",
+      "weekly": "{{day}} hằng tuần, {{time}}",
+      "monthly": "Ngày {{day}} hằng tháng, {{time}}",
+      "raw": "cron {{cron}}",
+      "orgZone": "múi giờ tổ chức"
+    },
+    "button": "nút {{field}}",
+    "minPermission": {
+      "edit": "người có quyền sửa",
+      "read": "người có quyền xem"
+    },
+    "unknownTable": "bảng không còn",
+    "unknownField": "trường không còn",
+    "unknownForm": "form không còn"
+  },
+  "duplicate": {
+    "done": "Đã tạo «{{name}}». Bản sao đang tắt và sẽ chạy bằng quyền của bạn.",
+    "failedTitle": "Không nhân bản được «{{name}}»",
+    "failure": {
+      "permissions": "Bản sao sẽ chạy bằng quyền của bạn, mà automation này dùng bảng, trường hoặc người gửi bạn không có quyền dùng. Chưa tạo gì.",
+      "invalid": "Automation này không còn lưu được như hiện tại nên chưa tạo bản sao. Hãy sửa nó trước rồi nhân bản.",
+      "forbidden": "Bạn không còn quản lý automation này."
+    },
+    "openSource": "Mở automation",
+    "close": "Đóng",
+    "saveFirst": "Hãy lưu hoặc huỷ thay đổi trước: bản sao được tạo từ phiên bản đã lưu."
+  }
+}

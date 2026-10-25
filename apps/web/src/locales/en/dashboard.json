@@ -1,0 +1,438 @@
+{
+  "page": {
+    "title": "Dashboard",
+    "backToBase": "Back to {{base}}",
+    "gone": {
+      "title": "This dashboard is no longer available",
+      "detail": "It was deleted, or you no longer have access to it."
+    },
+    "empty": {
+      "title": "No widgets yet",
+      "admin": "Choose Edit to add numbers, charts, tables and text.",
+      "member": "Ask a base admin to add widgets to this dashboard."
+    }
+  },
+  "type": {
+    "kpi": "KPI",
+    "bar": "Bar chart",
+    "line": "Line chart",
+    "pie": "Pie chart",
+    "combo": "Combo chart",
+    "table": "Table",
+    "text": "Text",
+    "filter_control": "Filter"
+  },
+  "chart": {
+    "dimension": "Group",
+    "summary_one": "{{kind}}: {{title}}, {{formatted}} group. {{items}}",
+    "summary_other": "{{kind}}: {{title}}, {{formatted}} groups. {{items}}",
+    "tableCaption": "Data of {{title}}",
+    "showTable": "View as table",
+    "keyboard": {
+      "hint": "Arrow keys move between groups, Enter filters the dashboard by the group, Shift+F10 opens more actions.",
+      "filtering": "Filtering the dashboard."
+    },
+    "menu": {
+      "filter": "Filter by “{{value}}”",
+      "unfilter": "Remove the filter by “{{value}}”",
+      "records": "View records of “{{value}}”"
+    }
+  },
+  "group": {
+    "empty": "(Empty)",
+    "other": "Other",
+    "checked": "Checked",
+    "unchecked": "Unchecked",
+    "noAccess": "(No access)",
+    "unknownUser": "Unknown user",
+    "weekOf": "Week of {{date}}",
+    "quarter": "Q{{quarter}} {{year}}"
+  },
+  "metric": {
+    "count": "Count of records",
+    "count_distinct": "Distinct {{field}}",
+    "sum": "Sum of {{field}}",
+    "avg": "Average of {{field}}",
+    "min": "Minimum of {{field}}",
+    "max": "Maximum of {{field}}"
+  },
+  "kpi": {
+    "previous": "vs {{value}} in the previous period",
+    "noPrevious": "No data for the previous period",
+    "progressLabel": "Progress toward {{target}}",
+    "progress": "{{percent}}% of {{target}}"
+  },
+  "state": {
+    "retry": "Try again",
+    "renderFailed": "This widget could not be shown",
+    "broken": {
+      "title": "This widget needs to be fixed",
+      "tableAdmin": "The table it reads was deleted. Restore the table from the base trash, or edit the widget.",
+      "fieldAdmin": "A field it uses was deleted or changed type. Edit the widget to choose another field.",
+      "member": "Ask a base admin to fix it."
+    },
+    "timeout": {
+      "title": "This widget took too long to load",
+      "detail": "The data is large or the server is busy. Try again in a moment."
+    },
+    "error": "This widget could not load",
+    "noPermission": "You don't have permission to see this widget's data",
+    "empty": {
+      "title": "No data",
+      "filtered": "No records match this widget's filter.",
+      "detail": "The table has no records to show here yet.",
+      "live": "No records match the dashboard filters."
+    }
+  },
+  "table": {
+    "unknownField": "Unknown field"
+  },
+  "edit": {
+    "open": "Edit",
+    "subtitle": "Editing. Changes are saved as you make them.",
+    "toolbar": "Dashboard editing",
+    "add": "Add widget",
+    "undo": "Undo",
+    "redo": "Redo",
+    "undone": "Undone",
+    "redone": "Redone",
+    "saving": "Saving…",
+    "saved": "All changes saved",
+    "done": "Done",
+    "limit": "A dashboard holds at most {{max}} widgets.",
+    "reloaded": "This dashboard was changed elsewhere. It now shows the latest version.",
+    "conflict": {
+      "title": "Someone else changed this dashboard",
+      "message": "Their changes are shown now. Your last change was not saved: make it again if you still need it."
+    },
+    "empty": {
+      "title": "No widgets yet",
+      "detail": "Add a number, a chart, a table or some text."
+    },
+    "widget": {
+      "actions": "Actions for {{name}}",
+      "settings": "Settings",
+      "move": "Move with the keyboard",
+      "resize": "Resize with the keyboard",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "adding": "Adding…",
+      "added": "{{type}} added",
+      "duplicated": "Widget duplicated",
+      "deleted": "Widget deleted. Undo brings it back."
+    },
+    "keyboard": {
+      "moveStart": "Moving. Use the arrow keys, Enter to finish, Escape to cancel.",
+      "resizeStart": "Resizing. Right and left change the width, down and up the height. Enter to finish, Escape to cancel.",
+      "moveHint": "Arrow keys move it. Enter: done. Escape: cancel.",
+      "resizeHint": "Arrow keys resize it. Enter: done. Escape: cancel.",
+      "position": "{{name}}: column {{column}}, row {{row}}",
+      "size": "{{name}}: {{width}} columns wide, {{height}} rows high",
+      "cannotMove": "It cannot move further that way.",
+      "cannotResize": "It cannot get any bigger or smaller that way.",
+      "done": "Position kept",
+      "cancelled": "Move cancelled"
+    },
+    "library": {
+      "title": "Add a widget",
+      "description": "Choose what to show. You can change its settings next.",
+      "close": "Close",
+      "table": "Data from table",
+      "noTable": "This base has no table to show.",
+      "noField": "No field of this table can be used for a {{type}}.",
+      "failed": "The table's fields could not be loaded. Try again.",
+      "about": {
+        "kpi": "One number, with the previous period or a target",
+        "bar": "Compare groups as bars, grouped or stacked",
+        "line": "A trend over time, as a line or an area",
+        "pie": "Each group's share of the whole",
+        "combo": "Bars and lines on two axes",
+        "table": "Records, or a summary by group",
+        "text": "Notes and headings in Markdown",
+        "filter_control": "A filter people choose a value in"
+      }
+    },
+    "theme": {
+      "open": "Theme",
+      "title": "Dashboard theme",
+      "close": "Close",
+      "mode": "Appearance",
+      "modes": {
+        "system": "Same as each viewer's app",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "palette": "Series colors",
+      "palettes": {
+        "default": "App colors",
+        "colorblind": "Color-blind safe",
+        "classic": "Classic",
+        "cool": "Cool"
+      },
+      "density": "Spacing",
+      "densities": {
+        "comfortable": "Comfortable",
+        "compact": "Compact"
+      }
+    },
+    "panel": {
+      "title": "Settings: {{name}}",
+      "close": "Close settings",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "invalid": "Not saved: fix the settings marked below",
+      "widgetTitle": "Title",
+      "description": "Description",
+      "table": "Table",
+      "tableGone": "(Deleted table)",
+      "filter": "Filter",
+      "filterHint": "Only records that match are counted. Viewers never see this filter.",
+      "filterEmpty": "No condition yet: every record of the table is counted.",
+      "grouping": "Group by",
+      "dimension": "Group records by",
+      "dateBucket": "Group dates by",
+      "buckets": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "quarter": "Quarter",
+        "year": "Year"
+      },
+      "bucketWidth": "Range width",
+      "bucketWidthHint": "Leave empty to make one group per value.",
+      "series": "Split into series by",
+      "seriesNone": "No series",
+      "seriesHint": "With series, the chart shows one metric.",
+      "metric": "Metric",
+      "metrics": "Metrics",
+      "metricN": "Metric {{position}}",
+      "removeMetric": "Remove metric {{position}}",
+      "addMetric": "Add metric",
+      "aggregation": "Calculation",
+      "aggregations": {
+        "count": "Count records",
+        "count_distinct": "Count distinct values",
+        "sum": "Sum",
+        "avg": "Average",
+        "min": "Minimum",
+        "max": "Maximum"
+      },
+      "metricField": "Of field",
+      "metricLabel": "Name",
+      "drawAs": "Draw as",
+      "drawBar": "Bars",
+      "drawLine": "Line",
+      "axis": "Axis",
+      "axisLeft": "Left",
+      "axisRight": "Right",
+      "color": "Color",
+      "autoColor": "Automatic",
+      "sorting": "Sort and limit",
+      "sort": "Sort by",
+      "sorts": {
+        "metric_desc": "Largest first",
+        "metric_asc": "Smallest first",
+        "dimension_asc": "Group, A to Z",
+        "dimension_desc": "Group, Z to A"
+      },
+      "limit": "Groups shown",
+      "limitHint": "1 to {{max}}.",
+      "others": "Group the rest into “Other”",
+      "display": "Display",
+      "orientation": "Bars",
+      "vertical": "Vertical",
+      "horizontal": "Horizontal",
+      "stack": "Several series",
+      "stacks": {
+        "grouped": "Side by side",
+        "stacked": "Stacked",
+        "percent": "Stacked to 100 %"
+      },
+      "area": "Fill the area under the line",
+      "smooth": "Smooth line",
+      "donut": "Donut",
+      "legend": "Show the legend",
+      "values": "Show values on the chart",
+      "numberFormat": "Number format",
+      "formats": {
+        "field": "As the field",
+        "number": "Number",
+        "currency": "Currency",
+        "percent": "Percent"
+      },
+      "currency": "Currency code",
+      "decimals": "Decimals",
+      "decimalsAuto": "Automatic",
+      "compact": "Short numbers (1.2K)",
+      "emptyText": "Text when there is no data",
+      "kpi": "Comparison and target",
+      "compare": "Compare with",
+      "compareNone": "Nothing",
+      "comparePrevious": "The previous period",
+      "compareField": "Date field",
+      "compareRange": "Period",
+      "ranges": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "quarter": "Quarter",
+        "year": "Year"
+      },
+      "target": "Target",
+      "prefix": "Before the number",
+      "suffix": "After the number",
+      "thresholds": "Color thresholds",
+      "thresholdsHint": "The number takes the color of the first threshold it is below.",
+      "thresholdBelow": "Threshold {{position}}: below",
+      "removeThreshold": "Remove threshold {{position}}",
+      "addThreshold": "Add threshold",
+      "tableSection": "Table",
+      "tableMode": "Show",
+      "tableModes": {
+        "records": "Records",
+        "pivot": "A summary by group"
+      },
+      "tableFields": "Fields (at most {{max}})",
+      "recordSort": "Sort records by",
+      "recordSortNone": "No order",
+      "direction": "Direction",
+      "asc": "Ascending",
+      "desc": "Descending",
+      "rows": "Rows shown",
+      "markdown": "Text",
+      "markdownHint": "Markdown: **bold**, *italic*, # headings, lists and links.",
+      "preview": "Preview",
+      "previewLabel": "Preview of the text",
+      "control": "Filter",
+      "controlKind": "Kind",
+      "controls": {
+        "date_range": "Date range",
+        "select": "Options",
+        "user": "People",
+        "text": "Text search",
+        "number_range": "Number range"
+      },
+      "controlField": "Field",
+      "parentControl": "Depends on filter",
+      "parentNone": "None",
+      "parentHint": "Its choices narrow to what the other filter allows.",
+      "defaultValue": "Default value",
+      "defaultNone": "None",
+      "defaultTextHint": "Separate several values with commas.",
+      "defaultUser": "Filters on people start without a default.",
+      "relative": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last_7_days": "Last 7 days",
+        "last_30_days": "Last 30 days",
+        "this_week": "This week",
+        "last_week": "Last week",
+        "this_month": "This month",
+        "last_month": "Last month",
+        "this_quarter": "This quarter",
+        "this_year": "This year",
+        "last_year": "Last year"
+      },
+      "range": {
+        "from": "From",
+        "to": "To"
+      },
+      "bound": "Widgets it filters",
+      "boundWait": "Available once the filter is saved.",
+      "boundNone": "No widget of this dashboard reads this table."
+    },
+    "globalFilters": {
+      "open": "Global filters",
+      "title": "Global filters",
+      "description": "Filters in the bar at the top of the dashboard. Viewers pick a value; every widget on a table you choose here is filtered by it.",
+      "close": "Close",
+      "empty": "No global filters yet.",
+      "add": "Add filter",
+      "remove": "Remove {{name}}",
+      "name": "Name",
+      "targets": "Field it filters in each table",
+      "notFiltered": "Not filtered",
+      "needTarget": "Choose a field in at least one table.",
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  },
+  "filters": {
+    "bar": "Dashboard filters",
+    "crossList": "Cross-filters",
+    "crossChip": "Filtered by: {{value}}",
+    "removeCross": "Remove the filter by {{value}} (from {{widget}})",
+    "clear": "Clear filters",
+    "any": "All",
+    "anyTime": "Any time",
+    "custom": "Custom range",
+    "fromOf": "{{label}}: from",
+    "toOf": "{{label}}: to",
+    "rangeInvalid": "The start date must not be after the end date.",
+    "min": "Min",
+    "max": "Max",
+    "minOf": "{{label}}: minimum",
+    "maxOf": "{{label}}: maximum",
+    "numberInvalid": "Enter numbers, the minimum not above the maximum.",
+    "textPlaceholder": "Contains…",
+    "search": "Search the values of {{label}}",
+    "searchPlaceholder": "Search…",
+    "selected_one": "{{count, number}} selected",
+    "selected_other": "{{count, number}} selected",
+    "noOptions": "No values",
+    "moreOptions": "More values match. Search to find the one you need.",
+    "loadingOptions": "Loading values…",
+    "optionsFailed": "The values could not be loaded.",
+    "clearControl": "Clear",
+    "noPermission": "You don't have permission to use this filter",
+    "editing": "{{kind}} filter. Viewers choose its value; it applies outside edit mode.",
+    "globalUnnamed": "Filter {{position}}",
+    "offOnLink": "Filters are turned off for this link."
+  },
+  "notice": {
+    "cross": "Filter by “{{value}}”",
+    "other_table": "{{name}} does not apply: it filters another table.",
+    "no_permission": "{{name}} is not applied: you can't see the field it filters.",
+    "broken": "{{name}} is not applied: its field was deleted or changed.",
+    "not_bound": "{{name}} does not apply to this widget.",
+    "self": "{{name}} comes from this widget."
+  },
+  "widget": {
+    "actions": "Actions for {{name}}",
+    "viewRecords": "View records",
+    "downloadPng": "Download as PNG",
+    "downloadCsv": "Download as CSV",
+    "downloadFrame": "Widget download"
+  },
+  "drill": {
+    "title": "Records: {{title}}",
+    "caption": "Records behind {{title}}",
+    "record": "Record",
+    "count_one": "{{formatted}} record",
+    "count_other": "{{formatted}} records",
+    "countEstimate_one": "About {{formatted}} record",
+    "countEstimate_other": "About {{formatted}} records",
+    "empty": "No records you can see",
+    "failed": "The records could not be loaded",
+    "more": "Show more",
+    "close": "Close records"
+  },
+  "tv": {
+    "open": "TV mode",
+    "exit": "Exit TV mode",
+    "fullscreen": "Full screen",
+    "rotate": "Rotate dashboards",
+    "rotateOff": "Off",
+    "seconds_one": "Every {{count, number}} second",
+    "seconds_other": "Every {{count, number}} seconds",
+    "minutes_one": "Every minute",
+    "minutes_other": "Every {{count, number}} minutes"
+  },
+  "shared": {
+    "refresh": "Refresh",
+    "everySeconds_one": "Updates every {{count, number}} second",
+    "everySeconds_other": "Updates every {{count, number}} seconds",
+    "everyMinutes_one": "Updates every minute",
+    "everyMinutes_other": "Updates every {{count, number}} minutes"
+  }
+}

@@ -1,0 +1,30 @@
+# Garage configuration for LOCAL DEVELOPMENT ONLY (docker-compose.dev.yml).
+#
+# !!! DEV-ONLY SECRETS !!!
+# `rpc_secret` and `admin_token` below are public placeholder values committed to
+# the repository. Never use this file for a real deployment: the self-hosting
+# compose file uses `garage.prod.toml`, which contains no secrets and requires
+# GARAGE_RPC_SECRET / GARAGE_ADMIN_TOKEN from the environment.
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+metadata_auto_snapshot_interval = "6h"
+
+# Single node, no redundancy (see ADR-0016).
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+# DEV-ONLY: hex of "dev-only-rpc-secret-do-not-use!!".
+rpc_secret = "6465762d6f6e6c792d7270632d7365637265742d646f2d6e6f742d7573652121"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
+# DEV-ONLY admin token.
+admin_token = "dev-only-garage-admin-token"

@@ -1,0 +1,56 @@
+{
+  "home": {
+    "shareLinks": "Link chia sẻ",
+    "emailSettings": "Cài đặt email",
+    "subtitle": "Các không gian làm việc và base của tổ chức.",
+    "newWorkspace": "Không gian làm việc mới",
+    "emptyTitle": "Chưa có không gian làm việc",
+    "emptyAdmin": "Tạo không gian làm việc để nhóm các base của bạn.",
+    "emptyMember": "Bạn chưa được truy cập không gian làm việc nào. Hãy nhờ quản trị viên thêm bạn vào.",
+    "emailIdentities": "Danh tính gửi email"
+  },
+  "workspace": {
+    "breadcrumb": "Đường dẫn",
+    "subtitle": "Các base trong không gian làm việc này.",
+    "newBase": "Base mới",
+    "newBaseIn": "Base mới trong {{workspace}}",
+    "noBases": "Không có base nào bạn mở được trong không gian làm việc này."
+  },
+  "createWorkspace": {
+    "title": "Tạo không gian làm việc",
+    "description": "Không gian làm việc dùng để nhóm các base trong {{org}}.",
+    "name": "Tên không gian làm việc",
+    "submit": "Tạo không gian làm việc"
+  },
+  "createBase": {
+    "title": "Tạo base",
+    "description": "Base mới được tạo trong {{workspace}}. Bạn sẽ là chủ sở hữu.",
+    "name": "Tên base",
+    "descriptionLabel": "Mô tả",
+    "descriptionHint": "Không bắt buộc.",
+    "submit": "Tạo base"
+  },
+  "noOrg": {
+    "title": "Chưa thuộc tổ chức nào",
+    "description": "Tài khoản của bạn chưa thuộc tổ chức nào. Hãy mở liên kết mời, hoặc nhờ quản trị viên mời bạn."
+  },
+  "settingsNav": {
+    "label": "Cài đặt tổ chức",
+    "title": "Cài đặt tổ chức",
+    "groups": {
+      "email": "Email",
+      "automation": "Automation",
+      "personal": "Cá nhân",
+      "organization": "Tổ chức"
+    },
+    "items": {
+      "emailSettings": "Cài đặt email",
+      "emailIdentities": "Danh tính gửi",
+      "telegramBots": "Bot Telegram",
+      "notifications": "Thông báo của bạn",
+      "integrations": "Tích hợp",
+      "apiTokens": "API token",
+      "audit": "Nhật ký hoạt động"
+    }
+  }
+}

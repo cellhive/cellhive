@@ -1,0 +1,16 @@
+{
+  "insert": "Chèn ảnh",
+  "upload": "Tải ảnh lên",
+  "fields": "Ảnh trong field của record",
+  "uploading": "Đang tải lên {{name}}…",
+  "inserted": "Đã chèn {{name}}.",
+  "issue": {
+    "MIME_NOT_ACCEPTED": "Hãy chọn ảnh PNG, JPEG, GIF hoặc WebP (không nhận SVG).",
+    "FILE_TOO_LARGE": "Ảnh quá lớn (tối đa 10 MB, và 2 MB sau khi thu nhỏ).",
+    "IMAGE_UNREADABLE": "Tệp này không phải ảnh đọc được.",
+    "CONTENT_MISMATCH": "Nội dung tệp không khớp với loại tệp.",
+    "DENIED": "Bạn không được thêm ảnh ở đây.",
+    "NETWORK": "Mất kết nối. Hãy thử lại.",
+    "FAILED": "Không tải được ảnh lên. Hãy thử lại."
+  }
+}

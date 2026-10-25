@@ -1,0 +1,34 @@
+{
+  "createdAt": "Created {{date}}",
+  "empty": {
+    "title": "No tables yet",
+    "description": "Tables, views and records of this base will appear here."
+  },
+  "tables": {
+    "heading": "Tables",
+    "trash": "Trash",
+    "trashOf": "Trash of {{table}}"
+  },
+  "deleteTable": {
+    "title": "Delete table “{{name}}”?",
+    "description": "The table goes to the trash of the base with its records, fields and views. You can restore it within 30 days.",
+    "submit": "Delete table",
+    "done": "Table {{name}} deleted. It stays in the trash for 30 days.",
+    "undo": "Undo",
+    "restored": "Table {{name}} restored."
+  },
+  "dashboards": {
+    "defaultName": "Untitled dashboard",
+    "createTitle": "New dashboard",
+    "renameTitle": "Rename dashboard",
+    "name": "Name",
+    "create": "Create",
+    "save": "Save",
+    "deleteTitle": "Delete dashboard {{name}}?",
+    "deleteDescription": "The dashboard and its widgets stay in the base trash for 30 days. The data of its tables is not changed.",
+    "deleteSubmit": "Delete",
+    "deleted": "Deleted dashboard {{name}}. It stays in the trash for 30 days.",
+    "undo": "Undo",
+    "restored": "Restored dashboard {{name}}."
+  }
+}

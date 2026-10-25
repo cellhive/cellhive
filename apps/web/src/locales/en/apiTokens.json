@@ -1,0 +1,177 @@
+{
+  "page": {
+    "title": "API tokens",
+    "subtitle": "Let scripts and integrations call the Cellhive API as you, with only the access you choose.",
+    "back": "Back to {{name}}",
+    "loading": "Loading…",
+    "close": "Close",
+    "cancel": "Cancel",
+    "loadMore": "Load more",
+    "tabs": "API token sections",
+    "tab": {
+      "mine": "Mine",
+      "all": "All tokens",
+      "policy": "Policy"
+    }
+  },
+  "list": {
+    "label": "API tokens",
+    "never": "Never",
+    "noExpiry": "Never expires",
+    "allBases": "All your bases",
+    "unknownBase": "A base you cannot open",
+    "expires": "Expires {{date}}",
+    "expired": "Expired {{date}}",
+    "revokedOn": "Revoked {{date}}",
+    "lastUsed": "Last used: {{value}}",
+    "owner": "Owner: {{name}}",
+    "scopes": "Scopes",
+    "bases": "Bases",
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "warning": {
+      "expiresSoon": "Expires in less than 7 days",
+      "expired": "Expired: requests with it are refused"
+    },
+    "rename": "Rename",
+    "renameLabel": "Rename {{name}}",
+    "revoke": "Revoke",
+    "revokeLabel": "Revoke {{name}}"
+  },
+  "mine": {
+    "title": "Your tokens",
+    "intro": "A token acts as you in this organization: it can never do more than you can, and only what its scopes allow.",
+    "create": "New token",
+    "empty": "You have no API tokens in this organization yet.",
+    "disabled": "API tokens are turned off for this organization: new tokens cannot be created and existing tokens do not work. Ask an organization admin."
+  },
+  "all": {
+    "title": "Tokens of the organization",
+    "intro": "Every member's tokens. Values are never shown; revoking stops a token immediately.",
+    "member": "Member",
+    "anyMember": "All members",
+    "status": "Status",
+    "anyStatus": "Any status",
+    "empty": "No tokens match."
+  },
+  "scopes": {
+    "records": {
+      "read": "Read records",
+      "write": "Change records"
+    },
+    "schema": {
+      "read": "Read structure",
+      "write": "Change structure"
+    },
+    "automations": {
+      "read": "Read automations",
+      "write": "Change automations"
+    }
+  },
+  "create": {
+    "title": "New API token",
+    "description": "The token is shown once after you create it.",
+    "name": "Name",
+    "nameHint": "What uses it, e.g. \"CI export\".",
+    "access": "Access",
+    "accessHint": "Start from a preset, then adjust. Writing does not include reading.",
+    "preset": {
+      "read": "Read data",
+      "readHint": "Read records and the structure of tables.",
+      "readWrite": "Read and write data",
+      "readWriteHint": "Read, create, change and delete records.",
+      "schema": "Manage structure",
+      "schemaHint": "Create and change tables, fields and views; read records.",
+      "automation": "Automation",
+      "automationHint": "Read and change automations; read record values (previews, test sends, run details)."
+    },
+    "groups": {
+      "records": "Records",
+      "recordsHint": "Rows of your tables, files, import and export.",
+      "schema": "Structure",
+      "schemaHint": "Workspaces, bases, tables, fields and views.",
+      "automations": "Automations",
+      "automationsHint": "Automations and their runs."
+    },
+    "read": "Read",
+    "write": "Write",
+    "bases": "Bases",
+    "allBases": "All bases I can open",
+    "someBases": "Only these bases",
+    "basesLegend": "Bases of the token",
+    "noBases": "You cannot open any base yet.",
+    "expiry": "Expiration",
+    "expiryChoice": {
+      "7": "7 days",
+      "30": "30 days",
+      "90": "90 days",
+      "365": "1 year",
+      "custom": "Custom date",
+      "none": "No expiration"
+    },
+    "customDate": "Expires at the end of",
+    "tooLong": "Not allowed: this organization limits tokens to {{days}} days.",
+    "required": "Not allowed: this organization requires tokens to expire.",
+    "noneWarning": "A token that never expires keeps working until someone revokes it. Prefer an expiration and create a new token when it ends.",
+    "expiresOn": "Expires {{date}}",
+    "submit": "Create token",
+    "errors": {
+      "nameRequired": "Enter a name.",
+      "nameInvalid": "At most 100 characters.",
+      "scopesRequired": "Choose at least one scope.",
+      "basesRequired": "Choose at least one base.",
+      "expiryRequired": "Choose a date.",
+      "expiryInvalid": "Choose a date between {{min}} and {{max}}."
+    }
+  },
+  "reveal": {
+    "title": "Copy your new token",
+    "description": "“{{name}}” was created.",
+    "warningTitle": "This is the only time you can see it",
+    "warning": "Cellhive stores only a fingerprint of the token. If you lose it, revoke it and create a new one.",
+    "label": "Token",
+    "example": "Example request",
+    "exampleHint": "Send the token in the Authorization header. Keep it out of code repositories and logs.",
+    "confirm": "I've saved the token somewhere safe",
+    "nag": "Confirm that you've saved the token before closing.",
+    "done": "Done"
+  },
+  "copy": {
+    "action": "Copy",
+    "done": "Copied",
+    "label": "Copy {{label}}",
+    "announce": "{{label}} copied to the clipboard."
+  },
+  "rename": {
+    "title": "Rename token",
+    "save": "Save"
+  },
+  "revoke": {
+    "title": "Revoke “{{name}}”?",
+    "description": "Integrations and scripts using this token stop working immediately. This cannot be undone.",
+    "descriptionOther": "Integrations and scripts of {{owner}} using this token stop working immediately. This cannot be undone.",
+    "confirm": "Revoke token"
+  },
+  "policy": {
+    "title": "Policy",
+    "intro": "Applies to every member of the organization.",
+    "enabled": "Allow API tokens",
+    "enabledHint": "When off, no token can be created and every existing token stops working until you turn this on again. Tokens are not revoked.",
+    "offWarning": "Saving turns off every API token of the organization: integrations using them stop immediately.",
+    "lifetime": "Longest lifetime of new tokens",
+    "noLimit": "No limit (tokens may never expire)",
+    "limit": "At most",
+    "days": "days",
+    "lifetimeHint": "Existing tokens keep their expiration.",
+    "lifetimeInvalid": "Enter a whole number from 1 to 3650.",
+    "save": "Save policy",
+    "saved": "Policy saved."
+  },
+  "toast": {
+    "renamed": "Token renamed.",
+    "revoked": "“{{name}}” revoked."
+  }
+}

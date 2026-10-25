@@ -1,0 +1,293 @@
+{
+  "panel": {
+    "title": "Notifications",
+    "close": "Close notifications",
+    "loading": "Loading notifications",
+    "filter": "Show",
+    "all": "All",
+    "unread": "Unread",
+    "baseFilter": "Base",
+    "allBases": "All bases",
+    "markAllRead": "Mark all as read",
+    "settings": "Notification settings",
+    "settingsLink": "Notification settings",
+    "noneUnread": "No unread notifications",
+    "unreadStatus_one": "{{count, number}} unread notification",
+    "unreadStatus_other": "{{count, number}} unread notifications",
+    "errorTitle": "Could not load notifications.",
+    "errorBody": "Check the connection and try again. No notification is lost.",
+    "retry": "Try again",
+    "empty": "No notifications yet",
+    "emptyUnread": "You have read everything",
+    "emptyHint": "Assignments, date reminders, changes to records you follow, finished imports and automation messages show here.",
+    "loadMore": "Load more",
+    "loadingMore": "Loading…"
+  },
+  "item": {
+    "message": "Message from an automation",
+    "disabled": "Automation «{{name}}» turned itself off",
+    "disabledUnnamed": "An automation turned itself off",
+    "disabledReason": {
+      "circuit_breaker": "Its runs failed 50 times in a row, or it was triggered more than 100 times in a minute.",
+      "run_as_lost_access": "The person it runs as no longer has the access it needs."
+    },
+    "overflow": "Automation «{{name}}» skipped records of a bulk change",
+    "overflowUnnamed": "An automation skipped records of a bulk change",
+    "overflowBody": "It runs at most {{limit}} times for one batch of changes.",
+    "other": "New notification",
+    "markRead": "Mark as read",
+    "alwaysSent": "Always sent",
+    "lostRecord": "No longer allowed to view the record",
+    "lostAutomation": "No longer allowed to view the automation",
+    "lostBase": "No longer allowed to open the base",
+    "quoted": "«{{text}}»",
+    "aRecord": "a record",
+    "aTable": "a table",
+    "actorAutomation": "An automation",
+    "actorSomeone": "Someone",
+    "actorAndOthers_one": "{{actor}} and {{formatted}} other",
+    "actorAndOthers_other": "{{actor}} and {{formatted}} others",
+    "moreFields_one": "{{formatted}} more",
+    "moreFields_other": "{{formatted}} more",
+    "assigned": "{{actor}} assigned you to {{record}}",
+    "assignedVia": "{{actor}} assigned you to {{record}} · {{fields}}",
+    "assignedBulk_one": "{{actor}} assigned you {{formatted}} record in {{table}}",
+    "assignedBulk_other": "{{actor}} assigned you {{formatted}} records in {{table}}",
+    "assignedFields": "Through {{fields}}",
+    "followedChanged": "{{actor}} changed {{record}}",
+    "followedChangedFields": "{{actor}} changed {{fields}} on {{record}}",
+    "followedChanges_one": "{{formatted}} change",
+    "followedChanges_other": "{{formatted}} changes",
+    "followedChangedRecords_one": "{{actor}} changed {{formatted}} record you follow in {{table}}",
+    "followedChangedRecords_other": "{{actor}} changed {{formatted}} records you follow in {{table}}",
+    "followedChangedRecordsFields_one": "{{actor}} changed {{fields}} on {{formatted}} record you follow in {{table}}",
+    "followedChangedRecordsFields_other": "{{actor}} changed {{fields}} on {{formatted}} records you follow in {{table}}",
+    "viaWebhook": "Via an incoming webhook",
+    "reminder": {
+      "upcoming": "{{record}}: {{field}} is due {{when}}",
+      "upcomingNoField": "{{record}} is due {{when}}",
+      "today": "{{record}}: {{field}} is due today",
+      "todayNoField": "{{record}} is due today",
+      "overdue": "{{record}}: {{field}} was due {{when}}",
+      "overdueNoField": "{{record}} was due {{when}}"
+    },
+    "reminderUnknown": "Reminder about {{record}}",
+    "reminderOn": "on {{date}}",
+    "reminderAt": "at {{time}}",
+    "reminderSent": "Reminder of {{time}} ({{zone}})",
+    "reminderStatus": {
+      "upcoming": "Upcoming",
+      "today": "Due today",
+      "overdue": "Overdue"
+    },
+    "import": {
+      "succeeded": "Import finished",
+      "succeededTable": "Import into {{table}} finished",
+      "failed": "Import failed",
+      "failedTable": "Import into {{table}} failed",
+      "cancelled": "Import cancelled",
+      "cancelledTable": "Import into {{table}} was cancelled"
+    },
+    "importCreated_one": "{{formatted}} created",
+    "importCreated_other": "{{formatted}} created",
+    "importUpdated_one": "{{formatted}} updated",
+    "importUpdated_other": "{{formatted}} updated",
+    "importFailedRows_one": "{{formatted}} row failed",
+    "importFailedRows_other": "{{formatted}} rows failed",
+    "overflowSkipped_one": "{{formatted}} record of the batch got no run. It runs at most {{limit}} times for one batch of changes.",
+    "overflowSkipped_other": "{{formatted}} records of the batch got no run. It runs at most {{limit}} times for one batch of changes.",
+    "lostTable": "No longer allowed to view the table",
+    "records": {
+      "show": "Show the records",
+      "list": "Records assigned to you",
+      "listFollowed": "Records you follow that changed",
+      "loading": "Loading the records",
+      "error": "Could not load the records.",
+      "retry": "Try again",
+      "none": "You can no longer view these records.",
+      "untitled": "(untitled record)",
+      "more_one": "And {{formatted}} more record",
+      "more_other": "And {{formatted}} more records",
+      "openTable": "Open the table"
+    },
+    "report": {
+      "download": "Download the error report",
+      "preparing": "Preparing the report…",
+      "gone": "The error report is no longer available: it is kept for 24 hours, for the person who ran the import."
+    }
+  },
+  "group": {
+    "title_one": "{{formatted}} message from automation «{{name}}»",
+    "title_other": "{{formatted}} messages from automation «{{name}}»",
+    "titleUnnamed_one": "{{formatted}} message from one automation",
+    "titleUnnamed_other": "{{formatted}} messages from one automation",
+    "latest": "Latest: {{title}}",
+    "markRead": "Mark these as read"
+  },
+  "types": {
+    "automation": {
+      "message": {
+        "name": "Messages from automations",
+        "description": "Content an automation writes and sends to you."
+      },
+      "disabled": {
+        "name": "Automation turned itself off",
+        "description": "In-app is always on so that you know when an automation stops running."
+      },
+      "batch_overflow": {
+        "name": "Automation skipped records of a bulk change",
+        "description": "When one batch goes past the limit of runs."
+      }
+    },
+    "record": {
+      "assigned": {
+        "name": "Assigned to records",
+        "description": "When someone assigns you through a person field with “Notify people when they are assigned”. A bulk change (paste, import) sends one notification for all its records."
+      },
+      "followed_changed": {
+        "name": "Changes to records you follow",
+        "description": "When someone else changes a record you follow (changes within a minute are grouped). Only fields you can see are listed; bulk changes such as pastes and imports are not sent."
+      }
+    },
+    "import": {
+      "finished": {
+        "name": "Import finished",
+        "description": "When an import of a CSV or Excel file you started ends: succeeded, failed or cancelled."
+      }
+    },
+    "date": {
+      "reminder": {
+        "name": "Date reminders",
+        "description": "When the date of a field with a reminder comes due (for example 09:00 the day before, in the field’s time zone). Sent to the people the reminder names, only for records and fields you can see."
+      }
+    }
+  },
+  "settings": {
+    "title": "Notifications",
+    "back": "Back to {{name}}",
+    "subtitle": "Your settings in {{org}}. Every notification email links to this page.",
+    "loading": "Loading notification settings",
+    "channels": {
+      "in_app": "In app",
+      "email": "Email",
+      "telegram": "Telegram"
+    },
+    "email": {
+      "title": "Notification emails",
+      "description": "How often notification emails are sent to you.",
+      "frequency": "Email frequency",
+      "immediate": "As they come",
+      "immediateHint": "Notifications within 5 minutes go in one email.",
+      "daily": "Daily",
+      "dailyHint": "One summary email a day.",
+      "off": "Off",
+      "offHint": "No notification email. Notifications still show in the app.",
+      "hour": "Time of the daily email"
+    },
+    "types": {
+      "title": "Notification types",
+      "description": "Choose the channels of each type.",
+      "caption": "Notification types by channel",
+      "type": "Type",
+      "switch": "{{type}}: {{channel}}"
+    },
+    "muted": {
+      "title": "Muted bases",
+      "description": "Mute a base from its “…” menu in the sidebar.",
+      "effect": "Muted bases send no email; their notifications still show in the app. “Automation turned itself off” is always sent.",
+      "empty": "No muted base.",
+      "unmute": "Unmute",
+      "unmuteLabel": "Unmute {{name}}"
+    },
+    "noSmtp": {
+      "title": "The email channel is not available",
+      "body": "The Cellhive email server is not configured, so the Email column and the email frequency are hidden. Notifications still show in the app."
+    },
+    "saved": {
+      "immediate": "Saved: emails as notifications come (grouped every 5 minutes).",
+      "daily": "Saved: a daily summary email at {{time}}.",
+      "off": "Saved: no notification emails.",
+      "channelOn": "Saved: {{type}} — {{channel}} on.",
+      "channelOff": "Saved: {{type}} — {{channel}} off.",
+      "unmuted": "Saved: «{{name}}» is no longer muted.",
+      "followOn": "Saved: {{name}} — on.",
+      "followOff": "Saved: {{name}} — off."
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Receive your notifications in a private chat with the organization's Telegram bot.",
+      "loading": "Loading your Telegram link",
+      "theBot": "the bot",
+      "intro": "Link your Telegram account to receive notifications in a private chat with the organization's bot. Choose which types go to Telegram in the table below.",
+      "link": "Link Telegram",
+      "relink": "Link again",
+      "newLink": "New link",
+      "cancelLink": "Cancel link",
+      "close": "Close",
+      "unlink": "Unlink",
+      "unavailable": "Telegram notifications are not turned on in this organization yet. Ask an organization owner or admin to choose a notification bot.",
+      "unavailableAdmin": "Telegram notifications are not turned on in this organization yet: choose a notification bot first.",
+      "setupBot": "Choose a notification bot",
+      "state": {
+        "linked": "Linked",
+        "error": "Not delivered",
+        "waiting": "Waiting for Telegram",
+        "pending": "Link waiting",
+        "expired": "Link expired"
+      },
+      "linkedTo": "Linked to {{bot}}.",
+      "linkedSince": "Linked to {{bot}} since {{date}}.",
+      "linkedHint": "Notifications go to your private chat with the bot. Sending /stop to the bot also unlinks.",
+      "reason": {
+        "blocked": "Telegram refused to deliver to you: you may have blocked {{bot}} or deleted the chat. Unblock the bot if needed, then link again.",
+        "bot_changed": "The organization changed its notification bot. Link again, this time with {{bot}}.",
+        "unknown": "Telegram notifications cannot reach you. Link again."
+      },
+      "stepOpen": "Scan the QR code with your phone's camera, or open Telegram on this computer.",
+      "stepOpenPhone": "Open Telegram with the button below.",
+      "stepStart": "Press Start in the chat with {{bot}}.",
+      "open": "Open Telegram",
+      "newTab": "(opens in a new tab)",
+      "waiting": "Waiting for you to press Start… this page updates by itself.",
+      "countdown": "One-time link, expires in {{time}}",
+      "expiresAt": "The link works once, until {{time}}.",
+      "qrLabel": "QR code of the link to {{bot}} on Telegram",
+      "qrHint": "Scan with your phone",
+      "expired": "The link expired before it was used. Create a new one when you are ready.",
+      "pendingElsewhere": "A link created in another tab or device is waiting. Use it there, or create a new one here.",
+      "columnNote": "The Telegram column applies once you link Telegram.",
+      "announce": {
+        "waiting": "Link created. Open it in Telegram and press Start.",
+        "linked": "Telegram is linked.",
+        "expired": "The Telegram link expired.",
+        "error": "Telegram notifications can no longer reach you.",
+        "unlinked": "Telegram unlinked.",
+        "cancelled": "Telegram link cancelled."
+      },
+      "confirm": {
+        "title": "Unlink Telegram?",
+        "description": "You will stop receiving notifications on Telegram. You can link again at any time.",
+        "keep": "Keep linked",
+        "unlink": "Unlink"
+      }
+    },
+    "follow": {
+      "title": "Following records",
+      "description": "You are told when someone else changes a record you follow (“Changes to records you follow”).",
+      "created": "Follow records I create",
+      "createdHint": "When you create one record by hand. Not pastes, imports, forms or automations.",
+      "assigned": "Follow records I am assigned to",
+      "assignedHint": "When someone adds you to a person field that notifies people. You are still notified of the assignment when this is off.",
+      "effect": "Turning a switch off only stops new follows: the records you follow stay followed. Unfollow a record from its detail panel."
+    }
+  },
+  "shell": {
+    "disabledToast": "«{{name}}» just turned itself off.",
+    "disabledToastUnnamed": "An automation just turned itself off.",
+    "view": "View",
+    "muteBase": "Mute notifications",
+    "unmuteBase": "Unmute notifications",
+    "mutedToast": "«{{name}}» is muted: no notification emails for it. In-app notifications still show.",
+    "unmutedToast": "«{{name}}» is no longer muted."
+  }
+}

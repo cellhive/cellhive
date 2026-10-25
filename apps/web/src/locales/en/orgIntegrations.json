@@ -1,0 +1,200 @@
+{
+  "page": {
+    "title": "Integrations",
+    "subtitle": "What automations may call outside Cellhive, and the secrets they sign or authenticate with.",
+    "back": "Back to {{name}}",
+    "whoSees": "Only owners and admins of the organization see this page.",
+    "loading": "Loading…",
+    "unknownUser": "A former member",
+    "close": "Close",
+    "cancel": "Cancel"
+  },
+  "allowlist": {
+    "title": "HTTP allowlist",
+    "intro": "Automations call public addresses on ports 80 and 443 only. Add a host here to let them reach it on your internal network, or on another port.",
+    "rulesTitle": "How entries work",
+    "rules": {
+      "patterns": "A host (n8n.internal, or n8n for a Docker service) or *.suffix with at least two labels (*.corp.example — not corp.example itself). No IP address or range.",
+      "ports": "Add :port for another port (n8n.internal:5678). Without a port, the entry covers 80 and 443.",
+      "loopback": "This server itself (localhost, 127.0.0.1) is reached only through an exact host with its port.",
+      "never": "Cloud metadata, broadcast and reserved addresses are always blocked, whatever this list says."
+    },
+    "offTitle": "Internal addresses stay closed on this server",
+    "off": "The administrator of this server set HTTP_PRIVATE_ALLOWLIST=off: entries only open another port on a public host. They never open an internal address.",
+    "addTitle": "Add a host",
+    "pattern": "Host",
+    "patternHint": "e.g. n8n.internal:5678 or *.corp.example",
+    "savedAs": "Will be saved as {{pattern}}",
+    "note": "Note (optional)",
+    "noteHint": "Why automations may call it, e.g. Internal n8n.",
+    "add": "Add to allowlist",
+    "count": "{{count, number}} / {{max, number}} hosts",
+    "empty": "No host yet: automations reach public addresses on ports 80 and 443 only.",
+    "listLabel": "Allowed hosts",
+    "ports": {
+      "default": "Ports 80 and 443",
+      "one": "Port {{port}}"
+    },
+    "wildcard": "every subdomain",
+    "addedBy": "Added by {{name}} · {{date}}",
+    "remove": "Remove {{pattern}}",
+    "removeTitle": "Remove {{pattern}}?",
+    "removeDescription": "Calls already on their way finish; from the next one, automations calling this host on an internal address or this port are blocked.",
+    "removeConfirm": "Remove",
+    "error": {
+      "required": "Enter a host.",
+      "pattern": "Enter a host such as n8n.internal or *.corp.example, optionally with :port. IP addresses and ranges are not accepted."
+    },
+    "toast": {
+      "added": "{{pattern}} added to the allowlist.",
+      "removed": "{{pattern}} removed from the allowlist."
+    }
+  },
+  "secrets": {
+    "title": "HTTP secrets",
+    "intro": "Values HTTP request and n8n steps send without showing them: a header value (API key, token) or a signing secret (Standard Webhooks). Builders choose them by name; nobody can read them back.",
+    "add": "Add secret",
+    "empty": "No HTTP secret yet.",
+    "kind": {
+      "http_header": "Header value",
+      "webhook_signing": "Signing secret"
+    },
+    "kindHint": {
+      "http_header": "An API key or token sent as a header (Authorization, X-Api-Key…). The header name is set in the step.",
+      "webhook_signing": "A whsec_… secret that signs each request (webhook-signature). Cellhive can generate it; you paste it into the receiver (n8n…)."
+    },
+    "scope": {
+      "all": "Every base",
+      "selected": "Chosen bases",
+      "unknownBase": "A base you do not see",
+      "none": "No base"
+    },
+    "scopeLine": "Bases: {{scope}}",
+    "addedBy": "Added by {{name}} · {{date}}",
+    "rotatingUntil": "The previous value still signs until {{date}}.",
+    "rotateLabel": "New value for {{name}}",
+    "rotateShort": "New value",
+    "edit": "Change {{name}}",
+    "editShort": "Change",
+    "deleteLabel": "Delete {{name}}",
+    "toast": {
+      "added": "Secret {{name}} added.",
+      "saved": "Secret {{name}} saved.",
+      "deleted": "Secret {{name}} deleted."
+    },
+    "form": {
+      "addTitle": "Add an HTTP secret",
+      "editTitle": "Change {{name}}",
+      "description": "The value is write-only: it is never shown again, not even to you.",
+      "kind": "Kind",
+      "name": "Name",
+      "nameHint": "Automation builders choose the secret by this name.",
+      "value": "Value",
+      "mode": {
+        "keep": "Keep the current value",
+        "generate": "Generate a new secret (recommended)",
+        "enter": "Paste a secret"
+      },
+      "rotateHint": "The previous value keeps signing for {{hours, number}} hours, so you have time to update the receiver.",
+      "replace": "Replace the value",
+      "signingValue": "Signing secret",
+      "signingValueHint": "whsec_ followed by base64 of 24 to 64 bytes.",
+      "headerValue": "Header value",
+      "headerValueHint": "The whole value, e.g. Bearer abc123. Printable characters, no line break, at most 4,096.",
+      "scope": "Usable in",
+      "scopeBases": "Bases",
+      "noBases": "The organization has no base.",
+      "scopeHint": "Changing the bases does not change automations: a step of a base left out fails when it runs.",
+      "add": "Add secret",
+      "save": "Save",
+      "error": {
+        "required": "This is required.",
+        "bases": "Choose at least one base.",
+        "format_http_header": "Use printable characters only, without line breaks, at most 4,096.",
+        "format_webhook_signing": "Paste a value of the form whsec_… (base64 of 24 to 64 bytes).",
+        "hosts_required": "List at least one host.",
+        "hosts_too_many": "At most 20 hosts.",
+        "hosts_invalid": "Each entry must be a host name (api.example.com), *.example.com or host:port — no IP address, scheme or path."
+      },
+      "allowedHosts": "Allowed hosts",
+      "allowedHostsHint": "Automations send this secret only to these hosts.",
+      "allowedHostsLegacyHint": "This secret has no allowed hosts yet: it is sent to any host until its transition period ends, then steps using it fail. Add the hosts it may be sent to.",
+      "allowedHostsPlaceholder": "api.example.com"
+    },
+    "reveal": {
+      "title": {
+        "created": "Signing secret created",
+        "rotated": "New signing secret"
+      },
+      "description": "Copy the secret of {{name}} into the receiving system now.",
+      "warningTitle": "Shown only once",
+      "warning": "Cellhive does not keep a readable copy: once this window is closed, the value cannot be shown again. Generate a new value if it is lost.",
+      "label": "Signing secret",
+      "hint": "Paste it where the receiver verifies Standard Webhooks signatures.",
+      "rotated": "The previous value keeps signing until {{date}}.",
+      "confirm": "I stored the secret in a safe place",
+      "nag": "Confirm you stored the secret: it cannot be shown again.",
+      "done": "Done"
+    },
+    "rotate": {
+      "title": "New value for {{name}}?",
+      "description": "Cellhive generates a new secret and shows it once. Requests carry both signatures for {{hours, number}} hours, then only the new one.",
+      "again": "A previous value is still signing: generating again drops the oldest one now.",
+      "confirm": "Generate new value"
+    },
+    "delete": {
+      "title": "Delete {{name}}?",
+      "description": "Automations can no longer use it.",
+      "loadingUsages": "Looking for automations using it…",
+      "noUsages": "No automation uses this secret.",
+      "usages_one": "{{count, number}} automation uses this secret: change it first.",
+      "usages_other": "{{count, number}} automations use this secret: change them first.",
+      "hiddenAutomation": "An automation you cannot see",
+      "open": "Open",
+      "confirm": "Delete"
+    },
+    "hostsLine": "Sent only to: {{hosts}}",
+    "legacy": {
+      "pending": "Set hosts before {{date}}",
+      "pendingHint": "Created before allowed hosts existed: still sent to any host until then.",
+      "stopped": "Sending stopped",
+      "stoppedHint": "Its transition period is over: steps using it fail until you set its allowed hosts.",
+      "setHosts": "Set hosts",
+      "setHostsLabel": "Set allowed hosts of {{name}}"
+    }
+  },
+  "copy": {
+    "action": "Copy",
+    "done": "Copied",
+    "label": "Copy {{label}}",
+    "announce": "{{label}} copied."
+  },
+  "hosts": {
+    "listLabel": "Hosts added",
+    "remove": "Remove {{host}}",
+    "announceAdded": "Added {{hosts}}.",
+    "announceRemoved": "Removed {{host}}.",
+    "count": "{{count, number}} / {{max, number}} hosts",
+    "duplicate": "Already listed: {{hosts}}.",
+    "invalid": "Not a host: {{hosts}}. Use api.example.com, *.example.com or host:port — no IP address, scheme or path.",
+    "full": "A secret lists at most {{max, number}} hosts.",
+    "savedAs": "Press Enter to add — will be saved as {{host}}",
+    "keyboard": "Press Enter or a comma to add a host, or paste several. Backspace moves to the last host; Delete removes it.",
+    "rulesTitle": "How allowed hosts work",
+    "rules": {
+      "exact": "api.example.com: that host only.",
+      "wildcard": "*.example.com: its subdomains only (api.example.com, a.b.example.com) — not example.com itself; add it too if needed.",
+      "port": "Add :port for a port other than 80 and 443 (hooks.example.com:8443).",
+      "noIp": "No IP address or range: a URL with an IP address never matches.",
+      "notAllowlist": "This list does not open internal addresses or other ports — the HTTP allowlist above does. A call must pass both."
+    }
+  },
+  "banner": {
+    "title_one": "{{count, number}} HTTP secret has no allowed hosts",
+    "title_other": "{{count, number}} HTTP secrets have no allowed hosts",
+    "pending": "Secrets created before allowed hosts existed are still sent to any host until their deadline — the first one is {{date}}. After it, steps using them fail.",
+    "stopped_one": "{{count, number}} of them already stopped sending: steps using it fail now.",
+    "stopped_other": "{{count, number}} of them already stopped sending: steps using them fail now.",
+    "review": "Set their hosts"
+  }
+}

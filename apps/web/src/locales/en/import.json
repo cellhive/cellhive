@@ -1,0 +1,207 @@
+{
+  "title": {
+    "create": "Import as a new table",
+    "append": "Import into {{table}}"
+  },
+  "description": "Bring records in from a CSV, TSV or Excel (.xlsx) file.",
+  "file": "File: {{name}}",
+  "close": "Close the import",
+  "percent": "{{percent}}%",
+  "steps": {
+    "label": "Import steps",
+    "upload": "File",
+    "preview": "Preview",
+    "mapping": "Columns",
+    "run": "Import",
+    "result": "Result",
+    "done": "(done)"
+  },
+  "headings": {
+    "upload": "Choose a file",
+    "preview": "Check how the file is read",
+    "mapping": "Choose what each column becomes",
+    "run": "Importing",
+    "result": "Import finished"
+  },
+  "menu": {
+    "button": "Import",
+    "createButton": "Import a file",
+    "append": "Import into {{table}}…",
+    "appendDenied": "You cannot add records to this table.",
+    "create": "Import as a new table…",
+    "createDenied": "Only base admins can create tables."
+  },
+  "upload": {
+    "drop": "Drop a file here, or choose one",
+    "choose": "Choose a file",
+    "limits": "CSV, TSV or Excel (.xlsx), up to {{size}} MB and {{rows}} rows.",
+    "uploading": "Uploading {{name}}…",
+    "progress": "Upload of {{name}}",
+    "cancel": "Cancel upload",
+    "problems": {
+      "empty": "{{name}} is empty.",
+      "tooLarge": "The file is larger than {{size}} MB. Split it into smaller files.",
+      "unsupported": "{{name}} is not a CSV, TSV or Excel (.xlsx) file.",
+      "legacyExcel": "{{name}} is an older spreadsheet format. Save it as Excel Workbook (.xlsx) or CSV, then import it."
+    }
+  },
+  "preview": {
+    "encoding": "Encoding",
+    "delimiter": "Delimiter",
+    "sheet": "Sheet",
+    "headerRow": "The first row holds column names",
+    "detected": "{{value}} (detected)",
+    "loading": "Reading the file again…",
+    "dismiss": "Keep the previous preview",
+    "caption": "First {{shown}} of {{total}} rows",
+    "region": "Preview of the file",
+    "rowNumber": "Row",
+    "true": "Yes",
+    "false": "No"
+  },
+  "encodings": {
+    "utf-8": "UTF-8",
+    "utf-8-bom": "UTF-8 with BOM",
+    "windows-1258": "Windows-1258 (Vietnamese)"
+  },
+  "delimiters": {
+    "comma": "Comma ( , )",
+    "semicolon": "Semicolon ( ; )",
+    "tab": "Tab",
+    "pipe": "Vertical bar ( | )"
+  },
+  "types": {
+    "text": "Text",
+    "number": "Number",
+    "select": "Single select",
+    "datetime": "Date",
+    "checkbox": "Checkbox"
+  },
+  "mapping": {
+    "tableName": "Table name",
+    "tableNameRequired": "Enter a table name.",
+    "tableNameTaken": "A table with this name already exists in this base.",
+    "createHint": "Each imported column becomes a field. Types are guessed from the first 200 rows; values that do not fit a field's type are skipped and listed in the report.",
+    "appendHint": "Choose the field each column fills. Only fields you can write are offered; columns left out are not imported.",
+    "columnsRegion": "Columns of the file",
+    "column": "Column",
+    "import": "Import",
+    "fieldName": "Field name",
+    "fieldType": "Field type",
+    "targetField": "Field",
+    "statusHeading": "Status",
+    "primary": "Primary field",
+    "primaryText": "The primary field is always text.",
+    "guessed": "Guessed from the file",
+    "importColumn": "Import column {{column}}",
+    "fieldNameOf": "Field name for column {{column}}",
+    "fieldTypeOf": "Field type for column {{column}}",
+    "targetOf": "Field for column {{column}}",
+    "fieldNameRequired": "Enter a field name.",
+    "fieldNameDuplicate": "Another column already has this name.",
+    "noColumns": "Choose at least one column to import.",
+    "skip": "Do not import",
+    "requiredField": "{{name}} (required)",
+    "duplicateField": "This field is already filled by another column.",
+    "missingRequired": "Required fields without a column: {{fields}}. Every row would be skipped.",
+    "nothingMapped": "No column is mapped to a field yet.",
+    "status": {
+      "mapped": "Fills {{field}}",
+      "mappedLink": "Fills {{field}} by record title; separate several titles with commas, quote a title that has a comma",
+      "mappedParent": "Fills {{field}} with the parent record of that title",
+      "unsupported": "Not imported: {{field}} holds files, which cannot be imported",
+      "computed": "Not imported: {{field}} is calculated by a formula or lookup",
+      "skipped": "Not imported",
+      "readOnly": "Not imported: you cannot write {{field}}",
+      "noMatch": "Not imported: no field with this name"
+    },
+    "unsupportedGroup": "Cannot be imported",
+    "attachmentOption": "{{name}} (files cannot be imported)",
+    "filesNote_one": "{{fields}} holds files: files cannot be imported from a sheet. Add them in the grid after the import.",
+    "filesNote_other": "{{fields}} hold files: files cannot be imported from a sheet. Add them in the grid after the import.",
+    "titles": {
+      "heading": "Columns filled by record titles",
+      "link": "{{column}} → {{field}}: titles of records of {{table}}",
+      "parent": "{{column}} → {{field}}: title of the parent record in {{table}}",
+      "unknownTable": "a table you cannot see",
+      "exact": "A title is the primary field of a record, written exactly, and must match one record you can see (and the field’s condition, if any).",
+      "separator": "Several records: separate the titles with commas. Put a title that has a comma between double quotes, e.g. An Phát, \"Nguyễn, An\".",
+      "parentRule": "One parent title per cell; the parent must exist before the import (not a row of the same file).",
+      "ids": "A record id (rec_…) works too.",
+      "skipped": "A row whose title matches no record, or several, is skipped and listed in the error report."
+    }
+  },
+  "actions": {
+    "otherFile": "Choose another file",
+    "next": "Next",
+    "back": "Back",
+    "start_one": "Import {{count, number}} row",
+    "start_other": "Import {{count, number}} rows",
+    "openTable": "Open the table",
+    "done": "Done"
+  },
+  "run": {
+    "queued": "Waiting for another import of your organization to finish…",
+    "running": "{{done}} of {{total}} rows processed",
+    "progress": "Import progress",
+    "background": "You can close this window: the import goes on and a notification shows when it is done.",
+    "cancel": "Cancel import",
+    "confirmTitle": "Cancel this import?",
+    "confirmAppend": "Rows already imported stay in the table.",
+    "confirmCreate": "The new table and the rows already imported go to the trash.",
+    "confirmCancel": "Cancel import",
+    "keepGoing": "Keep importing"
+  },
+  "result": {
+    "success": "Every row was imported.",
+    "partial": "The import finished, but some rows were skipped.",
+    "done": "The import finished.",
+    "imported": "Imported",
+    "skipped": "Skipped",
+    "read": "Rows read",
+    "errorsHeading": "Skipped rows",
+    "row": "Row",
+    "column": "Column",
+    "problem": "Problem",
+    "wholeRow": "Whole row",
+    "moreErrors": "The first {{shown}} problems are listed here; the report has all of them.",
+    "downloadReport": "Download the error report (CSV)",
+    "reportUntil": "Available until {{time}}",
+    "reportGone": "The error report is no longer available.",
+    "truncated": "The report holds the first 100,000 problems only.",
+    "cancelled": "The import was cancelled.",
+    "cancelledAppend": "Rows imported before cancelling stay in the table.",
+    "cancelledCreate": "The new table was moved to the trash; you can restore it for 30 days.",
+    "failedAppend": "Rows imported before the problem stay in the table.",
+    "failedCreate": "The new table was moved to the trash.",
+    "rowOf": "Data row {{dataRow}} (row {{fileRow}} in the file)",
+    "reportHint": "The report lists every skipped row with the value that was refused. Only you can download it.",
+    "linkSummaryNotFound_one": "{{formatted}} linked record not found.",
+    "linkSummaryNotFound_other": "{{formatted}} linked records not found.",
+    "linkSummaryAmbiguous_one": "{{formatted}} linked record with a title several records share.",
+    "linkSummaryAmbiguous_other": "{{formatted}} linked records with a title several records share.",
+    "moreInRow_one": "{{formatted}} more problem in this row",
+    "moreInRow_other": "{{formatted}} more problems in this row",
+    "linkSummary_one": "{{count, number}} linked record not matched: {{notFound}} not found, {{ambiguous}} with a title several records share.",
+    "linkSummary_other": "{{count, number}} linked records not matched: {{notFound}} not found, {{ambiguous}} with a title several records share.",
+    "link": {
+      "LINK_TARGET_NOT_FOUND": "No record with this title",
+      "LINK_TARGET_AMBIGUOUS": "Several records have this title"
+    },
+    "linkFix": {
+      "LINK_TARGET_NOT_FOUND": "Check the spelling against the record’s primary field; records you cannot see, or outside the field’s condition, do not match.",
+      "LINK_TARGET_AMBIGUOUS": "Give the records different titles, or write the record id (rec_…) in the file."
+    }
+  },
+  "background": {
+    "running": "Importing records…",
+    "succeeded": "The import finished.",
+    "failed": "The import did not finish."
+  },
+  "leave": {
+    "title": "Leave the import?",
+    "description": "The columns you set here are lost; the file stays uploaded for 24 hours.",
+    "stay": "Keep setting columns",
+    "confirm": "Leave"
+  }
+}

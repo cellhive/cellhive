@@ -1,0 +1,74 @@
+{
+  "stickyPath": "Parent records",
+  "level": "Level {{level, number}} / {{max, number}}",
+  "dragHandle": "Drag to change the parent",
+  "subrecord": "Sub-record",
+  "addChildHint": "Add a sub-record",
+  "untitled": "Untitled record",
+  "indentNone": "There is no record above at the same level to move it under.",
+  "outdentNone": "This record is already at the top level.",
+  "refused": {
+    "same": "The record is already there.",
+    "cycle": "A record cannot go under itself or one of its sub-records.",
+    "depth": "Reached the maximum depth of {{max, number}} levels.",
+    "unloaded": "Rows are still loading. Try again in a moment."
+  },
+  "drop": {
+    "child": "Make “{{title}}” a sub-record here",
+    "before": "Move “{{title}}” to this level",
+    "after": "Move “{{title}}” to this level"
+  },
+  "moved": {
+    "root": "“{{title}}” is now a top-level record.",
+    "under": "“{{title}}” moved under “{{parent}}”."
+  },
+  "menu": {
+    "label": "Row menu: {{title}}",
+    "open": "Open record",
+    "addChild": "Add sub-record",
+    "addSibling": "Add record at the same level",
+    "changeParent": "Change parent record…",
+    "outdent": "Move up one level",
+    "indent": "Make sub-record of the row above",
+    "delete": "Delete record"
+  },
+  "delete": {
+    "legendOne_one": "This record has {{count, number}} sub-record",
+    "legendOne_other": "This record has {{count, number}} sub-records",
+    "legendMany_one": "These records have {{count, number}} sub-record",
+    "legendMany_other": "These records have {{count, number}} sub-records",
+    "promote": "Keep the sub-records",
+    "promoteHint": "They become top-level records.",
+    "branch": "Delete the whole branch",
+    "branchHint_one": "{{count, number}} sub-record goes to the trash too; the branch can be restored together.",
+    "branchHint_other": "{{count, number}} sub-records go to the trash too; the branch can be restored together.",
+    "confirmBranch": "Delete branch"
+  },
+  "toolbar": {
+    "title": "Sub-records as a tree",
+    "button": "Tree",
+    "buttonCollapsed": "Tree: collapsed",
+    "buttonAll": "Tree: all open",
+    "buttonOn_one": "Tree: {{count, number}} level open",
+    "buttonOn_other": "Tree: {{count, number}} levels open",
+    "notEnabled": "This table has no sub-records yet. Turn them on so that any record can have sub-records (up to 10 levels).",
+    "enable": "Turn on sub-records",
+    "askAdmin": "Ask someone who can change this table’s fields to turn them on.",
+    "parentFieldName": "Parent record",
+    "show": "Show as a tree",
+    "showHint": "Records under their parent (field “{{field}}”).",
+    "groupWarning": "The view is grouped. A tree cannot be grouped: showing the tree sets the grouping aside.",
+    "groupOff": "A view shown as a tree cannot be grouped. Turn off the tree to group records.",
+    "turnOff": "Turn off the tree",
+    "ancestors": "Show parents of matches",
+    "ancestorsHint": "With a filter or search, the parent records of matches show dimmed for context.",
+    "levels": "Levels open by default",
+    "levelOption_one": "{{count, number}} level (top only)",
+    "levelOption_other": "{{count, number}} levels",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "levelsHint": "Only on this device, for you. Branches you open or close are remembered.",
+    "temporaryHint": "Changes apply at once and only you see them until you save the view."
+  },
+  "ancestorsLegend": "Dimmed rows are parents that do not match the filter, shown for context."
+}

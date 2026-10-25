@@ -1,0 +1,38 @@
+{
+  "connections": {
+    "title": "Tài khoản đã kết nối",
+    "subtitle": "Đăng nhập Cellhive bằng tài khoản của nhà cung cấp danh tính trong tổ chức của bạn.",
+    "linkedHeading": "Tài khoản bạn đã kết nối",
+    "loading": "Đang tải tài khoản đã kết nối",
+    "empty": "Chưa kết nối tài khoản nào.",
+    "connectedOn": "Kết nối lúc {{date}}",
+    "lastSignIn": "đăng nhập gần nhất {{date}}",
+    "neverUsed": "chưa dùng để đăng nhập",
+    "connectHeading": "Kết nối tài khoản",
+    "connectHint": "Bạn sẽ đăng nhập lại ở nhà cung cấp để xác nhận đó là tài khoản của mình.",
+    "connect": "Kết nối {{provider}}",
+    "noProviders": "Máy chủ này chưa cấu hình nhà cung cấp danh tính nào.",
+    "allConnected": "Bạn đã kết nối mọi nhà cung cấp danh tính của máy chủ này.",
+    "dismiss": "Đóng thông báo",
+    "linkError": {
+      "IDENTITY_IN_USE": "Tài khoản này của nhà cung cấp đã được kết nối với một người dùng Cellhive khác, hoặc bạn đã kết nối một tài khoản khác của nhà cung cấp này. Hãy gỡ kết nối đó trước, hoặc đăng nhập nhà cung cấp bằng đúng tài khoản.",
+      "OIDC_STATE_INVALID": "Quá trình kết nối quá lâu hoặc được bắt đầu ở một phiên khác. Hãy thử lại.",
+      "OIDC_PROVIDER_ERROR": "Nhà cung cấp danh tính không xác nhận được tài khoản. Hãy thử lại, hoặc liên hệ quản trị viên nếu lỗi vẫn tiếp diễn.",
+      "RATE_LIMITED": "Bạn đã thử quá nhiều lần. Hãy đợi một phút rồi thử lại.",
+      "generic": "Chưa kết nối được tài khoản. Hãy thử lại."
+    },
+    "disconnect": {
+      "action": "Gỡ kết nối",
+      "button": "Gỡ kết nối {{provider}}",
+      "title": "Gỡ kết nối {{provider}}?",
+      "description": "Bạn sẽ không đăng nhập được bằng tài khoản này nữa. Phiên trên thiết bị này vẫn giữ nguyên.",
+      "confirm": "Gỡ kết nối",
+      "cancel": "Huỷ",
+      "close": "Đóng"
+    },
+    "lastLoginMethod": {
+      "title": "Đây là cách đăng nhập duy nhất của bạn",
+      "description": "Tài khoản của bạn chưa có mật khẩu, nên gỡ kết nối này sẽ khiến bạn không đăng nhập được nữa. Hãy kết nối một nhà cung cấp khác trước, hoặc nhờ quản trị viên máy chủ đặt mật khẩu cho bạn."
+    }
+  }
+}

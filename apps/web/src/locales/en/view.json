@@ -1,0 +1,100 @@
+{
+  "bar": {
+    "label": "Views of {{table}}",
+    "shared": "Shared views",
+    "personal": "Personal views",
+    "more_one": "{{count, number}} more",
+    "more_other": "{{count, number}} more",
+    "moreLabel_one": "{{count, number}} more view",
+    "moreLabel_other": "{{count, number}} more views",
+    "switch": "Switch view, open: {{name}}"
+  },
+  "tab": {
+    "personal": "Personal view",
+    "locked": "Locked view",
+    "options": "Options of view {{name}}"
+  },
+  "types": {
+    "grid": "Grid",
+    "kanban": "Kanban",
+    "form": "Form"
+  },
+  "defaultName": {
+    "grid": "Grid view",
+    "kanban": "Kanban view",
+    "form": "Form view"
+  },
+  "create": {
+    "button": "New view",
+    "shared": "Shared view",
+    "personal": "Personal view (only you)"
+  },
+  "menu": {
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "duplicatePersonal": "Duplicate as personal view",
+    "moveLeft": "Move left",
+    "moveRight": "Move right",
+    "lock": "Lock view",
+    "unlock": "Unlock view",
+    "delete": "Delete view",
+    "deleteLocked": "Delete view (unlock it first)",
+    "deleteLast": "Delete view (the last shared view stays)"
+  },
+  "rename": {
+    "title": "Rename view",
+    "name": "Name",
+    "submit": "Rename"
+  },
+  "delete": {
+    "title": "Delete view {{name}}?",
+    "description": "Only the view is deleted: the records stay in the table. Share links of this view stop working.",
+    "submit": "Delete view",
+    "done": "View {{name}} deleted."
+  },
+  "lock": {
+    "locked": "View {{name}} is locked: nobody can change its settings until it is unlocked.",
+    "unlocked": "View {{name}} is unlocked."
+  },
+  "unsaved": {
+    "label": "Unsaved changes",
+    "hintLocked": "This view is locked. Your changes are kept on this device only.",
+    "hintReadOnly": "You cannot change this view. Your changes are kept on this device only.",
+    "hintSave": "These changes are kept on this device until you save them.",
+    "save": "Save",
+    "saveAsPersonal": "Save as personal view",
+    "discard": "Discard",
+    "saved": "Changes saved to view {{name}}.",
+    "savedAsPersonal": "Saved as personal view {{name}}.",
+    "more": "More ways to save",
+    "personalName": "{{name}} (personal)",
+    "explainTitle": "Your changes cannot be saved to this view",
+    "explainLocked": "This view is locked: its settings cannot change until it is unlocked. You can keep your changes as a personal view that only you see.",
+    "explainReadOnly": "You cannot change this shared view. You can keep your changes as a personal view that only you see.",
+    "explainCancel": "Not now"
+  },
+  "gone": "The view you were looking at was deleted or is no longer available to you.",
+  "dnd": {
+    "instructions": "Drag a view tab to reorder the views. With the keyboard, use Move left or Move right in the view options.",
+    "start": "Picked up view {{name}}.",
+    "over": "View {{name}} is over view {{over}}.",
+    "end": "View {{name}} was dropped.",
+    "cancel": "Moving view {{name}} was cancelled."
+  },
+  "placeholder": {
+    "kanban": {
+      "title": "Kanban views are coming soon",
+      "description": "This view will show the records as cards grouped by a field. Until then, open a grid view to work with the records."
+    },
+    "form": {
+      "title": "Form views are coming soon",
+      "description": "This view will be a form that adds records to the table. Until then, open a grid view to work with the records."
+    }
+  },
+  "none": {
+    "title": "No view of this table is available to you",
+    "description": "Your role does not show any shared view of this table. You can make a personal view: only you will see it.",
+    "create": "Create a personal grid view"
+  },
+  "breadcrumb": "Location"
+}

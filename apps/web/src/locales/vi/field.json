@@ -1,0 +1,606 @@
+{
+  "dialog": {
+    "createTitle": "Trường mới",
+    "editTitle": "Sửa trường",
+    "create": "Tạo trường",
+    "save": "Lưu"
+  },
+  "name": "Tên",
+  "type": "Kiểu trường",
+  "description": "Mô tả",
+  "optionsLegend": "Tuỳ chọn của kiểu trường",
+  "noOptions": "Kiểu trường này không có tuỳ chọn.",
+  "required": "Bắt buộc",
+  "requiredHint": "Bản ghi mới và bản ghi được sửa phải có giá trị.",
+  "unique": "Giá trị không trùng",
+  "uniqueHint": "Không có hai bản ghi nào cùng giá trị.",
+  "defaultValue": "Giá trị mặc định",
+  "defaultValueHint": "Tự điền cho bản ghi mới khi để trống.",
+  "conversionSoon": "Đổi kiểu của trường đã có (hoặc chuyển từ nhiều giá trị sang một) sẽ có trong bản tới. Hiện tại hãy tạo một trường mới.",
+  "typeChangeSoon": "Chưa đổi được kiểu của trường đã lưu.",
+  "locked": "Cấu trúc bảng đang được cập nhật. Thay đổi của bạn chưa được lưu.",
+  "retry": "Thử lại",
+  "fixErrors": "Một số thiết lập cần bạn xem lại.",
+  "validation": {
+    "DUPLICATE_OPTION": "Đã có lựa chọn khác trùng tên này.",
+    "NAME_CONFLICT": "Bảng đã có trường khác trùng tên này."
+  },
+  "types": {
+    "text": "Văn bản",
+    "number": "Số",
+    "select": "Lựa chọn",
+    "datetime": "Ngày",
+    "checkbox": "Hộp kiểm",
+    "user": "Người dùng",
+    "created_at": "Thời điểm tạo",
+    "updated_at": "Thời điểm sửa cuối",
+    "created_by": "Người tạo",
+    "updated_by": "Người sửa cuối",
+    "auto_number": "Số tự động",
+    "link": "Liên kết tới bảng khác",
+    "attachment": "Tệp đính kèm",
+    "formula": "Công thức",
+    "lookup": "Tra cứu",
+    "parent": "Bản ghi cha",
+    "button": "Nút"
+  },
+  "text": {
+    "style": "Kiểu hiển thị",
+    "styleHint": "Chỉ đổi cách hiển thị và nhập giá trị.",
+    "styles": {
+      "plain": "Văn bản thường",
+      "phone": "Số điện thoại",
+      "url": "URL",
+      "email": "Email",
+      "barcode": "Mã vạch"
+    }
+  },
+  "number": {
+    "style": "Định dạng",
+    "styles": {
+      "plain": "Số",
+      "currency": "Tiền tệ",
+      "progress": "Thanh tiến độ",
+      "rating": "Đánh giá"
+    },
+    "precision": "Số chữ số thập phân",
+    "decimals_other": "{{count, number}} chữ số thập phân",
+    "percentage": "Hiển thị dạng phần trăm",
+    "percentageHint": "Giá trị là phân số: 0,2 hiển thị 20%.",
+    "thousands": "Dấu phân cách hàng nghìn",
+    "currency": "Loại tiền",
+    "currencyPrecision": "Theo loại tiền",
+    "progressPercentage": "Giá trị là phân số (0 đến 1)",
+    "progressHint": "Nếu không, giá trị đi từ 0 đến 100.",
+    "ratingIcon": "Biểu tượng",
+    "ratingIcons": {
+      "star": "Ngôi sao",
+      "heart": "Trái tim",
+      "thumbs_up": "Ngón cái",
+      "fire": "Ngọn lửa",
+      "smile": "Mặt cười",
+      "flash": "Tia chớp",
+      "flower": "Bông hoa"
+    },
+    "ratingMin": "Thấp nhất",
+    "ratingMax": "Cao nhất",
+    "defaultHint": "Tự điền cho bản ghi mới khi để trống. Phần trăm là phân số (20% = 0,2)."
+  },
+  "datetime": {
+    "format": "Định dạng",
+    "timezone": "Múi giờ",
+    "timezoneHint": "Dùng để hiển thị và đọc ngày có giờ.",
+    "defaultZone": "Múi giờ của tổ chức",
+    "noDefault": "Không có",
+    "createdTimeDefault": "Thời điểm tạo bản ghi"
+  },
+  "user": {
+    "multiple": "Cho phép nhiều người",
+    "notify": "Thông báo khi được giao",
+    "notifyHint": "Người được thêm vào field này nhận thông báo (nếu đọc được bản ghi và field này) và tự theo dõi bản ghi. Thay đổi hàng loạt chỉ gửi mỗi người một thông báo cho mọi bản ghi của nó.",
+    "defaultCurrentUser": "Giao cho người tạo bản ghi"
+  },
+  "select": {
+    "multiple": "Cho phép chọn nhiều lựa chọn",
+    "options": "Các lựa chọn",
+    "empty": "Chưa có lựa chọn.",
+    "add": "Thêm lựa chọn",
+    "unnamed": "Lựa chọn {{position}}",
+    "optionName": "Tên lựa chọn {{position}}",
+    "reorder": "Di chuyển {{name}}",
+    "color": "Màu của {{name}}: {{color}}",
+    "colorHeading": "Màu",
+    "remove": "Xoá {{name}}",
+    "restore": "Giữ lại {{name}}",
+    "deleteWarning_other": "Sẽ xoá {{count, number}} lựa chọn. Bản ghi đang dùng sẽ mất giá trị này; việc gỡ chạy nền sau khi bạn lưu.",
+    "removing_other": "Đang gỡ {{count, number}} lựa chọn đã xoá khỏi các bản ghi (chạy nền).",
+    "removed_other": "Đã gỡ {{count, number}} lựa chọn đã xoá khỏi các bản ghi.",
+    "removeFailed": "Gỡ các lựa chọn đã xoá khỏi bản ghi không thành công.",
+    "defaultHint": "Chỉ các lựa chọn đã lưu.",
+    "noDefault": "Không có",
+    "dnd": {
+      "instructions": "Để đổi thứ tự, nhấn Space hoặc Enter, di chuyển bằng phím mũi tên rồi nhấn Space hoặc Enter lần nữa. Nhấn Esc để huỷ.",
+      "start": "Đã nhấc {{name}}.",
+      "over": "{{name}} đang ở vị trí {{position}}.",
+      "end": "Đã thả {{name}} ở vị trí {{position}}.",
+      "cancel": "Đã huỷ di chuyển {{name}}."
+    }
+  },
+  "colors": {
+    "0": "Xám",
+    "1": "Trời",
+    "2": "Lá",
+    "3": "Hổ phách",
+    "4": "Hồng",
+    "5": "Ngọc",
+    "6": "Cam",
+    "7": "Chàm"
+  },
+  "autoNumber": {
+    "rules": "Quy tắc đánh số",
+    "types": {
+      "text": "Chữ cố định",
+      "incremental_number": "Số đếm",
+      "created_time": "Ngày tạo"
+    },
+    "ruleType": "Loại quy tắc {{position}}",
+    "text": "Chữ của quy tắc {{position}}",
+    "length": "Số chữ số của quy tắc {{position}}",
+    "dateFormat": "Định dạng ngày của quy tắc {{position}}",
+    "digits_other": "{{count, number}} chữ số",
+    "moveUp": "Đưa quy tắc {{position}} lên",
+    "moveDown": "Đưa quy tắc {{position}} xuống",
+    "remove": "Xoá quy tắc {{position}}",
+    "add": "Thêm quy tắc",
+    "preview": "Các số đầu tiên",
+    "previewInvalid": "Điền đủ các quy tắc để xem số.",
+    "recomputeHint": "Đổi quy tắc sẽ đánh số lại các bản ghi đã có (chạy nền)."
+  },
+  "preview": {
+    "title": "Xem trước",
+    "untitled": "Trường chưa đặt tên",
+    "invalid": "Sửa thiết lập để xem trước.",
+    "noOptions": "Thêm lựa chọn để xem ở đây.",
+    "checked": "Đã chọn",
+    "text": {
+      "plain": "Máy POS lỗi in",
+      "phone": "0912 345 678",
+      "url": "https://example.com",
+      "email": "hotro@example.com",
+      "barcode": "8934563138165"
+    },
+    "link": {
+      "first": "An Phát",
+      "second": "Bình Minh"
+    },
+    "attachment": {
+      "first": "hop-dong.pdf",
+      "second": "anh-chup.jpg"
+    }
+  },
+  "rename": {
+    "title": "Đổi tên trường",
+    "submit": "Đổi tên"
+  },
+  "delete": {
+    "title": "Xoá trường “{{name}}”?",
+    "description": "Trường và các giá trị sẽ vào thùng rác của bảng này. Bạn có thể khôi phục trong vòng 30 ngày.",
+    "submit": "Xoá trường",
+    "done": "Đã chuyển “{{name}}” vào thùng rác.",
+    "restoreHeals": "Khôi phục trường từ thùng rác thì chúng chạy lại bình thường."
+  },
+  "limit": {
+    "title": "Quá nhiều trường",
+    "description_other": "Mỗi bảng có tối đa {{formatted}} trường và bảng này đã đạt giới hạn.",
+    "descriptionUnknown": "Bảng này đã đạt số trường tối đa.",
+    "hint": "Hãy xoá các trường không còn dùng, hoặc chuyển bớt dữ liệu sang bảng khác, rồi thử lại.",
+    "ok": "Đã hiểu"
+  },
+  "link": {
+    "table": "Bảng liên kết",
+    "chooseTable": "Chọn bảng…",
+    "tableFixed": "Không đổi được bảng liên kết sau khi tạo trường: hãy thêm một trường liên kết mới.",
+    "allowMultiple": "Cho chọn nhiều bản ghi",
+    "allowMultipleHint": "Tắt: mỗi ô chỉ liên kết tối đa một bản ghi.",
+    "filter": "Chỉ bản ghi khớp điều kiện",
+    "filterHint": "Ô chọn chỉ hiện các bản ghi của bảng liên kết thoả điều kiện này; khi ghi cũng được kiểm tra.",
+    "changed": "Thay đổi",
+    "otherTable": "bảng liên kết",
+    "thisTable": "bảng này",
+    "allowMultipleOn": "Bật: mỗi ô liên kết được nhiều bản ghi của {{table}}.",
+    "allowMultipleOff": "Tắt: mỗi ô liên kết tối đa một bản ghi của {{table}}.",
+    "twoWay": "Liên kết hai chiều",
+    "twoWayHint": "Bảng {{table}} sẽ thấy các bản ghi {{source}} liên kết với mình.",
+    "twoWayNoRights": "Cần quyền sửa cấu trúc cả bảng {{table}}; hãy nhờ quản trị base.",
+    "reverseName": "Tên trường ở bảng {{table}}",
+    "reverseHint": "Trường ngược luôn cho chọn nhiều bản ghi.",
+    "reverseField": "Trường ngược: “{{name}}” ở bảng {{table}}.",
+    "reverseUnknown": "trường ngược"
+  },
+  "attachment": {
+    "accept": "Loại tệp được nhận",
+    "acceptAny": "Mọi loại tệp",
+    "acceptSome": "Chỉ các loại sau",
+    "acceptHint": "Máy chủ kiểm tra lại mỗi lần tải lên.",
+    "acceptNone": "Chọn ít nhất một loại: không chọn loại nào thì nhận mọi tệp.",
+    "customTypes": "Loại MIME khác",
+    "customTypesHint": "Phân cách bằng dấu phẩy, vd image/heic hoặc application/vnd.dwg; type/* cho cả nhóm.",
+    "customTypesPlaceholder": "image/heic, application/vnd.dwg",
+    "presets": {
+      "images": "Ảnh",
+      "pdf": "PDF",
+      "office": "Word, Excel, PowerPoint",
+      "video": "Video",
+      "audio": "Âm thanh",
+      "archives": "Tệp nén (ZIP, 7z, RAR)",
+      "text": "Văn bản và CSV"
+    },
+    "maxFiles": "Số tệp tối đa mỗi ô",
+    "maxFilesHint": "Từ 1 đến 100.",
+    "blocked": "Chặn các đuôi tệp",
+    "blockedHint": "Mặc định chặn tệp thực thi. Để trống để không chặn gì.",
+    "blockedDefault": "Khôi phục mặc định"
+  },
+  "convert": {
+    "applied": "Đã lưu trường.",
+    "busy": "Trường đang được đổi kiểu. Bạn sửa lại được khi việc này xong.",
+    "loading": "Đang tải bản xem trước…",
+    "previewFailed": "Không tải được bản xem trước.",
+    "tableOf": "Bảng {{table}}",
+    "footer": "Có thể hoàn tác trong 7 ngày. Chạy nền.",
+    "footerLink": "Chạy nền, khoá sửa cấu trúc hai trường này tới khi xong. Hoàn tác trong 7 ngày.",
+    "moreOptions_other": "và {{count, number}} lựa chọn khác",
+    "emptyColumn": "Cột đang trống: không mất dữ liệu nào.",
+    "submit": {
+      "type": "Đổi kiểu",
+      "style": "Lưu",
+      "to_two_way": "Bật hai chiều",
+      "to_single": "Chỉ giữ một bản ghi",
+      "static": "Chuyển thành giá trị tĩnh",
+      "toComputed": "Đổi sang {{type}}"
+    },
+    "pane": {
+      "type": "Xem trước thay đổi",
+      "style": "Kiểm tra định dạng",
+      "to_two_way": "Xem trước: bật liên kết hai chiều",
+      "to_single": "Xem trước: mỗi ô một bản ghi",
+      "to_one_way": "Xem trước: tắt liên kết hai chiều"
+    },
+    "picker": {
+      "hint": "Chọn kiểu khác để xem giá trị sẽ ra sao.",
+      "current": "{{type}} (hiện tại)",
+      "linkFixed": "Liên kết không đổi được sang kiểu khác.",
+      "typeFixed": "Kiểu trường này không đổi được sang kiểu khác.",
+      "refused": "{{type}} — {{reason}}",
+      "groups": {
+        "keep": "Giữ dữ liệu",
+        "truncate": "Cắt bớt dữ liệu",
+        "blacklist": "Mất dữ liệu",
+        "forbidden": "Không đổi được"
+      },
+      "effect": {
+        "keep": "Giá trị được chuyển sang kiểu mới; giá trị không chuyển được sẽ trống.",
+        "truncate": "Ô có nhiều giá trị chỉ giữ giá trị đầu tiên.",
+        "blacklist": "Kiểu này không giữ được giá trị hiện có: cột có giá trị sẽ mất hết.",
+        "forbidden": "Trường không đổi được sang kiểu này."
+      }
+    },
+    "reasons": {
+      "noColumn": "hệ thống tự điền",
+      "otherKind": "hãy tạo trường mới",
+      "fixedSource": "không áp dụng cho trường này",
+      "primaryField": "trường chính không thể là trường tính toán"
+    },
+    "settings": {
+      "existing": "Giá trị đang có",
+      "createOptions": "Tạo lựa chọn từ giá trị có sẵn",
+      "createOptionsHint": "Mỗi giá trị khác nhau thành một lựa chọn, tối đa 1.000.",
+      "matchOnly": "Chỉ giữ giá trị khớp lựa chọn có sẵn",
+      "matchOnlyHint": "Giá trị không khớp sẽ bị xoá.",
+      "truthy": "Giá trị coi là đã đánh dấu",
+      "truthyHint": "Phân cách bằng dấu phẩy, không phân biệt hoa thường. Giá trị khác thành chưa đánh dấu.",
+      "truthyPlaceholder": "Có, x, xong",
+      "matchEmail": "Giá trị là email thành viên",
+      "matchEmailHint": "Email của thành viên tổ chức thành người đó; giá trị khác bị xoá."
+    },
+    "stats": {
+      "affected_other": "bản ghi bị ảnh hưởng",
+      "lost_other": "giá trị sẽ mất",
+      "truncated_other": "giá trị bị cắt",
+      "newOptions_other": "lựa chọn mới",
+      "dependents_other": "view hoặc quy tắc đang dùng",
+      "filled_other": "ô có giá trị",
+      "replaced_other": "giá trị bị thay"
+    },
+    "samples": {
+      "record": "Bản ghi",
+      "before": "Hiện tại",
+      "after": "Sau khi đổi",
+      "untitled": "Chưa đặt tên",
+      "empty": "Trống",
+      "caption": "Ví dụ chuyển đổi",
+      "checked": "Đã đánh dấu",
+      "unchecked": "Chưa đánh dấu"
+    },
+    "style": {
+      "invalid": {
+        "email_other": "ô không đúng định dạng email",
+        "phone_other": "ô không đúng định dạng số điện thoại"
+      },
+      "invalidShort": {
+        "email": "Không phải email",
+        "phone": "Không phải số điện thoại"
+      },
+      "keepTitle": "Không xoá giá trị nào.",
+      "keepBody": "Ô sai định dạng được đánh dấu trên grid và trong chi tiết bản ghi."
+    },
+    "refused": {
+      "title": "Trường không đổi được sang kiểu này.",
+      "tooManyOptions": "Sẽ cần hơn 1.000 lựa chọn.",
+      "notAllowed": "Hãy tạo trường mới với kiểu này."
+    },
+    "dataLoss": {
+      "title": "Kiểu {{type}} không giữ được giá trị hiện có.",
+      "body_other": "Toàn bộ {{formatted}} giá trị của cột sẽ bị xoá."
+    },
+    "consent": {
+      "acceptDataLoss_other": "Tôi hiểu toàn bộ {{formatted}} giá trị sẽ bị xoá",
+      "lost_other": "Tôi hiểu {{lost}} giá trị sẽ bị xoá",
+      "truncated_other": "Tôi hiểu {{truncated}} ô sẽ bị cắt",
+      "both_other": "Tôi hiểu {{lost}} giá trị sẽ bị xoá và {{truncated}} ô bị cắt",
+      "single_other": "Tôi hiểu {{truncated}} ô sẽ chỉ giữ một liên kết",
+      "dependents_other": "Tôi đã xem các thành phần đang dùng trường này",
+      "replaced_other": "Tôi hiểu {{lost}} giá trị sẽ bị thay"
+    },
+    "confirm": {
+      "lost": {
+        "title_other": "{{lost}} giá trị sẽ bị xoá",
+        "body_other": "vì không chuyển được sang {{type}}. Cần xác nhận trước khi đổi kiểu."
+      },
+      "truncated": {
+        "title_other": "{{truncated}} ô sẽ bị cắt",
+        "body_other": "chỉ còn giá trị đầu tiên. Cần xác nhận trước khi đổi kiểu."
+      },
+      "both": {
+        "title_other": "{{lost}} giá trị sẽ bị xoá, {{truncated}} ô bị cắt",
+        "body_other": "Cần xác nhận trước khi đổi kiểu."
+      },
+      "single": {
+        "title_other": "{{truncated}} ô sẽ chỉ giữ liên kết đầu tiên.",
+        "body_other": "Các liên kết còn lại bị gỡ (giữ 7 ngày để hoàn tác)."
+      },
+      "dependents": {
+        "title_other": "Có view hoặc quy tắc đang dùng trường này.",
+        "body_other": "Chúng có thể không chạy đúng sau khi đổi."
+      },
+      "replaced": {
+        "title_other": "{{lost}} giá trị sẽ được thay bằng giá trị tính",
+        "body_other": "Giá trị cũ được giữ 7 ngày để hoàn tác."
+      }
+    },
+    "uniqueReset": {
+      "title": "Tuỳ chọn “Không trùng giá trị” sẽ tắt.",
+      "body": "Sau khi đổi kiểu có thể có giá trị trùng; bạn bật lại được sau."
+    },
+    "dependents": {
+      "title": "Đang dùng trường này",
+      "kinds": {
+        "view": "Bộ lọc, sắp xếp, nhóm hoặc form của view",
+        "role": "Quy tắc của vai trò",
+        "field": "Công thức hoặc tra cứu",
+        "automation": "Tự động hoá"
+      },
+      "unnamed": {
+        "view": "Một view",
+        "role": "Một vai trò",
+        "field": "Một trường",
+        "automation": "Một tự động hoá"
+      },
+      "open": "Mở",
+      "openLabel": "Mở {{name}} trong thẻ mới"
+    },
+    "twoWay": {
+      "linkedRecords_other": "bản ghi đang có liên kết",
+      "newField_other": "bản ghi của {{table}} nhận trường mới",
+      "overLimit_other": "ô vượt 500 liên kết",
+      "overLimitCaption": "Bản ghi của {{table}} vượt giới hạn",
+      "recordOf": "Bản ghi của {{table}}",
+      "links": "Liên kết",
+      "linkCount_other": "{{formatted}} liên kết",
+      "overTitle_other": "{{formatted}} bản ghi của {{table}} có hơn 500 liên kết.",
+      "overBody": "Các liên kết này được giữ nguyên. Ô đó chỉ gỡ được, không thêm được cho tới khi còn tối đa 500.",
+      "noCopyTitle": "Không chép dữ liệu.",
+      "noCopyBody": "Hai trường dùng chung một bộ liên kết: sửa ở bên nào, bên kia thấy ngay. Lịch sử bản ghi của {{table}} bắt đầu từ lúc bật.",
+      "rightsTitle": "Cần quyền sửa cấu trúc ở cả {{source}} và {{target}}.",
+      "rightsBody": "Bạn đang có quyền này."
+    },
+    "single": {
+      "linked_other": "ô có liên kết",
+      "truncated_other": "ô có nhiều liên kết"
+    },
+    "oneWay": {
+      "title": "Tắt liên kết hai chiều",
+      "tables": "{{source}} ↔ {{target}}",
+      "which": "Giữ trường ở bảng nào",
+      "keep": "Giữ “{{field}}” ở bảng {{table}}",
+      "keepHint": "Trường “{{field}}” ở bảng {{table}} vào thùng rác 30 ngày.",
+      "after": "Sau khi tắt",
+      "removed": "(vào thùng rác)",
+      "linksKept": "Liên kết giữ nguyên. Chỉ mất cách xem ngược từ bảng {{table}}.",
+      "broken_other": "thành phần sẽ lỗi",
+      "cells_other": "ô giữ nguyên liên kết",
+      "noLinkLost": "liên kết bị xoá",
+      "usedBy": "Đang dùng trường “{{field}}” ở {{table}}",
+      "noDependents": "Không có gì đang dùng trường bị xoá.",
+      "consent_other": "Tôi hiểu {{formatted}} thành phần trên sẽ báo lỗi",
+      "brokenTitle_other": "{{formatted}} thành phần sẽ báo lỗi",
+      "brokenBody": "cho tới khi bạn sửa lại hoặc khôi phục trường.",
+      "footer": "Hoàn tác trong 7 ngày. Trường bị xoá nằm trong thùng rác 30 ngày.",
+      "submit": "Tắt hai chiều"
+    },
+    "revert": {
+      "title": "Hoàn tác đổi kiểu?",
+      "newFieldName": "{{name}} (bản cũ)",
+      "done": "Đã hoàn tác đổi kiểu “{{name}}”.",
+      "doneNewField": "Đã tạo “{{name}}” với giá trị cũ.",
+      "expiredTitle": "Hoàn tác đổi kiểu",
+      "expiredBody": "Đã quá 7 ngày; cột cũ đã được dọn.",
+      "expiredSince": "Đã quá 7 ngày kể từ {{date}}. Cột cũ đã được dọn.",
+      "running": "Việc đổi kiểu vẫn đang chạy. Hoàn tác được khi xong.",
+      "link": {
+        "to_two_way": "Trường ngược vào thùng rác, “{{field}}” trở lại liên kết một chiều. Liên kết giữ nguyên.",
+        "to_one_way": "Trường đã xoá ở bảng kia được khôi phục, “{{field}}” trở lại liên kết hai chiều.",
+        "to_single": "“{{field}}” lại cho chọn nhiều bản ghi và các liên kết đã gỡ được trả lại."
+      },
+      "summary": "Trường “{{field}}” quay về kiểu {{type}} với giá trị lúc {{date}}.",
+      "unchanged_other": "ô lấy lại giá trị cũ",
+      "edited_other": "ô sửa sau khi đổi",
+      "how": "Với các ô đã sửa sau khi đổi",
+      "keep": "Giữ các giá trị đã sửa (khuyên dùng)",
+      "keepHint_other": "{{formatted}} ô đã sửa giữ giá trị, chuyển về kiểu {{type}}.",
+      "newField": "Khôi phục thành trường mới (bản cũ)",
+      "newFieldHint": "Giá trị cũ nằm ở một trường mới cạnh trường này; không ghi đè gì.",
+      "newFieldLabel": "Tên trường mới",
+      "overwrite": "Ghi đè cả các ô đã sửa",
+      "overwriteHint_other": "{{formatted}} ô sẽ mất giá trị mới.",
+      "overwriteTitle_other": "{{formatted}} ô đã sửa sau khi đổi kiểu.",
+      "overwriteBody": "Các giá trị mới đó sẽ bị thay bằng giá trị cũ. Lịch sử bản ghi vẫn giữ để tra lại.",
+      "overwriteConsent_other": "Tôi hiểu {{formatted}} giá trị mới sẽ bị ghi đè",
+      "unconvertibleTitle_other": "{{formatted}} ô đã sửa không chuyển được về kiểu {{type}}.",
+      "unconvertibleBody": "Các ô này lấy lại giá trị cũ.",
+      "unconvertibleConsent_other": "Tôi hiểu {{formatted}} ô đã sửa lấy lại giá trị cũ",
+      "dependentsTitle": "Công thức, bộ lọc và view dùng trường này",
+      "dependentsBody": "sẽ tính lại theo kiểu {{type}}.",
+      "footer_other": "Còn {{count, number}} ngày. Sau {{date}} cột cũ bị xoá hẳn.",
+      "submit": "Hoàn tác đổi kiểu",
+      "toComputedTitle": "Trường trở lại thành {{type}}.",
+      "toComputedBody": "Giá trị được tính lại cho mọi bản ghi; giá trị gõ tay từ lúc đổi kiểu sẽ không còn."
+    },
+    "static": {
+      "action": "Chuyển thành giá trị tĩnh ({{type}})",
+      "hint": "Giữ giá trị hiện tại, không tự tính lại nữa."
+    },
+    "computed": {
+      "emptyValue": "rỗng",
+      "toTitle": "Giá trị sẽ do {{type}} tính.",
+      "toBody": "Mọi giá trị hiện có được thay bằng giá trị tính. Giá trị cũ được giữ 7 ngày: hoàn tác đổi kiểu để lấy lại.",
+      "staticTitle": "Giá trị hiện tại được giữ thành giá trị tĩnh.",
+      "staticBody": "Trường thành {{type}} và không tự tính lại nữa. Hoàn tác được trong 7 ngày.",
+      "confirmTitle": "Đổi “{{name}}” sang {{type}}",
+      "back": "Quay lại",
+      "next": "Tiếp tục"
+    }
+  },
+  "formula": {
+    "backfilling": "Đang tính “{{name}}” cho mọi bản ghi. Cột sẽ tự cập nhật khi xong.",
+    "unavailable": "Không cấu hình được trường công thức ở đây."
+  },
+  "button": {
+    "label": "Nhãn trên nút",
+    "labelHint": "Để trống: dùng tên trường.",
+    "color": "Màu",
+    "confirm": "Hỏi lại trước khi chạy",
+    "confirmHint": "Hộp xác nhận hiện ra trước khi automation chạy.",
+    "confirmTitleDefault": "{{label}}?",
+    "confirmTitle": "Tiêu đề",
+    "confirmLabel": "Chữ trên nút xác nhận",
+    "confirmMessage": "Nội dung",
+    "preview": {
+      "ready": "Ô trong grid",
+      "disabled": "Khi không đủ điều kiện",
+      "noFilter": "Không lọc, sắp xếp, nhóm theo trường nút.",
+      "noForm": "Form không có câu hỏi cho nút.",
+      "export": "Xuất CSV ghi nhãn của nút.",
+      "limit": "Giới hạn 10 lần bấm mỗi phút cho mỗi người."
+    },
+    "automation": {
+      "title": "Automation chạy khi bấm",
+      "none": "Chưa gắn automation",
+      "noneHint": "Nút bị khoá cho tới khi có automation đang bật. Builder mở với trigger “Khi bấm nút” và quyền bấm mặc định là người sửa được bản ghi.",
+      "saveAndCreate": "Lưu và tạo automation",
+      "create": "Tạo automation cho nút này",
+      "unnamed": "Automation",
+      "on": "Đang bật",
+      "off": "Đã tắt",
+      "open": "Mở trong builder",
+      "runAs": "Chạy bằng quyền",
+      "whoClicks": "Ai được bấm",
+      "editors": "Người sửa được bản ghi",
+      "readers": "Người xem được bản ghi",
+      "when": "Bật nút khi",
+      "always": "Luôn bật",
+      "steps": "Các bước",
+      "readWarning": "Người chỉ có quyền xem cũng chạy được automation này bằng quyền của «{{name}}».",
+      "runAsUnknown": "người chạy automation",
+      "editInBuilder": "Ai được bấm và khi nào nút bật là một phần của automation: đổi trong builder (người lưu sẽ thành người chạy).",
+      "one": "Mỗi nút gắn tối đa một automation. Cần nhiều việc thì thêm bước trong automation đó.",
+      "noSteps": "Chưa có bước nào",
+      "and": "và",
+      "or": "hoặc",
+      "more_other": "+{{count, number}} điều kiện khác"
+    }
+  },
+  "reminder": {
+    "title": "Nhắc hạn",
+    "enable": "Nhắc mọi người về ngày này",
+    "enableHint": "Gửi thông báo khi tới ngày của từng bản ghi: trong ứng dụng, và qua email hoặc Telegram theo lựa chọn của mỗi người.",
+    "off": "Không nhắc.",
+    "readOnly": "Chỉ người sửa được các trường của bảng này mới cài được nhắc hạn.",
+    "when": "Thời điểm",
+    "direction": "Thời điểm nhắc",
+    "directions": {
+      "at": "Đúng lúc",
+      "onDay": "Trong ngày",
+      "before": "Trước",
+      "after": "Sau"
+    },
+    "amount": "Bao lâu",
+    "amountHint": "Tối đa 30 ngày ({{max, number}} theo đơn vị này).",
+    "amountHintDays": "Tối đa 30 ngày.",
+    "unit": "Đơn vị",
+    "units": {
+      "days": "ngày",
+      "hours": "giờ",
+      "minutes": "phút"
+    },
+    "timeOfDay": "Giờ trong ngày",
+    "zoneField": "Theo múi giờ của trường: {{zone}}",
+    "zoneOrg": "Theo múi giờ của trường: {{zone}} (của tổ chức)",
+    "withTime": "Tính từ giờ của từng giá trị.",
+    "recipients": "Gửi cho",
+    "recipientsField": "Người trong một trường",
+    "userField": "Trường người",
+    "chooseField": "Chọn một trường",
+    "deletedField": "(trường đã xoá)",
+    "noUserFields": "Bảng này chưa có trường người (Người dùng hoặc Người tạo).",
+    "broken": {
+      "missing": "Trường người nhận đã bị xoá: nhắc hạn này không được gửi. Hãy chọn trường khác.",
+      "wrongType": "Trường người nhận “{{field}}” không còn là trường người: nhắc hạn này không được gửi. Hãy chọn trường khác."
+    },
+    "recipientsUsers": "Thành viên cụ thể (tối đa {{max, number}})",
+    "chooseMember": "Chọn thành viên",
+    "membersFull": "Danh sách đã đủ",
+    "memberOption": "{{name}} · {{email}}",
+    "addMember": "Thêm",
+    "removeMember": "Bỏ {{name}}",
+    "memberRefused": "(bị từ chối)",
+    "unknownMember": "Thành viên không xác định",
+    "membersChosen_other": "Đã chọn {{count, number}}/{{max, number}} thành viên",
+    "membersHint_other": "{{count, number}}/{{max, number}} thành viên.",
+    "preview": {
+      "title": "Ví dụ",
+      "text": "Giá trị {{value}} được nhắc lúc {{due}} ({{zone}}).",
+      "local": "Tức là {{time}} theo múi giờ của bạn ({{zone}})."
+    },
+    "note": "Chỉ người đọc được bản ghi, trường này và (khi gửi người trong một trường) cả trường đó mới nhận. Nhắc từ lúc bật, không nhắc cho ngày đã qua.",
+    "errors": {
+      "REMINDER_AMOUNT": "Nhập số nguyên từ 1 đến {{max, number}}.",
+      "REMINDER_FIELD_REQUIRED": "Chọn trường chứa người được nhắc.",
+      "REMINDER_USERS_REQUIRED": "Thêm ít nhất một thành viên.",
+      "REMINDER_USERS_TOO_MANY": "Tối đa {{max, number}} thành viên.",
+      "UNKNOWN_FIELD": "Trường này không còn trong bảng. Hãy chọn trường khác.",
+      "INVALID_FIELD_TYPE": "Trường này không còn là trường người. Hãy chọn trường Người dùng hoặc Người tạo.",
+      "USER_NOT_FOUND": "{{name}} không phải thành viên của tổ chức này."
+    }
+  }
+}

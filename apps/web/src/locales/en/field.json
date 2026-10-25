@@ -1,0 +1,665 @@
+{
+  "dialog": {
+    "createTitle": "New field",
+    "editTitle": "Edit field",
+    "create": "Create field",
+    "save": "Save"
+  },
+  "name": "Name",
+  "type": "Field type",
+  "description": "Description",
+  "optionsLegend": "Options of the field type",
+  "noOptions": "This field type has no options.",
+  "required": "Required",
+  "requiredHint": "New and edited records must have a value.",
+  "unique": "Unique values",
+  "uniqueHint": "No two records may have the same value.",
+  "defaultValue": "Default value",
+  "defaultValueHint": "Filled in for new records when left empty.",
+  "conversionSoon": "Changing the type of an existing field (or switching it from several values to one) is coming soon. Create a new field instead for now.",
+  "typeChangeSoon": "The type of a saved field cannot be changed yet.",
+  "locked": "The table structure is being updated. Your changes were not saved yet.",
+  "retry": "Try again",
+  "fixErrors": "Some settings need your attention.",
+  "validation": {
+    "DUPLICATE_OPTION": "Another option already has this name.",
+    "NAME_CONFLICT": "Another field of this table already has this name."
+  },
+  "types": {
+    "text": "Text",
+    "number": "Number",
+    "select": "Select",
+    "datetime": "Date",
+    "checkbox": "Checkbox",
+    "user": "User",
+    "created_at": "Created time",
+    "updated_at": "Last modified time",
+    "created_by": "Created by",
+    "updated_by": "Last modified by",
+    "auto_number": "Auto number",
+    "link": "Link to another table",
+    "attachment": "Attachment",
+    "formula": "Formula",
+    "lookup": "Lookup",
+    "parent": "Parent record",
+    "button": "Button"
+  },
+  "text": {
+    "style": "Style",
+    "styleHint": "Only changes how values are shown and entered.",
+    "styles": {
+      "plain": "Plain text",
+      "phone": "Phone number",
+      "url": "URL",
+      "email": "Email",
+      "barcode": "Barcode"
+    }
+  },
+  "number": {
+    "style": "Format",
+    "styles": {
+      "plain": "Number",
+      "currency": "Currency",
+      "progress": "Progress bar",
+      "rating": "Rating"
+    },
+    "precision": "Decimal places",
+    "decimals_one": "{{count, number}} decimal place",
+    "decimals_other": "{{count, number}} decimal places",
+    "percentage": "Show as percentage",
+    "percentageHint": "Values are fractions: 0.2 shows as 20%.",
+    "thousands": "Thousands separator",
+    "currency": "Currency",
+    "currencyPrecision": "Currency default",
+    "progressPercentage": "Values are fractions (0 to 1)",
+    "progressHint": "Otherwise values go from 0 to 100.",
+    "ratingIcon": "Icon",
+    "ratingIcons": {
+      "star": "Star",
+      "heart": "Heart",
+      "thumbs_up": "Thumbs up",
+      "fire": "Fire",
+      "smile": "Smile",
+      "flash": "Flash",
+      "flower": "Flower"
+    },
+    "ratingMin": "Lowest",
+    "ratingMax": "Highest",
+    "defaultHint": "Filled in for new records when left empty. Percentages are fractions (20% = 0.2)."
+  },
+  "datetime": {
+    "format": "Format",
+    "timezone": "Time zone",
+    "timezoneHint": "Used to show and read dates with a time.",
+    "defaultZone": "Organization time zone",
+    "noDefault": "No default",
+    "createdTimeDefault": "Time the record is created"
+  },
+  "user": {
+    "multiple": "Allow several people",
+    "notify": "Notify people when they are assigned",
+    "notifyHint": "People added to this field are notified (if they can read the record and this field) and follow the record. A bulk change sends each of them one notification for all its records.",
+    "defaultCurrentUser": "Assign the person who creates the record"
+  },
+  "select": {
+    "multiple": "Allow several options per record",
+    "options": "Options",
+    "empty": "No options yet.",
+    "add": "Add option",
+    "unnamed": "Option {{position}}",
+    "optionName": "Name of option {{position}}",
+    "reorder": "Move {{name}}",
+    "color": "Color of {{name}}: {{color}}",
+    "colorHeading": "Color",
+    "remove": "Delete {{name}}",
+    "restore": "Keep {{name}}",
+    "deleteWarning_one": "{{count, number}} option will be deleted. Records that use it lose this value; this runs in the background after you save.",
+    "deleteWarning_other": "{{count, number}} options will be deleted. Records that use them lose these values; this runs in the background after you save.",
+    "removing_one": "Removing the deleted option from records in the background.",
+    "removing_other": "Removing the {{count, number}} deleted options from records in the background.",
+    "removed_one": "The deleted option was removed from the records.",
+    "removed_other": "The {{count, number}} deleted options were removed from the records.",
+    "removeFailed": "Removing the deleted options from the records failed.",
+    "defaultHint": "Saved options only.",
+    "noDefault": "No default",
+    "dnd": {
+      "instructions": "To reorder an option, press Space or Enter, move it with the arrow keys, then press Space or Enter again. Press Escape to cancel.",
+      "start": "Picked up {{name}}.",
+      "over": "{{name}} is over position {{position}}.",
+      "end": "{{name}} was dropped at position {{position}}.",
+      "cancel": "Moving {{name}} was cancelled."
+    }
+  },
+  "colors": {
+    "0": "Gray",
+    "1": "Sky",
+    "2": "Leaf",
+    "3": "Amber",
+    "4": "Pink",
+    "5": "Jade",
+    "6": "Orange",
+    "7": "Indigo"
+  },
+  "autoNumber": {
+    "rules": "Numbering rules",
+    "types": {
+      "text": "Fixed text",
+      "incremental_number": "Counter",
+      "created_time": "Creation date"
+    },
+    "ruleType": "Kind of rule {{position}}",
+    "text": "Text of rule {{position}}",
+    "length": "Digits of rule {{position}}",
+    "dateFormat": "Date format of rule {{position}}",
+    "digits_one": "{{count, number}} digit",
+    "digits_other": "{{count, number}} digits",
+    "moveUp": "Move rule {{position}} up",
+    "moveDown": "Move rule {{position}} down",
+    "remove": "Delete rule {{position}}",
+    "add": "Add rule",
+    "preview": "First numbers",
+    "previewInvalid": "Fill in every rule to see the numbers.",
+    "recomputeHint": "Changing the rules renumbers existing records in the background."
+  },
+  "preview": {
+    "title": "Preview",
+    "untitled": "Untitled field",
+    "invalid": "Fix the settings to see a preview.",
+    "noOptions": "Add options to see them here.",
+    "checked": "Checked",
+    "text": {
+      "plain": "Printer does not print",
+      "phone": "+84 912 345 678",
+      "url": "https://example.com",
+      "email": "support@example.com",
+      "barcode": "8934563138165"
+    },
+    "link": {
+      "first": "An Phát",
+      "second": "Bình Minh"
+    },
+    "attachment": {
+      "first": "contract.pdf",
+      "second": "photo.jpg"
+    }
+  },
+  "rename": {
+    "title": "Rename field",
+    "submit": "Rename"
+  },
+  "delete": {
+    "title": "Delete the field “{{name}}”?",
+    "description": "The field and its values move to the trash of this table. You can restore them from there within 30 days.",
+    "submit": "Delete field",
+    "done": "“{{name}}” was moved to the trash.",
+    "restoreHeals": "Restoring the field from the trash makes them work again."
+  },
+  "limit": {
+    "title": "Too many fields",
+    "description_one": "A table can have at most {{formatted}} field, and this one is full.",
+    "description_other": "A table can have at most {{formatted}} fields, and this one is full.",
+    "descriptionUnknown": "This table has reached the maximum number of fields.",
+    "hint": "Delete fields you no longer use, or move part of the data to another table, then try again.",
+    "ok": "OK"
+  },
+  "link": {
+    "table": "Linked table",
+    "chooseTable": "Choose a table…",
+    "tableFixed": "The linked table cannot change once the field exists: add another link field instead.",
+    "allowMultiple": "Allow several records",
+    "allowMultipleHint": "Off: a cell links at most one record.",
+    "filter": "Only records that match",
+    "filterHint": "The picker offers only records of the linked table that meet these conditions; writes are checked too.",
+    "changed": "Changed",
+    "otherTable": "the linked table",
+    "thisTable": "this table",
+    "allowMultipleOn": "On: a cell may link several records of {{table}}.",
+    "allowMultipleOff": "Off: a cell links at most one record of {{table}}.",
+    "twoWay": "Two-way link",
+    "twoWayHint": "{{table}} shows the records of {{source}} linked to each of its records.",
+    "twoWayNoRights": "Needs the right to change the structure of {{table}} too; ask a base admin.",
+    "reverseName": "Field name in {{table}}",
+    "reverseHint": "The reverse field always allows several records.",
+    "reverseField": "Reverse field: “{{name}}” in {{table}}.",
+    "reverseUnknown": "the reverse field"
+  },
+  "attachment": {
+    "accept": "Accepted files",
+    "acceptAny": "Any type of file",
+    "acceptSome": "Only these types",
+    "acceptHint": "Checked again by the server on every upload.",
+    "acceptNone": "Pick at least one type: with none, any file is accepted.",
+    "customTypes": "Other MIME types",
+    "customTypesHint": "Separated by commas, e.g. image/heic or application/vnd.dwg; type/* for a family.",
+    "customTypesPlaceholder": "image/heic, application/vnd.dwg",
+    "presets": {
+      "images": "Images",
+      "pdf": "PDF",
+      "office": "Word, Excel, PowerPoint",
+      "video": "Video",
+      "audio": "Audio",
+      "archives": "Archives (ZIP, 7z, RAR)",
+      "text": "Text and CSV"
+    },
+    "maxFiles": "Most files per cell",
+    "maxFilesHint": "From 1 to 100.",
+    "blocked": "Blocked extensions",
+    "blockedHint": "Executables by default. Leave empty to block nothing.",
+    "blockedDefault": "Restore defaults"
+  },
+  "convert": {
+    "applied": "Field saved.",
+    "busy": "This field is being converted to its new type. You can change it again once that is done.",
+    "loading": "Loading the preview…",
+    "previewFailed": "The preview could not be loaded.",
+    "tableOf": "Table {{table}}",
+    "footer": "Can be undone for 7 days. Runs in the background.",
+    "footerLink": "Runs in the background; the structure of both fields is locked until it ends. Can be undone for 7 days.",
+    "moreOptions_one": "and {{count, number}} more option",
+    "moreOptions_other": "and {{count, number}} more options",
+    "emptyColumn": "The column is empty: nothing is lost.",
+    "submit": {
+      "type": "Change type",
+      "style": "Save",
+      "to_two_way": "Turn on two-way",
+      "to_single": "Keep one record",
+      "static": "Convert to static values",
+      "toComputed": "Change to {{type}}"
+    },
+    "pane": {
+      "type": "Preview of the change",
+      "style": "Format check",
+      "to_two_way": "Preview: turn on two-way link",
+      "to_single": "Preview: one record per cell",
+      "to_one_way": "Preview: turn off two-way link"
+    },
+    "picker": {
+      "hint": "Pick another type to see what happens to the values.",
+      "current": "{{type}} (current)",
+      "linkFixed": "A link field cannot become another type.",
+      "typeFixed": "This type of field cannot become another type.",
+      "refused": "{{type}} — {{reason}}",
+      "groups": {
+        "keep": "Values are converted",
+        "truncate": "Values are cut",
+        "blacklist": "Values are lost",
+        "forbidden": "Not possible"
+      },
+      "effect": {
+        "keep": "Values are converted to the new type; those that cannot be become empty.",
+        "truncate": "Cells with several values keep only the first one.",
+        "blacklist": "This type cannot hold the current values: a column with values loses all of them.",
+        "forbidden": "The field cannot become this type."
+      }
+    },
+    "reasons": {
+      "noColumn": "filled in automatically",
+      "otherKind": "create a new field instead",
+      "fixedSource": "not possible for this field",
+      "primaryField": "the primary field cannot be computed"
+    },
+    "settings": {
+      "existing": "Current values",
+      "createOptions": "Create options from the values",
+      "createOptionsHint": "Each distinct value becomes an option, up to 1,000.",
+      "matchOnly": "Keep only values matching an existing option",
+      "matchOnlyHint": "Values without a matching option are removed.",
+      "truthy": "Values read as checked",
+      "truthyHint": "Separated by commas, not case sensitive. Other values become unchecked.",
+      "truthyPlaceholder": "Yes, x, done",
+      "matchEmail": "Values are member emails",
+      "matchEmailHint": "Emails of organization members become those people; anything else is removed."
+    },
+    "stats": {
+      "affected_one": "record affected",
+      "affected_other": "records affected",
+      "lost_one": "value will be lost",
+      "lost_other": "values will be lost",
+      "truncated_one": "value will be cut",
+      "truncated_other": "values will be cut",
+      "newOptions_one": "new option",
+      "newOptions_other": "new options",
+      "dependents_one": "view or rule uses it",
+      "dependents_other": "views or rules use it",
+      "filled_one": "cell with a value",
+      "filled_other": "cells with a value",
+      "replaced_one": "value replaced",
+      "replaced_other": "values replaced"
+    },
+    "samples": {
+      "record": "Record",
+      "before": "Now",
+      "after": "After the change",
+      "untitled": "Untitled",
+      "empty": "Empty",
+      "caption": "Examples of the conversion",
+      "checked": "Checked",
+      "unchecked": "Not checked"
+    },
+    "style": {
+      "invalid": {
+        "email_one": "cell is not a valid email",
+        "email_other": "cells are not valid emails",
+        "phone_one": "cell is not a valid phone number",
+        "phone_other": "cells are not valid phone numbers"
+      },
+      "invalidShort": {
+        "email": "Not an email",
+        "phone": "Not a phone number"
+      },
+      "keepTitle": "No value is removed.",
+      "keepBody": "Cells in the wrong format are marked in the grid and the record panel."
+    },
+    "refused": {
+      "title": "The field cannot be converted to this type.",
+      "tooManyOptions": "It would need more than 1,000 options.",
+      "notAllowed": "Create a new field of this type instead."
+    },
+    "dataLoss": {
+      "title": "{{type}} cannot hold the current values.",
+      "body_one": "The {{formatted}} value of the column will be removed.",
+      "body_other": "All {{formatted}} values of the column will be removed."
+    },
+    "consent": {
+      "acceptDataLoss_one": "I understand the {{formatted}} value will be removed",
+      "acceptDataLoss_other": "I understand all {{formatted}} values will be removed",
+      "lost_one": "I understand {{lost}} value will be removed",
+      "lost_other": "I understand {{lost}} values will be removed",
+      "truncated_one": "I understand {{truncated}} cell will be cut",
+      "truncated_other": "I understand {{truncated}} cells will be cut",
+      "both_one": "I understand {{lost}} values will be removed and {{truncated}} cut",
+      "both_other": "I understand {{lost}} values will be removed and {{truncated}} cut",
+      "single_one": "I understand {{truncated}} cell will keep only one link",
+      "single_other": "I understand {{truncated}} cells will keep only one link",
+      "dependents_one": "I have checked what uses this field",
+      "dependents_other": "I have checked what uses this field",
+      "replaced_one": "I understand {{lost}} value will be replaced",
+      "replaced_other": "I understand {{lost}} values will be replaced"
+    },
+    "confirm": {
+      "lost": {
+        "title_one": "{{lost}} value will be removed",
+        "title_other": "{{lost}} values will be removed",
+        "body_one": "because it cannot be read as {{type}}. Confirm before changing the type.",
+        "body_other": "because they cannot be read as {{type}}. Confirm before changing the type."
+      },
+      "truncated": {
+        "title_one": "{{truncated}} cell will be cut",
+        "title_other": "{{truncated}} cells will be cut",
+        "body_one": "to its first value. Confirm before changing the type.",
+        "body_other": "to their first value. Confirm before changing the type."
+      },
+      "both": {
+        "title_one": "{{lost}} values will be removed, {{truncated}} cut",
+        "title_other": "{{lost}} values will be removed, {{truncated}} cut",
+        "body_one": "Confirm before changing the type.",
+        "body_other": "Confirm before changing the type."
+      },
+      "single": {
+        "title_one": "{{truncated}} cell will keep only its first link.",
+        "title_other": "{{truncated}} cells will keep only their first link.",
+        "body_one": "The other links are removed (kept 7 days to undo).",
+        "body_other": "The other links are removed (kept 7 days to undo)."
+      },
+      "dependents": {
+        "title_one": "Views or rules use this field.",
+        "title_other": "Views or rules use this field.",
+        "body_one": "They may stop working after the change.",
+        "body_other": "They may stop working after the change."
+      },
+      "replaced": {
+        "title_one": "{{lost}} value will be replaced by the computed one",
+        "title_other": "{{lost}} values will be replaced by the computed ones",
+        "body_one": "The old value is kept for 7 days for an undo.",
+        "body_other": "The old values are kept for 7 days for an undo."
+      }
+    },
+    "uniqueReset": {
+      "title": "Unique values will be turned off.",
+      "body": "Duplicates may appear after the change; you can turn it on again afterwards."
+    },
+    "dependents": {
+      "title": "Uses this field",
+      "kinds": {
+        "view": "View filter, sort, group or form",
+        "role": "Role rule",
+        "field": "Formula or lookup",
+        "automation": "Automation"
+      },
+      "unnamed": {
+        "view": "A view",
+        "role": "A role",
+        "field": "A field",
+        "automation": "An automation"
+      },
+      "open": "Open",
+      "openLabel": "Open {{name}} in a new tab"
+    },
+    "twoWay": {
+      "linkedRecords_one": "record has links",
+      "linkedRecords_other": "records have links",
+      "newField_one": "record of {{table}} gets the new field",
+      "newField_other": "records of {{table}} get the new field",
+      "overLimit_one": "cell over 500 links",
+      "overLimit_other": "cells over 500 links",
+      "overLimitCaption": "Records of {{table}} over the limit",
+      "recordOf": "Record of {{table}}",
+      "links": "Links",
+      "linkCount_one": "{{formatted}} link",
+      "linkCount_other": "{{formatted}} links",
+      "overTitle_one": "{{formatted}} record of {{table}} has more than 500 links.",
+      "overTitle_other": "{{formatted}} records of {{table}} have more than 500 links.",
+      "overBody": "These links are kept. Such a cell can only lose links until it is back to 500.",
+      "noCopyTitle": "No data is copied.",
+      "noCopyBody": "Both fields share one set of links: a change on one side shows on the other at once. The record history of {{table}} starts now.",
+      "rightsTitle": "Needs the right to change the structure of both {{source}} and {{target}}.",
+      "rightsBody": "You have it."
+    },
+    "single": {
+      "linked_one": "cell has links",
+      "linked_other": "cells have links",
+      "truncated_one": "cell has several links",
+      "truncated_other": "cells have several links"
+    },
+    "oneWay": {
+      "title": "Turn off two-way link",
+      "tables": "{{source}} ↔ {{target}}",
+      "which": "Field to keep",
+      "keep": "Keep “{{field}}” in {{table}}",
+      "keepHint": "“{{field}}” in {{table}} goes to the trash for 30 days.",
+      "after": "After turning off",
+      "removed": "(moved to the trash)",
+      "linksKept": "Links stay as they are. Only the view of them from {{table}} goes.",
+      "broken_one": "item will break",
+      "broken_other": "items will break",
+      "cells_one": "cell keeps its links",
+      "cells_other": "cells keep their links",
+      "noLinkLost": "links removed",
+      "usedBy": "Uses “{{field}}” in {{table}}",
+      "noDependents": "Nothing uses the field that goes.",
+      "consent_one": "I understand the item above will break",
+      "consent_other": "I understand the {{formatted}} items above will break",
+      "brokenTitle_one": "{{formatted}} item will show an error",
+      "brokenTitle_other": "{{formatted}} items will show an error",
+      "brokenBody": "until you fix it or restore the field.",
+      "footer": "Can be undone for 7 days. The removed field stays in the trash for 30 days.",
+      "submit": "Turn off two-way"
+    },
+    "revert": {
+      "title": "Undo the type change?",
+      "newFieldName": "{{name}} (old version)",
+      "done": "The type change of “{{name}}” was undone.",
+      "doneNewField": "“{{name}}” was created with the old values.",
+      "expiredTitle": "Undo the type change",
+      "expiredBody": "More than 7 days have passed; the old column was cleaned up.",
+      "expiredSince": "More than 7 days have passed since {{date}}; the old column was cleaned up.",
+      "running": "The conversion is still running. You can undo it once it is done.",
+      "link": {
+        "to_two_way": "The reverse field goes to the trash and “{{field}}” becomes a one-way link again. Links stay as they are.",
+        "to_one_way": "The field removed from the other table comes back and “{{field}}” is a two-way link again.",
+        "to_single": "“{{field}}” allows several records again and the removed links come back."
+      },
+      "summary": "“{{field}}” goes back to the type {{type}} with its values of {{date}}.",
+      "unchanged_one": "cell gets its old value back",
+      "unchanged_other": "cells get their old value back",
+      "edited_one": "cell edited since the change",
+      "edited_other": "cells edited since the change",
+      "how": "Cells edited since the change",
+      "keep": "Keep the later edits (recommended)",
+      "keepHint_one": "The {{formatted}} edited cell keeps its value, as {{type}}.",
+      "keepHint_other": "The {{formatted}} edited cells keep their values, as {{type}}.",
+      "newField": "Restore as a new field (old version)",
+      "newFieldHint": "The old values come back in a new field next to this one; nothing is overwritten.",
+      "newFieldLabel": "Name of the new field",
+      "overwrite": "Overwrite the later edits",
+      "overwriteHint_one": "{{formatted}} cell loses its new value.",
+      "overwriteHint_other": "{{formatted}} cells lose their new values.",
+      "overwriteTitle_one": "{{formatted}} cell was edited after the change.",
+      "overwriteTitle_other": "{{formatted}} cells were edited after the change.",
+      "overwriteBody": "Their new values are replaced by the old ones. The record history keeps them.",
+      "overwriteConsent_one": "I understand {{formatted}} new value will be overwritten",
+      "overwriteConsent_other": "I understand {{formatted}} new values will be overwritten",
+      "unconvertibleTitle_one": "{{formatted}} edited cell cannot be read as {{type}}.",
+      "unconvertibleTitle_other": "{{formatted}} edited cells cannot be read as {{type}}.",
+      "unconvertibleBody": "They get their old value back.",
+      "unconvertibleConsent_one": "I understand {{formatted}} edited cell gets its old value",
+      "unconvertibleConsent_other": "I understand {{formatted}} edited cells get their old value",
+      "dependentsTitle": "Formulas, filters and views that use this field",
+      "dependentsBody": "work with the type {{type}} again.",
+      "footer_one": "{{count, number}} day left. After {{date}} the old column is removed.",
+      "footer_other": "{{count, number}} days left. After {{date}} the old column is removed.",
+      "submit": "Undo type change",
+      "toComputedTitle": "The field becomes a {{type}} again.",
+      "toComputedBody": "Its values are computed again for every record; values typed since the change are not kept."
+    },
+    "static": {
+      "action": "Convert to static values ({{type}})",
+      "hint": "Keeps the current values; they are no longer computed."
+    },
+    "computed": {
+      "emptyValue": "empty",
+      "toTitle": "The values will be computed by the {{type}}.",
+      "toBody": "Every current value is replaced by the computed one. The old values are kept for 7 days: undo the change to get them back.",
+      "staticTitle": "The current values are kept as static values.",
+      "staticBody": "The field becomes {{type}} and is no longer computed. You can undo this within 7 days.",
+      "confirmTitle": "Change “{{name}}” to {{type}}",
+      "back": "Back",
+      "next": "Next"
+    }
+  },
+  "formula": {
+    "backfilling": "Computing “{{name}}” for every record. The column updates when it is done.",
+    "unavailable": "Formula fields cannot be configured here."
+  },
+  "button": {
+    "label": "Label on the button",
+    "labelHint": "Empty: the field's name.",
+    "color": "Color",
+    "confirm": "Ask before running",
+    "confirmHint": "A dialog asks to confirm before the automation runs.",
+    "confirmTitleDefault": "{{label}}?",
+    "confirmTitle": "Title",
+    "confirmLabel": "Text on the confirm button",
+    "confirmMessage": "Message",
+    "preview": {
+      "ready": "Cell in the grid",
+      "disabled": "When it cannot run",
+      "noFilter": "No filtering, sorting or grouping by a button field.",
+      "noForm": "Forms have no question for a button.",
+      "export": "CSV exports write the button's label.",
+      "limit": "At most 10 clicks a minute per person."
+    },
+    "automation": {
+      "title": "Automation run by the button",
+      "none": "No automation attached",
+      "noneHint": "The button stays disabled until an automation that is on runs from it. The builder opens with the trigger “When the button is clicked”; by default only people who can edit the record may click.",
+      "saveAndCreate": "Save and create an automation",
+      "create": "Create an automation for this button",
+      "unnamed": "Automation",
+      "on": "On",
+      "off": "Off",
+      "open": "Open in builder",
+      "runAs": "Runs with the permissions of",
+      "whoClicks": "Who can click",
+      "editors": "People who can edit the record",
+      "readers": "People who can view the record",
+      "when": "Button enabled when",
+      "always": "Always",
+      "steps": "Steps",
+      "readWarning": "People who can only view records can also run this automation, with the permissions of «{{name}}».",
+      "runAsUnknown": "the automation's runner",
+      "editInBuilder": "Who can click and when the button is enabled are part of the automation: change them in the builder (whoever saves it becomes its runner).",
+      "one": "A button runs at most one automation. For more work, add steps to that automation.",
+      "noSteps": "No steps yet",
+      "and": "and",
+      "or": "or",
+      "more_one": "+{{count, number}} more condition",
+      "more_other": "+{{count, number}} more conditions"
+    }
+  },
+  "reminder": {
+    "title": "Reminder",
+    "enable": "Remind people of this date",
+    "enableHint": "A notification goes out when each record's date comes: in the app, and by email or Telegram as each person chose.",
+    "off": "No reminder.",
+    "readOnly": "Only people who can change this table's fields can set up its reminder.",
+    "when": "When",
+    "direction": "When to remind",
+    "directions": {
+      "at": "At the time",
+      "onDay": "On the day",
+      "before": "Before",
+      "after": "After"
+    },
+    "amount": "How long",
+    "amountHint": "Up to 30 days ({{max, number}} in this unit).",
+    "amountHintDays": "Up to 30 days.",
+    "unit": "Unit",
+    "units": {
+      "days": "days",
+      "hours": "hours",
+      "minutes": "minutes"
+    },
+    "timeOfDay": "Time of day",
+    "zoneField": "In the field's time zone: {{zone}}",
+    "zoneOrg": "In the field's time zone: {{zone}} (the organization's)",
+    "withTime": "Counted from the time of each value.",
+    "recipients": "Send to",
+    "recipientsField": "The people in a field",
+    "userField": "Person field",
+    "chooseField": "Choose a field",
+    "deletedField": "(deleted field)",
+    "noUserFields": "This table has no person field (User or Created by) yet.",
+    "broken": {
+      "missing": "The recipient field was deleted: this reminder is not sent. Choose another field.",
+      "wrongType": "The recipient field “{{field}}” is no longer a person field: this reminder is not sent. Choose another field."
+    },
+    "recipientsUsers": "Specific members (up to {{max, number}})",
+    "chooseMember": "Choose a member",
+    "membersFull": "The list is full",
+    "memberOption": "{{name}} · {{email}}",
+    "addMember": "Add",
+    "removeMember": "Remove {{name}}",
+    "memberRefused": "(refused)",
+    "unknownMember": "Unknown member",
+    "membersChosen_one": "{{count, number}} member chosen of {{max, number}}",
+    "membersChosen_other": "{{count, number}} members chosen of {{max, number}}",
+    "membersHint_one": "{{count, number}} of {{max, number}} members.",
+    "membersHint_other": "{{count, number}} of {{max, number}} members.",
+    "preview": {
+      "title": "Example",
+      "text": "A value of {{value}} is reminded on {{due}} ({{zone}}).",
+      "local": "That is {{time}} in your time zone ({{zone}})."
+    },
+    "note": "Only people who can read the record, this field and, when it goes to a person field, that field too receive it. Reminders start when you turn this on: dates already passed are not reminded.",
+    "errors": {
+      "REMINDER_AMOUNT": "Enter a whole number from 1 to {{max, number}}.",
+      "REMINDER_FIELD_REQUIRED": "Choose the field whose people are reminded.",
+      "REMINDER_USERS_REQUIRED": "Add at least one member.",
+      "REMINDER_USERS_TOO_MANY": "At most {{max, number}} members.",
+      "UNKNOWN_FIELD": "This field no longer exists in the table. Choose another one.",
+      "INVALID_FIELD_TYPE": "This field is no longer a person field. Choose a User or Created by field.",
+      "USER_NOT_FOUND": "{{name}} is not a member of this organization."
+    }
+  }
+}

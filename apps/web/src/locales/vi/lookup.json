@@ -1,0 +1,114 @@
+{
+  "save": "Lưu trường",
+  "noDefinition": "Bạn không xem được cấu hình của trường tra cứu này: nó dùng bảng hoặc trường bạn không có quyền đọc. Bạn vẫn đổi được tên và mô tả.",
+  "source": {
+    "legend": "Lấy dữ liệu từ",
+    "table": "Bảng nguồn",
+    "field": "Trường lấy giá trị",
+    "chooseTable": "Chọn bảng",
+    "chooseField": "Chọn trường",
+    "thisTable": "{{table}} (bảng này)"
+  },
+  "shortcut": {
+    "label": "Lối tắt: qua trường liên kết",
+    "hint": "Lấy các bản ghi liên kết với từng bản ghi của {{table}}; điều kiện đầu được tạo sẵn.",
+    "choose": "Chọn trường liên kết…",
+    "optionOut": "{{field}} → {{table}}",
+    "optionIn": "{{field}} (trường của {{table}})",
+    "via": "Qua trường liên kết",
+    "ofThisTable": "của bảng này.",
+    "ofTable": "của bảng {{table}}.",
+    "generated": "Điều kiện đầu được tạo sẵn.",
+    "change": "Đổi",
+    "changeLabel": "Đổi trường liên kết"
+  },
+  "conditions": {
+    "label": "Điều kiện",
+    "chooseSource": "Chọn bảng nguồn trước.",
+    "hint": "Một cấp, tối đa 5 điều kiện, cần ít nhất 1.",
+    "matchBefore": "Lấy khi",
+    "matchAfter": "điều kiện khớp",
+    "all": "tất cả",
+    "any": "bất kỳ",
+    "field": "Trường của điều kiện {{position}}",
+    "fieldUnknown": "Trường không xác định",
+    "remove": "Xoá điều kiện {{position}} trên {{field}}",
+    "valueSource": "So {{field}} với",
+    "constant": "Giá trị cố định",
+    "chooseRef": "Chọn trường của bảng này…",
+    "thisTable": "Bảng {{table}}",
+    "thisRecord": "Dòng này",
+    "auto": "tự tạo",
+    "autoHint": "“Dòng này” là bản ghi {{table}} đang được tính.",
+    "incomplete": "Chọn giá trị cho điều kiện này.",
+    "atLeastOne": "Cần ít nhất một điều kiện: tra cứu không bao giờ lấy cả bảng.",
+    "noFields": "Không trường nào của bảng này dùng được trong điều kiện.",
+    "add": "Thêm điều kiện",
+    "count": "{{count, number}} / {{max, number}}",
+    "countLabel": "{{count, number}} trên tối đa {{max, number}} điều kiện",
+    "advanced": "Các điều kiện này được tạo qua API và không sửa được ở đây. Chúng giữ nguyên trừ khi bạn thay bằng điều kiện mới.",
+    "replaceAdvanced": "Thay bằng điều kiện mới",
+    "recordOf": "Bản ghi của {{table}}",
+    "recordHint": "“{{field}}” là một trong các bản ghi mà dòng này liên kết tới."
+  },
+  "aggregate": {
+    "label": "Hiển thị dạng",
+    "options": {
+      "raw_value": "Giá trị",
+      "unique": "Duy nhất",
+      "unique_counta": "Đếm duy nhất",
+      "sum": "Tổng",
+      "counta": "Đếm",
+      "average": "Trung bình",
+      "max": "Lớn nhất",
+      "min": "Nhỏ nhất"
+    }
+  },
+  "format": {
+    "label": "Định dạng",
+    "source": "{{style}} (theo nguồn)",
+    "sourceLocked": "{{style}} (theo trường nguồn)",
+    "default": "Số nguyên (mặc định)",
+    "lockedHint": "Kết quả giữ định dạng của {{field}} ở bảng {{table}}. Muốn đổi, sửa ở trường nguồn.",
+    "none": "không định dạng",
+    "number": "Số",
+    "decimal": "Số, 2 chữ số thập phân",
+    "percent": "Phần trăm",
+    "currencyOf": "Tiền tệ {{code}}",
+    "progress": "Thanh tiến độ",
+    "rating": "Đánh giá",
+    "custom": "Định dạng hiện tại"
+  },
+  "preview": {
+    "title": "Xem trước 5 dòng đầu",
+    "idle": "Chọn bảng nguồn, trường lấy giá trị và ít nhất một điều kiện để xem trước.",
+    "loading": "Đang tải bản xem trước",
+    "invalid": "Chưa tính được với cấu hình này: xem thông báo ở cột trái.",
+    "retry": "Thử lại",
+    "empty": "Bạn chưa đọc được bản ghi nào của bảng này.",
+    "result": "Kết quả",
+    "record": "Bản ghi",
+    "untitled": "(chưa có tên)",
+    "blank": "(trống)",
+    "records_one": "{{count, number}} bản ghi",
+    "records_other": "{{count, number}} bản ghi",
+    "mode": {
+      "stored": "Lưu giá trị, tự tính lại khi nguồn đổi.",
+      "virtual": "Tính mỗi lần đọc (không lưu)."
+    },
+    "perfWarning": "Mỗi lần đọc trường này đều quét bảng nguồn: có thể chậm với bảng lớn.",
+    "lockedTitle": "Người không xem được bảng {{table}} thấy ô rỗng kèm khoá.",
+    "lockedHint": "Không lộ số liệu của bảng nguồn."
+  },
+  "cycle": {
+    "title": "Trường tra cứu này sẽ phụ thuộc vào chính nó qua các trường khác:",
+    "chain": "Chuỗi tham chiếu vòng",
+    "hidden": "một trường bạn không thấy",
+    "hint": "Chọn trường khác hoặc sửa một trường trong vòng."
+  },
+  "footer": {
+    "background_one": "Lưu xong, cột được tính cho {{count, number}} bản ghi trong nền.",
+    "background_other": "Lưu xong, cột được tính cho {{count, number}} bản ghi trong nền.",
+    "virtual": "Giá trị được tính khi đọc, không phải chờ."
+  }
+}

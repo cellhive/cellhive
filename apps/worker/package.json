@@ -1,0 +1,51 @@
+{
+  "name": "@cellhive/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cellhive background worker (graphile-worker in a NestJS application context)",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch --clear-screen=false --env-file-if-exists=../../.env src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:int": "vitest run -c vitest.int.config.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.1.0",
+    "@nestjs/core": "^12.1.0",
+    "@cellhive/contracts": "workspace:*",
+    "@cellhive/server-core": "workspace:*",
+    "graphile-worker": "^0.18.0",
+    "ioredis": "^6.0.0",
+    "kysely": "^0.29.6",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "sharp": "^0.35.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^12.1.0",
+    "@types/node": "^24.13.6",
+    "@types/pg": "^8.23.1",
+    "testcontainers": "^12.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
+  }
+}

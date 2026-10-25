@@ -1,0 +1,53 @@
+{
+  "name": "cellhive",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-hosted, fully open source no-code database platform",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "packageManager": "pnpm@10.26.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "size": "pnpm --filter @cellhive/web size",
+    "dev": "turbo run dev",
+    "lint": "turbo run build --output-logs=errors-only && NODE_OPTIONS=--max-old-space-size=8192 eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json && turbo run typecheck",
+    "test": "turbo run test:coverage test",
+    "test:coverage": "turbo run test:coverage",
+    "test:int": "turbo run test:int",
+    "test:matrix": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --filter @cellhive/api test:matrix",
+    "test:e2e": "turbo run build --filter=@cellhive/api... --filter=@cellhive/web... --output-logs=errors-only && pnpm --filter @cellhive/web test:e2e",
+    "test:e2e:perf": "turbo run build --filter=@cellhive/api... --filter=@cellhive/web... --output-logs=errors-only && pnpm --filter @cellhive/web test:e2e:perf",
+    "licenses:check": "node tools/ci/src/cli/check-licenses.ts",
+    "dco:check": "node tools/ci/src/cli/check-dco.ts",
+    "db:migrate": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --filter @cellhive/api db:migrate",
+    "cellhive": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --silent --filter @cellhive/api cellhive",
+    "seed:demo": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --silent --filter @cellhive/api seed:demo",
+    "seed:bench": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --filter @cellhive/api seed:bench",
+    "gen:openapi": "pnpm --filter @cellhive/contracts gen:openapi",
+    "dev:infra": "docker compose -f docker-compose.dev.yml up -d --wait && docker compose -f docker-compose.dev.yml run --rm storage-init",
+    "dev:infra:down": "docker compose -f docker-compose.dev.yml --profile init down -v --remove-orphans"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.6",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-i18next": "^6.1.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1"
+  }
+}

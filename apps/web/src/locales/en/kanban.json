@@ -1,0 +1,74 @@
+{
+  "toolbar": {
+    "label": "Board options"
+  },
+  "board": {
+    "label": "{{table}} by {{field}}",
+    "allEmpty": "No records to show. Turn off \"Hide empty columns\" to see every column."
+  },
+  "column": {
+    "uncategorized": "Uncategorized",
+    "formerMember": "Former member",
+    "countLabel": "Records:",
+    "add": "Add a record to {{name}}",
+    "loading": "Loading cards…",
+    "noCards": "No records",
+    "error": "The cards of this column could not be loaded.",
+    "menu": "Column actions for {{name}}",
+    "addCard": "Add a card"
+  },
+  "card": {
+    "untitled": "Untitled",
+    "roleDescription": "draggable card",
+    "actions": "Card actions",
+    "open": "Open record",
+    "moveTo": "Move to",
+    "current": "Current",
+    "moveBlocked": {
+      "narrow": "Cards can be moved on a wider screen.",
+      "offline": "Cards can be moved again once you are back online.",
+      "locked": "The table is being changed; try again in a moment.",
+      "readOnly": "You cannot change this field, so cards cannot be moved."
+    },
+    "follow": "Follow record",
+    "unfollow": "Unfollow record",
+    "followed": "You follow “{{title}}”. You will be notified when someone else changes it.",
+    "unfollowed": "You no longer follow “{{title}}”.",
+    "undo": "Undo",
+    "gone": "This record was deleted or is no longer available to you."
+  },
+  "dnd": {
+    "instructions": "To move a card to another column, press Space to pick it up, Left or Right Arrow to choose the column, then Space to drop it, or Escape to cancel. Shift+F10 opens the card menu with \"Move to\".",
+    "start": "Picked up card {{title}}.",
+    "over": "Card {{title}} is over column {{column}}.",
+    "outside": "Card {{title}} is not over a column.",
+    "end": "Card {{title}} was dropped in column {{column}}.",
+    "cancel": "Moving card {{title}} was cancelled."
+  },
+  "move": {
+    "refused": "The card could not be moved: {{reason}}"
+  },
+  "settings": {
+    "groupBy": "Group by",
+    "groupedBy": "Grouped by {{name}}",
+    "groupHeading": "Group cards by",
+    "cardFields": "Card fields",
+    "cardFieldsCount_one": "{{count, number}} card field",
+    "cardFieldsCount_other": "{{count, number}} card fields",
+    "cardFieldsHeading": "Fields shown on cards",
+    "hideEmpty": "Hide empty columns",
+    "cover": "Cover",
+    "coverHeading": "Cover image from",
+    "noCover": "No cover"
+  },
+  "setup": {
+    "title": "Choose how to group the cards",
+    "description": "A kanban view shows one column per option of a single select field, or per member of a single user field.",
+    "noField": "This table has no single select or single user field. Add one to group the records as cards.",
+    "label": "Group cards by",
+    "placeholder": "Choose a field…"
+  },
+  "error": {
+    "retry": "Try again"
+  }
+}

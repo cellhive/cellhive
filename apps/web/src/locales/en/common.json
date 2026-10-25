@@ -1,0 +1,107 @@
+{
+  "app": {
+    "name": "Cellhive"
+  },
+  "loading": "Loading…",
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "signOut": "Sign out"
+  },
+  "nav": {
+    "baseSettings": "Base settings",
+    "automations": "Automations",
+    "skipToContent": "Skip to content",
+    "sidebar": "Sidebar",
+    "open": "Open navigation",
+    "close": "Close navigation",
+    "workspaces": "Workspaces",
+    "createWorkspace": "Create workspace",
+    "expand": "Show bases of {{name}}",
+    "collapse": "Hide bases of {{name}}",
+    "noWorkspaces": "No workspaces yet",
+    "noBases": "No bases yet",
+    "loadFailed": "Could not load",
+    "tables": "Tables",
+    "tableMenu": "Actions for table {{table}}",
+    "deleteTable": "Delete table",
+    "dashboards": "Dashboards",
+    "newDashboard": "New dashboard",
+    "dashboardMenu": "Actions for dashboard {{name}}",
+    "renameDashboard": "Rename",
+    "duplicateDashboard": "Duplicate",
+    "deleteDashboard": "Delete dashboard",
+    "trash": "Trash",
+    "baseMenu": "Actions for base {{name}}"
+  },
+  "orgSwitcher": {
+    "label": "Switch organization, current: {{name}}",
+    "heading": "Organizations"
+  },
+  "userMenu": {
+    "label": "Account menu for {{name}}",
+    "connections": "Connected accounts",
+    "apiTokens": "API tokens"
+  },
+  "preferences": {
+    "menu": "Display",
+    "language": "Language",
+    "theme": "Theme",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Same as system"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page does not exist, or you do not have access to it.",
+    "home": "Go to the home page"
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "description": "The page could not be shown. Reload to try again.",
+    "reload": "Reload"
+  },
+  "connection": {
+    "offline": "You are offline. What you see is read-only until the connection is back.",
+    "reconnecting": "Reconnecting…"
+  },
+  "toast": {
+    "region": "Notifications",
+    "dismiss": "Dismiss notification"
+  },
+  "share": {
+    "button": "Share",
+    "buttonLabel": "Share view {{name}}",
+    "dashboardLabel": "Share dashboard {{name}}"
+  },
+  "dependents": {
+    "ref_one": "{{formatted}} formula or lookup will show #REF!",
+    "ref_other": "{{formatted}} formulas and lookups will show #REF!",
+    "value_one": "{{formatted}} formula or lookup will show #VALUE!",
+    "value_other": "{{formatted}} formulas and lookups will show #VALUE!",
+    "unnamed": "A field",
+    "inTable": "in {{table}}",
+    "formula": "Formula",
+    "lookup": "Lookup",
+    "computed": "Formula or lookup",
+    "tokenLabel": "Its cells will show {{token}}",
+    "hidden_one": "and {{formatted}} field you cannot see",
+    "hidden_other": "and {{formatted}} fields you cannot see"
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread_one": "Notifications, {{formatted}} unread",
+    "bellUnread_other": "Notifications, {{formatted}} unread"
+  },
+  "automationTabs": {
+    "label": "Automation",
+    "config": "Configuration",
+    "runs": "Run history"
+  }
+}

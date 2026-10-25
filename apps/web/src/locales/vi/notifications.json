@@ -1,0 +1,279 @@
+{
+  "panel": {
+    "title": "Thông báo",
+    "close": "Đóng thông báo",
+    "loading": "Đang tải thông báo",
+    "filter": "Hiển thị",
+    "all": "Tất cả",
+    "unread": "Chưa đọc",
+    "baseFilter": "Base",
+    "allBases": "Mọi base",
+    "markAllRead": "Đánh dấu tất cả đã đọc",
+    "settings": "Cài đặt thông báo",
+    "settingsLink": "Cài đặt thông báo",
+    "noneUnread": "Không có thông báo chưa đọc",
+    "unreadStatus_other": "{{count, number}} thông báo chưa đọc",
+    "errorTitle": "Không tải được thông báo.",
+    "errorBody": "Kiểm tra kết nối rồi thử lại. Thông báo không bị mất.",
+    "retry": "Thử lại",
+    "empty": "Chưa có thông báo nào",
+    "emptyUnread": "Bạn đã đọc hết thông báo",
+    "emptyHint": "Việc được giao, nhắc hạn, thay đổi trên bản ghi bạn theo dõi, kết quả nhập dữ liệu và tin từ automation sẽ hiện ở đây.",
+    "loadMore": "Tải thêm",
+    "loadingMore": "Đang tải…"
+  },
+  "item": {
+    "message": "Tin từ automation",
+    "disabled": "Automation «{{name}}» đã tự tắt",
+    "disabledUnnamed": "Một automation đã tự tắt",
+    "disabledReason": {
+      "circuit_breaker": "50 lần kích hoạt liên tiếp thất bại, hoặc bị kích hoạt hơn 100 lần trong một phút.",
+      "run_as_lost_access": "Người chạy automation không còn đủ quyền cần thiết."
+    },
+    "overflow": "Automation «{{name}}» bỏ qua bản ghi của một thay đổi hàng loạt",
+    "overflowUnnamed": "Một automation bỏ qua bản ghi của một thay đổi hàng loạt",
+    "overflowBody": "Automation chạy tối đa {{limit}} lần cho một lô thay đổi.",
+    "other": "Thông báo mới",
+    "markRead": "Đánh dấu đã đọc",
+    "alwaysSent": "Luôn gửi",
+    "lostRecord": "Không còn quyền xem bản ghi",
+    "lostAutomation": "Không còn quyền xem automation",
+    "lostBase": "Không còn quyền mở base",
+    "quoted": "«{{text}}»",
+    "aRecord": "một bản ghi",
+    "aTable": "một bảng",
+    "actorAutomation": "Một automation",
+    "actorSomeone": "Ai đó",
+    "actorAndOthers_other": "{{actor}} và {{formatted}} người khác",
+    "moreFields_other": "{{formatted}} trường khác",
+    "assigned": "{{actor}} đã giao cho bạn {{record}}",
+    "assignedVia": "{{actor}} đã giao cho bạn {{record}} · {{fields}}",
+    "assignedBulk_other": "{{actor}} đã giao cho bạn {{formatted}} bản ghi trong {{table}}",
+    "assignedFields": "Qua trường {{fields}}",
+    "followedChanged": "{{actor}} đã sửa {{record}}",
+    "followedChangedFields": "{{actor}} đã sửa {{fields}} trên {{record}}",
+    "followedChanges_other": "{{formatted}} lần thay đổi",
+    "followedChangedRecords_other": "{{actor}} đã sửa {{formatted}} bản ghi bạn theo dõi trong {{table}}",
+    "followedChangedRecordsFields_other": "{{actor}} đã sửa {{fields}} trên {{formatted}} bản ghi bạn theo dõi trong {{table}}",
+    "viaWebhook": "Qua webhook nhận",
+    "reminder": {
+      "upcoming": "{{record}} đến hạn {{field}} {{when}}",
+      "upcomingNoField": "{{record}} đến hạn {{when}}",
+      "today": "{{record}} đến hạn {{field}} hôm nay",
+      "todayNoField": "{{record}} đến hạn hôm nay",
+      "overdue": "{{record}} đã quá hạn {{field}} {{when}}",
+      "overdueNoField": "{{record}} đã quá hạn {{when}}"
+    },
+    "reminderUnknown": "Nhắc hạn {{record}}",
+    "reminderOn": "vào {{date}}",
+    "reminderAt": "lúc {{time}}",
+    "reminderSent": "Nhắc lúc {{time}} ({{zone}})",
+    "reminderStatus": {
+      "upcoming": "Sắp tới",
+      "today": "Hôm nay",
+      "overdue": "Quá hạn"
+    },
+    "import": {
+      "succeeded": "Nhập dữ liệu đã xong",
+      "succeededTable": "Nhập dữ liệu vào {{table}} đã xong",
+      "failed": "Nhập dữ liệu thất bại",
+      "failedTable": "Nhập dữ liệu vào {{table}} thất bại",
+      "cancelled": "Nhập dữ liệu đã bị huỷ",
+      "cancelledTable": "Nhập dữ liệu vào {{table}} đã bị huỷ"
+    },
+    "importCreated_other": "{{formatted}} tạo mới",
+    "importUpdated_other": "{{formatted}} cập nhật",
+    "importFailedRows_other": "{{formatted}} dòng lỗi",
+    "overflowSkipped_other": "{{formatted}} bản ghi của lô không được chạy. Automation chạy tối đa {{limit}} lần cho một lô thay đổi.",
+    "lostTable": "Không còn quyền xem bảng",
+    "records": {
+      "show": "Xem các bản ghi",
+      "list": "Bản ghi được giao cho bạn",
+      "listFollowed": "Bản ghi bạn theo dõi đã thay đổi",
+      "loading": "Đang tải các bản ghi",
+      "error": "Không tải được các bản ghi.",
+      "retry": "Thử lại",
+      "none": "Bạn không còn quyền xem các bản ghi này.",
+      "untitled": "(bản ghi không có tiêu đề)",
+      "more_other": "Và {{formatted}} bản ghi khác",
+      "openTable": "Mở bảng"
+    },
+    "report": {
+      "download": "Tải báo cáo các dòng lỗi",
+      "preparing": "Đang chuẩn bị báo cáo…",
+      "gone": "Báo cáo các dòng lỗi không còn: báo cáo chỉ được giữ 24 giờ, cho người đã chạy lần nhập."
+    }
+  },
+  "group": {
+    "title_other": "{{formatted}} tin từ automation «{{name}}»",
+    "titleUnnamed_other": "{{formatted}} tin từ cùng một automation",
+    "latest": "Mới nhất: {{title}}",
+    "markRead": "Đánh dấu các tin này đã đọc"
+  },
+  "types": {
+    "automation": {
+      "message": {
+        "name": "Tin từ automation",
+        "description": "Nội dung do automation soạn và gửi cho bạn."
+      },
+      "disabled": {
+        "name": "Automation bị tự tắt",
+        "description": "Trong app luôn bật để bạn biết khi automation ngừng chạy."
+      },
+      "batch_overflow": {
+        "name": "Automation bỏ qua bản ghi khi thay đổi hàng loạt",
+        "description": "Khi một lô vượt trần số lần chạy."
+      }
+    },
+    "record": {
+      "assigned": {
+        "name": "Được giao bản ghi",
+        "description": "Khi ai đó giao cho bạn qua trường người dùng có bật “Thông báo khi được giao”. Thay đổi hàng loạt (dán, nhập dữ liệu) chỉ gửi một thông báo cho mọi bản ghi của nó."
+      },
+      "followed_changed": {
+        "name": "Thay đổi trên bản ghi bạn theo dõi",
+        "description": "Khi người khác sửa một bản ghi bạn theo dõi (các thay đổi trong một phút được gộp lại). Chỉ liệt kê các trường bạn được xem; thay đổi hàng loạt như dán hay nhập dữ liệu không được gửi."
+      }
+    },
+    "import": {
+      "finished": {
+        "name": "Nhập dữ liệu xong",
+        "description": "Khi lần nhập tệp CSV hoặc Excel bạn bắt đầu kết thúc: thành công, thất bại hoặc bị huỷ."
+      }
+    },
+    "date": {
+      "reminder": {
+        "name": "Nhắc hạn",
+        "description": "Khi ngày của một trường có bật nhắc hạn tới hạn (ví dụ 09:00 hôm trước, theo múi giờ của trường). Gửi cho những người được chọn trong phần nhắc hạn, chỉ với bản ghi và trường bạn được xem."
+      }
+    }
+  },
+  "settings": {
+    "title": "Thông báo",
+    "back": "Quay lại {{name}}",
+    "subtitle": "Cài đặt của bạn trong {{org}}. Mọi email thông báo có link về trang này.",
+    "loading": "Đang tải cài đặt thông báo",
+    "channels": {
+      "in_app": "Trong app",
+      "email": "Email",
+      "telegram": "Telegram"
+    },
+    "email": {
+      "title": "Email thông báo",
+      "description": "Tần suất gửi email thông báo cho bạn.",
+      "frequency": "Tần suất email",
+      "immediate": "Ngay khi có",
+      "immediateHint": "Gom các thông báo trong 5 phút vào một email.",
+      "daily": "Hằng ngày",
+      "dailyHint": "Một email tóm tắt mỗi ngày.",
+      "off": "Tắt",
+      "offHint": "Không gửi email thông báo. Vẫn thấy trong app.",
+      "hour": "Giờ gửi email hằng ngày"
+    },
+    "types": {
+      "title": "Loại thông báo",
+      "description": "Chọn kênh cho từng loại.",
+      "caption": "Loại thông báo theo kênh",
+      "type": "Loại",
+      "switch": "{{type}}: {{channel}}"
+    },
+    "muted": {
+      "title": "Base đã tắt tiếng",
+      "description": "Tắt tiếng một base từ menu “…” của base ở thanh bên.",
+      "effect": "Không gửi email cho base đã tắt tiếng; trong app vẫn hiện. “Automation bị tự tắt” vẫn gửi.",
+      "empty": "Chưa tắt tiếng base nào.",
+      "unmute": "Bật lại tiếng",
+      "unmuteLabel": "Bật lại tiếng {{name}}"
+    },
+    "noSmtp": {
+      "title": "Kênh email chưa dùng được",
+      "body": "Máy chủ email của Cellhive chưa được cấu hình nên cột Email và phần tần suất email bị ẩn. Thông báo vẫn hiện trong app."
+    },
+    "saved": {
+      "immediate": "Đã lưu: gửi email ngay khi có (gom mỗi 5 phút).",
+      "daily": "Đã lưu: email tóm tắt hằng ngày lúc {{time}}.",
+      "off": "Đã lưu: không gửi email thông báo.",
+      "channelOn": "Đã lưu: {{type}} — bật {{channel}}.",
+      "channelOff": "Đã lưu: {{type}} — tắt {{channel}}.",
+      "unmuted": "Đã lưu: bật lại tiếng «{{name}}».",
+      "followOn": "Đã lưu: {{name}} — bật.",
+      "followOff": "Đã lưu: {{name}} — tắt."
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Nhận thông báo trong cuộc trò chuyện riêng với bot Telegram của tổ chức.",
+      "loading": "Đang tải liên kết Telegram của bạn",
+      "theBot": "bot",
+      "intro": "Liên kết tài khoản Telegram để nhận thông báo trong cuộc trò chuyện riêng với bot của tổ chức. Chọn loại nào gửi qua Telegram ở bảng bên dưới.",
+      "link": "Liên kết Telegram",
+      "relink": "Liên kết lại",
+      "newLink": "Tạo link mới",
+      "cancelLink": "Huỷ link",
+      "close": "Đóng",
+      "unlink": "Huỷ liên kết",
+      "unavailable": "Tổ chức chưa bật thông báo qua Telegram. Hãy nhờ chủ sở hữu hoặc quản trị viên tổ chức chọn bot gửi thông báo.",
+      "unavailableAdmin": "Tổ chức chưa bật thông báo qua Telegram: hãy chọn bot gửi thông báo trước.",
+      "setupBot": "Chọn bot gửi thông báo",
+      "state": {
+        "linked": "Đã liên kết",
+        "error": "Không gửi được",
+        "waiting": "Đang chờ Telegram",
+        "pending": "Có link đang chờ",
+        "expired": "Link đã hết hạn"
+      },
+      "linkedTo": "Đã liên kết với {{bot}}.",
+      "linkedSince": "Đã liên kết với {{bot}} từ {{date}}.",
+      "linkedHint": "Thông báo được gửi vào cuộc trò chuyện riêng của bạn với bot. Gửi /stop cho bot cũng huỷ liên kết.",
+      "reason": {
+        "blocked": "Telegram từ chối gửi tin cho bạn: có thể bạn đã chặn {{bot}} hoặc xoá cuộc trò chuyện. Bỏ chặn bot nếu cần rồi liên kết lại.",
+        "bot_changed": "Tổ chức đã đổi bot gửi thông báo. Hãy liên kết lại, lần này với {{bot}}.",
+        "unknown": "Thông báo qua Telegram không tới được bạn. Hãy liên kết lại."
+      },
+      "stepOpen": "Quét mã QR bằng camera điện thoại, hoặc mở Telegram trên máy này.",
+      "stepOpenPhone": "Mở Telegram bằng nút bên dưới.",
+      "stepStart": "Bấm Start (Bắt đầu) trong cuộc trò chuyện với {{bot}}.",
+      "open": "Mở Telegram",
+      "newTab": "(mở trong tab mới)",
+      "waiting": "Đang chờ bạn bấm Start… trang tự cập nhật.",
+      "countdown": "Link dùng một lần, hết hạn sau {{time}}",
+      "expiresAt": "Link dùng được một lần, tới {{time}}.",
+      "qrLabel": "Mã QR của link tới {{bot}} trên Telegram",
+      "qrHint": "Quét bằng điện thoại",
+      "expired": "Link đã hết hạn mà chưa được dùng. Tạo link mới khi bạn sẵn sàng.",
+      "pendingElsewhere": "Có một link tạo ở tab hoặc thiết bị khác đang chờ. Dùng link đó ở nơi đã tạo, hoặc tạo link mới ở đây.",
+      "columnNote": "Cột Telegram có hiệu lực sau khi bạn liên kết Telegram.",
+      "announce": {
+        "waiting": "Đã tạo link. Mở link trong Telegram và bấm Start.",
+        "linked": "Đã liên kết Telegram.",
+        "expired": "Link liên kết Telegram đã hết hạn.",
+        "error": "Thông báo qua Telegram không còn tới được bạn.",
+        "unlinked": "Đã huỷ liên kết Telegram.",
+        "cancelled": "Đã huỷ link liên kết Telegram."
+      },
+      "confirm": {
+        "title": "Huỷ liên kết Telegram?",
+        "description": "Bạn sẽ không nhận thông báo qua Telegram nữa. Có thể liên kết lại bất cứ lúc nào.",
+        "keep": "Giữ liên kết",
+        "unlink": "Huỷ liên kết"
+      }
+    },
+    "follow": {
+      "title": "Theo dõi bản ghi",
+      "description": "Bạn được báo khi người khác sửa bản ghi bạn theo dõi (“Thay đổi trên bản ghi bạn theo dõi”).",
+      "created": "Tự theo dõi bản ghi tôi tạo",
+      "createdHint": "Khi bạn tạo từng bản ghi bằng tay. Không gồm dán, nhập dữ liệu, form hay automation.",
+      "assigned": "Tự theo dõi bản ghi tôi được giao",
+      "assignedHint": "Khi ai đó thêm bạn vào trường người dùng có bật thông báo. Tắt công tắc này bạn vẫn nhận thông báo được giao.",
+      "effect": "Tắt công tắc chỉ dừng theo dõi mới: các bản ghi đang theo dõi vẫn giữ. Bỏ theo dõi từng bản ghi trong panel chi tiết của nó."
+    }
+  },
+  "shell": {
+    "disabledToast": "«{{name}}» vừa tự tắt.",
+    "disabledToastUnnamed": "Một automation vừa tự tắt.",
+    "view": "Xem",
+    "muteBase": "Tắt tiếng thông báo",
+    "unmuteBase": "Bật lại tiếng thông báo",
+    "mutedToast": "Đã tắt tiếng «{{name}}»: không gửi email thông báo cho base này. Thông báo trong app vẫn hiện.",
+    "unmutedToast": "Đã bật lại tiếng «{{name}}»."
+  }
+}

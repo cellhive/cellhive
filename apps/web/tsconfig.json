@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    // Config files are loaded by Node/Vite directly, which need `.ts` in imports.
+    "allowImportingTsExtensions": true,
+    // `node` for the config files, E2E tests and their global setup; src/ is
+    // kept free of Node built-ins by ESLint (no-restricted-imports).
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "src",
+    "test",
+    "e2e",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "security-headers.ts",
+    ".size-limit.js"
+  ]
+}

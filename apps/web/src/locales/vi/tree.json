@@ -1,0 +1,69 @@
+{
+  "stickyPath": "Bản ghi cấp trên",
+  "level": "Cấp {{level, number}} / {{max, number}}",
+  "dragHandle": "Kéo để đổi bản ghi cha",
+  "subrecord": "Sub-record",
+  "addChildHint": "Thêm sub-record",
+  "untitled": "Bản ghi chưa đặt tên",
+  "indentNone": "Không có bản ghi cùng cấp phía trên để đưa vào.",
+  "outdentNone": "Bản ghi này đã ở cấp gốc.",
+  "refused": {
+    "same": "Bản ghi đã ở đúng chỗ này.",
+    "cycle": "Không thể đặt bản ghi vào dưới chính nó hoặc sub-record của nó.",
+    "depth": "Đã tới độ sâu tối đa {{max, number}} cấp.",
+    "unloaded": "Các dòng đang tải. Hãy thử lại sau giây lát."
+  },
+  "drop": {
+    "child": "Đặt “{{title}}” làm sub-record ở đây",
+    "before": "Chuyển “{{title}}” sang cấp này",
+    "after": "Chuyển “{{title}}” sang cấp này"
+  },
+  "moved": {
+    "root": "“{{title}}” đã thành bản ghi gốc.",
+    "under": "Đã chuyển “{{title}}” vào dưới “{{parent}}”."
+  },
+  "menu": {
+    "label": "Thao tác dòng: {{title}}",
+    "open": "Mở chi tiết",
+    "addChild": "Thêm sub-record",
+    "addSibling": "Thêm bản ghi cùng cấp",
+    "changeParent": "Đổi bản ghi cha…",
+    "outdent": "Đưa lên một cấp",
+    "indent": "Làm con của dòng trên",
+    "delete": "Xoá bản ghi"
+  },
+  "delete": {
+    "legendOne_other": "Bản ghi này có {{count, number}} sub-record",
+    "legendMany_other": "Các bản ghi này có {{count, number}} sub-record",
+    "promote": "Giữ các sub-record",
+    "promoteHint": "Chúng trở thành bản ghi gốc.",
+    "branch": "Xoá cả nhánh",
+    "branchHint_other": "{{count, number}} sub-record cũng vào thùng rác; có thể khôi phục cả nhánh cùng lúc.",
+    "confirmBranch": "Xoá cả nhánh"
+  },
+  "toolbar": {
+    "title": "Sub-records dạng cây",
+    "button": "Dạng cây",
+    "buttonCollapsed": "Cây: thu gọn",
+    "buttonAll": "Cây: mở tất cả",
+    "buttonOn_other": "Cây: mở {{count, number}} cấp",
+    "notEnabled": "Bảng này chưa bật sub-records. Bật để mỗi bản ghi có thể có sub-record (tối đa 10 cấp).",
+    "enable": "Bật sub-records",
+    "askAdmin": "Nhờ người có quyền sửa trường của bảng bật tính năng này.",
+    "parentFieldName": "Bản ghi cha",
+    "show": "Hiện dạng cây",
+    "showHint": "Bản ghi nằm dưới bản ghi cha (trường “{{field}}”).",
+    "groupWarning": "View đang được nhóm. Dạng cây không nhóm được: bật dạng cây sẽ tạm bỏ nhóm.",
+    "groupOff": "View dạng cây không nhóm được. Tắt dạng cây để nhóm bản ghi.",
+    "turnOff": "Tắt dạng cây",
+    "ancestors": "Hiện cấp trên của kết quả",
+    "ancestorsHint": "Khi lọc hoặc tìm, bản ghi cha của kết quả hiện mờ để giữ ngữ cảnh.",
+    "levels": "Mở sẵn",
+    "levelOption_other": "{{count, number}} cấp",
+    "collapseAll": "Thu gọn tất cả",
+    "expandAll": "Mở tất cả",
+    "levelsHint": "Chỉ trên thiết bị này, cho riêng bạn. Nhánh bạn mở/thu gọn được ghi nhớ.",
+    "temporaryHint": "Thay đổi áp dụng ngay và chỉ bạn thấy cho tới khi lưu view."
+  },
+  "ancestorsLegend": "Dòng mờ là cấp trên không khớp bộ lọc, hiện để giữ ngữ cảnh."
+}

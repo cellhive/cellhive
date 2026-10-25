@@ -1,0 +1,200 @@
+{
+  "page": {
+    "title": "Tích hợp",
+    "subtitle": "Những gì automation được gọi ra ngoài Cellhive, và các secret dùng để ký hoặc xác thực.",
+    "back": "Về {{name}}",
+    "whoSees": "Chỉ owner và admin của tổ chức thấy trang này.",
+    "loading": "Đang tải…",
+    "unknownUser": "Một thành viên cũ",
+    "close": "Đóng",
+    "cancel": "Huỷ"
+  },
+  "allowlist": {
+    "title": "Allowlist HTTP",
+    "intro": "Automation chỉ gọi được địa chỉ công khai ở cổng 80 và 443. Thêm host vào đây để automation gọi được nó trong mạng nội bộ, hoặc ở cổng khác.",
+    "rulesTitle": "Cách các mục hoạt động",
+    "rules": {
+      "patterns": "Một host (n8n.internal, hoặc n8n cho service Docker) hoặc *.hậu_tố có ít nhất hai nhãn (*.corp.example — không gồm chính corp.example). Không nhận địa chỉ IP hay dải IP.",
+      "ports": "Thêm :cổng cho cổng khác (n8n.internal:5678). Không có cổng thì mục áp cho 80 và 443.",
+      "loopback": "Chính máy chủ này (localhost, 127.0.0.1) chỉ gọi được qua host chính xác kèm cổng.",
+      "never": "Địa chỉ metadata cloud, broadcast và dành riêng luôn bị chặn, dù danh sách này ghi gì."
+    },
+    "offTitle": "Máy chủ này không mở địa chỉ nội bộ",
+    "off": "Quản trị viên máy chủ đặt HTTP_PRIVATE_ALLOWLIST=off: các mục chỉ mở cổng khác trên host công khai, không bao giờ mở địa chỉ nội bộ.",
+    "addTitle": "Thêm host",
+    "pattern": "Host",
+    "patternHint": "vd n8n.internal:5678 hoặc *.corp.example",
+    "savedAs": "Sẽ lưu thành {{pattern}}",
+    "note": "Ghi chú (không bắt buộc)",
+    "noteHint": "Lý do automation được gọi, vd n8n nội bộ.",
+    "add": "Thêm vào allowlist",
+    "count": "{{count, number}} / {{max, number}} host",
+    "empty": "Chưa có host nào: automation chỉ gọi được địa chỉ công khai ở cổng 80 và 443.",
+    "listLabel": "Host được phép",
+    "ports": {
+      "default": "Cổng 80 và 443",
+      "one": "Cổng {{port}}"
+    },
+    "wildcard": "mọi tên miền con",
+    "addedBy": "{{name}} thêm · {{date}}",
+    "remove": "Bỏ {{pattern}}",
+    "removeTitle": "Bỏ {{pattern}}?",
+    "removeDescription": "Lời gọi đang chạy vẫn hoàn tất; từ lời gọi sau, automation gọi host này qua địa chỉ nội bộ hoặc cổng này sẽ bị chặn.",
+    "removeConfirm": "Bỏ",
+    "error": {
+      "required": "Hãy nhập host.",
+      "pattern": "Nhập host như n8n.internal hoặc *.corp.example, có thể kèm :cổng. Không nhận địa chỉ IP hay dải IP."
+    },
+    "toast": {
+      "added": "Đã thêm {{pattern}} vào allowlist.",
+      "removed": "Đã bỏ {{pattern}} khỏi allowlist."
+    }
+  },
+  "secrets": {
+    "title": "Secret HTTP",
+    "intro": "Giá trị mà bước gửi HTTP request và n8n gửi đi mà không hiện ra: giá trị header (API key, token) hoặc secret ký (Standard Webhooks). Người dựng automation chọn theo tên; không ai đọc lại được.",
+    "add": "Thêm secret",
+    "empty": "Chưa có secret HTTP nào.",
+    "kind": {
+      "http_header": "Giá trị header",
+      "webhook_signing": "Secret ký"
+    },
+    "kindHint": {
+      "http_header": "API key hoặc token gửi trong header (Authorization, X-Api-Key…). Tên header đặt trong bước.",
+      "webhook_signing": "Secret whsec_… ký mỗi request (webhook-signature). Cellhive có thể sinh giúp; bạn dán vào hệ thống nhận (n8n…)."
+    },
+    "scope": {
+      "all": "Mọi base",
+      "selected": "Các base được chọn",
+      "unknownBase": "Một base bạn không thấy",
+      "none": "Không base nào"
+    },
+    "scopeLine": "Base: {{scope}}",
+    "addedBy": "{{name}} thêm · {{date}}",
+    "rotatingUntil": "Giá trị cũ vẫn ký tới {{date}}.",
+    "rotateLabel": "Giá trị mới cho {{name}}",
+    "rotateShort": "Giá trị mới",
+    "edit": "Sửa {{name}}",
+    "editShort": "Sửa",
+    "deleteLabel": "Xoá {{name}}",
+    "toast": {
+      "added": "Đã thêm secret {{name}}.",
+      "saved": "Đã lưu secret {{name}}.",
+      "deleted": "Đã xoá secret {{name}}."
+    },
+    "form": {
+      "addTitle": "Thêm secret HTTP",
+      "editTitle": "Sửa {{name}}",
+      "description": "Giá trị chỉ ghi: không bao giờ hiện lại, kể cả với bạn.",
+      "kind": "Loại",
+      "name": "Tên",
+      "nameHint": "Người dựng automation chọn secret theo tên này.",
+      "value": "Giá trị",
+      "mode": {
+        "keep": "Giữ giá trị hiện tại",
+        "generate": "Sinh secret mới (khuyên dùng)",
+        "enter": "Dán secret"
+      },
+      "rotateHint": "Giá trị cũ vẫn ký thêm {{hours, number}} giờ để bạn kịp cập nhật bên nhận.",
+      "replace": "Thay giá trị",
+      "signingValue": "Secret ký",
+      "signingValueHint": "whsec_ rồi base64 của 24 đến 64 byte.",
+      "headerValue": "Giá trị header",
+      "headerValueHint": "Cả giá trị, vd Bearer abc123. Ký tự in được, không xuống dòng, tối đa 4.096.",
+      "scope": "Dùng được ở",
+      "scopeBases": "Base",
+      "noBases": "Tổ chức chưa có base nào.",
+      "scopeHint": "Đổi base không sửa automation: bước của base bị loại sẽ lỗi khi chạy.",
+      "add": "Thêm secret",
+      "save": "Lưu",
+      "error": {
+        "required": "Bắt buộc nhập.",
+        "bases": "Chọn ít nhất một base.",
+        "format_http_header": "Chỉ dùng ký tự in được, không xuống dòng, tối đa 4.096.",
+        "format_webhook_signing": "Dán giá trị dạng whsec_… (base64 của 24 đến 64 byte).",
+        "hosts_required": "Nhập ít nhất một host.",
+        "hosts_too_many": "Tối đa 20 host.",
+        "hosts_invalid": "Mỗi mục phải là tên host (api.example.com), *.example.com hoặc host:cổng — không địa chỉ IP, scheme hay đường dẫn."
+      },
+      "allowedHosts": "Host được phép",
+      "allowedHostsHint": "Automation chỉ gửi secret này tới các host này.",
+      "allowedHostsLegacyHint": "Secret này chưa có host được phép: vẫn được gửi tới mọi host cho tới khi hết hạn chuyển đổi, sau đó bước dùng nó sẽ lỗi. Hãy thêm các host được gửi tới.",
+      "allowedHostsPlaceholder": "api.example.com"
+    },
+    "reveal": {
+      "title": {
+        "created": "Đã tạo secret ký",
+        "rotated": "Secret ký mới"
+      },
+      "description": "Sao chép secret của {{name}} vào hệ thống nhận ngay bây giờ.",
+      "warningTitle": "Chỉ hiện một lần",
+      "warning": "Cellhive không giữ bản đọc được: đóng cửa sổ này là không hiện lại được nữa. Nếu mất, hãy sinh giá trị mới.",
+      "label": "Secret ký",
+      "hint": "Dán vào nơi bên nhận kiểm chữ ký Standard Webhooks.",
+      "rotated": "Giá trị cũ vẫn ký tới {{date}}.",
+      "confirm": "Tôi đã cất secret ở nơi an toàn",
+      "nag": "Hãy xác nhận đã cất secret: không hiện lại được nữa.",
+      "done": "Xong"
+    },
+    "rotate": {
+      "title": "Giá trị mới cho {{name}}?",
+      "description": "Cellhive sinh secret mới và hiện một lần. Request mang cả hai chữ ký trong {{hours, number}} giờ, sau đó chỉ chữ ký mới.",
+      "again": "Một giá trị cũ vẫn đang ký: sinh lần nữa sẽ bỏ ngay giá trị cũ nhất.",
+      "confirm": "Sinh giá trị mới"
+    },
+    "delete": {
+      "title": "Xoá {{name}}?",
+      "description": "Automation sẽ không dùng được secret này nữa.",
+      "loadingUsages": "Đang tìm automation dùng secret…",
+      "noUsages": "Không automation nào dùng secret này.",
+      "usages_one": "{{count, number}} automation đang dùng secret này: hãy sửa trước.",
+      "usages_other": "{{count, number}} automation đang dùng secret này: hãy sửa trước.",
+      "hiddenAutomation": "Một automation bạn không xem được",
+      "open": "Mở",
+      "confirm": "Xoá"
+    },
+    "hostsLine": "Chỉ gửi tới: {{hosts}}",
+    "legacy": {
+      "pending": "Cần đặt host trước {{date}}",
+      "pendingHint": "Tạo trước khi có host được phép: tới hạn đó vẫn được gửi tới mọi host.",
+      "stopped": "Đã ngừng gửi",
+      "stoppedHint": "Đã hết hạn chuyển đổi: bước dùng secret này lỗi cho tới khi bạn đặt host được phép.",
+      "setHosts": "Đặt host",
+      "setHostsLabel": "Đặt host được phép cho {{name}}"
+    }
+  },
+  "copy": {
+    "action": "Sao chép",
+    "done": "Đã sao chép",
+    "label": "Sao chép {{label}}",
+    "announce": "Đã sao chép {{label}}."
+  },
+  "hosts": {
+    "listLabel": "Các host đã thêm",
+    "remove": "Bỏ {{host}}",
+    "announceAdded": "Đã thêm {{hosts}}.",
+    "announceRemoved": "Đã bỏ {{host}}.",
+    "count": "{{count, number}} / {{max, number}} host",
+    "duplicate": "Đã có trong danh sách: {{hosts}}.",
+    "invalid": "Không phải host: {{hosts}}. Dùng api.example.com, *.example.com hoặc host:cổng — không địa chỉ IP, scheme hay đường dẫn.",
+    "full": "Một secret có tối đa {{max, number}} host.",
+    "savedAs": "Nhấn Enter để thêm — sẽ lưu thành {{host}}",
+    "keyboard": "Nhấn Enter hoặc dấu phẩy để thêm host, hoặc dán nhiều host cùng lúc. Backspace chuyển tới host cuối; Delete bỏ host đó.",
+    "rulesTitle": "Cách host được phép hoạt động",
+    "rules": {
+      "exact": "api.example.com: chỉ đúng host đó.",
+      "wildcard": "*.example.com: chỉ các tên con (api.example.com, a.b.example.com) — không gồm chính example.com; thêm riêng nếu cần.",
+      "port": "Thêm :cổng cho cổng khác 80 và 443 (hooks.example.com:8443).",
+      "noIp": "Không nhận địa chỉ IP hay dải IP: URL dùng địa chỉ IP không bao giờ khớp.",
+      "notAllowlist": "Danh sách này không mở địa chỉ nội bộ hay cổng khác — đó là việc của allowlist HTTP ở trên. Một lời gọi phải qua cả hai."
+    }
+  },
+  "banner": {
+    "title_one": "{{count, number}} secret HTTP chưa có host được phép",
+    "title_other": "{{count, number}} secret HTTP chưa có host được phép",
+    "pending": "Secret tạo trước khi có host được phép vẫn được gửi tới mọi host cho tới hạn của nó — hạn sớm nhất là {{date}}. Sau hạn, bước dùng secret đó sẽ lỗi.",
+    "stopped_one": "{{count, number}} secret đã ngừng gửi: bước dùng nó đang lỗi.",
+    "stopped_other": "{{count, number}} secret đã ngừng gửi: bước dùng chúng đang lỗi.",
+    "review": "Đặt host cho chúng"
+  }
+}

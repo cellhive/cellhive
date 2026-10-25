@@ -1,0 +1,147 @@
+{
+  "page": {
+    "title": "Telegram bots",
+    "subtitle": "Bots that automations can use to send Telegram messages. Automation builders only see the bot name, never its token.",
+    "back": "Back to {{name}}",
+    "add": "Add bot",
+    "loading": "Loading bots",
+    "emptyTitle": "No Telegram bot yet",
+    "empty": "Create a bot with @BotFather, add it to your group or channel, then paste its token here.",
+    "scopeLine": "Bases: {{scope}}",
+    "addedBy": "Added by {{name}} · {{date}}",
+    "unknownUser": "a former member",
+    "edit": "Change {{name}}",
+    "editShort": "Change",
+    "delete": "Delete {{name}}",
+    "whoSees": "Only organization owners and admins see this page. A step of a base that a bot is no longer shared with fails until the bot is shared again or the step changes.",
+    "listHeading": "Bots"
+  },
+  "scope": {
+    "all": "All bases",
+    "selected": "Selected bases",
+    "none": "none",
+    "unknownBase": "Unknown base"
+  },
+  "form": {
+    "addTitle": "Add a Telegram bot",
+    "editTitle": "Change {{name}}",
+    "description": "The token is stored encrypted and never shown again.",
+    "name": "Name",
+    "nameHint": "What automation builders choose, e.g. “Sales” or “IT support”.",
+    "token": "Bot token",
+    "tokenHint": "From @BotFather, like 123456789:AAH…",
+    "tokenKeepHint": "Leave empty to keep the saved token; type a new one to replace it.",
+    "tokenSaved": "Saved — hidden",
+    "scope": "Can be used in",
+    "scopeBases": "Bases",
+    "scopeHint": "Automations of other bases cannot choose this bot.",
+    "noBases": "This organization has no base yet.",
+    "add": "Add bot",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "errors": {
+      "required": "Required.",
+      "format": "This is not a Telegram bot token (it looks like 123456789:AAH…).",
+      "bases": "Choose at least one base."
+    }
+  },
+  "delete": {
+    "title": "Delete {{name}}?",
+    "description": "Automations cannot send with this bot any more. A bot still used by automations cannot be deleted.",
+    "loadingUsages": "Loading the automations using this bot",
+    "noUsages": "No automation uses this bot.",
+    "usages_one": "{{count, number}} automation uses this bot: change it first.",
+    "usages_other": "{{count, number}} automations use this bot: change them first.",
+    "notificationBot": "This bot sends members their notifications. Choose another notification bot first (“Notification bot” above).",
+    "hiddenAutomation": "An automation you cannot see",
+    "open": "Open",
+    "confirm": "Delete bot",
+    "notificationBotBlockedTitle": "This is the notification bot",
+    "notificationBotBlocked": "It cannot be deleted while it sends members their notifications. Choose another bot, or no bot, under “Notification bot” first."
+  },
+  "toast": {
+    "added": "Bot “{{name}}” added.",
+    "saved": "Bot “{{name}}” saved.",
+    "deleted": "Bot “{{name}}” deleted."
+  },
+  "notificationBot": {
+    "title": "Notification bot",
+    "description": "Members link their own Telegram to this bot to receive their notifications there. One bot per organization; automations can keep using it.",
+    "loading": "Loading the notification bot",
+    "none": "No notification bot yet: members cannot receive notifications on Telegram.",
+    "secretName": "Bot “{{name}}”",
+    "label": "Notification bot",
+    "select": "Bot that sends notifications",
+    "noneOption": "None — no notifications on Telegram",
+    "save": "Save",
+    "hintFirst": "Members can link Telegram once a bot is chosen. Nothing is sent to anyone when you save.",
+    "hintChange": "Changing or removing the bot unlinks everyone: each member has to link Telegram again.",
+    "noBots": "Add a bot below first, then choose it here.",
+    "tokenHint": "This is the notification bot: replacing the token with another bot's makes every member link Telegram again.",
+    "status": {
+      "ok": "Working",
+      "webhook_conflict": "Webhook elsewhere",
+      "invalid_token": "Token refused",
+      "unknown": "Not checked yet"
+    },
+    "webhookConflict": {
+      "title": "Telegram sends this bot's messages elsewhere",
+      "body": "The bot has a webhook set by another system, so Cellhive cannot receive /start. Remove that webhook (deleteWebhook) or create a bot only for Cellhive with @BotFather and choose it here."
+    },
+    "invalidToken": {
+      "title": "Telegram refuses the bot's token",
+      "body": "The token was probably revoked in @BotFather. Paste the new token with “Change” in the list below, or choose another bot."
+    },
+    "confirm": {
+      "changeTitle": "Change the notification bot?",
+      "removeTitle": "Stop notifications on Telegram?",
+      "description": "Every member who linked Telegram is unlinked.",
+      "changeBody": "Notifications will come from “{{name}}”. Members have to link Telegram again from their notification settings; until then they get nothing on Telegram.",
+      "removeBody": "Nobody will receive notifications on Telegram any more, and the links members made stop working.",
+      "change": "Change bot",
+      "remove": "Stop Telegram notifications"
+    },
+    "toast": {
+      "saved": "@{{username}} now sends notifications.",
+      "removed": "Notifications are no longer sent on Telegram."
+    },
+    "mode": {
+      "legend": "Receive messages by",
+      "current": "(current)",
+      "polling": "Polling (default)",
+      "pollingHint": "Cellhive asks Telegram for new messages. Works on any server; a /stop is handled within 15 minutes.",
+      "webhook": "Webhook",
+      "webhookHint": "Telegram sends each message to Cellhive right away. This server must be reachable from the internet over HTTPS (PUBLIC_URL).",
+      "apply": "Apply",
+      "unavailable": "Webhook is not available: this server is not reachable over HTTPS. Polling works the same for members.",
+      "webhookStatusLabel": "Webhook:",
+      "webhookStatus": {
+        "ok": "Working",
+        "error": "Delivery errors",
+        "unknown": "Not checked yet"
+      },
+      "webhookError": {
+        "title": "Telegram cannot deliver messages to Cellhive",
+        "body": "Telegram reported delivery errors, or the webhook was changed elsewhere. Check that PUBLIC_URL is reachable from the internet, then choose Webhook again — or switch back to Polling."
+      },
+      "publicUrl": {
+        "title": "This server is not reachable over HTTPS",
+        "body": "The webhook needs PUBLIC_URL to be an https address on port 443, 80, 88 or 8443. Keep Polling — members get their notifications the same way — or ask the person who runs this server."
+      },
+      "conflict": {
+        "title": "This bot already sends its messages to another webhook",
+        "intro": "Cellhive never replaces a webhook that another system set. To use the webhook mode:",
+        "step1": "Remove that webhook where it was set (another bot tool, n8n…), or create a bot only for Cellhive with @BotFather and choose it above.",
+        "step2": "Then choose Webhook and apply again.",
+        "meanwhile": "Until then the bot keeps receiving messages by polling."
+      },
+      "tokenHintWebhook": "If the new token is another bot's, receiving goes back to polling: choose Webhook again afterwards.",
+      "toast": {
+        "webhook": "Telegram now sends this bot’s messages straight to Cellhive (webhook).",
+        "polling": "Cellhive asks Telegram for this bot’s messages again (polling).",
+        "fellBack": "The token belongs to another bot, so receiving went back to polling. Choose Webhook again in “Notification bot” if you need it."
+      }
+    }
+  }
+}

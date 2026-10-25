@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+**/dist
+**/coverage
+**/.turbo
+LICENSE
+packages/contracts/LICENSE
+CODE_OF_CONDUCT.md
+docs/
+packages/contracts/openapi.json
+.claude/
+.agents/

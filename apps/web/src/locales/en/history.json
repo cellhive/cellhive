@@ -1,0 +1,76 @@
+{
+  "timeline": "Changes",
+  "changes": "Changed fields",
+  "loading": "Loading history…",
+  "retry": "Try again",
+  "none": "No changes yet.",
+  "noneForField": "This field has not changed yet.",
+  "loadMore": "Load older changes",
+  "before": "Before:",
+  "after": "After:",
+  "empty": "(empty)",
+  "showAll": "Show all {{count, number}} changes",
+  "showLess": "Show fewer changes",
+  "batch_one": "Part of a change to {{count, number}} record",
+  "batch_other": "Part of a change to {{count, number}} records",
+  "cellTitle": "History of {{field}}",
+  "close": "Close history",
+  "actor": {
+    "user": "Deleted user",
+    "api_token": "API token",
+    "automation": "Automation",
+    "shareLinkNamed": "Share link of “{{name}}”",
+    "share_link": "Share link",
+    "system": "System"
+  },
+  "via": {
+    "app": "In the app",
+    "automation": "Via an automation",
+    "apiToken": "Via an API token",
+    "shareLink": "Via a share link or form",
+    "import": "Via an import",
+    "revert": "Restored from an earlier change"
+  },
+  "verb": {
+    "created": "created this record",
+    "deleted": "deleted this record",
+    "restored": "restored this record from the trash",
+    "reverted": "restored an earlier value",
+    "changedField": "changed {{field}}",
+    "changedFields_one": "changed {{count, number}} field",
+    "changedFields_other": "changed {{count, number}} fields"
+  },
+  "revert": {
+    "action_one": "Restore previous value",
+    "action_other": "Restore previous values",
+    "confirmTitle_one": "Restore the previous value?",
+    "confirmTitle_other": "Restore {{count, number}} previous values?",
+    "confirmDescription_one": "The value from before this change is written again as a new change. A later edit of this field is replaced.",
+    "confirmDescription_other": "The values from before this change are written again as a new change. Later edits of these fields are replaced.",
+    "cancel": "Cancel",
+    "confirm": "Restore",
+    "done": "Previous value restored.",
+    "doneSkipped_one": "Previous value restored. {{count, number}} linked record was deleted and was not linked again.",
+    "doneSkipped_other": "Previous values restored. {{count, number}} linked records were deleted and were not linked again.",
+    "gone": "The record is no longer available to you.",
+    "notFound": "This change can no longer be restored: the record or the change is not available anymore.",
+    "retry": "Try again",
+    "conflict": {
+      "title": "Record changed since",
+      "message": "{{name}} changed this record after its history was loaded. The latest values are shown now.",
+      "someone": "Someone",
+      "keep": "Keep current values",
+      "restoreAnyway": "Restore anyway"
+    }
+  },
+  "files": {
+    "added": "added",
+    "removed": "removed",
+    "reordered": "Files reordered"
+  },
+  "links": {
+    "added": "linked",
+    "removed": "unlinked",
+    "reordered": "Linked records reordered"
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "title": "Email",
+  "subtitle": "Organization settings · {{org}}",
+  "back": "Back to {{name}}",
+  "loading": "Loading email settings",
+  "cancel": "Cancel",
+  "save": "Save changes",
+  "saved": "Email settings saved.",
+  "unsaved": "You have unsaved changes.",
+  "smtp": {
+    "title": "Email server (SMTP)",
+    "description": "Set with environment variables of the instance. This page is read-only.",
+    "status": "Status",
+    "configured": "Configured",
+    "notConfigured": "Not configured",
+    "host": "Server",
+    "port": "Port, encryption",
+    "portValue": "{{port}} · {{security}}",
+    "security": {
+      "tls": "TLS",
+      "starttls": "STARTTLS",
+      "none": "No encryption"
+    },
+    "from": "System sender address",
+    "allowedDomains": "Domains for sending directly",
+    "allowedDomainsHint": "Sender identities on these domains send as themselves; others are sent on their behalf.",
+    "none": "None",
+    "missing": {
+      "title": "No email server yet.",
+      "body": "Automations cannot send email and the email channel of notifications is hidden. The instance operator sets these variables, then restarts the API and the worker:",
+      "example": "Example",
+      "docs": "Details: “Docker Compose” environment variables in the self-hosting documentation (docs/SPEC.md §20)."
+    }
+  },
+  "test": {
+    "button": "Test connection",
+    "testing": "Testing",
+    "hint_one": "Sends a test email to {{email}}. {{count, number}} test left this minute.",
+    "hint_other": "Sends a test email to {{email}}. {{count, number}} tests left this minute.",
+    "progress": "Connecting to {{host}}…",
+    "progressNoHost": "Connecting to the email server…",
+    "reply": "Server code: <code>{{reply}}</code>.",
+    "sent": {
+      "title": "Connection works.",
+      "body": "A test email was sent to {{to}} at {{time}}."
+    },
+    "failed": {
+      "authFailed": {
+        "title": "The server refused to sign in.",
+        "hint": "Check the user name and password in SMTP_URL."
+      },
+      "tlsFailed": {
+        "title": "The secure connection (TLS) failed.",
+        "hint": "Check the port and the scheme (smtps:// for TLS at once, smtp:// for STARTTLS) and the server certificate."
+      },
+      "connectionFailed": {
+        "title": "Could not connect to the server.",
+        "hint": "Check the host name, the port and any firewall between Cellhive and the email server."
+      },
+      "timeout": {
+        "title": "The server did not answer in time.",
+        "hint": "The server may be overloaded or blocked by a firewall. Try again in a few minutes."
+      },
+      "temporary": {
+        "title": "The server refused the email for now.",
+        "hint": "This is usually temporary. Try again in a few minutes."
+      },
+      "rejected": {
+        "title": "The server refused the email.",
+        "hint": "Check that the server accepts the sender address of SMTP_FROM."
+      },
+      "hostNotAllowed": {
+        "title": "The server address is not allowed.",
+        "hint": "The host resolves to a blocked address."
+      },
+      "unknown": {
+        "title": "The test failed for an unknown reason.",
+        "hint": "Try again; if it keeps failing, check the API and worker logs."
+      }
+    }
+  },
+  "limits": {
+    "title": "Limits in force",
+    "description": "The instance operator can change them with environment variables.",
+    "perHour": "Emails per hour for the organization",
+    "perHourValue": "{{used, number}} sent / {{max, number}}",
+    "resetsAt": "resets at {{time}}",
+    "recipients": "Recipients per email",
+    "perSecond": "Emails per second (each process)",
+    "tests": "Test emails",
+    "testsValue_one": "{{count, number}} per minute for each person",
+    "testsValue_other": "{{count, number}} per minute for each person",
+    "html": "Content size",
+    "htmlValue": "{{size}} of HTML"
+  },
+  "footer": {
+    "title": "Footer of automation emails",
+    "description": "The footer tells recipients that the email was sent automatically.",
+    "legend": "Footer policy",
+    "required": "Required",
+    "requiredHint": "Every automation email has a Minimal or Full footer.",
+    "author_choice": "Automation authors choose",
+    "author_choiceHint": "Allows “None” when sending directly through a verified sender identity.",
+    "locked": {
+      "title": "Locked by the instance",
+      "body": "The instance sets <code>EMAIL_AUTOMATION_FOOTER=required</code>. The instance operator can change it to <code>org</code> to let each organization decide."
+    },
+    "org": "The instance sets <code>EMAIL_AUTOMATION_FOOTER=org</code>, so the organization decides. Emails from the system sender or sent on behalf of an identity always have a footer.",
+    "minimal": "Minimal footer: <q>This email was sent automatically by Cellhive of {{org}}.</q>"
+  },
+  "signature": {
+    "title": "Default signature",
+    "description": "Used for emails sent by the system sender. Sender identities have their own signature."
+  },
+  "systemSender": {
+    "title": "System sender for automations",
+    "label": "Allow automations to send as {{from}}",
+    "labelNoSmtp": "Allow automations to send with the system sender",
+    "hint": "Turn off to make every automation email go through a verified sender identity.",
+    "usage_one": "{{count, number}} automation uses it ({{enabled, number}} turned on).",
+    "usage_other": "{{count, number}} automations use it ({{enabled, number}} turned on).",
+    "usageNone": "No automation uses it.",
+    "savedOn": "Saved: automations may send with the system sender.",
+    "savedOff": "Saved: the system sender is turned off.",
+    "dialog": {
+      "title": "Turn off the system sender?",
+      "body_one": "{{count, number}} automation sends with the system sender ({{enabled, number}} turned on). After turning it off, its email steps fail until a sender identity is chosen.",
+      "body_other": "{{count, number}} automations send with the system sender ({{enabled, number}} turned on). After turning it off, their email steps fail until a sender identity is chosen.",
+      "cancel": "Cancel",
+      "confirm": "Turn off the system sender"
+    }
+  },
+  "identities": {
+    "title": "Sender identities",
+    "description": "Addresses such as hr@ or it@ so automations send email on behalf of a department.",
+    "manage": "Manage sender identities"
+  },
+  "audience": {
+    "title": "Who sees this page",
+    "body": "Owners and admins of the organization. Other members opening this link get the page not found."
+  },
+  "attachments": {
+    "title": "Attachments",
+    "description": "Files automation emails may carry from attachment fields. Only files people can download are sent.",
+    "files": "Files per email",
+    "filesHint": "At most {{max, number}} (limit of this server).",
+    "size": "Total size per email (MB)",
+    "sizeHint": "Original files, at most {{max, number}} MB (limit of this server).",
+    "range": "Enter a whole number from 1 to {{max, number}}.",
+    "note": "An email over these limits is not sent: its step fails, no file is dropped.",
+    "save": "Save limits",
+    "reset": "Use the server limits",
+    "saved": "Saved: attachment limits updated."
+  }
+}

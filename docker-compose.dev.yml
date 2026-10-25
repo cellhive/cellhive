@@ -1,0 +1,96 @@
+# Local development infrastructure: PostgreSQL 18, Valkey 8, Garage (S3).
+# The apps themselves run on the host with `pnpm dev`.
+#
+#   pnpm dev:infra        # start + wait for healthy + run storage-init
+#   pnpm dev:infra:down   # stop and REMOVE volumes
+#
+# !!! DEV-ONLY CREDENTIALS !!! Every password, token and key in this file and in
+# infra/garage/garage.toml is a public placeholder. Ports are bound to 127.0.0.1
+# only. Never reuse this file for a deployment; use docker-compose.yml instead.
+#
+# Several checkouts/worktrees side by side: give each its own project name and
+# host ports (shell environment or `.env`), e.g.
+#   COMPOSE_PROJECT_NAME=cellhive-wt2 DEV_POSTGRES_PORT=15432 DEV_VALKEY_PORT=16379 \
+#   DEV_GARAGE_S3_PORT=13900 DEV_GARAGE_ADMIN_PORT=13903 pnpm dev:infra
+# and point DATABASE_URL, CACHE_URL and S3_ENDPOINT at those ports. Compose gives
+# COMPOSE_PROJECT_NAME precedence over `name:` below, so `dev:infra:down` only
+# removes the containers and volumes of that project.
+name: cellhive-dev
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: cellhive
+      POSTGRES_PASSWORD: cellhive # DEV-ONLY
+      POSTGRES_DB: cellhive
+    ports:
+      - '127.0.0.1:${DEV_POSTGRES_PORT:-5432}:5432'
+    # PostgreSQL 18+ images keep PGDATA under /var/lib/postgresql/18/docker, so the
+    # volume must be mounted at /var/lib/postgresql (ADR-0019).
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cellhive -d cellhive']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  valkey:
+    image: valkey/valkey:8
+    ports:
+      - '127.0.0.1:${DEV_VALKEY_PORT:-6379}:6379'
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  garage:
+    image: dxflrs/garage:v2.4.1
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    ports:
+      - '127.0.0.1:${DEV_GARAGE_S3_PORT:-3900}:3900' # S3 API
+      - '127.0.0.1:${DEV_GARAGE_ADMIN_PORT:-3903}:3903' # admin API
+    healthcheck:
+      # The image is distroless; `garage status` talks to the local daemon over RPC.
+      test: ['CMD', '/garage', 'status']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 2s
+
+  # One-shot: layout, bucket, access key, CORS. Idempotent; not started by
+  # `up`, run with `docker compose -f docker-compose.dev.yml run --rm storage-init`.
+  storage-init:
+    image: curlimages/curl:8.22.0
+    profiles: ['init']
+    entrypoint: ['/bin/sh', '/storage-init.sh']
+    restart: 'no'
+    depends_on:
+      garage:
+        condition: service_healthy
+    volumes:
+      - ./infra/garage/storage-init.sh:/storage-init.sh:ro
+    environment:
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_S3_URL: http://garage:3900
+      GARAGE_ADMIN_TOKEN: dev-only-garage-admin-token # DEV-ONLY, matches garage.toml
+      S3_BUCKET: cellhive
+      S3_REGION: garage
+      # DEV-ONLY key; must match S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY in .env.example.
+      S3_ACCESS_KEY_ID: GK6465762d6f70656e62617365
+      S3_SECRET_ACCESS_KEY: 6465762d6f6e6c792d73332d7365637265742d646f2d6e6f742d757365212121
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5173}
+
+volumes:
+  postgres-data:
+  valkey-data:
+  garage-meta:
+  garage-data:

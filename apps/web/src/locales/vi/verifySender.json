@@ -1,0 +1,22 @@
+{
+  "title": "Xác nhận địa chỉ gửi email",
+  "onCellhive": "trên Cellhive",
+  "askBy": "{{name}} (quản trị {{org}}) muốn dùng {{email}} để gửi email tự động từ Cellhive của {{org}}.",
+  "ask": "{{org}} muốn dùng {{email}} để gửi email tự động từ Cellhive của tổ chức.",
+  "displayName": "Tên hiển thị",
+  "address": "Địa chỉ",
+  "expires": "Hết hạn",
+  "confirm": "Xác nhận",
+  "ignore": "Không phải bạn yêu cầu? Bỏ qua trang này. Địa chỉ sẽ không được dùng nếu không ai bấm Xác nhận.",
+  "loading": "Đang tải",
+  "retry": "Thử lại",
+  "doneTitle": "Đã xác nhận",
+  "done": "{{email}} dùng được để gửi email automation của {{org}}. Bạn có thể đóng trang này.",
+  "doneShort": "{{email}} dùng được để gửi email automation. Bạn có thể đóng trang này.",
+  "invalidTitle": "Link không còn dùng được",
+  "invalid": "Link sai, đã được dùng, đã bị thay bằng thư mới hơn hoặc đã hết hạn (link chỉ dùng trong 24 giờ). Nhờ quản trị tổ chức gửi lại thư xác nhận nếu cần.",
+  "expiredTitle": "Link đã hết hạn",
+  "expired": "Nhờ quản trị tổ chức gửi lại thư xác nhận. Link chỉ dùng trong 24 giờ.",
+  "rateLimitedTitle": "Thử quá nhiều lần",
+  "rateLimited": "Có quá nhiều yêu cầu từ mạng của bạn. Thử lại sau vài phút."
+}

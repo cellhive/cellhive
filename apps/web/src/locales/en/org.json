@@ -1,0 +1,56 @@
+{
+  "home": {
+    "shareLinks": "Share links",
+    "emailSettings": "Email settings",
+    "subtitle": "Workspaces and bases of this organization.",
+    "newWorkspace": "New workspace",
+    "emptyTitle": "No workspaces yet",
+    "emptyAdmin": "Create a workspace to group your bases.",
+    "emptyMember": "You do not have access to any workspace yet. Ask an administrator to add you.",
+    "emailIdentities": "Sender identities"
+  },
+  "workspace": {
+    "breadcrumb": "Breadcrumb",
+    "subtitle": "Bases in this workspace.",
+    "newBase": "New base",
+    "newBaseIn": "New base in {{workspace}}",
+    "noBases": "No bases you can open in this workspace."
+  },
+  "createWorkspace": {
+    "title": "Create workspace",
+    "description": "A workspace groups bases in {{org}}.",
+    "name": "Workspace name",
+    "submit": "Create workspace"
+  },
+  "createBase": {
+    "title": "Create base",
+    "description": "The new base is created in {{workspace}}. You will be its owner.",
+    "name": "Base name",
+    "descriptionLabel": "Description",
+    "descriptionHint": "Optional.",
+    "submit": "Create base"
+  },
+  "noOrg": {
+    "title": "No organization",
+    "description": "Your account does not belong to any organization. Open an invitation link, or ask an administrator to invite you."
+  },
+  "settingsNav": {
+    "label": "Organization settings",
+    "title": "Organization settings",
+    "groups": {
+      "email": "Email",
+      "automation": "Automation",
+      "personal": "Personal",
+      "organization": "Organization"
+    },
+    "items": {
+      "emailSettings": "Email settings",
+      "emailIdentities": "Sender identities",
+      "telegramBots": "Telegram bots",
+      "notifications": "Your notifications",
+      "integrations": "Integrations",
+      "apiTokens": "API tokens",
+      "audit": "Audit log"
+    }
+  }
+}

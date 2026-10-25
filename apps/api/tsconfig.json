@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    // NestJS relies on legacy (TypeScript) decorators. Decorator metadata is
+    // deliberately NOT emitted: tsx/esbuild and Vitest cannot emit it, so every
+    // constructor dependency is declared with an explicit `@Inject(token)`.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": false
+  },
+  "include": ["src", "test", "scripts", "vitest.config.ts", "vitest.int.config.ts"]
+}

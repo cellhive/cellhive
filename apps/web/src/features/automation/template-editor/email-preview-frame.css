@@ -1,0 +1,144 @@
+/*
+ * Look of the email preview frame (T522; see preview-document.ts): the
+ * fixed layout of the server (`renderEmailLayout`, CONTRACTS §23.1) and the
+ * styles of the tags the Markdown renderer emits (`EMAIL_ELEMENT_STYLES`),
+ * written as selectors because the frame refuses inline styles (app CSP).
+ * Keep in step with packages/server-core/src/mail/layout.ts.
+ */
+html {
+  color-scheme: light;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f4f5f7;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #1f2328;
+}
+/* The hidden preheader. */
+body > div:first-child {
+  display: none;
+}
+body > table {
+  width: 100%;
+  border-collapse: separate;
+  background-color: #f4f5f7;
+}
+body > table > tbody > tr > td {
+  padding: 24px 12px;
+}
+body > table > tbody > tr > td > table {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  border-collapse: separate;
+}
+body > table > tbody > tr > td > table > tbody > tr:first-child > td {
+  padding: 24px;
+  text-align: left;
+}
+/* Long words break inside the card (WRAP_LONG_WORDS of the server layout). */
+body > table > tbody > tr > td > table > tbody > tr > td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+/* The footer row, below a rule. */
+body > table > tbody > tr > td > table > tbody > tr + tr > td {
+  padding: 16px 24px 24px 24px;
+  border-top: 1px solid #d0d7de;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #57606a;
+  text-align: left;
+}
+p,
+h1,
+h2,
+h3 {
+  margin: 0 0 12px 0;
+}
+h1,
+h2,
+h3 {
+  line-height: 1.3;
+  font-weight: 600;
+}
+h1 {
+  font-size: 22px;
+}
+h2 {
+  font-size: 18px;
+}
+h3 {
+  font-size: 16px;
+}
+ul,
+ol {
+  margin: 0 0 12px 0;
+  padding: 0 0 0 24px;
+}
+li {
+  margin: 0 0 4px 0;
+}
+blockquote {
+  margin: 0 0 12px 0;
+  padding: 0 0 0 12px;
+  border-left: 3px solid #d0d7de;
+  color: #57606a;
+}
+hr {
+  border: 0;
+  border-top: 1px solid #d0d7de;
+  margin: 16px 0;
+}
+a {
+  color: #0b57d0;
+  text-decoration: underline;
+}
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
+  background-color: #f3f4f6;
+}
+code {
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+pre {
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+pre code {
+  padding: 0;
+  background: none;
+}
+/* Tables of the body (a `digest`): inside the outer table and the card. */
+table table table {
+  border-collapse: collapse;
+  margin: 0 0 12px 0;
+  width: 100%;
+}
+table table table th,
+table table table td {
+  border: 1px solid #d0d7de;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+table table table th {
+  font-weight: 600;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}

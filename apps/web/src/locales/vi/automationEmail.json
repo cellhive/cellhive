@@ -1,0 +1,248 @@
+{
+  "editor": {
+    "flow": "Sơ đồ",
+    "toolbar": "Định dạng",
+    "text": "chữ",
+    "linkText": "chữ của link",
+    "withShortcut": "{{name}} ({{shortcut}})",
+    "commands": {
+      "bold": "Đậm",
+      "italic": "Nghiêng",
+      "strike": "Gạch ngang",
+      "link": "Chèn link",
+      "bullet": "Danh sách",
+      "numbered": "Danh sách số",
+      "quote": "Trích dẫn",
+      "rule": "Đường kẻ",
+      "table": "Bảng cho danh sách bản ghi"
+    },
+    "insertValue": "Chèn giá trị",
+    "formula": "Công thức",
+    "hint": "Markdown hẹp, không nhận HTML. Gõ {{open}} để chèn giá trị.",
+    "length": "{{length}} / {{max}}"
+  },
+  "sender": {
+    "label": "Người gửi",
+    "search": "Tìm người gửi",
+    "noMatch": "Không có người gửi nào khớp.",
+    "systemAddress": "địa chỉ hệ thống",
+    "shows": "Thư hiển thị: {{from}}",
+    "showsReply": "Thư hiển thị: {{from}}, trả lời tới {{replyTo}}",
+    "mode": {
+      "system": "Người gửi hệ thống",
+      "send_as": "Gửi trực tiếp",
+      "on_behalf": "Gửi thay"
+    },
+    "none": "Chưa có người gửi nào dùng được trong base này. Quản trị tổ chức thêm và xác minh danh tính ở Cài đặt › Danh tính gửi.",
+    "systemOff": "Tổ chức đã tắt người gửi hệ thống. Chọn một danh tính gửi.",
+    "missing": "Người gửi đã chọn không còn dùng được (chưa xác minh, đã tắt hoặc ngoài phạm vi base). Chọn người gửi khác."
+  },
+  "recipients": {
+    "title": "Người nhận",
+    "to": "Tới",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "list": "Người nhận trong {{label}}",
+    "add": "Thêm người nhận {{label}}",
+    "placeholder": "Thêm email, trường hoặc người dùng",
+    "pick": "Trường và người dùng",
+    "pickFor": "Chọn trường hoặc người cho {{label}}",
+    "remove": "Bỏ {{name}}",
+    "invalid": "Không phải địa chỉ email: {{addresses}}",
+    "emailField": "trường email",
+    "userField": "trường người dùng",
+    "stepField": "Bước {{number}} · {{field}} (bản ghi đầu tiên)"
+  },
+  "replyTo": {
+    "label": "Reply-To",
+    "default": "Reply-To của người gửi",
+    "identity": "{{name}} <{{email}}>",
+    "field": "{{name}} (trường người dùng)",
+    "clickedBy": "Người bấm nút",
+    "runAs": "Người mà automation chạy bằng quyền",
+    "unknown": "Giá trị không còn dùng được",
+    "hint": "Reply-To chỉ là danh tính đã xác minh hoặc email người dùng Cellhive."
+  },
+  "mayNotRead": {
+    "title": "Người nhận có thể không đọc được dữ liệu trong thư.",
+    "body": "Email không kiểm quyền người nhận nên họ vẫn nhận đủ nội dung. Xem phần kiểm tra dưới khung xem trước."
+  },
+  "subject": {
+    "label": "Tiêu đề",
+    "hint": "Văn bản thuần, 1 dòng, tối đa 255 ký tự."
+  },
+  "body": {
+    "label": "Nội dung",
+    "imageNeedsSave": "Hãy lưu automation trước: ảnh được lưu kèm automation.",
+    "tooManyImages_other": "Mỗi thư có tối đa {{count, number}} ảnh."
+  },
+  "digest": {
+    "chip": "Danh sách bản ghi",
+    "toggle": "Chèn các bản ghi mà một bước trước tìm được",
+    "hint": "Mỗi bản ghi của bước “Tìm bản ghi” một dòng, đặt ở chỗ chip “Danh sách bản ghi” trong nội dung.",
+    "step": "Bản ghi của",
+    "stepOption": "Bước {{number}} · Tìm bản ghi trong {{table}}",
+    "missingStep": "Bước không còn tồn tại",
+    "maxRows": "Tối đa (dòng)",
+    "row": "Mỗi dòng",
+    "rowFields": "Trường của bản ghi tìm được",
+    "rowHint": "Chỉ các trường mà bước trả về. Vượt giới hạn thì một dòng cuối nói còn bao nhiêu bản ghi."
+  },
+  "signature": {
+    "label": "Kèm chữ ký",
+    "identity": "Chữ ký của danh tính {{name}}. Quản trị tổ chức sửa ở Danh tính gửi.",
+    "org": "Chữ ký mặc định của tổ chức (Cài đặt › Email)."
+  },
+  "footer": {
+    "label": "Footer",
+    "levels": {
+      "minimal": "Tối giản",
+      "full": "Đầy đủ",
+      "none": "Không có"
+    },
+    "lock": {
+      "system": "Thư từ người gửi hệ thống luôn có footer.",
+      "on_behalf": "Thư gửi thay luôn có footer.",
+      "policy": "Tổ chức yêu cầu luôn có footer. “Không có” chỉ dùng được khi chính sách cho phép và gửi trực tiếp qua danh tính đã xác minh.",
+      "none": "Được chọn “Không có”: thư gửi trực tiếp qua danh tính đã xác minh.",
+      "unknown": "“Không có” chỉ dùng được khi chính sách cho phép và gửi trực tiếp qua danh tính đã xác minh."
+    },
+    "tightenedTitle": "“Không có” không còn được phép.",
+    "tightenedBody": "Thư sẽ gửi kèm footer Tối giản cho tới khi bạn chọn lại và lưu."
+  },
+  "attachments": {
+    "title": "Đính kèm từ trường tệp của bản ghi kích hoạt",
+    "list": "Trường tệp đính kèm",
+    "noRecord": "Trigger này không có bản ghi nên không có tệp để đính kèm.",
+    "none": "Bảng của trigger chưa có trường tệp.",
+    "missingField": "Trường #REF",
+    "remove": "Bỏ {{name}}",
+    "add": "Thêm trường tệp ({{chosen}} / {{max}})",
+    "notDownloadable": "Bạn không tải được tệp của trường này",
+    "onMissing": "Tệp chưa sẵn sàng hoặc đang quét",
+    "fail": "Báo lỗi bước",
+    "skip": "Bỏ qua tệp đó",
+    "leaves": "Tệp sẽ được gửi ra ngoài Cellhive.",
+    "estimate_other": "Ước tính với {{record}}: {{count, number}} tệp, {{size}}.",
+    "estimateMax_other": "Ước tính với {{record}}: {{count, number}} tệp, {{size}} / {{max}}.",
+    "blocked": "Không gửi .html, .svg, .exe và các đuôi Gmail chặn.",
+    "errors": {
+      "attachment_access_denied": "automation không tải được một số tệp",
+      "attachment_not_ready": "có tệp chưa sẵn sàng (đang tải lên hoặc đang quét)",
+      "attachment_type_blocked": "có loại tệp bị chặn",
+      "too_many_attachments": "quá nhiều tệp",
+      "attachments_too_large": "tệp quá lớn"
+    }
+  },
+  "smtp": {
+    "title": "Máy chủ email chưa được cấu hình.",
+    "body": "Người vận hành cần đặt SMTP_URL và SMTP_FROM. Quản trị tổ chức xem trạng thái ở Cài đặt › Email.",
+    "open": "Mở Cài đặt email"
+  },
+  "preview": {
+    "title": "Xem trước",
+    "record": "Bản ghi mẫu",
+    "noRecords": "Không có bản ghi",
+    "untitled": "Bản ghi chưa có tên",
+    "noTriggerRecord": "Trigger này không có bản ghi.",
+    "loading": "Đang tải bản xem trước",
+    "tabsLabel": "Dạng xem trước",
+    "tabs": {
+      "html": "HTML",
+      "text": "Văn bản",
+      "headers": "Header"
+    },
+    "blocked": {
+      "not_saved": "Tạo automation trước: xem trước và gửi thử dùng automation đã lưu (kèm thay đổi chưa lưu của bạn).",
+      "incomplete": "Thêm người nhận và tiêu đề để xem trước.",
+      "no_records": "Bảng của trigger chưa có bản ghi nào bạn đọc được để xem trước."
+    },
+    "invalid": "Chưa dựng được bản xem trước:",
+    "hiddenField": "một trường",
+    "sandbox": "Khung cách ly (iframe sandbox, không chạy script). Dựng ở server bằng quyền của bạn.",
+    "frameTitle": "Xem trước email: {{subject}}",
+    "textNote": "Phần text/plain sinh từ cùng cây Markdown: link thành “chữ (url)”, bảng thành dòng có dấu |.",
+    "footerApplied": "{{level}} (áp thay cho lựa chọn của bạn)",
+    "files_other": "{{count, number}} tệp · {{size}}",
+    "onBehalfTitle": "Gửi thay qua Cellhive",
+    "onBehalfBody": "Địa chỉ không nằm trong domain được phép gửi trực tiếp, nên From là địa chỉ hệ thống kèm “(qua Cellhive)” và thư trả lời đi tới danh tính. Giữ DMARC hợp lệ.",
+    "headers": {
+      "from": "Từ",
+      "replyTo": "Reply-To",
+      "to": "Tới",
+      "cc": "Cc",
+      "bcc": "Bcc",
+      "subject": "Tiêu đề",
+      "footer": "Footer",
+      "files": "Tệp kèm"
+    },
+    "searchRecord": "Tìm bản ghi"
+  },
+  "regex": {
+    "title": "Không dùng được {{name}} trong email.",
+    "hint": "Tạo trường công thức dùng REGEX ở bảng rồi chèn trường đó vào thư."
+  },
+  "test": {
+    "button": "Gửi thử tới tôi",
+    "to": "Tới {{email}}, tiêu đề có tiền tố {{prefix}}",
+    "yourAddress": "địa chỉ của bạn",
+    "left_other": "Còn {{formatted}} / {{max}} lần trong phút này",
+    "limited": "Đã gửi thử {{max}} lần trong 1 phút. Thử lại sau {{seconds}} giây.",
+    "sent": "Đã gửi thư thử tới {{to}}.",
+    "smtpCode": "Mã máy chủ: {{code}}.",
+    "failed": {
+      "auth_failed": "Máy chủ email từ chối đăng nhập.",
+      "host_not_allowed": "Máy chủ của danh tính này không được phép.",
+      "tls_failed": "Kết nối bảo mật tới máy chủ email thất bại.",
+      "connection_failed": "Không kết nối được tới máy chủ email.",
+      "timeout": "Máy chủ email không trả lời kịp.",
+      "temporary": "Máy chủ email tạm thời không nhận thư. Thử lại sau.",
+      "rejected": "Máy chủ email từ chối thư.",
+      "unknown": "Không gửi được thư thử.",
+      "smtp_not_configured": "Máy chủ email chưa được cấu hình.",
+      "smtp_temporary": "Máy chủ email tạm thời không nhận thư. Thử lại sau.",
+      "smtp_rejected": "Máy chủ email từ chối thư.",
+      "email_quota_exceeded": "Tổ chức đã dùng hết lượt gửi email của giờ này.",
+      "too_many_recipients": "Quá nhiều người nhận.",
+      "email_body_too_large": "Thư quá lớn.",
+      "invalid_recipients": "Không có người nhận hợp lệ.",
+      "invalid_sender": "Người gửi không được cấu hình máy chủ email cho phép."
+    }
+  },
+  "checks": {
+    "title": "Kiểm tra với bản ghi mẫu",
+    "html": "HTML {{size}}",
+    "htmlMax": "HTML {{size}} / {{max}}",
+    "recipients_other": "{{count, number}} người nhận",
+    "recipientsMax_other": "{{count, number}} người nhận / {{max}}",
+    "invalid_other": "({{count, number}} địa chỉ không hợp lệ)",
+    "external_other": "{{count, number}} người nhận ngoài tổ chức",
+    "mayNotRead": "Có người nhận có thể không đọc được: {{fields}}",
+    "mayNotReadRecord": "Có người nhận có thể không đọc được bản ghi này",
+    "onBehalf": "Gửi thay: người nhận thấy “(qua Cellhive)”",
+    "attachmentsUnavailable": "Tệp của bản ghi này không gửi được: {{reason}}",
+    "files_other": "{{count, number}} tệp, {{size}}",
+    "filesMax_other": "{{count, number}} tệp, {{size}} / {{max}}",
+    "render_other": "{{count, number}} giá trị không điền được (để trống trong thư)",
+    "with": "Dựng với {{record}}."
+  },
+  "notification": {
+    "recipients": "Người nhận",
+    "empty": "Chưa có người nhận",
+    "add": "Thêm người nhận",
+    "users": "Người dùng",
+    "groups": "Nhóm",
+    "members_other": "{{count, number}} thành viên",
+    "unknownUser": "Người đã rời tổ chức",
+    "unknownGroup": "Nhóm đã bị xoá",
+    "recipientsHint": "Tối đa {{max}} người sau khi bung nhóm.",
+    "title": "Tiêu đề",
+    "body": "Nội dung",
+    "bodyHint": "Văn bản thuần: không Markdown, không HTML. Giữ xuống dòng.",
+    "link": "Gắn với bản ghi",
+    "noLink": "Không gắn bản ghi",
+    "skipActor": "Không gửi cho người gây ra sự kiện",
+    "skipActorHint": "Tắt: họ cũng nhận (ví dụ tự nhắc việc).",
+    "permissions": "Người không đọc được bản ghi hoặc trường được dùng sẽ không nhận; lịch sử chạy ghi lại họ."
+  }
+}

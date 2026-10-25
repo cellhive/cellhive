@@ -1,0 +1,31 @@
+name: Setup toolchain
+description: Install pnpm (version from package.json) and Node.js (version from .nvmrc), restore the pnpm and turbo caches, and install dependencies.
+
+inputs:
+  turbo-cache-key:
+    description: Suffix that separates turbo caches per job.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v6
+
+    - name: Install Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - name: Restore turbo cache
+      uses: actions/cache@v6
+      with:
+        path: .turbo
+        key: turbo-${{ runner.os }}-${{ inputs.turbo-cache-key }}-${{ github.sha }}
+        restore-keys: |
+          turbo-${{ runner.os }}-${{ inputs.turbo-cache-key }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

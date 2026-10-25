@@ -1,0 +1,255 @@
+{
+  "page": {
+    "title": "Sender identities",
+    "subtitle": "Addresses such as hr@ or it@ that automations of {{org}} may send email as, once verified.",
+    "back": "Back to {{name}}",
+    "add": "Add identity",
+    "loading": "Loading sender identities",
+    "emptyTitle": "No sender identity yet",
+    "empty": "Automation emails are sent by the system sender until you add and verify an address of your organization.",
+    "ownServer": "An identity with its own SMTP server always sends directly, through that server.",
+    "noSmtpTitle": "The system email server is not configured",
+    "noSmtp": "Only identities with their own SMTP server can send email. The instance operator sets SMTP_URL and SMTP_FROM.",
+    "whoSees": "Only owners and administrators of the organization see this page. Turning an identity off does not turn automations off: their email step fails until the identity is usable again.",
+    "domains": "Addresses of {{domains}} are sent directly. Other addresses are sent on behalf: From is the system address followed by “(via Cellhive)”, and replies go to the identity's address."
+  },
+  "list": {
+    "caption": "Sender identities",
+    "identity": "Identity",
+    "sending": "How it sends",
+    "status": "Status",
+    "scope": "Bases",
+    "automations": "Automations",
+    "actions": "Actions",
+    "usageLoading": "Loading"
+  },
+  "status": {
+    "verified": "Verified",
+    "pending": "Waiting for verification",
+    "error": "Sign-in failing",
+    "disabled": "Off"
+  },
+  "statusLine": {
+    "verified_code": "By code · {{date}}",
+    "verified_link": "By link · {{date}}",
+    "pendingUntil": "Email sent, valid until {{date}}",
+    "pendingNone": "No valid verification email: send a new one",
+    "error_auth_failed": "The SMTP server keeps refusing the user name or password",
+    "disabled": "Automations cannot send as it"
+  },
+  "mode": {
+    "send_as": "Sent directly",
+    "on_behalf": "Sent on behalf"
+  },
+  "scope": {
+    "all": "All bases",
+    "selected": "Selected bases",
+    "none": "No base",
+    "unknownBase": "Base you cannot see"
+  },
+  "row": {
+    "menu": "Actions for {{name}}",
+    "edit": "Edit",
+    "verify": "Verify",
+    "enterCode": "Enter code",
+    "resend": "Send email again",
+    "test": "Test & verify",
+    "enable": "Turn back on",
+    "disable": "Turn off",
+    "delete": "Delete",
+    "ownServer": "Own server: {{host}}",
+    "shownAs": "Recipients see: {{from}}"
+  },
+  "transport": {
+    "system": "System email server",
+    "systemHint": "Sent through the SMTP server of this Cellhive instance.",
+    "smtp": "Own SMTP server",
+    "smtpHint": "Cellhive signs in to your organization's mail server with this mailbox."
+  },
+  "smtp": {
+    "title": "SMTP server",
+    "host": "Host",
+    "hostHint": "Name or IP address, without port, e.g. mail.example.com.",
+    "hostPlaceholder": "mail.example.com",
+    "port": "Port",
+    "security": "Encryption",
+    "securityMode": {
+      "starttls": "STARTTLS",
+      "tls": "TLS",
+      "none": "None"
+    },
+    "insecureTitle": "No encryption",
+    "insecure": "The password and every email travel in clear text. Use it only inside a trusted local network.",
+    "insecureConfirm": "I understand, use an unencrypted connection",
+    "username": "User name",
+    "password": "Password",
+    "passwordHint": "Stored encrypted and never shown again.",
+    "passwordNewHint": "The new password replaces the saved one; the identity must be verified again.",
+    "passwordSaved": "Saved",
+    "changePassword": "Change password",
+    "keepPassword": "Keep the saved password",
+    "yourDomain": "your domain",
+    "spfTitle": "SPF and DKIM",
+    "spf": "This server must be allowed to send for {{domain}} (SPF) and sign its email (DKIM), otherwise recipients may reject the email (DMARC).",
+    "basicAuthTitle": "Microsoft 365 and Gmail",
+    "basicAuth": "Both increasingly block signing in to SMTP with a password. Use an app password where your organization allows it; signing in with OAuth is not supported yet."
+  },
+  "preview": {
+    "from": "Recipients see: {{from}}",
+    "replyTo": "Replies go to: {{replyTo}}",
+    "systemAddress": "the system address",
+    "whySmtp": "Sent through your own server: From is this address.",
+    "whyNoSmtp": "The system email server is not configured: the address is sent on behalf.",
+    "whySendAs": "{{domain}} is a domain the system server may send for: From is this address.",
+    "whyOnBehalf": "{{domain}} is not a domain the system server may send for: From is the system address with “(via Cellhive)”, replies go to this address."
+  },
+  "form": {
+    "addTitle": "Add sender identity",
+    "editTitle": "Edit {{name}}",
+    "close": "Close",
+    "email": "Email address",
+    "emailPlaceholder": "hr@example.com",
+    "displayName": "Display name",
+    "displayNameHint": "Shown as the sender name, e.g. Human Resources.",
+    "transport": "Sending server",
+    "replyTo": "Default Reply-To",
+    "replyToHint": "Optional. Empty: replies go to the identity's address.",
+    "scope": "Bases that may use it",
+    "scopeBases": "Bases",
+    "scopeHint": "Automation managers of these bases can pick this identity.",
+    "noBases": "There is no base in the organization yet.",
+    "signature": "Signature",
+    "reverifyTitle": "This change needs a new verification.",
+    "reverify_one": "{{name}} goes back to “waiting for verification”. {{count, number}} automation using it fails at its email step until it is verified. Name, signature or bases changes do not need this.",
+    "reverify_other": "{{name}} goes back to “waiting for verification”. {{count, number}} automations using it fail at their email step until it is verified. Name, signature or bases changes do not need this.",
+    "footnote": "A verification email with a link and a 6-digit code goes to this address, valid for 24 hours.",
+    "footnoteSmtp": "Cellhive signs in to the server, then sends a verification email from this address to itself (link and 6-digit code, valid for 24 hours).",
+    "footnoteEdit": "Name, Reply-To, signature and bases change without a new verification.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveAndSend": "Save and send verification email",
+    "saveAndTest": "Save, test and verify",
+    "saved": "{{name}} saved.",
+    "errors": {
+      "required": "Required.",
+      "invalidEmail": "Enter a valid email address.",
+      "tooLong": "At most 100 characters.",
+      "confirmInsecure": "Confirm the unencrypted connection, or choose STARTTLS or TLS.",
+      "pickBase": "Pick at least one base."
+    }
+  },
+  "signature": {
+    "toolbar": "Signature formatting",
+    "format": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "link": "Insert link",
+      "list": "List"
+    },
+    "sample": {
+      "bold": "bold text",
+      "italic": "italic text",
+      "link": "link text",
+      "list": "item"
+    },
+    "help": "Markdown: **bold**, _italic_, [link](https://…), lists, up to 2 images with “Insert image” (sent inside the email, never as links). No record values.",
+    "count": "{{length}} / {{maximum}}",
+    "tooBig": "At most {{maximum}} characters.",
+    "placeholder": "A signature is fixed text: remove the double curly braces (no placeholders).",
+    "imageSource": "Images must be inserted with “Insert image”: links to images and data: images are not sent.",
+    "tooManyImages_one": "At most {{count, number}} image.",
+    "tooManyImages_other": "At most {{count, number}} images.",
+    "preview": "Preview"
+  },
+  "verify": {
+    "title": "Verify {{email}}",
+    "close": "Close",
+    "intro": "A verification email with a link and a 6-digit code is sent to {{email}}. Whoever reads that mailbox presses “Confirm” in the email, or reads you the code.",
+    "introSmtp": "Cellhive signs in to {{host}} as {{username}}, then sends a verification email from {{email}} to itself, with a link and a 6-digit code.",
+    "sent": "Verification email sent to {{email}}",
+    "sentExpires": "The link and the code are valid until {{date}}.",
+    "rateLimited": "Too many verification emails for now.",
+    "smtpCode": "SMTP reply {{code}}",
+    "steps": {
+      "label": "Test steps",
+      "connect": "Connect to {{host}}:{{port}}",
+      "tls": "Encrypt the connection (TLS)",
+      "auth": "Sign in as {{username}}",
+      "send": "Send an email from {{email}} to itself"
+    },
+    "stepState": {
+      "done": "Succeeded",
+      "failed": "Failed",
+      "skipped": "Skipped: no encryption",
+      "not_run": "Not run"
+    },
+    "failure": {
+      "auth_failed": "The server refused the user name or password",
+      "send_as_denied": "The account may not send as this address",
+      "host_not_allowed": "This host points to an internal or reserved address",
+      "tls_failed": "The encrypted connection could not be set up",
+      "connection_failed": "Could not connect to the server",
+      "timeout": "The server did not answer in time",
+      "smtp_not_configured": "The system email server is not configured",
+      "rejected": "The server refused the email",
+      "temporary": "The server is temporarily unavailable",
+      "unknown": "The verification email could not be sent"
+    },
+    "fix": {
+      "auth_failed": "Check the user name and password. Microsoft 365 and Gmail often block password sign-in: use an app password where allowed.",
+      "send_as_denied": "Give this mailbox account the right to send as the address (Microsoft 365: “Send As”), or sign in with the address's own mailbox.",
+      "host_not_allowed": "Use the public name of the mail server. A server in your local network needs SMTP_ALLOW_PRIVATE_HOSTS=true on this instance.",
+      "tls_failed": "Check the port and the encryption: TLS usually uses port 465, STARTTLS port 587.",
+      "connection_failed": "Check the host and the port, and that the server accepts connections from this instance.",
+      "timeout": "Check the host and the port, then try again.",
+      "smtp_not_configured": "Ask the instance operator to set SMTP_URL and SMTP_FROM, or use an own SMTP server.",
+      "rejected": "Check that the address exists and accepts email, then try again.",
+      "temporary": "Try again in a few minutes.",
+      "unknown": "Try again in a few minutes."
+    },
+    "codeLabel": "6-digit code",
+    "codeHint": "Paste or type the code from the email.",
+    "submit": "Verify",
+    "wrongCode": "Wrong code.",
+    "wrongCodeLeft_one": "Wrong code. {{count, number}} attempt left.",
+    "wrongCodeLeft_other": "Wrong code. {{count, number}} attempts left.",
+    "lockedTitle": "Wrong code entered 5 times.",
+    "locked": "This code no longer works. Send a new verification email to get a new one.",
+    "resend": "Send email again",
+    "test": "Test & verify",
+    "limits": "At most {{perHour, number}} emails an hour per identity, {{perDay, number}} a day per organization.",
+    "linkNote": "This page does not update by itself when someone confirms through the link; reopen it to see the new status.",
+    "errorFix": "Fix the server settings (Edit) if they changed, then test and verify again.",
+    "disabled": "This identity is off. Turn it back on to verify it.",
+    "done": "{{email}} is verified",
+    "doneHint": "Automations of the bases in its scope can now send as this identity.",
+    "toast": "{{email}} verified."
+  },
+  "confirm": {
+    "disableTitle": "Turn off {{name}}?",
+    "disableDescription": "Automations sending as {{email}} stay on, but their email step fails. They do not switch to the system sender.",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteDescription": "{{email}} can no longer be used. Automations sending as it stay on, but their email step fails.",
+    "disable": "Turn off identity",
+    "delete": "Delete identity",
+    "loadingUsages": "Loading the automations using it",
+    "noUsages": "No automation sends as this identity.",
+    "usages_one": "{{count, number}} automation sends as this identity:",
+    "usages_other": "{{count, number}} automations send as this identity:",
+    "hiddenAutomation": "Automation of a base you cannot see",
+    "moreUsages_one": "and {{count, number}} more",
+    "moreUsages_other": "and {{count, number}} more",
+    "open": "Open"
+  },
+  "toast": {
+    "disabled": "{{name}} turned off.",
+    "enabled": "{{name}} turned back on.",
+    "deleted": "{{name}} deleted."
+  },
+  "nameIssue": {
+    "badge": "Display name needs a fix",
+    "fix": "Fix display name",
+    "title": "This display name is no longer accepted",
+    "body": "It was saved before the rule and is kept: automation emails still show it until you change it. You can save other changes without changing it."
+  }
+}

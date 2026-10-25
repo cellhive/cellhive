@@ -1,0 +1,32 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+
+# Install scripts that are not needed:
+# - unrs-resolver, esbuild: ship prebuilt binaries as optional dependencies; their
+#   postinstall is only a fallback/validation step.
+# - cpu-features, ssh2: optional native speed-ups of the Docker client used by
+#   Testcontainers (Docker over SSH only); pure JS fallbacks are used.
+# - protobufjs: postinstall only prints a version compatibility notice.
+ignoredBuiltDependencies:
+  - cpu-features
+  - esbuild
+  - protobufjs
+  - ssh2
+  - unrs-resolver
+
+# glide-data-grid 6.0.3 (the last release, pinned by FRONTEND §1.3) declares
+# React 16–18 as peers. It uses no API React 19 removed (no findDOMNode,
+# string refs, legacy context or ReactDOM.render); the grid E2E tests run it on
+# React 19. Accept React 19 for this package only instead of forking it.
+peerDependencyRules:
+  allowedVersions:
+    '@glideapps/glide-data-grid>react': '19'
+    '@glideapps/glide-data-grid>react-dom': '19'
+
+# pdfjs-dist declares @napi-rs/canvas as an optional dependency for rendering in Node.js
+# only; the web client renders PDFs in the browser (T407), so the native canvas
+# binaries are never needed.
+overrides:
+  'pdfjs-dist>@napi-rs/canvas': '-'

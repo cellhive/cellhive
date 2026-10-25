@@ -1,0 +1,38 @@
+{
+  "connections": {
+    "title": "Connected accounts",
+    "subtitle": "Sign in to Cellhive with an account of your organization's identity provider.",
+    "linkedHeading": "Your connected accounts",
+    "loading": "Loading connected accounts",
+    "empty": "No account is connected yet.",
+    "connectedOn": "Connected {{date}}",
+    "lastSignIn": "last sign-in {{date}}",
+    "neverUsed": "not used to sign in yet",
+    "connectHeading": "Connect an account",
+    "connectHint": "You will sign in with the provider again to confirm it is your account.",
+    "connect": "Connect {{provider}}",
+    "noProviders": "No identity provider is set up on this server.",
+    "allConnected": "Every identity provider of this server is connected.",
+    "dismiss": "Dismiss",
+    "linkError": {
+      "IDENTITY_IN_USE": "This account of the provider is already connected to another Cellhive user, or you already connected another account of this provider. Disconnect it first, or sign in to the provider with the right account.",
+      "OIDC_STATE_INVALID": "Connecting took too long or was started in another session. Try again.",
+      "OIDC_PROVIDER_ERROR": "The identity provider could not confirm the account. Try again, or contact an administrator if it keeps happening.",
+      "RATE_LIMITED": "Too many attempts. Wait a minute, then try again.",
+      "generic": "The account was not connected. Try again."
+    },
+    "disconnect": {
+      "action": "Disconnect",
+      "button": "Disconnect {{provider}}",
+      "title": "Disconnect {{provider}}?",
+      "description": "You will no longer be able to sign in with this account. You stay signed in on this device.",
+      "confirm": "Disconnect",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "lastLoginMethod": {
+      "title": "This is the only way you can sign in",
+      "description": "Your account has no password, so disconnecting this provider would lock you out. Connect another provider first, or ask your server administrator to set a password for you."
+    }
+  }
+}

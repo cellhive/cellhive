@@ -1,0 +1,73 @@
+{
+  "toolbar": {
+    "label": "Tuỳ chọn bảng Kanban"
+  },
+  "board": {
+    "label": "{{table}} theo {{field}}",
+    "allEmpty": "Không có bản ghi nào để hiển thị. Tắt \"Ẩn cột trống\" để xem mọi cột."
+  },
+  "column": {
+    "uncategorized": "Chưa phân loại",
+    "formerMember": "Cựu thành viên",
+    "countLabel": "Số bản ghi:",
+    "add": "Thêm bản ghi vào {{name}}",
+    "loading": "Đang tải thẻ…",
+    "noCards": "Không có bản ghi",
+    "error": "Không tải được các thẻ của cột này.",
+    "menu": "Thao tác của cột {{name}}",
+    "addCard": "Thêm thẻ"
+  },
+  "card": {
+    "untitled": "Chưa có tiêu đề",
+    "roleDescription": "thẻ kéo được",
+    "actions": "Thao tác với thẻ",
+    "open": "Mở bản ghi",
+    "moveTo": "Chuyển sang",
+    "current": "Hiện tại",
+    "moveBlocked": {
+      "narrow": "Có thể chuyển thẻ trên màn hình rộng hơn.",
+      "offline": "Có thể chuyển thẻ lại khi có kết nối.",
+      "locked": "Table đang được thay đổi, hãy thử lại sau giây lát.",
+      "readOnly": "Bạn không được sửa trường này nên không chuyển được thẻ."
+    },
+    "follow": "Theo dõi bản ghi",
+    "unfollow": "Bỏ theo dõi bản ghi",
+    "followed": "Bạn đang theo dõi “{{title}}”. Bạn sẽ nhận thông báo khi người khác sửa bản ghi này.",
+    "unfollowed": "Bạn đã bỏ theo dõi “{{title}}”.",
+    "undo": "Hoàn tác",
+    "gone": "Bản ghi này đã bị xoá hoặc bạn không còn quyền xem."
+  },
+  "dnd": {
+    "instructions": "Để chuyển thẻ sang cột khác, nhấn Space để nhấc thẻ, mũi tên Trái hoặc Phải để chọn cột, rồi Space để thả, hoặc Escape để huỷ. Shift+F10 mở menu của thẻ với mục \"Chuyển sang\".",
+    "start": "Đã nhấc thẻ {{title}}.",
+    "over": "Thẻ {{title}} đang ở trên cột {{column}}.",
+    "outside": "Thẻ {{title}} không ở trên cột nào.",
+    "end": "Đã thả thẻ {{title}} vào cột {{column}}.",
+    "cancel": "Đã huỷ chuyển thẻ {{title}}."
+  },
+  "move": {
+    "refused": "Không chuyển được thẻ: {{reason}}"
+  },
+  "settings": {
+    "groupBy": "Nhóm theo",
+    "groupedBy": "Nhóm theo {{name}}",
+    "groupHeading": "Nhóm thẻ theo",
+    "cardFields": "Trường trên thẻ",
+    "cardFieldsCount_other": "{{count, number}} trường trên thẻ",
+    "cardFieldsHeading": "Trường hiển thị trên thẻ",
+    "hideEmpty": "Ẩn cột trống",
+    "cover": "Ảnh bìa",
+    "coverHeading": "Lấy ảnh bìa từ",
+    "noCover": "Không có ảnh bìa"
+  },
+  "setup": {
+    "title": "Chọn cách nhóm các thẻ",
+    "description": "View Kanban hiển thị một cột cho mỗi tuỳ chọn của trường chọn một giá trị, hoặc cho mỗi thành viên của trường người dùng một giá trị.",
+    "noField": "Bảng này chưa có trường chọn một giá trị hoặc trường người dùng một giá trị. Hãy thêm một trường như vậy để nhóm bản ghi thành thẻ.",
+    "label": "Nhóm thẻ theo",
+    "placeholder": "Chọn trường…"
+  },
+  "error": {
+    "retry": "Thử lại"
+  }
+}

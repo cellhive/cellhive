@@ -1,0 +1,177 @@
+{
+  "method": {
+    "label": "Method"
+  },
+  "url": {
+    "label": "URL",
+    "hint": "http or https. Each inserted value is encoded, so it cannot change the host or add a path. Internal addresses and ports other than 80/443 need the organization's allowlist."
+  },
+  "query": {
+    "title": "Query parameters",
+    "name": "Parameter name",
+    "value": "Parameter value",
+    "add": "Add parameter",
+    "row": "Parameter {{number}}"
+  },
+  "headers": {
+    "title": "Headers",
+    "name": "Header name",
+    "value": "Header value",
+    "add": "Add header",
+    "row": "Header {{number}}",
+    "invalid": "A header name uses letters, digits and - _ . ! # $ % & ' * + ^ ` | ~ only.",
+    "forbidden": "Cellhive sets {{name}} itself: remove this header.",
+    "duplicate": "{{name}} is already set (or is the authentication header): keep one."
+  },
+  "pairs": {
+    "count": "{{count, number}} / {{max, number}}",
+    "remove": "Remove {{name}}"
+  },
+  "auth": {
+    "title": "Authentication",
+    "none": "None",
+    "secret": "Header with a secret",
+    "header": "Header name",
+    "headerHint": "The secret's value is sent as this header, e.g. Authorization: Bearer … or X-Api-Key.",
+    "secretLabel": "Secret",
+    "secretHint": "Header secrets of the organization usable in this base. Their value is never shown here."
+  },
+  "body": {
+    "title": "Body",
+    "none": "None",
+    "json": "JSON",
+    "form": "Form",
+    "text": "Text",
+    "get": "A GET request has no body: choose another method or remove the body.",
+    "jsonLabel": "JSON body",
+    "jsonHint": "Inserted values are escaped as JSON text: put text values in quotes, e.g. \"name\": \"{{ … }}\".",
+    "jsonInvalid": "This is not valid JSON.",
+    "jsonInvalidAt": "This is not valid JSON (near character {{position, number}}).",
+    "textLabel": "Text body",
+    "digestKept": "This body is a list of records set outside the builder: it is kept as is."
+  },
+  "form": {
+    "name": "Field name",
+    "value": "Field value",
+    "add": "Add field",
+    "row": "Field {{number}}"
+  },
+  "signing": {
+    "label": "Sign the request",
+    "hint": "With a signing secret the request carries Standard Webhooks headers (webhook-signature) the receiver can verify.",
+    "none": "Do not sign"
+  },
+  "failOnError": {
+    "label": "Fail the step on an HTTP error",
+    "hint": "Off: a 4xx or 5xx answer still ends the step successfully and later steps can read its status. Temporary errors are retried either way."
+  },
+  "secret": {
+    "choose": "Choose…",
+    "unknown": "Secret no longer usable here",
+    "none": {
+      "http_header": "No header secret is shared with this base",
+      "webhook_signing": "No signing secret is shared with this base"
+    },
+    "askAdmin": "Ask an owner or admin of the organization to add one in the organization's integrations.",
+    "addThere": "Add one in the organization's integrations.",
+    "openIntegrations": "Open integrations"
+  },
+  "paths": {
+    "title": "Values for later steps",
+    "hint": "Later steps can use these parts of the response through \"+\". Pick more from a test response, or type a path.",
+    "inputLabel": "Path in the response",
+    "add": "Add",
+    "remove": "Stop offering {{path}}",
+    "invalid": "Write a path under body, e.g. body.id or body.items[0].sku."
+  },
+  "test": {
+    "title": "Send a test",
+    "hint": "Sends this step as you see it now, with your permissions, through the same checks as a real run. Earlier steps do not run: their values are empty.",
+    "webhookSample": "Values from the webhook request come from the sample request captured at {{time}}.",
+    "webhookNoSample": "This hook has no sample request yet: values from the webhook request will be empty. Listen for a sample request in the trigger first.",
+    "noSampleSent": "Sent without a sample request: values from the webhook request were empty.",
+    "record": "Sample record",
+    "loading": "Loading…",
+    "noMatch": "No record found",
+    "search": "Search records",
+    "send": "Send test",
+    "notSaved": "Save the automation once to send a test.",
+    "incomplete": "Complete the step first (see the problems above).",
+    "noRecords": "The trigger table has no record to test with."
+  },
+  "result": {
+    "sending": "Sending to {{host}}…",
+    "retrying": "Attempt {{attempts, number}} of {{max, number}} failed: trying again shortly…",
+    "succeeded": "Delivered to {{host}}",
+    "failed": "Not delivered to {{host}}",
+    "cancelled": "The test was cancelled.",
+    "allowlistHint": "{{host}} is an internal address: an owner or admin of the organization can add it to the allowlist.",
+    "askAdmin": "Ask one of them.",
+    "openAllowlist": "Open the allowlist",
+    "status": "Status",
+    "contentType": "Content type",
+    "body": "Response body",
+    "empty": "Empty",
+    "truncated": "Cut after the first 10 KB.",
+    "pathsTitle": "Use in later steps",
+    "pathsHint": "Offer a value of this response in the \"+\" menu of later steps.",
+    "use": "Use",
+    "used": "Used",
+    "usePath": "Use {{path}} in later steps"
+  },
+  "error": {
+    "ssrf": {
+      "invalid_url": "This URL cannot be called (scheme, user name, length or characters).",
+      "port_not_allowed": "This port is not open: only 80 and 443 are, unless the host and port are in the allowlist.",
+      "private_address": "This host is on an internal network.",
+      "blocked_address": "This address can never be called (cloud metadata, broadcast or reserved): use another URL.",
+      "unresolvable": "This host name could not be found: check it.",
+      "unknown": "The call was blocked by the outbound network rules."
+    },
+    "http_status": "The destination answered HTTP {{status}}.",
+    "rate_limited": "The destination asked to wait {{seconds, number}} seconds or more.",
+    "http_timeout": "The destination did not answer in time.",
+    "http_network": "The destination could not be reached.",
+    "http_response_too_large": "The response is larger than 1 MB.",
+    "http_request_too_large": "The request body is larger than 1 MB.",
+    "secret_unavailable": "A secret of this step is no longer usable in this base.",
+    "invalid_value": "A value of this step could not be used (the URL is not text, or the JSON body does not parse).",
+    "unknown": "The test failed ({{code}}).",
+    "secret_host_not_allowed": "The URL of this HTTP step is not an allowed host of its secret (a plain http URL needs an entry with its port): nothing was sent. Add the host to the secret in the organization settings if it is the real receiver.",
+    "secret_host_not_allowed_legacy_expired": "The secret of this HTTP step was created before allowed hosts existed and its transition period is over: set its allowed hosts in the organization settings."
+  },
+  "n8n": {
+    "intro": "Sends the trigger record to an n8n workflow: a signed POST with a standard JSON payload, built with the permissions of the person the automation runs as.",
+    "url": "Webhook URL",
+    "urlHint": "The production URL of the Webhook node (…/webhook/…), method POST.",
+    "secret": "Signing secret",
+    "secretHint": "Required. In n8n, verify the webhook-id, webhook-timestamp and webhook-signature headers (Standard Webhooks) with the same secret.",
+    "fields": "Fields sent",
+    "fieldsAll": "Every readable field",
+    "fieldsChosen": "Chosen fields",
+    "fieldsAllHint": "Every field the automation can read when it runs, new fields included.",
+    "fieldsCount": "{{count, number}} / {{max, number}} fields",
+    "fieldsSearch": "Search fields",
+    "noRecord": "This trigger has no record: the payload has the event, the automation and the base, and record is null.",
+    "changes": "Send the changes",
+    "changesHint": "Old and new value of the fields sent that changed.",
+    "preview": {
+      "title": "Example payload",
+      "hint": "Values are placeholders. The real payload holds only what {{name}} can read when the step runs.",
+      "automation": "This automation"
+    }
+  },
+  "secretHosts": {
+    "sentTo": "This secret is sent only to: {{hosts}}.",
+    "unchecked": "A URL from values is checked when the step runs.",
+    "notListedTitle": "{{host}} is not an allowed host of this secret",
+    "ipTitle": "An IP address never matches the allowed hosts of a secret",
+    "plainHttpTitle": "This secret is not sent over plain http",
+    "plainHttp": "{{host}} is allowed over https only: plain http would send the secret unencrypted, so saving will be refused. Use https://, or add {{host}}:{{port}} to the secret in the organization settings if this receiver really has no https.",
+    "notListed": "Saving will be refused, and nothing would be sent there. Allowed hosts: {{hosts}}. Use one of them, or add {{host}} to the secret in the organization settings.",
+    "legacyTitle": "This secret has no allowed hosts yet",
+    "legacy": "It was created before allowed hosts existed and is still sent to any host until {{date}}; after that, this step fails. Set its hosts in the organization settings.",
+    "expiredTitle": "This secret stopped sending",
+    "expired": "It was created before allowed hosts existed and its transition period is over: saving is refused and runs of this step fail until its allowed hosts are set."
+  }
+}

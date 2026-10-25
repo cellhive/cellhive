@@ -1,0 +1,207 @@
+{
+  "editor": {
+    "title": "Formula editor",
+    "subtitle": "{{field}} · table {{table}}",
+    "newField": "New field",
+    "reformat": "Reformat",
+    "guide": "Guide",
+    "label": "Formula",
+    "newlineHint": "Shift+Enter for a new line",
+    "placeholder": "Type [ for fields and tables, or a function name",
+    "confirm": "Confirm"
+  },
+  "field": {
+    "empty": "No formula yet",
+    "missing": "Write the formula of this field.",
+    "write": "Write formula",
+    "edit": "Edit formula",
+    "mobileTitle": "Edit on a screen of 768 px or more",
+    "mobileBody": "On a phone you can only read the formula and its result. Open this base on a computer or tablet to edit it.",
+    "copy": "Copy formula",
+    "copied": "Formula copied.",
+    "copyFailed": "The formula could not be copied.",
+    "uses": "Uses data from"
+  },
+  "catalogue": {
+    "groups": "Groups",
+    "tabs": {
+      "fields": "Fields",
+      "tables": "Tables",
+      "variables": "Variables",
+      "logic": "Logic",
+      "number": "Number",
+      "text": "Text",
+      "date": "Date",
+      "list": "List"
+    },
+    "search": "Search functions or fields",
+    "results": "Search results",
+    "empty": "Nothing matches.",
+    "phase2": "Not available yet",
+    "phase2Doc": "Not available yet: a formula using this function cannot be saved.",
+    "fieldCount_one": "{{count, number}} field",
+    "fieldCount_other": "{{count, number}} fields",
+    "docs": "Documentation",
+    "insert": "Insert",
+    "table": "Table",
+    "fieldDoc": "The value of this field in the same record.",
+    "options": "Options: {{list}}.",
+    "linkDoc": "A link: [Link].[Field] gives the values of the linked records as a list.",
+    "tableDoc": "All records of the table. [Table].[Field] gives a whole column as a list; [Table].FILTER(…) keeps the records matching a condition.",
+    "currentValueDoc": "Inside FILTER, MAP, COUNTIF, SUMIF or SORTBY: the record (over a table) or the value (over a list) being tested. CurrentValue.[Field] reads a field of that record.",
+    "letDoc": "A variable defined earlier in LET.",
+    "syntax": "Syntax",
+    "examples": "Examples",
+    "exampleResult": "Result: {{result}}",
+    "returns": "Returns: {{type}}",
+    "insertExample": "Insert example",
+    "volatile": "Its value changes over time: a formula using it is computed each time it is read, not stored."
+  },
+  "guide": {
+    "title": "Writing formulas",
+    "fields": "Fields of this table: [Field name].",
+    "links": "Through a link: [Link].[Field] gives the values of the linked records.",
+    "tables": "Another table: [Table].FILTER(CurrentValue.[Field] = [Field]).[Field].SUM().",
+    "text": "Text in double quotes: \"Done\". Numbers use a dot: 0.1.",
+    "operators": "Operators: + - * / % & = != > >= < <= && ||.",
+    "keyboard": "Keyboard",
+    "keys": {
+      "suggest": "Ctrl+Space",
+      "accept": "Tab / Enter",
+      "close": "Esc",
+      "newline": "Shift+Enter",
+      "confirm": "Ctrl+Enter"
+    },
+    "actions": {
+      "suggest": "Show suggestions",
+      "accept": "Insert the selected suggestion",
+      "close": "Close the suggestions",
+      "newline": "New line",
+      "confirm": "Confirm the formula"
+    }
+  },
+  "suggest": {
+    "label": "Suggestions",
+    "fields": "Fields · {{table}}",
+    "tables": "Tables",
+    "variables": "Variables",
+    "tableFunctions": "Functions for tables",
+    "table": "Table",
+    "variable": "Variable",
+    "tab": "Tab"
+  },
+  "errors": {
+    "count_one": "{{count, number}} error",
+    "count_other": "{{count, number}} errors",
+    "at": "Line and column",
+    "none": "No errors",
+    "UNCLOSED_CALL": "Missing ) to close {{function}}(.",
+    "UNKNOWN_FIELD_named": "There is no field “{{name}}” here (or you cannot see it).",
+    "UNKNOWN_FUNCTION_named": "There is no function {{name}}.",
+    "UNSUPPORTED_FUNCTION_named": "{{name}} is not available yet.",
+    "WRONG_ARGUMENT_COUNT": "{{function}} takes {{min, number}} to {{max, number}} arguments, not {{actual, number}}.",
+    "WRONG_ARGUMENT_COUNT_exact": "{{function}} takes {{min, number}} arguments, not {{actual, number}}.",
+    "WRONG_ARGUMENT_COUNT_open": "{{function}} takes at least {{min, number}} arguments, not {{actual, number}}.",
+    "TYPE_MISMATCH_text": "The results must all have the same type. Wrap this one in TEXT() to turn it into text."
+  },
+  "preview": {
+    "empty": "Write a formula to see its result.",
+    "noRows": "No record to preview.",
+    "timeout": "The preview took too long. Simplify the formula or try again.",
+    "failed": "The preview could not be computed.",
+    "blank": "empty",
+    "blankHint": "This record gives an empty cell: its data is empty, or the formula fails on it (division by 0…). The formula can still be saved; IFERROR(…, 0) shows a value instead.",
+    "previous": "Previous record",
+    "next": "Next record",
+    "row": "Record {{index, number}} / {{count, number}} · {{title}}",
+    "untitled": "Untitled",
+    "records_one": "{{count, number}} record",
+    "records_other": "{{count, number}} records"
+  },
+  "perf": {
+    "virtual": "This formula may be slow on large tables: it queries another table without going through a link field and is computed each time it is read. Filter through a link field if you can.",
+    "wrapped": "This formula may be slow on large tables: it queries another table without going through a link field, and its condition applies a function to CurrentValue.[…]. Compare CurrentValue.[field] directly with a value or a field instead.",
+    "footer": "1 warning, can still be saved"
+  },
+  "signature": {
+    "label": "Function signature"
+  },
+  "paramKinds": {
+    "number": "a number.",
+    "boolean": "a condition, true or false.",
+    "date": "a date.",
+    "text": "a value, read as text.",
+    "single": "one value.",
+    "value": "a value or a list.",
+    "numbers": "numbers, or lists of numbers.",
+    "number_list": "a list of numbers.",
+    "dates": "dates, or a list of dates.",
+    "list": "a list.",
+    "items": "a list or a table.",
+    "range": "a table or a list to go through.",
+    "rows": "records of a table.",
+    "values": "one value or a list.",
+    "lists": "lists to combine.",
+    "condition": "true or false for each record or value; CurrentValue is the one being tested.",
+    "mapping": "the value computed for each element; CurrentValue is the element."
+  },
+  "result": {
+    "label": "Result",
+    "type": "Result type",
+    "unknown": "Known once the formula is valid.",
+    "list": "List of {{kind}}",
+    "kinds": {
+      "text": "Text",
+      "number": "Number",
+      "boolean": "Yes / no",
+      "date": "Date",
+      "datetime": "Date and time",
+      "user": "User",
+      "attachment": "Attachment",
+      "record": "Record",
+      "null": "Empty"
+    }
+  },
+  "mode": {
+    "label": "Computation",
+    "stored": "Stored, computed again when its data changes.",
+    "virtual": "Computed each time it is read (not stored).",
+    "virtualVolatile": "Computed each time it is read (not stored), because {{function}}() changes over time.",
+    "virtualDependency": "Computed each time it is read (not stored), because it uses “{{field}}”, which is computed on read."
+  },
+  "style": {
+    "number": "Number format",
+    "kinds": {
+      "plain": "Number",
+      "currency": "Currency",
+      "percentage": "Percentage"
+    },
+    "currency": "Currency",
+    "precision": "Decimal places",
+    "thousands": "Thousands separator",
+    "shown": "Shown as",
+    "date": "Date format",
+    "format": "Display",
+    "defaultFormat": "Default",
+    "timeZone": "Dates follow the organization time zone ({{zone}}).",
+    "none": "This result type has no format."
+  },
+  "discard": {
+    "title": "Discard the changes to this formula?",
+    "keep": "Keep editing",
+    "discard": "Discard"
+  },
+  "footer": {
+    "length": "{{count, number}} / {{limit, number}} characters",
+    "filters": "{{count, number}} / {{limit, number}} cross-table filters",
+    "dependencies": "Depends on: {{list}}",
+    "fixToConfirm_one": "Fix {{count, number}} error to confirm",
+    "fixToConfirm_other": "Fix {{count, number}} errors to confirm",
+    "writeToConfirm": "Write a formula to confirm"
+  },
+  "popover": {
+    "title": "Edit formula",
+    "expand": "Open the full editor",
+    "guide": "Formula guide"
+  }
+}

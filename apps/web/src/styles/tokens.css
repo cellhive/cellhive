@@ -1,0 +1,343 @@
+/*
+ * Cellhive design tokens v0.1 (docs/FRONTEND.md §9.3, mockup "Cellhive UI").
+ *
+ * Components never use color codes: Tailwind utilities map to these variables
+ * (see index.css `@theme`). Theme selection: `data-theme="light|dark"` on
+ * <html>; without the attribute (before the app script runs) the system
+ * preference applies.
+ */
+
+:root {
+  /* Typography */
+  --font-ui: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-code: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-size-title: 20px;
+  --font-size-heading: 15px;
+  --font-size-body: 13px;
+  --font-size-label: 12px;
+  --font-size-mono: 12px;
+}
+
+/*
+ * Light colors: the app, and a dashboard set to light whatever the app's
+ * theme (T812 `data-dashboard-theme`, dashboard theme of CONTRACTS §28.1).
+ */
+:root,
+[data-dashboard-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --surface-sunken: #f1f3f5;
+  --border: #e1e4e8;
+  --border-strong: #c9ced6;
+  /*
+   * Borders of form controls (input, select, check box, switch track, segmented
+   * control): ≥ 3:1 on surface, bg, surface-sunken and accent-soft (WCAG 1.4.11,
+   * T322b). `--border` stays for dividers and frames.
+   */
+  --border-control: #838b96;
+  --text: #16191d;
+  --text-muted: #5b6470;
+  /* ≥ 4.5:1 on bg, surface, surface-sunken and accent-soft (S2 QA: "(empty)" in history). */
+  --text-subtle: #646d79;
+  --accent: #0f766e;
+  --accent-soft: #e6f2f1;
+  /* Hover of accent buttons: darker, so text keeps ≥ 4.5:1 (was accent at 90 %: 4.48:1). */
+  --accent-hover: #0d655e;
+  /* Text on accent: white in light mode (FRONTEND §9.3). */
+  --on-accent: #ffffff;
+  --danger: #b42318;
+  --on-danger: #ffffff;
+  --warning: #b54708;
+  --success: #067647;
+  --overlay: rgb(22 25 29 / 0.4);
+  --focus-ring: var(--accent);
+
+  /*
+   * Select option colors (data colors, not accents; FRONTEND §9.3): gray, sky,
+   * leaf, amber, pink, jade, orange, indigo. Light background + dark text of
+   * the same hue, at least 4.5:1 (checked by grid/__tests__/theme.test.ts).
+   * Option `color` indexes wrap around the eight.
+   */
+  --option-0-bg: #eef1f4;
+  --option-0-fg: #3f4854;
+  --option-1-bg: #e0f2fe;
+  --option-1-fg: #075985;
+  --option-2-bg: #dcfce7;
+  --option-2-fg: #166534;
+  --option-3-bg: #fef3c7;
+  --option-3-fg: #92400e;
+  --option-4-bg: #ffe4e6;
+  --option-4-fg: #9f1239;
+  --option-5-bg: #ccfbf1;
+  --option-5-fg: #115e59;
+  --option-6-bg: #ffedd5;
+  --option-6-fg: #9a3412;
+  --option-7-bg: #e0e7ff;
+  --option-7-fg: #3730a3;
+
+  /*
+   * Color rules of a grid view (T816, FRONTEND §6.9): a row/cell background
+   * on which `text` and `text-muted` keep at least 4.5:1, and a mark (the
+   * left stripe, so the color is not the only signal) at least 3:1 on it.
+   * Checked by grid/__tests__/theme.test.ts.
+   */
+  --rule-red-bg: #fee2e2;
+  --rule-red-mark: #dc2626;
+  --rule-orange-bg: #ffedd5;
+  --rule-orange-mark: #c2410c;
+  --rule-yellow-bg: #fef3c7;
+  --rule-yellow-mark: #a16207;
+  --rule-green-bg: #dcfce7;
+  --rule-green-mark: #15803d;
+  --rule-teal-bg: #ccfbf1;
+  --rule-teal-mark: #0f766e;
+  --rule-blue-bg: #dbeafe;
+  --rule-blue-mark: #2563eb;
+  --rule-indigo-bg: #e0e7ff;
+  --rule-indigo-mark: #4f46e5;
+  --rule-purple-bg: #f3e8ff;
+  --rule-purple-mark: #9333ea;
+  --rule-pink-bg: #fce7f3;
+  --rule-pink-mark: #db2777;
+  --rule-gray-bg: #e5e7eb;
+  --rule-gray-mark: #4b5563;
+
+  /*
+   * Chart series (T811, FRONTEND §9.3): eight categorical hues in a fixed
+   * order (blue, orange, aqua, yellow, magenta, green, violet, red), checked
+   * for color-vision separation on `surface` in both themes; three light
+   * slots sit below 3:1, so every chart has a table view and patterns.
+   * "Other" is a neutral gray.
+   */
+  --chart-0: #2a78d6;
+  --chart-1: #eb6834;
+  --chart-2: #1baf7a;
+  --chart-3: #eda100;
+  --chart-4: #e87ba4;
+  --chart-5: #008300;
+  --chart-6: #6250d6;
+  --chart-7: #e34948;
+  --chart-other: #8b949f;
+}
+
+:root {
+  /*
+   * User avatars in the DOM (design boards): a solid circle of one of eight
+   * colors (same hue order as the options) with white initials, ≥ 4.5:1.
+   * The same in both themes.
+   */
+  --avatar-0: #3f4854;
+  --avatar-1: #0369a1;
+  --avatar-2: #3f6212;
+  --avatar-3: #b45309;
+  --avatar-4: #be123c;
+  --avatar-5: #0f766e;
+  --avatar-6: #c2410c;
+  --avatar-7: #4338ca;
+  --on-avatar: #ffffff;
+
+  /* Inverse surface (the trash's selection bar): dark in both themes. */
+  --inverse: #16191d;
+  --on-inverse: #ffffff;
+  /* A destructive action on the inverse bar (board "Thùng rác": outlined, T421b). */
+  --danger-on-inverse: #f97066;
+
+  /*
+   * File viewer (T418 lightbox, board S4 "Xem ảnh đính kèm"): a dark stage in
+   * every theme, so images and documents read the same whatever the app's theme.
+   */
+  --viewer-bg: rgb(11 13 15 / 0.96);
+  --viewer-fg: #e7eaee;
+  --viewer-fg-muted: #9aa3ae;
+  --viewer-line: #3a4048;
+  --viewer-control: rgb(255 255 255 / 0.12);
+  --viewer-card: #181b1e;
+  --viewer-card-line: #2a2f35;
+  --viewer-accent: #4fb8ab;
+  --on-viewer-accent: #0b1f1d;
+  --viewer-danger: #f97066;
+
+  /* Radii: chips, controls, frames */
+  --radius-chip: 4px;
+  --radius-control: 6px;
+  --radius-frame: 8px;
+
+  /* Motion (T322b): enter 160 ms, exit ~70 % of it, sheets a little longer. */
+  --motion-enter: 160ms;
+  --motion-exit: 110ms;
+  --motion-sheet: 200ms;
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Elevation: popovers, toasts and panels only */
+  --elevation-popover: 0 8px 24px rgb(22 25 29 / 0.12), 0 1px 3px rgb(22 25 29 / 0.08);
+
+  /* Density: toolbar controls 32 px; grid rows 34 px (compact) / 44 px (comfortable) */
+  --control-height: 32px;
+  --grid-row-compact: 34px;
+  --grid-row-comfortable: 44px;
+}
+
+/* Touch-sized screens: controls at least 44 px (FRONTEND §9.3). */
+@media (max-width: 1023.98px) {
+  :root {
+    --control-height: 44px;
+  }
+}
+
+/*
+ * Dark values. Duplicated for the explicit choice and for the system
+ * preference before the app has set `data-theme`.
+ */
+:root[data-theme='dark'],
+[data-dashboard-theme='dark'] {
+  color-scheme: dark;
+  --bg: #111315;
+  --surface: #181b1e;
+  --surface-sunken: #1f2327;
+  --border: #2a2f35;
+  --border-strong: #3a4048;
+  --border-control: #6e7782;
+  --text: #e7eaee;
+  --text-muted: #9aa3ae;
+  --text-subtle: #8b949f;
+  --accent: #4fb8ab;
+  --accent-soft: #15302d;
+  --accent-hover: #6cc6bb;
+  /* White on #4FB8AB is 2.4:1; the dark background color gives 7.9:1. */
+  --on-accent: #111315;
+  --danger: #f97066;
+  --on-danger: #111315;
+  --warning: #fdb022;
+  /* Not specified in FRONTEND §9.3; same family as the dark danger/warning values. */
+  --success: #47cd89;
+  --overlay: rgb(8 9 10 / 0.6);
+  --elevation-popover: 0 8px 24px rgb(8 9 10 / 0.5), 0 1px 3px rgb(8 9 10 / 0.4);
+  --option-0-bg: #2a2f35;
+  --option-0-fg: #d0d5dc;
+  --option-1-bg: #0c3349;
+  --option-1-fg: #9ad8fb;
+  --option-2-bg: #173a24;
+  --option-2-fg: #9fe3b4;
+  --option-3-bg: #3d2e0a;
+  --option-3-fg: #f8d57e;
+  --option-4-bg: #4a1622;
+  --option-4-fg: #fdb4c1;
+  --option-5-bg: #0d3a37;
+  --option-5-fg: #8fe6dc;
+  --option-6-bg: #452212;
+  --option-6-fg: #fdba8c;
+  --option-7-bg: #262b5c;
+  --option-7-fg: #b9c3ff;
+  --rule-red-bg: #3d1a1d;
+  --rule-red-mark: #f87171;
+  --rule-orange-bg: #3d2312;
+  --rule-orange-mark: #fb923c;
+  --rule-yellow-bg: #36300f;
+  --rule-yellow-mark: #facc15;
+  --rule-green-bg: #14331f;
+  --rule-green-mark: #4ade80;
+  --rule-teal-bg: #0f3330;
+  --rule-teal-mark: #2dd4bf;
+  --rule-blue-bg: #172b49;
+  --rule-blue-mark: #60a5fa;
+  --rule-indigo-bg: #22264d;
+  --rule-indigo-mark: #818cf8;
+  --rule-purple-bg: #2e1d45;
+  --rule-purple-mark: #c084fc;
+  --rule-pink-bg: #3d1a30;
+  --rule-pink-mark: #f472b6;
+  --rule-gray-bg: #2b3036;
+  --rule-gray-mark: #9ca3af;
+  --chart-0: #3987e5;
+  --chart-1: #d95926;
+  --chart-2: #199e70;
+  --chart-3: #c98500;
+  --chart-4: #d55181;
+  --chart-5: #008300;
+  --chart-6: #9085e9;
+  --chart-7: #e66767;
+  --chart-other: #6e7782;
+  --inverse: #e7eaee;
+  --on-inverse: #111315;
+  --danger-on-inverse: #b42318;
+}
+
+/* A dark dashboard in the light app: tokens that refer to others resolve again here. */
+[data-dashboard-theme='dark'] {
+  --focus-ring: var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #111315;
+    --surface: #181b1e;
+    --surface-sunken: #1f2327;
+    --border: #2a2f35;
+    --border-strong: #3a4048;
+    --border-control: #6e7782;
+    --text: #e7eaee;
+    --text-muted: #9aa3ae;
+    --text-subtle: #8b949f;
+    --accent: #4fb8ab;
+    --accent-soft: #15302d;
+    --accent-hover: #6cc6bb;
+    --on-accent: #111315;
+    --danger: #f97066;
+    --on-danger: #111315;
+    --warning: #fdb022;
+    --success: #47cd89;
+    --overlay: rgb(8 9 10 / 0.6);
+    --elevation-popover: 0 8px 24px rgb(8 9 10 / 0.5), 0 1px 3px rgb(8 9 10 / 0.4);
+    --option-0-bg: #2a2f35;
+    --option-0-fg: #d0d5dc;
+    --option-1-bg: #0c3349;
+    --option-1-fg: #9ad8fb;
+    --option-2-bg: #173a24;
+    --option-2-fg: #9fe3b4;
+    --option-3-bg: #3d2e0a;
+    --option-3-fg: #f8d57e;
+    --option-4-bg: #4a1622;
+    --option-4-fg: #fdb4c1;
+    --option-5-bg: #0d3a37;
+    --option-5-fg: #8fe6dc;
+    --option-6-bg: #452212;
+    --option-6-fg: #fdba8c;
+    --option-7-bg: #262b5c;
+    --option-7-fg: #b9c3ff;
+    --rule-red-bg: #3d1a1d;
+    --rule-red-mark: #f87171;
+    --rule-orange-bg: #3d2312;
+    --rule-orange-mark: #fb923c;
+    --rule-yellow-bg: #36300f;
+    --rule-yellow-mark: #facc15;
+    --rule-green-bg: #14331f;
+    --rule-green-mark: #4ade80;
+    --rule-teal-bg: #0f3330;
+    --rule-teal-mark: #2dd4bf;
+    --rule-blue-bg: #172b49;
+    --rule-blue-mark: #60a5fa;
+    --rule-indigo-bg: #22264d;
+    --rule-indigo-mark: #818cf8;
+    --rule-purple-bg: #2e1d45;
+    --rule-purple-mark: #c084fc;
+    --rule-pink-bg: #3d1a30;
+    --rule-pink-mark: #f472b6;
+    --rule-gray-bg: #2b3036;
+    --rule-gray-mark: #9ca3af;
+    --chart-0: #3987e5;
+    --chart-1: #d95926;
+    --chart-2: #199e70;
+    --chart-3: #c98500;
+    --chart-4: #d55181;
+    --chart-5: #008300;
+    --chart-6: #9085e9;
+    --chart-7: #e66767;
+    --chart-other: #6e7782;
+    --inverse: #e7eaee;
+    --on-inverse: #111315;
+    --danger-on-inverse: #b42318;
+  }
+}

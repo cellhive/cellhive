@@ -1,0 +1,151 @@
+{
+  "title": "Email",
+  "subtitle": "Cài đặt tổ chức · {{org}}",
+  "back": "Quay lại {{name}}",
+  "loading": "Đang tải cài đặt email",
+  "cancel": "Huỷ",
+  "save": "Lưu thay đổi",
+  "saved": "Đã lưu cài đặt email.",
+  "unsaved": "Có thay đổi chưa lưu.",
+  "smtp": {
+    "title": "Máy chủ email (SMTP)",
+    "description": "Cấu hình bằng biến môi trường của instance. Trang này chỉ đọc.",
+    "status": "Trạng thái",
+    "configured": "Đã cấu hình",
+    "notConfigured": "Chưa cấu hình",
+    "host": "Máy chủ",
+    "port": "Cổng, mã hoá",
+    "portValue": "{{port}} · {{security}}",
+    "security": {
+      "tls": "TLS",
+      "starttls": "STARTTLS",
+      "none": "Không mã hoá"
+    },
+    "from": "Địa chỉ gửi hệ thống",
+    "allowedDomains": "Domain gửi trực tiếp",
+    "allowedDomainsHint": "Danh tính gửi thuộc các domain này gửi bằng chính địa chỉ của nó; domain khác được gửi thay.",
+    "none": "Không có",
+    "missing": {
+      "title": "Chưa có máy chủ email.",
+      "body": "Automation không gửi được email, kênh email của thông báo bị ẩn. Người vận hành instance đặt các biến sau rồi khởi động lại API và worker:",
+      "example": "Ví dụ",
+      "docs": "Chi tiết: biến môi trường mục “Docker Compose” trong tài liệu tự triển khai (docs/SPEC.md §20)."
+    }
+  },
+  "test": {
+    "button": "Kiểm tra kết nối",
+    "testing": "Đang kiểm tra",
+    "hint_other": "Gửi một thư thử tới {{email}}. Còn {{count, number}} lần trong phút này.",
+    "progress": "Đang kết nối tới {{host}}…",
+    "progressNoHost": "Đang kết nối tới máy chủ email…",
+    "reply": "Mã máy chủ: <code>{{reply}}</code>.",
+    "sent": {
+      "title": "Kết nối tốt.",
+      "body": "Đã gửi thư thử tới {{to}} lúc {{time}}."
+    },
+    "failed": {
+      "authFailed": {
+        "title": "Máy chủ từ chối đăng nhập.",
+        "hint": "Kiểm tra tài khoản và mật khẩu trong SMTP_URL."
+      },
+      "tlsFailed": {
+        "title": "Kết nối bảo mật (TLS) không thành công.",
+        "hint": "Kiểm tra cổng và kiểu kết nối (smtps:// cho TLS ngay, smtp:// cho STARTTLS) cùng chứng chỉ của máy chủ."
+      },
+      "connectionFailed": {
+        "title": "Không kết nối được tới máy chủ.",
+        "hint": "Kiểm tra tên máy chủ, cổng và tường lửa giữa Cellhive và máy chủ email."
+      },
+      "timeout": {
+        "title": "Máy chủ không trả lời kịp.",
+        "hint": "Máy chủ có thể đang quá tải hoặc bị tường lửa chặn. Thử lại sau ít phút."
+      },
+      "temporary": {
+        "title": "Máy chủ tạm thời từ chối thư.",
+        "hint": "Thường chỉ là tạm thời. Thử lại sau ít phút."
+      },
+      "rejected": {
+        "title": "Máy chủ từ chối thư.",
+        "hint": "Kiểm tra máy chủ có nhận địa chỉ gửi trong SMTP_FROM không."
+      },
+      "hostNotAllowed": {
+        "title": "Địa chỉ máy chủ không được phép.",
+        "hint": "Tên máy chủ trỏ tới một địa chỉ bị chặn."
+      },
+      "unknown": {
+        "title": "Kiểm tra thất bại vì lỗi không xác định.",
+        "hint": "Thử lại; nếu vẫn lỗi, xem log của API và worker."
+      }
+    }
+  },
+  "limits": {
+    "title": "Giới hạn đang áp",
+    "description": "Người vận hành instance đổi được bằng biến môi trường.",
+    "perHour": "Email mỗi giờ cho tổ chức",
+    "perHourValue": "Đã gửi {{used, number}} / {{max, number}}",
+    "resetsAt": "đặt lại lúc {{time}}",
+    "recipients": "Người nhận mỗi thư",
+    "perSecond": "Thư mỗi giây (mỗi tiến trình)",
+    "tests": "Gửi thử",
+    "testsValue_other": "{{count, number}} lần mỗi phút cho mỗi người",
+    "html": "Kích thước nội dung",
+    "htmlValue": "{{size}} HTML"
+  },
+  "footer": {
+    "title": "Footer của thư automation",
+    "description": "Footer giúp người nhận biết đây là thư tự động.",
+    "legend": "Chính sách footer",
+    "required": "Bắt buộc",
+    "requiredHint": "Mọi thư automation có footer Tối giản hoặc Đầy đủ.",
+    "author_choice": "Người tạo automation chọn",
+    "author_choiceHint": "Cho phép “Không có” khi gửi trực tiếp qua danh tính đã xác minh.",
+    "locked": {
+      "title": "Đang khoá bởi instance",
+      "body": "Instance đặt <code>EMAIL_AUTOMATION_FOOTER=required</code>. Người vận hành instance đổi thành <code>org</code> để tổ chức tự quyết."
+    },
+    "org": "Instance đặt <code>EMAIL_AUTOMATION_FOOTER=org</code> nên tổ chức tự quyết. Thư qua người gửi hệ thống hoặc gửi thay luôn có footer.",
+    "minimal": "Footer Tối giản: <q>Email được gửi tự động bởi Cellhive của {{org}}.</q>"
+  },
+  "signature": {
+    "title": "Chữ ký mặc định",
+    "description": "Dùng cho thư gửi bằng người gửi hệ thống. Danh tính gửi có chữ ký riêng."
+  },
+  "systemSender": {
+    "title": "Người gửi hệ thống cho automation",
+    "label": "Cho phép automation gửi bằng {{from}}",
+    "labelNoSmtp": "Cho phép automation gửi bằng người gửi hệ thống",
+    "hint": "Tắt để buộc mọi thư automation đi qua danh tính gửi đã xác minh.",
+    "usage_other": "Hiện {{count, number}} automation đang dùng ({{enabled, number}} đang bật).",
+    "usageNone": "Chưa automation nào dùng.",
+    "savedOn": "Đã lưu: automation được gửi bằng người gửi hệ thống.",
+    "savedOff": "Đã lưu: đã tắt người gửi hệ thống.",
+    "dialog": {
+      "title": "Tắt người gửi hệ thống?",
+      "body_other": "{{count, number}} automation đang gửi bằng người gửi hệ thống ({{enabled, number}} đang bật). Sau khi tắt, bước gửi email của chúng sẽ lỗi cho tới khi chọn một danh tính gửi.",
+      "cancel": "Huỷ",
+      "confirm": "Tắt người gửi hệ thống"
+    }
+  },
+  "identities": {
+    "title": "Danh tính gửi",
+    "description": "Địa chỉ như hr@ hay it@ để automation gửi thư nhân danh phòng ban.",
+    "manage": "Quản lý danh tính gửi"
+  },
+  "audience": {
+    "title": "Ai thấy trang này",
+    "body": "Chủ sở hữu và quản trị tổ chức. Thành viên khác mở link này nhận trang không tìm thấy."
+  },
+  "attachments": {
+    "title": "Tệp đính kèm",
+    "description": "Số tệp và dung lượng thư automation được gửi kèm từ field tệp. Chỉ gửi tệp mà người chạy automation được phép tải.",
+    "files": "Số tệp mỗi thư",
+    "filesHint": "Tối đa {{max, number}} (giới hạn của máy chủ).",
+    "size": "Tổng dung lượng mỗi thư (MB)",
+    "sizeHint": "Tính theo tệp gốc, tối đa {{max, number}} MB (giới hạn của máy chủ).",
+    "range": "Nhập số nguyên từ 1 đến {{max, number}}.",
+    "note": "Thư vượt giới hạn sẽ không được gửi: bước gửi thư thất bại, không bỏ bớt tệp nào.",
+    "save": "Lưu giới hạn",
+    "reset": "Dùng giới hạn của máy chủ",
+    "saved": "Đã lưu giới hạn tệp đính kèm."
+  }
+}

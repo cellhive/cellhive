@@ -1,0 +1,261 @@
+{
+  "editor": {
+    "flow": "Flow",
+    "toolbar": "Formatting",
+    "text": "text",
+    "linkText": "link text",
+    "withShortcut": "{{name}} ({{shortcut}})",
+    "commands": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strikethrough",
+      "link": "Insert link",
+      "bullet": "Bulleted list",
+      "numbered": "Numbered list",
+      "quote": "Quote",
+      "rule": "Horizontal rule",
+      "table": "Table for a list of records"
+    },
+    "insertValue": "Insert value",
+    "formula": "Formula",
+    "hint": "Narrow Markdown, no HTML. Type {{open}} to insert a value.",
+    "length": "{{length}} / {{max}}"
+  },
+  "sender": {
+    "label": "Sender",
+    "search": "Search senders",
+    "noMatch": "No sender matches.",
+    "systemAddress": "the system address",
+    "shows": "Recipients see: {{from}}",
+    "showsReply": "Recipients see: {{from}}, replies go to {{replyTo}}",
+    "mode": {
+      "system": "System sender",
+      "send_as": "Sends directly",
+      "on_behalf": "On behalf"
+    },
+    "none": "No sender can be used in this base. Organization admins add and verify sender identities in Settings › Sender identities.",
+    "systemOff": "The organization turned the system sender off. Choose a sender identity.",
+    "missing": "The chosen sender can no longer be used (not verified, turned off or outside this base). Choose another one."
+  },
+  "recipients": {
+    "title": "Recipients",
+    "to": "To",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "list": "Recipients in {{label}}",
+    "add": "Add a recipient to {{label}}",
+    "placeholder": "Add an email, a field or a person",
+    "pick": "Fields and people",
+    "pickFor": "Choose a field or a person for {{label}}",
+    "remove": "Remove {{name}}",
+    "invalid": "Not an email address: {{addresses}}",
+    "emailField": "email field",
+    "userField": "people field",
+    "stepField": "Step {{number}} · {{field}} (first record)"
+  },
+  "replyTo": {
+    "label": "Reply-To",
+    "default": "The sender's own Reply-To",
+    "identity": "{{name}} <{{email}}>",
+    "field": "{{name}} (people field)",
+    "clickedBy": "The person who clicked the button",
+    "runAs": "The person the automation runs as",
+    "unknown": "A value that can no longer be used",
+    "hint": "Reply-To is only a verified sender identity or the email of a Cellhive user."
+  },
+  "mayNotRead": {
+    "title": "Recipients may not be allowed to read some of this email.",
+    "body": "Email does not check what recipients may read: they get the whole content. See the checks under the preview."
+  },
+  "subject": {
+    "label": "Subject",
+    "hint": "Plain text, one line, at most 255 characters."
+  },
+  "body": {
+    "label": "Body",
+    "imageNeedsSave": "Save the automation first: its images are stored with it.",
+    "tooManyImages_one": "An email has at most {{count, number}} image.",
+    "tooManyImages_other": "An email has at most {{count, number}} images."
+  },
+  "digest": {
+    "chip": "List of records",
+    "toggle": "Insert the records an earlier step found",
+    "hint": "One line per record of a “Find records” step, where the body shows the chip “List of records”.",
+    "step": "Records of",
+    "stepOption": "Step {{number}} · Find records in {{table}}",
+    "missingStep": "A step that no longer exists",
+    "maxRows": "At most (rows)",
+    "row": "Each line",
+    "rowFields": "Fields of the records found",
+    "rowHint": "Only the fields the step returns. Past the limit, one line says how many more there are."
+  },
+  "signature": {
+    "label": "Include signature",
+    "identity": "The signature of the identity {{name}}. Organization admins edit it in Sender identities.",
+    "org": "The organization's default signature (Settings › Email)."
+  },
+  "footer": {
+    "label": "Footer",
+    "levels": {
+      "minimal": "Minimal",
+      "full": "Full",
+      "none": "None"
+    },
+    "lock": {
+      "system": "Emails from the system sender always have a footer.",
+      "on_behalf": "Emails sent on behalf always have a footer.",
+      "policy": "The organization requires a footer. “None” needs a policy that allows it and a verified identity that sends directly.",
+      "none": "“None” is allowed: the email is sent directly by a verified identity.",
+      "unknown": "“None” needs a policy that allows it and a verified identity that sends directly."
+    },
+    "tightenedTitle": "“None” is no longer allowed.",
+    "tightenedBody": "Emails get the minimal footer until you choose another option and save."
+  },
+  "attachments": {
+    "title": "Attachments from file fields of the trigger record",
+    "list": "Attached fields",
+    "noRecord": "This trigger has no record, so there are no files to attach.",
+    "none": "The trigger table has no attachment field.",
+    "missingField": "#REF field",
+    "remove": "Remove {{name}}",
+    "add": "Add a file field ({{chosen}} / {{max}})",
+    "notDownloadable": "You cannot download its files",
+    "onMissing": "File not ready or being scanned",
+    "fail": "Fail the step",
+    "skip": "Skip that file",
+    "leaves": "The files will be sent outside Cellhive.",
+    "estimate_one": "With {{record}}: {{count, number}} file, {{size}}.",
+    "estimate_other": "With {{record}}: {{count, number}} files, {{size}}.",
+    "estimateMax_one": "With {{record}}: {{count, number}} file, {{size}} / {{max}}.",
+    "estimateMax_other": "With {{record}}: {{count, number}} files, {{size}} / {{max}}.",
+    "blocked": "No .html, .svg, .exe or other extensions Gmail blocks.",
+    "errors": {
+      "attachment_access_denied": "the automation cannot download some files",
+      "attachment_not_ready": "a file is not ready yet (uploading or being scanned)",
+      "attachment_type_blocked": "a file type is blocked",
+      "too_many_attachments": "too many files",
+      "attachments_too_large": "the files are too large"
+    }
+  },
+  "smtp": {
+    "title": "The email server is not set up.",
+    "body": "The operator needs to set SMTP_URL and SMTP_FROM. Organization admins see the status in Settings › Email.",
+    "open": "Open email settings"
+  },
+  "preview": {
+    "title": "Preview",
+    "record": "Sample record",
+    "noRecords": "No record",
+    "untitled": "Untitled record",
+    "noTriggerRecord": "This trigger has no record.",
+    "loading": "Loading the preview",
+    "tabsLabel": "Preview format",
+    "tabs": {
+      "html": "HTML",
+      "text": "Text",
+      "headers": "Headers"
+    },
+    "blocked": {
+      "not_saved": "Create the automation first: the preview and the test email use the saved automation (with your unsaved changes).",
+      "incomplete": "Add a recipient and a subject to see the preview.",
+      "no_records": "The trigger table has no record you can read to preview with."
+    },
+    "invalid": "The preview cannot be built yet:",
+    "hiddenField": "a field",
+    "sandbox": "Isolated frame (sandbox, no scripts). Rendered by the server with your permissions.",
+    "frameTitle": "Email preview: {{subject}}",
+    "textNote": "The text/plain part comes from the same Markdown tree: links become “text (url)”, tables become lines with |.",
+    "footerApplied": "{{level}} (applied instead of your choice)",
+    "files_one": "{{count, number}} file · {{size}}",
+    "files_other": "{{count, number}} files · {{size}}",
+    "onBehalfTitle": "Sent on behalf through Cellhive",
+    "onBehalfBody": "The address is not in a domain sent directly, so From is the system address with “(via Cellhive)” and replies go to the identity. This keeps DMARC valid.",
+    "headers": {
+      "from": "From",
+      "replyTo": "Reply-To",
+      "to": "To",
+      "cc": "Cc",
+      "bcc": "Bcc",
+      "subject": "Subject",
+      "footer": "Footer",
+      "files": "Attachments"
+    },
+    "searchRecord": "Search records"
+  },
+  "regex": {
+    "title": "{{name}} cannot be used in an email.",
+    "hint": "Create a formula field using REGEX in the table, then insert that field into the email."
+  },
+  "test": {
+    "button": "Send a test to me",
+    "to": "To {{email}}, subject prefixed {{prefix}}",
+    "yourAddress": "your address",
+    "left_one": "{{formatted}} / {{max}} left this minute",
+    "left_other": "{{formatted}} / {{max}} left this minute",
+    "limited": "Sent {{max}} tests in one minute. Try again in {{seconds}} s.",
+    "sent": "Test email sent to {{to}}.",
+    "smtpCode": "Server code: {{code}}.",
+    "failed": {
+      "auth_failed": "The email server refused the sign-in.",
+      "host_not_allowed": "The server of this identity is not allowed.",
+      "tls_failed": "The secure connection to the email server failed.",
+      "connection_failed": "Cannot connect to the email server.",
+      "timeout": "The email server did not answer in time.",
+      "temporary": "The email server is temporarily unavailable. Try again later.",
+      "rejected": "The email server refused the email.",
+      "unknown": "The test email could not be sent.",
+      "smtp_not_configured": "The email server is not set up.",
+      "smtp_temporary": "The email server is temporarily unavailable. Try again later.",
+      "smtp_rejected": "The email server refused the email.",
+      "email_quota_exceeded": "The organization reached its email limit for this hour.",
+      "too_many_recipients": "Too many recipients.",
+      "email_body_too_large": "The email is too large.",
+      "invalid_recipients": "No valid recipient.",
+      "invalid_sender": "The sender is not allowed by the email server settings."
+    }
+  },
+  "checks": {
+    "title": "Checks with the sample record",
+    "html": "HTML {{size}}",
+    "htmlMax": "HTML {{size}} / {{max}}",
+    "recipients_one": "{{count, number}} recipient",
+    "recipients_other": "{{count, number}} recipients",
+    "recipientsMax_one": "{{count, number}} recipient / {{max}}",
+    "recipientsMax_other": "{{count, number}} recipients / {{max}}",
+    "invalid_one": "({{count, number}} address is not valid)",
+    "invalid_other": "({{count, number}} addresses are not valid)",
+    "external_one": "{{count, number}} recipient outside the organization",
+    "external_other": "{{count, number}} recipients outside the organization",
+    "mayNotRead": "Some recipients may not be allowed to read: {{fields}}",
+    "mayNotReadRecord": "Some recipients may not be allowed to read this record",
+    "onBehalf": "Sent on behalf: recipients see “(via Cellhive)”",
+    "attachmentsUnavailable": "The files cannot be sent with this record: {{reason}}",
+    "files_one": "{{count, number}} file, {{size}}",
+    "files_other": "{{count, number}} files, {{size}}",
+    "filesMax_one": "{{count, number}} file, {{size}} / {{max}}",
+    "filesMax_other": "{{count, number}} files, {{size}} / {{max}}",
+    "render_one": "{{count, number}} value could not be filled (empty in the email)",
+    "render_other": "{{count, number}} values could not be filled (empty in the email)",
+    "with": "Rendered with {{record}}."
+  },
+  "notification": {
+    "recipients": "Recipients",
+    "empty": "No recipient yet",
+    "add": "Add recipients",
+    "users": "People",
+    "groups": "Groups",
+    "members_one": "{{count, number}} member",
+    "members_other": "{{count, number}} members",
+    "unknownUser": "A former member",
+    "unknownGroup": "A deleted group",
+    "recipientsHint": "At most {{max}} people once groups are expanded.",
+    "title": "Title",
+    "body": "Message",
+    "bodyHint": "Plain text: no Markdown, no HTML. Line breaks are kept.",
+    "link": "Links to",
+    "noLink": "No record",
+    "skipActor": "Leave out the person who caused the event",
+    "skipActorHint": "Off: they are notified too (e.g. a reminder to themselves).",
+    "permissions": "People who cannot read the record or a field used in the text do not receive it; the run history lists them."
+  }
+}

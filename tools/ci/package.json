@@ -1,0 +1,21 @@
+{
+  "name": "@cellhive/ci-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CI checks for Cellhive: dependency license allowlist and DCO sign-off",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.6",
+    "eslint": "^10.11.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
+  }
+}

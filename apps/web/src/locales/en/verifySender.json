@@ -1,0 +1,22 @@
+{
+  "title": "Confirm a sender address",
+  "onCellhive": "on Cellhive",
+  "askBy": "{{name}} (administrator of {{org}}) asks to use {{email}} to send automated emails from Cellhive of {{org}}.",
+  "ask": "{{org}} asks to use {{email}} to send automated emails from its Cellhive.",
+  "displayName": "Display name",
+  "address": "Address",
+  "expires": "Valid until",
+  "confirm": "Confirm",
+  "ignore": "Did not ask for this? Close this page. The address is not used unless someone presses Confirm.",
+  "loading": "Loading",
+  "retry": "Try again",
+  "doneTitle": "Address confirmed",
+  "done": "{{email}} can now send automated emails of {{org}}. You can close this page.",
+  "doneShort": "{{email}} can now send automated emails. You can close this page.",
+  "invalidTitle": "This link no longer works",
+  "invalid": "It is wrong, already used, replaced by a newer email or expired (links are valid for 24 hours). Ask the organization administrator to send a new verification email if needed.",
+  "expiredTitle": "This link has expired",
+  "expired": "Ask the organization administrator to send the verification email again. Links are valid for 24 hours.",
+  "rateLimitedTitle": "Too many attempts",
+  "rateLimited": "Too many requests from your network. Try again in a few minutes."
+}

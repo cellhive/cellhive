@@ -1,0 +1,17 @@
+# Keep the Docker build context small and free of local state and secrets.
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+.git
+.github
+.claude
+.agents
+.env
+.env.*
+!.env.example
+docs
+infra/garage
+*.log
+**/test-results
+**/playwright-report

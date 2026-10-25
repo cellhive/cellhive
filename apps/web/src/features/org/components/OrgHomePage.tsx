@@ -1,0 +1,120 @@
+import { Button, Skeleton } from '@cellhive/ui';
+import { useQuery } from '@tanstack/react-query';
+import { AtSign, FolderPlus, Link2, Mail } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
+
+import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
+import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
+import { canCreateWorkspace } from '../../../lib/permissions/org';
+import { workspacesQuery } from '../api';
+import { orgPath, useRouteOrg, workspacePath } from '../hooks';
+
+import { WorkspaceBaseList } from './WorkspaceBaseList';
+
+/** Loaded when first opened: react-hook-form and zod stay out of the app shell (T700). */
+const CreateWorkspaceDialog = lazy(async () => ({
+  default: (await import('./CreateWorkspaceDialog')).CreateWorkspaceDialog,
+}));
+
+/** `/o/:orgSlug`: every workspace of the organization with its bases. */
+export function OrgHomePage() {
+  const { t } = useTranslation('org');
+  const org = useRouteOrg();
+  // `null` until first opened; then the dialog stays mounted (its close animates).
+  const [creating, setCreating] = useState<boolean | null>(null);
+  const { data, isPending, isError, error } = useQuery(workspacesQuery(org.id));
+  const allowed = canCreateWorkspace(org.role);
+  useDocumentTitle(org.name);
+
+  return (
+    <div className="flex flex-col gap-8 p-6 lg:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-title">{org.name}</h1>
+          <p className="text-fg-muted">{t('home.subtitle')}</p>
+        </div>
+        {allowed ? (
+          <div className="flex flex-wrap gap-2">
+            {/* Organization owners/admins manage share links (T316, FRONTEND §2). */}
+            <Button variant="secondary" asChild>
+              <Link to={`${orgPath(org)}/settings/share-links`}>
+                <Link2 aria-hidden="true" />
+                {t('home.shareLinks')}
+              </Link>
+            </Button>
+            {/* T526: email settings of the organization (FRONTEND §15). */}
+            <Button variant="secondary" asChild>
+              <Link to={`${orgPath(org)}/settings/email`} data-testid="org-email-settings">
+                <Mail aria-hidden="true" />
+                {t('home.emailSettings')}
+              </Link>
+            </Button>
+            {/* Sender identities of automation emails (T533, ADR-33). */}
+            <Button variant="secondary" asChild>
+              <Link to={`${orgPath(org)}/settings/email/identities`}>
+                <AtSign aria-hidden="true" />
+                {t('home.emailIdentities')}
+              </Link>
+            </Button>
+            <Button
+              onClick={() => {
+                setCreating(true);
+              }}
+            >
+              <FolderPlus aria-hidden="true" />
+              {t('home.newWorkspace')}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      {isPending ? (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-20" />
+        </div>
+      ) : isError ? (
+        <ErrorAlert error={error} />
+      ) : data.items.length === 0 ? (
+        <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line-strong p-6">
+          <h2 className="text-heading">{t('home.emptyTitle')}</h2>
+          <p className="text-fg-muted">{allowed ? t('home.emptyAdmin') : t('home.emptyMember')}</p>
+          {allowed ? (
+            <Button
+              onClick={() => {
+                setCreating(true);
+              }}
+            >
+              <FolderPlus aria-hidden="true" />
+              {t('home.newWorkspace')}
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        data.items.map((workspace) => (
+          <section
+            key={workspace.id}
+            className="flex flex-col gap-3"
+            aria-labelledby={workspace.id}
+          >
+            <h2 id={workspace.id} className="text-heading">
+              <Link to={workspacePath(org, workspace)} className="hover:underline">
+                {workspace.name}
+              </Link>
+            </h2>
+            <WorkspaceBaseList org={org} workspace={workspace} />
+          </section>
+        ))
+      )}
+      {allowed && creating !== null ? (
+        <Suspense fallback={null}>
+          <CreateWorkspaceDialog org={org} open={creating} onOpenChange={setCreating} />
+        </Suspense>
+      ) : null}
+    </div>
+  );
+}
+
+export default OrgHomePage;

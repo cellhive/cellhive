@@ -1,0 +1,25 @@
+# Garage configuration for self-hosting (docker-compose.yml, profile `full`).
+#
+# This file intentionally contains NO secrets. Garage reads them from the
+# environment and refuses to start without them:
+#   GARAGE_RPC_SECRET   32 bytes, hex encoded:  openssl rand -hex 32
+#   GARAGE_ADMIN_TOKEN  random token:           openssl rand -base64 32
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+metadata_auto_snapshot_interval = "6h"
+
+# Single node, no redundancy (see ADR-0016).
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
