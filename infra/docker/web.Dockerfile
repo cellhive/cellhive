@@ -27,6 +27,7 @@ COPY packages/field-types/package.json packages/field-types/
 COPY packages/filter-dsl/package.json packages/filter-dsl/
 COPY packages/formula-engine/package.json packages/formula-engine/
 COPY packages/markdown/package.json packages/markdown/
+COPY packages/permissions/package.json packages/permissions/
 COPY packages/ui/package.json packages/ui/
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter "@cellhive/web..."
@@ -36,6 +37,7 @@ COPY packages/field-types packages/field-types
 COPY packages/filter-dsl packages/filter-dsl
 COPY packages/formula-engine packages/formula-engine
 COPY packages/markdown packages/markdown
+COPY packages/permissions packages/permissions
 COPY packages/ui packages/ui
 COPY apps/web apps/web
 # Topological order: the workspace packages (tsc) first, then the web app (vite).
