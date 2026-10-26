@@ -4,6 +4,8 @@ ADR-01 → ADR-15 là các quyết định gốc, được tóm tắt trong `SPE
 
 Thứ tự ưu tiên (AGENTS.md): ADR mới nhất > CONTRACTS (định dạng) / SPEC (kiến trúc) > FRONTEND > code hiện có.
 
+Dòng "Nguồn:" nhắc `docs/reviews/…` hoặc BACKLOG trỏ tới ghi chú lập kế hoạch của nhóm bảo trì (repo riêng, không công khai); nội dung đã chốt nằm trong chính ADR.
+
 | # | Tiêu đề | Trạng thái | Ngày |
 |---|---|---|---|
 | [0016](0016-object-storage-garage.md) | Object storage: Garage thay MinIO | Accepted | 2026-09-23 |

@@ -14,6 +14,8 @@ Working rules for contributors and coding agents. Read this file before every ch
 
 Precedence when documents disagree: newest ADR > CONTRACTS (formats) / SPEC (architecture) > FRONTEND > existing code. If a conflict cannot be resolved, stop and raise it in the pull request or an issue instead of guessing.
 
+Task IDs (`T509`, …) and references to `BACKLOG.md`, `docs/reviews/` or `docs/qa/` in documents and code comments point to the maintainers' planning notes, which live in a separate private repository. They only record where a decision came from; the decision itself is in SPEC, CONTRACTS or an ADR.
+
 ## Environment
 
 - Node 24 LTS, pnpm 9+, TypeScript strict, Docker.

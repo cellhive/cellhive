@@ -4,7 +4,9 @@ Version: 1.57 (T816 — §8 `color_rules` của view grid: tô màu dòng/ô the
 Date: 2026-10-25
 Status: **Approved for implementation** — mọi quyết định kiến trúc bên dưới là quyết định chốt, không phải gợi ý.
 
-> Tài liệu này là nguồn sự thật (source of truth) cho kiến trúc; `CONTRACTS.md` là nguồn sự thật cho định dạng dữ liệu/API/lỗi/quyền; `BACKLOG.md` là danh sách việc; `AGENTS.md` là quy tắc làm việc. Nếu code hiện có mâu thuẫn với tài liệu, dừng lại và báo cáo, không tự "sửa cho khớp" theo ý mình. Mọi thay đổi kiến trúc phải thêm một ADR mới vào `docs/adr/`.
+> Tài liệu này là nguồn sự thật (source of truth) cho kiến trúc; `CONTRACTS.md` là nguồn sự thật cho định dạng dữ liệu/API/lỗi/quyền; `AGENTS.md` là quy tắc làm việc. Nếu code hiện có mâu thuẫn với tài liệu, dừng lại và báo cáo, không tự "sửa cho khớp" theo ý mình. Mọi thay đổi kiến trúc phải thêm một ADR mới vào `docs/adr/`.
+>
+> Mã task (`T509`…) và các tham chiếu tới `BACKLOG.md`, `docs/reviews/`, `docs/qa/` trong tài liệu và code trỏ tới ghi chú lập kế hoạch của nhóm bảo trì, lưu ở một repo riêng không công khai. Chúng chỉ ghi nguồn gốc của quyết định; nội dung đã chốt nằm trong SPEC, CONTRACTS hoặc ADR.
 
 ---
 
@@ -141,7 +143,6 @@ cellhive/
 ├── docs/
 │   ├── SPEC.md              # tài liệu này
 │   ├── CONTRACTS.md         # định dạng API/record/lỗi/quyền
-│   ├── BACKLOG.md           # danh sách task
 │   ├── FRONTEND.md          # kiến trúc frontend
 │   ├── adr/
 │   ├── en/                  # tài liệu người dùng + self-host

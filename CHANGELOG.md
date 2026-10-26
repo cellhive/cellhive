@@ -29,7 +29,7 @@ Migration 0052 (T709) builds `audit_logs_actor_idx (organization_id, actor_id, c
 
 #### Migration 0037 (`events_entity_index`): plan a maintenance window on large installs
 
-Migration 0037 builds the index `meta.events (organization_id, entity_id, created_at)` on **every partition** of `meta.events` (and on partitions created later). It makes `EventsRepository.laterRecordChanges` (automation `record.matches`) cost a few rows instead of every event of the organization since the last dispatched one (p95 0.34 ms instead of 7.5 ms on 2,000,000 events; see `docs/reviews/S5-review.md` §5.2).
+Migration 0037 builds the index `meta.events (organization_id, entity_id, created_at)` on **every partition** of `meta.events` (and on partitions created later). It makes `EventsRepository.laterRecordChanges` (automation `record.matches`) cost a few rows instead of every event of the organization since the last dispatched one (p95 0.34 ms instead of 7.5 ms on 2,000,000 events).
 
 - **Locking**: a plain `CREATE INDEX` takes a `SHARE` lock on each partition while it builds. Reads continue, but **writes to that partition wait**, and every record write inserts a `meta.events` row, so record writes (API, imports, automations, workers) stall on the partition being indexed. Partitions are indexed one after another, so the stall moves from month to month.
 - **Who is affected**: instances with many events (long-lived installs, large imports, a big dispatch backlog). A fresh install or a small one builds the index in well under a second per partition and needs no special care.
