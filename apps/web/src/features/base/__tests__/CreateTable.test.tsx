@@ -32,6 +32,8 @@ function serve(kind: AccessKind, { conflict = false } = {}) {
       },
       [`GET /tables/${NEW}`]: () => json(tables[0]),
       [`GET /tables/${NEW}/fields`]: () => json(fieldList()),
+      // No view: the table opens on its "no view" screen, not the canvas grid (jsdom has no ResizeObserver).
+      [`GET /tables/${NEW}/views`]: () => json({ items: [], total: 0, offset: 0, limit: 1000 }),
     },
   });
   return { posted };
@@ -55,7 +57,9 @@ describe('Creating a table', () => {
       expect(router.state.location.pathname).toMatch(new RegExp(`^/b/${BASE_ID}/t/${NEW}`, 'u'));
     });
     expect(posted).toEqual([{ name: 'Tasks' }]);
-    expect(await screen.findByRole('link', { name: /Tasks/u })).toBeVisible();
+    // The sidebar lists it: the table list was refreshed.
+    const tablesNav = await screen.findByRole('navigation', { name: 'Tables' });
+    expect(await within(tablesNav).findByRole('link', { name: /Tasks/u })).toBeVisible();
   });
 
   it('opens from the sidebar and keeps the dialog open on a name in use', async () => {
