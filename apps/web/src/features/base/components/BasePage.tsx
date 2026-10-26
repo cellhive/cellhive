@@ -1,6 +1,7 @@
-import { Skeleton } from '@cellhive/ui';
+import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { Database, Table2, Trash2 } from 'lucide-react';
+import { Database, Plus, Table2, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
@@ -13,6 +14,8 @@ import { baseQuery } from '../api';
 
 import type { EffectiveAccess, TableDto } from '@cellhive/contracts';
 import type { ReactNode } from 'react';
+
+const CreateTableDialog = lazy(() => import('./CreateTableDialog'));
 
 function tablePath(baseId: string, tableId: string): string {
   return `/b/${encodeURIComponent(baseId)}/t/${encodeURIComponent(tableId)}`;
@@ -81,6 +84,7 @@ export function BasePage({ actions }: BasePageProps = {}) {
   const { data: base } = useSuspenseQuery(baseQuery(baseId));
   const tables = useQuery(tablesQuery(baseId));
   const format = useFormatters();
+  const [creating, setCreating] = useState(false);
   useDocumentTitle(base.name);
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8">
@@ -106,8 +110,31 @@ export function BasePage({ actions }: BasePageProps = {}) {
           <Table2 aria-hidden="true" className="size-6 text-fg-muted" />
           <h2 className="text-heading">{t('empty.title')}</h2>
           <p className="max-w-md text-fg-muted">{t('empty.description')}</p>
+          {canManageSchema(base.access) ? (
+            <Button
+              className="mt-2"
+              data-testid="empty-base-new-table"
+              onClick={() => {
+                setCreating(true);
+              }}
+            >
+              <Plus aria-hidden="true" />
+              {t('tables.new')}
+            </Button>
+          ) : null}
         </div>
       )}
+      {creating ? (
+        <Suspense fallback={null}>
+          <CreateTableDialog
+            baseId={baseId}
+            tableCount={tables.data?.items.length ?? 0}
+            onClose={() => {
+              setCreating(false);
+            }}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

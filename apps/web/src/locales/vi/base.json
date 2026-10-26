@@ -7,7 +7,12 @@
   "tables": {
     "heading": "Bảng",
     "trash": "Thùng rác",
-    "trashOf": "Thùng rác của bảng {{table}}"
+    "trashOf": "Thùng rác của bảng {{table}}",
+    "new": "Tạo bảng",
+    "defaultName": "Bảng {{n}}",
+    "name": "Tên bảng",
+    "create": "Tạo",
+    "createHint": "Bảng mới có sẵn trường Tên và một view lưới. Thêm trường khác ngay trên lưới bằng “Thêm trường”."
   },
   "deleteTable": {
     "title": "Xoá bảng “{{name}}”?",

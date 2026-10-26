@@ -25,6 +25,7 @@
     "tables": "Bảng",
     "tableMenu": "Thao tác với bảng {{table}}",
     "deleteTable": "Xoá bảng",
+    "newTable": "Tạo bảng",
     "dashboards": "Dashboard",
     "newDashboard": "Dashboard mới",
     "dashboardMenu": "Thao tác với dashboard {{name}}",
