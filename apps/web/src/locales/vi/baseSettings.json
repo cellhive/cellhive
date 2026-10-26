@@ -9,6 +9,11 @@
       "shareLinks": "Liên kết chia sẻ",
       "webhooks": "Webhook",
       "audit": "Nhật ký"
+    },
+    "groups": {
+      "access": "Quyền truy cập",
+      "integrations": "Tích hợp",
+      "data": "Dữ liệu"
     }
   },
   "page": {
@@ -18,36 +23,31 @@
   },
   "general": {
     "title": "Chung",
-    "subtitle": "Những nơi quản lý {{base}}.",
-    "entries": {
-      "members": {
-        "title": "Thành viên",
-        "description": "Ai mở được base và với vai trò nào."
-      },
-      "roles": {
-        "title": "Vai trò",
-        "description": "Vai trò có sẵn, vai trò riêng và người được gán."
-      },
-      "shareLinks": {
-        "title": "Liên kết chia sẻ",
-        "description": "Liên kết tới view và form của base."
-      },
-      "webhooks": {
-        "title": "Webhook",
-        "description": "Địa chỉ hệ thống khác gọi để chạy automation."
-      },
-      "automations": {
-        "title": "Automation",
-        "description": "Quy tắc chạy khi bản ghi thay đổi hoặc theo lịch."
-      },
-      "trash": {
-        "title": "Thùng rác",
-        "description": "Bảng đã xoá, khôi phục được trong 30 ngày."
-      },
-      "audit": {
-        "title": "Nhật ký",
-        "description": "Ai đã thay đổi gì trong base, và khi nào."
-      }
+    "info": {
+      "title": "Tên và mô tả",
+      "name": "Tên base",
+      "description": "Mô tả",
+      "descriptionHint": "Hiện dưới tên base ở trang của base.",
+      "save": "Lưu thay đổi",
+      "saved": "Đã lưu."
+    },
+    "facts": {
+      "title": "Chi tiết",
+      "id": "ID base",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép ID base.",
+      "created": "Tạo lúc"
+    },
+    "delete": {
+      "title": "Xoá base",
+      "description": "Xoá {{name}} cùng các bảng, view, dashboard và automation trong đó với mọi người. Có thể hoàn tác ngay sau khi xoá.",
+      "open": "Xoá base…",
+      "confirmTitle": "Xoá base {{name}}?",
+      "confirmLabel": "Gõ {{name}} để xác nhận",
+      "submit": "Xoá base",
+      "deleted": "Đã xoá base {{name}}.",
+      "undo": "Hoàn tác",
+      "restored": "Đã khôi phục base {{name}}."
     }
   },
   "roles": {

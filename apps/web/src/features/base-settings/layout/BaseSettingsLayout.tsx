@@ -25,17 +25,40 @@ interface NavItem {
 /**
  * The pages of "Base settings" (T712, FRONTEND §17; the base settings nav of
  * the "Roles" board, laid out like `OrgSettingsLayout`), with the audit
- * log of the base (T716).
+ * log of the base (T716). Grouped like the board "Cài đặt base · Chung (đề
+ * xuất)": General, then access, integrations and data; the group names show
+ * from 1024 px only (below, the nav is one scrolling row).
  */
-const ITEMS: readonly NavItem[] = [
-  { path: '', key: 'general', icon: Settings, testId: 'base-settings-nav-general' },
-  { path: 'members', key: 'members', icon: Users, testId: 'base-settings-nav-members' },
-  { path: 'roles', key: 'roles', icon: ShieldCheck, testId: 'base-settings-nav-roles' },
-  // T316 and T611: their pages moved under this layout as they were.
-  { path: 'share-links', key: 'shareLinks', icon: Link2, testId: 'base-settings-nav-share-links' },
-  { path: 'webhooks', key: 'webhooks', icon: Webhook, testId: 'base-settings-nav-webhooks' },
-  // T716: the audit log of the base (CONTRACTS §11.4).
-  { path: 'audit', key: 'audit', icon: History, testId: 'base-settings-nav-audit' },
+const GROUPS: readonly { readonly key: string | null; readonly items: readonly NavItem[] }[] = [
+  {
+    key: null,
+    items: [{ path: '', key: 'general', icon: Settings, testId: 'base-settings-nav-general' }],
+  },
+  {
+    key: 'access',
+    items: [
+      { path: 'members', key: 'members', icon: Users, testId: 'base-settings-nav-members' },
+      { path: 'roles', key: 'roles', icon: ShieldCheck, testId: 'base-settings-nav-roles' },
+      // T316 and T611: their pages moved under this layout as they were.
+      {
+        path: 'share-links',
+        key: 'shareLinks',
+        icon: Link2,
+        testId: 'base-settings-nav-share-links',
+      },
+    ],
+  },
+  {
+    key: 'integrations',
+    items: [
+      { path: 'webhooks', key: 'webhooks', icon: Webhook, testId: 'base-settings-nav-webhooks' },
+    ],
+  },
+  {
+    key: 'data',
+    // T716: the audit log of the base (CONTRACTS §11.4).
+    items: [{ path: 'audit', key: 'audit', icon: History, testId: 'base-settings-nav-audit' }],
+  },
 ];
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
@@ -46,7 +69,8 @@ const linkClasses = ({ isActive }: { isActive: boolean }) =>
 
 /**
  * Layout of the base settings pages for base admins (T712, FRONTEND §17): a
- * nav "Base settings" beside the page — a column from 1024 px, a row that
+ * nav "Base settings" beside the page — a column from 1024 px as tall as
+ * the page (its links stay in view while the page scrolls), a row that
  * scrolls on its own below (the page never scrolls sideways). The layout
  * route is guarded (`baseSettings`): everyone else gets the 404 screen
  * without the nav.
@@ -61,30 +85,43 @@ export function BaseSettingsLayout() {
       <nav
         aria-label={t('nav.label')}
         data-testid="base-settings-nav"
-        className="flex min-w-0 flex-col gap-2 border-b border-line bg-surface px-4 py-3 lg:sticky lg:top-0 lg:max-h-dvh lg:w-60 lg:shrink-0 lg:self-start lg:gap-4 lg:border-r lg:border-b-0 lg:px-3 lg:py-6"
+        className="flex min-w-0 flex-col border-b border-line bg-surface lg:w-60 lg:shrink-0 lg:border-r lg:border-b-0"
       >
-        <span className="flex min-w-0 flex-col lg:px-2.5">
-          <span className="text-label font-semibold text-fg-muted">{t('nav.title')}</span>
-          {base.data === undefined ? null : (
-            <span className="truncate text-body font-medium text-fg">{base.data.name}</span>
-          )}
-        </span>
-        <ul className="-mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
-          {ITEMS.map((item) => (
-            <li key={item.key}>
-              <NavLink
-                to={item.path === '' ? root : `${root}/${item.path}`}
-                // "Roles" stays current in a role's editor (T713, `roles/:roleId`).
-                end={item.path === ''}
-                className={linkClasses}
-                data-testid={item.testId}
-              >
-                <item.icon aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
-                {t(`nav.items.${item.key}`)}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+        <div className="flex min-w-0 flex-col gap-2 px-4 py-3 lg:sticky lg:top-0 lg:max-h-dvh lg:gap-4 lg:overflow-y-auto lg:px-3 lg:py-6">
+          <span className="flex min-w-0 flex-col lg:px-2.5">
+            <span className="text-label font-semibold text-fg-muted">{t('nav.title')}</span>
+            {base.data === undefined ? null : (
+              <span className="truncate text-body font-medium text-fg">{base.data.name}</span>
+            )}
+          </span>
+          <div className="-mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-4 lg:overflow-visible lg:px-0">
+            {GROUPS.map((group) => (
+              <div key={group.key ?? 'base'} className="flex shrink-0 flex-col gap-1">
+                {group.key === null ? null : (
+                  <h3 className="hidden px-2.5 text-label text-fg-muted lg:block">
+                    {t(`nav.groups.${group.key}`)}
+                  </h3>
+                )}
+                <ul className="flex gap-1 lg:flex-col">
+                  {group.items.map((item) => (
+                    <li key={item.key}>
+                      <NavLink
+                        to={item.path === '' ? root : `${root}/${item.path}`}
+                        // "Roles" stays current in a role's editor (T713, `roles/:roleId`).
+                        end={item.path === ''}
+                        className={linkClasses}
+                        data-testid={item.testId}
+                      >
+                        <item.icon aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
+                        {t(`nav.items.${item.key}`)}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
       </nav>
       <div className="min-w-0 flex-1">
         <Outlet />
