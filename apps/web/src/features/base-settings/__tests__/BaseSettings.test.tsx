@@ -250,22 +250,24 @@ afterEach(() => {
 });
 
 describe('base settings layout (T712)', () => {
-  it('has the base settings nav with the current page, and General lists the entries', async () => {
+  it('has the grouped base settings nav with the current page; General holds settings', async () => {
     serve();
     await renderApp(`/b/${BASE}/settings`);
     const nav = await screen.findByRole('navigation', { name: 'Base settings' });
-    for (const name of ['General', 'Members', 'Roles', 'Share links', 'Webhooks']) {
+    for (const name of ['General', 'Members', 'Roles', 'Share links', 'Webhooks', 'Audit log']) {
       expect(within(nav).getByRole('link', { name })).toBeVisible();
+    }
+    for (const group of ['Access', 'Integrations', 'Data']) {
+      expect(within(nav).getByRole('heading', { name: group })).toBeInTheDocument();
     }
     expect(within(nav).getByRole('link', { name: 'General' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    const entries = await screen.findByTestId('base-settings-entries');
-    expect(within(entries).getByRole('link', { name: /Roles/u })).toHaveAttribute(
-      'href',
-      `/b/${BASE}/settings/roles`,
-    );
+    // General is the base's own settings, not links repeating the nav.
+    const general = await screen.findByTestId('base-settings-general');
+    expect(within(general).getByLabelText('Base name')).toHaveValue('Chăm sóc khách hàng');
+    expect(within(general).queryByRole('link', { name: /Roles/u })).toBeNull();
     expect(await axeViolations(document.body)).toEqual([]);
   });
 

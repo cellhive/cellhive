@@ -9,6 +9,11 @@
       "shareLinks": "Share links",
       "webhooks": "Webhooks",
       "audit": "Audit log"
+    },
+    "groups": {
+      "access": "Access",
+      "integrations": "Integrations",
+      "data": "Data"
     }
   },
   "page": {
@@ -18,36 +23,31 @@
   },
   "general": {
     "title": "General",
-    "subtitle": "Where {{base}} is managed.",
-    "entries": {
-      "members": {
-        "title": "Members",
-        "description": "Who can open the base, and with which role."
-      },
-      "roles": {
-        "title": "Roles",
-        "description": "The built-in roles and your own, and who holds them."
-      },
-      "shareLinks": {
-        "title": "Share links",
-        "description": "Links to views and forms of the base."
-      },
-      "webhooks": {
-        "title": "Webhooks",
-        "description": "URLs other systems call to start automations."
-      },
-      "automations": {
-        "title": "Automations",
-        "description": "Rules that run when records change or on a schedule."
-      },
-      "trash": {
-        "title": "Trash",
-        "description": "Deleted tables, restored within 30 days."
-      },
-      "audit": {
-        "title": "Audit log",
-        "description": "Who changed what in the base, and when."
-      }
+    "info": {
+      "title": "Name and description",
+      "name": "Base name",
+      "description": "Description",
+      "descriptionHint": "Shown under the base name on its page.",
+      "save": "Save changes",
+      "saved": "Saved."
+    },
+    "facts": {
+      "title": "Details",
+      "id": "Base ID",
+      "copy": "Copy",
+      "copied": "Base ID copied.",
+      "created": "Created"
+    },
+    "delete": {
+      "title": "Delete base",
+      "description": "Deletes {{name}} with its tables, views, dashboards and automations for everyone. You can undo it right after.",
+      "open": "Delete base…",
+      "confirmTitle": "Delete base {{name}}?",
+      "confirmLabel": "Type {{name}} to confirm",
+      "submit": "Delete base",
+      "deleted": "Deleted base {{name}}.",
+      "undo": "Undo",
+      "restored": "Restored base {{name}}."
     }
   },
   "roles": {

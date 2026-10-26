@@ -246,7 +246,7 @@ for (const variant of VARIANTS) {
 
     // Base settings: index, members, access panel of u_sales1.
     await page.goto(base());
-    await expect(page.getByTestId('base-settings-entries')).toBeVisible();
+    await expect(page.getByTestId('base-settings-general')).toBeVisible();
     await audit(page, tag('base settings index'));
     await page.goto(base('/members'));
     const salesRow = page
