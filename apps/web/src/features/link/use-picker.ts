@@ -197,10 +197,19 @@ export function usePicker(props: LinkPickerProps, options: { withRecent: boolean
   const activeOption =
     active < 0 || !settled ? undefined : optionList[Math.min(active, optionList.length - 1)];
 
+  // The pending announcement does not outlive the picker (no state update after unmount).
+  const announceTimer = useRef<number | undefined>(undefined);
+  useEffect(
+    () => () => {
+      window.clearTimeout(announceTimer.current);
+    },
+    [],
+  );
   const announce = (text: string) => {
     // A changed text is read again even when it repeats (the region is emptied first).
     setAnnouncement('');
-    window.setTimeout(() => {
+    window.clearTimeout(announceTimer.current);
+    announceTimer.current = window.setTimeout(() => {
       setAnnouncement(text);
     }, 30);
   };
