@@ -25,6 +25,7 @@
     "tables": "Tables",
     "tableMenu": "Actions for table {{table}}",
     "deleteTable": "Delete table",
+    "newTable": "New table",
     "dashboards": "Dashboards",
     "newDashboard": "New dashboard",
     "dashboardMenu": "Actions for dashboard {{name}}",

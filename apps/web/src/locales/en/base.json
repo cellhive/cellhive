@@ -7,7 +7,12 @@
   "tables": {
     "heading": "Tables",
     "trash": "Trash",
-    "trashOf": "Trash of {{table}}"
+    "trashOf": "Trash of {{table}}",
+    "new": "New table",
+    "defaultName": "Table {{n}}",
+    "name": "Name",
+    "create": "Create",
+    "createHint": "The table starts with a Name field and a grid view. Add more fields on the grid with “Add field”."
   },
   "deleteTable": {
     "title": "Delete table “{{name}}”?",

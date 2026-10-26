@@ -5,9 +5,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Skeleton,
+  Tooltip,
 } from '@cellhive/ui';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { MoreHorizontal, Settings, Table2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Plus, Settings, Table2, Trash2 } from 'lucide-react';
 import { lazy, Suspense, useId, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
@@ -30,6 +31,8 @@ import type { TableDto } from '@cellhive/contracts';
  * app shell (FRONTEND §11.1).
  */
 const DeleteTableDialog = lazy(() => import('./DeleteTableDialog'));
+/** "New table": its own chunk too, loaded when a base admin opens it. */
+const CreateTableDialog = lazy(() => import('./CreateTableDialog'));
 
 /** Tables whose record count the sidebar asks for (one small count request each). */
 export const COUNTED_TABLES = 50;
@@ -57,6 +60,8 @@ function tablePath(baseId: string, tableId: string): string {
  * features do not import each other (FRONTEND §1.2).
  *
  * (T811) The "Dashboards" group follows the tables (`BaseDashboardsNav`).
+ *
+ * Base admins also get "New table" next to the heading (`CreateTableDialog`).
  */
 export function BaseTablesNav({ baseId, extra }: { baseId: string; extra?: ReactNode }) {
   const { t, i18n } = useTranslation('common');
@@ -66,6 +71,7 @@ export function BaseTablesNav({ baseId, extra }: { baseId: string; extra?: React
   const admin = base.data !== undefined && isBaseAdmin(base.data.access);
   const trash = useQuery({ ...tableTrashQuery(baseId), enabled: admin });
   const [deleting, setDeleting] = useState<TableDto | null>(null);
+  const [creating, setCreating] = useState(false);
   const items: readonly TableDto[] = tables.data?.items ?? [];
   // The UI language's digits (not `useFormatters`: it would put the formatters
   // in a chunk shared with the public share page, `.size-limit.js`).
@@ -77,9 +83,26 @@ export function BaseTablesNav({ baseId, extra }: { baseId: string; extra?: React
   return (
     <>
       <nav aria-labelledby={headingId} className="flex flex-col gap-1">
-        <h2 id={headingId} className="px-2 text-label text-fg-muted">
-          {t('nav.tables')}
-        </h2>
+        <div className="flex items-center justify-between gap-2 px-2">
+          <h2 id={headingId} className="text-label text-fg-muted">
+            {t('nav.tables')}
+          </h2>
+          {admin ? (
+            <Tooltip content={t('nav.newTable')}>
+              <button
+                type="button"
+                aria-label={t('nav.newTable')}
+                data-testid="new-table"
+                className="flex size-6 items-center justify-center rounded-md text-fg-muted hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-accent max-lg:size-control"
+                onClick={() => {
+                  setCreating(true);
+                }}
+              >
+                <Plus aria-hidden="true" className="size-4" />
+              </button>
+            </Tooltip>
+          ) : null}
+        </div>
         {tables.isPending ? (
           <div className="flex flex-col gap-2 px-2">
             <Skeleton className="h-6" />
@@ -206,6 +229,17 @@ export function BaseTablesNav({ baseId, extra }: { baseId: string; extra?: React
             ) : null}
           </ul>
         )}
+        {creating ? (
+          <Suspense fallback={null}>
+            <CreateTableDialog
+              baseId={baseId}
+              tableCount={items.length}
+              onClose={() => {
+                setCreating(false);
+              }}
+            />
+          </Suspense>
+        ) : null}
         {deleting === null ? null : (
           <Suspense fallback={null}>
             <DeleteTableDialog
