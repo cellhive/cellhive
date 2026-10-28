@@ -139,7 +139,7 @@
       "group": "Nhóm"
     },
     "roleOf": "Vai trò của {{name}}",
-    "noAccess": "Không có quyền",
+    "noAccess": "Không có vai trò",
     "saving": "Đang lưu…",
     "fullAccess": {
       "org_owner": "Toàn quyền · chủ sở hữu tổ chức",

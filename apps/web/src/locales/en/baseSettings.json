@@ -142,7 +142,7 @@
       "group": "Group"
     },
     "roleOf": "Role of {{name}}",
-    "noAccess": "No access",
+    "noAccess": "No role",
     "saving": "Saving…",
     "fullAccess": {
       "org_owner": "Full access · organization owner",

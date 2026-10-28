@@ -14,7 +14,7 @@ import { api, apiSignIn, collectCspViolations, expectNoSeriousA11yViolations, ok
  *   and a second tab of u_admin on the members page shows the new role too;
  * - renaming "Kho" to a taken name ("sales", case-insensitive) → inline error;
  * - deleting "Kho" while assigned → the list of who holds it;
- * - the group "Sales" gets a role with the keyboard; "No access" asks first
+ * - the group "Sales" gets a role with the keyboard; "No role" asks first
  *   (`alertdialog`), confirmed with the keyboard;
  * - u_editor opening `/b/B/settings/roles` gets the 404 screen;
  * - axe on every state; Vietnamese at 375 px: cards, no horizontal scroll.
@@ -273,7 +273,7 @@ test('renaming to a taken name is an inline error; a role still assigned lists i
   await context.close();
 });
 
-test('the group Sales gets a role with the keyboard; "No access" is confirmed first', async ({
+test('the group Sales gets a role with the keyboard; "No role" is confirmed first', async ({
   browser,
 }) => {
   const { context, page } = await openAs(browser, WORKER_ORG.email('admin'));
@@ -306,12 +306,12 @@ test('the group Sales gets a role with the keyboard; "No access" is confirmed fi
     kho.id,
   );
 
-  // u_reader: "No access" → alertdialog → confirmed with the keyboard.
+  // u_reader: "No role" → alertdialog → confirmed with the keyboard.
   await search.fill(READER_NAME);
   const reader = page.getByRole('combobox', { name: `Role of ${READER_NAME}` });
   await expect(reader).toHaveValue(kho.id);
   await reader.focus();
-  await reader.selectOption({ label: 'No access' });
+  await reader.selectOption({ label: 'No role' });
   const confirm = page.getByRole('alertdialog', { name: `Remove the access of ${READER_NAME}?` });
   await expect(confirm).toContainText(`${READER_NAME} can no longer open ${demo.baseName}`);
   await expectNoSeriousA11yViolations(page, 'remove access: alertdialog');
@@ -321,7 +321,7 @@ test('the group Sales gets a role with the keyboard; "No access" is confirmed fi
   await expect(reader).toHaveValue(kho.id);
   // The focus is back on the select (WCAG 2.4.3), after a cancel as after a confirmation.
   await expect(reader).toBeFocused();
-  await reader.selectOption({ label: 'No access' });
+  await reader.selectOption({ label: 'No role' });
   const button = confirm.getByRole('button', { name: 'Remove access' });
   for (let step = 0; step < 5; step += 1) {
     if (await button.evaluate((element) => element === document.activeElement)) break;
@@ -381,7 +381,7 @@ test('Vietnamese at 375 px: the tables become cards, no horizontal scroll', asyn
   await noHorizontalScroll(page, 375);
   await expectNoSeriousA11yViolations(page, 'members at 375 px (vi)');
   await page.getByRole('combobox', { name: 'Vai trò của Sales' }).selectOption({
-    label: 'Không có quyền',
+    label: 'Không có vai trò',
   });
   const confirm = page.getByRole('alertdialog', { name: 'Gỡ quyền của Sales?' });
   await expect(confirm).toBeVisible();

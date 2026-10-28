@@ -464,7 +464,7 @@ describe('members page (T712)', () => {
       within(reader)
         .getAllByRole('option')
         .map((option) => option.textContent),
-    ).toEqual(['No access', 'Admin', 'Editor', 'Reader', 'Sales', 'Kế toán']);
+    ).toEqual(['No role', 'Admin', 'Editor', 'Reader', 'Sales', 'Kế toán']);
     expect(screen.getByRole('combobox', { name: 'Role of Sales' })).toHaveValue(SALES_ROLE.id);
     // (T713) "View access" for people, not for groups.
     expect(screen.getByRole('button', { name: 'View the access of Lê Quốc Bảo' })).toBeVisible();
@@ -487,7 +487,7 @@ describe('members page (T712)', () => {
     expect(select).toHaveValue(EMPTY_ROLE.id);
   });
 
-  it('"No access" removes the role after an alertdialog; Cancel keeps it', async () => {
+  it('"No role" removes the role after an alertdialog; Cancel keeps it', async () => {
     const user = userEvent.setup();
     const calls = serve();
     await renderApp(`/b/${BASE}/settings/members`);
