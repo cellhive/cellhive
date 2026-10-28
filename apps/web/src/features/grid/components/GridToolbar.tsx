@@ -72,9 +72,16 @@ export function GridToolbar({
       {leading === undefined ? null : (
         <div className="mr-1 hidden shrink-0 items-center md:flex">{leading}</div>
       )}
-      {/* On a phone the controls scroll sideways so that the search box keeps its width; the outline goes inside, where the scroller does not clip it. */}
-      <div className="flex min-w-0 shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,#000_calc(100%-20px),transparent)] [&_:focus-visible]:outline-offset-[-2px]">
-        {children}
+      {/*
+       * Phones: the controls scroll sideways under a faded edge, so the search
+       * box and "+ Record" stay on screen. Only there: their panels are bottom
+       * sheets (fixed) that the scroller does not clip; from 768 px they drop
+       * down from the button. The outline goes inside, where it is not clipped.
+       */}
+      <div className="relative flex min-w-0 shrink-0 max-md:shrink max-md:after:pointer-events-none max-md:after:absolute max-md:after:inset-y-0 max-md:after:right-0 max-md:after:w-5 max-md:after:bg-linear-to-l max-md:after:from-surface">
+        <div className="flex min-w-0 items-center gap-1 max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:[&_:focus-visible]:outline-offset-[-2px]">
+          {children}
+        </div>
       </div>
       <DropdownMenu>
         <Tooltip content={t('toolbar.more')}>
@@ -117,8 +124,7 @@ export function GridToolbar({
       )}
       <div className="min-w-0 flex-1" />
       {search === undefined ? null : (
-        // Gives way first (down to 96 px), before the controls start to scroll.
-        <div className="flex min-w-24 shrink-[100] items-center md:w-56 xl:w-64">{search}</div>
+        <div className="flex min-w-24 shrink items-center md:w-56 xl:w-64">{search}</div>
       )}
       {primary === undefined ? null : (
         <div className="flex shrink-0 items-center gap-1">{primary}</div>

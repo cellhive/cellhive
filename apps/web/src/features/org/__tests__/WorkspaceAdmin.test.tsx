@@ -50,8 +50,8 @@ function serve({ orgRole = 'owner' }: { orgRole?: 'owner' | 'member' } = {}) {
       [`GET /orgs/${ORG.id}/workspaces/${WSP}`]: () => json(workspace),
       [`GET /workspaces/${WSP}/bases`]: () => list(live),
       [`PATCH /orgs/${ORG.id}/workspaces/${WSP}`]: (init) => {
-        calls.push(`PATCH ${String(init?.body)}`);
-        workspace = { ...workspace, ...(JSON.parse(String(init?.body)) as object) };
+        calls.push(`PATCH ${init?.body as string}`);
+        workspace = { ...workspace, ...(JSON.parse(init?.body as string) as object) };
         return json(workspace);
       },
       [`DELETE /orgs/${ORG.id}/workspaces/${WSP}`]: () => {

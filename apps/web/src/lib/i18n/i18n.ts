@@ -52,6 +52,7 @@ export const NAMESPACES = [
   'apiTokens',
   'audit',
   'dashboard',
+  'workspace',
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
