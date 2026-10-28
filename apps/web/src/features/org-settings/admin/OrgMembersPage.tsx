@@ -186,8 +186,11 @@ export function OrgMembersPage() {
                             </span>
                           ) : null}
                         </span>
-                        <span className="text-label font-normal break-all text-fg-muted">
-                          {member.user.email}
+                        {/* A narrow column breaks the address before "@", not inside a word. */}
+                        <span className="text-label font-normal [overflow-wrap:anywhere] text-fg-muted">
+                          {member.user.email.slice(0, member.user.email.lastIndexOf('@'))}
+                          <wbr />
+                          {member.user.email.slice(member.user.email.lastIndexOf('@'))}
                         </span>
                       </span>
                     </th>

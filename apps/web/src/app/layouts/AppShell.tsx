@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Menu, Settings, X } from 'lucide-react';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, NavLink, Outlet, useLocation, useParams } from 'react-router';
+import { Link, Navigate, Outlet, useLocation, useParams } from 'react-router';
 
 import { AutomationNavLink } from '../../features/automation/nav/AutomationNavLink';
 import { baseQuery } from '../../features/base/api';
@@ -173,19 +173,11 @@ export function AppShell() {
               <OrgSwitcher orgs={orgs} current={current} />
               {/* T830: the organization's settings, for owners/admins like the route guard. */}
               {isOrgAdmin(current.role) ? (
-                <NavLink
+                <OrgSettingsLink
                   to={`${orgPath(current)}/settings`}
-                  data-testid="sidebar-org-settings"
-                  className={({ isActive }) =>
-                    cn(
-                      'flex min-h-8 min-w-0 items-center gap-2 rounded-md px-2 text-body text-fg hover:bg-surface-sunken max-lg:min-h-control',
-                      isActive && 'bg-accent-soft font-medium text-accent',
-                    )
-                  }
-                >
-                  <Settings aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="min-w-0 truncate">{t('nav.orgSettings')}</span>
-                </NavLink>
+                  pathname={location.pathname}
+                  label={t('nav.orgSettings')}
+                />
               ) : null}
             </div>
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
@@ -256,3 +248,36 @@ export function AppShell() {
 }
 
 export default AppShell;
+
+/**
+ * The organization settings entry of the sidebar. Not a `NavLink`: the
+ * notification and API token pages sit under `/settings` but are personal,
+ * so they must not mark it current.
+ */
+function OrgSettingsLink({
+  to,
+  pathname,
+  label,
+}: {
+  readonly to: string;
+  readonly pathname: string;
+  readonly label: string;
+}) {
+  const current =
+    (pathname === to || pathname.startsWith(`${to}/`)) &&
+    !/\/settings\/(?:notifications|api-tokens)(?:\/|$)/u.test(pathname);
+  return (
+    <Link
+      to={to}
+      data-testid="sidebar-org-settings"
+      aria-current={current ? 'page' : undefined}
+      className={cn(
+        'flex min-h-8 min-w-0 items-center gap-2 rounded-md px-2 text-body text-fg hover:bg-surface-sunken max-lg:min-h-control',
+        current && 'bg-accent-soft font-medium text-accent',
+      )}
+    >
+      <Settings aria-hidden="true" className="size-4 shrink-0" />
+      <span className="min-w-0 truncate">{label}</span>
+    </Link>
+  );
+}
