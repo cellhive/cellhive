@@ -710,6 +710,7 @@ function Builder({
               value={name}
               maxLength={255}
               aria-label={t('page.name')}
+              placeholder={t('page.name')}
               className="h-8 w-56 max-lg:h-control"
               data-testid="builder-name"
               onChange={(event) => {

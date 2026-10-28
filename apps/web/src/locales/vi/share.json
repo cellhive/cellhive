@@ -195,6 +195,7 @@
     "off": "Đang tắt"
   },
   "bulk": {
+    "hint": "Chọn link để thu hồi nhiều link một lúc.",
     "selected_one": "Đã chọn {{count, number}} link",
     "selected_other": "Đã chọn {{count, number}} link",
     "revoke": "Thu hồi link đã chọn",

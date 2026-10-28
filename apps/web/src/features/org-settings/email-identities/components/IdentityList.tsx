@@ -250,7 +250,12 @@ function IdentityName({
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
       <span className="font-medium break-words text-fg">{identity.display_name}</span>
-      <span className="text-label font-normal break-all text-fg-muted">{identity.email}</span>
+      {/* A narrow column breaks the address before "@" rather than inside a word. */}
+      <span className="text-label font-normal [overflow-wrap:anywhere] text-fg-muted">
+        {identity.email.slice(0, identity.email.lastIndexOf('@'))}
+        <wbr />
+        {identity.email.slice(identity.email.lastIndexOf('@'))}
+      </span>
       {identity.smtp === null ? null : (
         <span className="inline-flex items-center gap-1 text-label font-normal text-fg-muted">
           <Server aria-hidden="true" className="size-3.5 shrink-0" />

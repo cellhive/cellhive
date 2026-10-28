@@ -169,6 +169,11 @@ export function ShareLinksManager({ scope, bases }: ShareLinksManagerProps) {
               {t('bulk.revoke')}
             </Button>
           </>
+        ) : items.length > 1 ? (
+          // The row keeps its height so that ticking a box does not move the list.
+          <span aria-hidden="true" className="text-label font-normal text-fg-muted">
+            {t('bulk.hint')}
+          </span>
         ) : null}
       </div>
 

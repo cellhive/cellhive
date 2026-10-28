@@ -72,7 +72,10 @@ export function GridToolbar({
       {leading === undefined ? null : (
         <div className="mr-1 hidden shrink-0 items-center md:flex">{leading}</div>
       )}
-      <div className="flex min-w-0 shrink-0 items-center gap-1">{children}</div>
+      {/* On a phone the controls scroll sideways so that the search box keeps its width; the outline goes inside, where the scroller does not clip it. */}
+      <div className="flex min-w-0 shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,#000_calc(100%-20px),transparent)] [&_:focus-visible]:outline-offset-[-2px]">
+        {children}
+      </div>
       <DropdownMenu>
         <Tooltip content={t('toolbar.more')}>
           <DropdownMenuTrigger asChild>
@@ -114,7 +117,8 @@ export function GridToolbar({
       )}
       <div className="min-w-0 flex-1" />
       {search === undefined ? null : (
-        <div className="flex min-w-24 shrink items-center md:w-56 xl:w-64">{search}</div>
+        // Gives way first (down to 96 px), before the controls start to scroll.
+        <div className="flex min-w-24 shrink-[100] items-center md:w-56 xl:w-64">{search}</div>
       )}
       {primary === undefined ? null : (
         <div className="flex shrink-0 items-center gap-1">{primary}</div>

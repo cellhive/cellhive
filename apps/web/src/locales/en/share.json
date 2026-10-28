@@ -195,6 +195,7 @@
     "off": "Turned off"
   },
   "bulk": {
+    "hint": "Select links to revoke several at once.",
     "selected_one": "{{count, number}} link selected",
     "selected_other": "{{count, number}} links selected",
     "revoke": "Revoke selected",

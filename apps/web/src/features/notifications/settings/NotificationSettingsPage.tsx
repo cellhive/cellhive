@@ -578,7 +578,7 @@ export function NotificationSettingsPage() {
         subtitle={t('settings.subtitle', { org: org.name })}
       />
       <div className={cn('flex w-full max-w-3xl flex-col gap-6 py-6', PAGE_GUTTER)}>
-        <div role="status" aria-atomic="true" data-testid="settings-saved">
+        <div role="status" aria-atomic="true" data-testid="settings-saved" className="empty:-mb-6">
           {saved.message === null ? null : (
             <p className="inline-flex items-center gap-2 rounded-md bg-accent-soft px-3 py-2 text-body text-fg">
               <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-accent" />
