@@ -78,6 +78,14 @@ describe('number formats', () => {
     expect(metricFormatter('en', widget, field as never, aggregation)(value)).toBe(expected);
   });
 
+  it('spells the compact scale out in Vietnamese (QA S7 L6)', () => {
+    const vnd = { style: 'currency', currency: 'VND', compact: true } as const;
+    expect(metricFormatter('vi', vnd, null, 'sum')(4_100_000_000)).toBe('4,1 tỷ ₫');
+    expect(metricFormatter('vi', vnd, null, 'sum')(3_500_000)).toBe('3,5 triệu ₫');
+    expect(metricFormatter('vi', { compact: true }, null, 'sum')(12_500)).toBe('13 nghìn');
+    expect(metricFormatter('en', vnd, null, 'sum')(-4_100_000_000)).toBe('-₫4.1B');
+  });
+
   it('reads field styles defensively', () => {
     expect(fieldNumberStyle({ style: { type: 'plain', precision: 1 } })).toEqual({
       type: 'plain',

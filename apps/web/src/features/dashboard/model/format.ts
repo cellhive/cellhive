@@ -129,8 +129,28 @@ export function metricFormatter(
     options = { maximumFractionDigits: 0 };
   } else if (field !== null) options = fromField(field, aggregation);
   else options = { maximumFractionDigits: 2 };
+  // Short compact `vi` reads "3 T ₫" (tỷ) next to "3 Tr ₫" (triệu): spell the scale out.
+  if (options.notation === 'compact' && locale.toLowerCase().startsWith('vi')) {
+    options = { ...options, compactDisplay: 'long' };
+    if (options.style === 'currency') return compactCurrency(locale, options);
+  }
   const format = numberFormat(locale, options);
   return (value) => format.format(value);
+}
+
+/** ICU ignores `compactDisplay: 'long'` with a currency: the scaled number, then the symbol where the locale puts it. */
+function compactCurrency(locale: string, options: Intl.NumberFormatOptions): NumberFormatter {
+  const { currency } = options;
+  const number = numberFormat(locale, { ...options, style: 'decimal' });
+  const parts = numberFormat(locale, { style: 'currency', currency }).formatToParts(1);
+  const symbol = parts.find((part) => part.type === 'currency')?.value ?? currency ?? '';
+  const before =
+    parts.findIndex((part) => part.type === 'currency') <
+    parts.findIndex((part) => part.type === 'integer');
+  return (value) => {
+    if (!before) return `${number.format(value)} ${symbol}`;
+    return value < 0 ? `-${symbol}${number.format(-value)}` : `${symbol}${number.format(value)}`;
+  };
 }
 
 /** Percentages of a 100 % stacked chart (0–100, one decimal at most). */
