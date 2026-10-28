@@ -5,15 +5,10 @@ import {
   type MeIdentityList,
   type OidcLinkStartResponse,
 } from '@cellhive/contracts';
-import { AppError } from '@cellhive/server-core/errors';
 import { Controller, Delete, Get, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 
 import { OidcStateCookie } from '../../common/auth/oidc/state-cookie.js';
-import {
-  CurrentPrincipal,
-  type Principal,
-  type SessionPrincipal,
-} from '../../common/auth/principal.js';
+import { CurrentPrincipal, sessionOf, type Principal } from '../../common/auth/principal.js';
 import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { ZodValidationPipe } from '../../common/validation/zod-validation.pipe.js';
 
@@ -21,27 +16,6 @@ import { MeIdentitiesService } from './me-identities.service.js';
 import { OidcLoginService } from './oidc.service.js';
 
 import type { FastifyReply, FastifyRequest } from 'fastify';
-
-/**
- * Session only (`api-token-scopes.ts`): `ScopeGuard` already refuses API
- * tokens with `403 INSUFFICIENT_SCOPE`; this keeps the type narrow.
- */
-function sessionOf(principal: Principal): SessionPrincipal {
-  if (principal.kind !== 'session') {
-    throw new AppError('INSUFFICIENT_SCOPE', {
-      detail: 'This route needs a signed-in session; API tokens cannot use it.',
-      errors: [
-        {
-          path: '',
-          code: 'INSUFFICIENT_SCOPE',
-          message: 'The API token does not allow this route',
-          params: { required: ['session'] },
-        },
-      ],
-    });
-  }
-  return principal;
-}
 
 /** Connected accounts of the caller (CONTRACTS §27.3; BACKLOG T708, ADR-36 §3). */
 @Controller('me/identities')

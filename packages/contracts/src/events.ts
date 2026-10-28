@@ -156,6 +156,9 @@ export const AUDIT_ONLY_ACTIONS = [
   // OIDC identity connected or disconnected (T708, CONTRACTS §27.3): provider and method, no claim.
   'auth.identity_linked',
   'auth.identity_unlinked',
+  // The caller changed their own password or profile (T831, CONTRACTS §12.0): never the password.
+  'auth.password_changed',
+  'user.updated',
 ] as const;
 
 export type AuditOnlyAction = (typeof AUDIT_ONLY_ACTIONS)[number];

@@ -13,7 +13,7 @@ import {
 import type { Id } from '@cellhive/contracts';
 
 /** Why every token of a user is revoked at once (audit `after.reason`). */
-export type BulkRevocationReason = 'password_reset';
+export type BulkRevocationReason = 'password_reset' | 'password_change';
 
 export interface RevokeUserApiTokensInput {
   readonly userId: Id<'usr'>;

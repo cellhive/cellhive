@@ -115,6 +115,7 @@
     "PASSWORD_TOO_COMMON": "This password is too common. Choose another one.",
     "PASSWORD_MISMATCH": "The passwords do not match.",
     "NO_PASSWORD": "This account signs in with an external provider and has no password.",
+    "CURRENT_PASSWORD_INVALID": "The current password is wrong.",
     "INVALID_LOCALE": "Unknown language.",
     "INVALID_TIME_ZONE": "Unknown time zone.",
     "DEPENDENCY_DOWN": "A service is unavailable.",

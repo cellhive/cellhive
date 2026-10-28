@@ -90,6 +90,24 @@ export class UsersRepository extends GlobalRepository<'users'> {
     return result.numUpdatedRows > 0n;
   }
 
+  /** Sets the given profile keys; `undefined` when the user does not exist. */
+  async updateProfile(
+    id: Id<'usr'>,
+    changes: {
+      readonly display_name?: string;
+      readonly locale?: string;
+      readonly timezone?: string;
+    },
+    tx?: Tx,
+  ): Promise<User | undefined> {
+    return this.executor(tx)
+      .updateTable('meta.users')
+      .set(changes)
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirst();
+  }
+
   /** Whether the user signs in through an external identity provider (OIDC). */
   async hasExternalIdentity(id: Id<'usr'>, tx?: Tx): Promise<boolean> {
     const row = await this.executor(tx)

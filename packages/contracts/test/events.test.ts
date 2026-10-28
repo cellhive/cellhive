@@ -64,6 +64,8 @@ describe('event catalogue', () => {
     'user_channel.unlinked',
     'auth.identity_linked',
     'auth.identity_unlinked',
+    'auth.password_changed',
+    'user.updated',
   ])('%s is audit-only', (name) => {
     expect(isEventType(name)).toBe(false);
     expect(isAuditAction(name)).toBe(true);
@@ -80,7 +82,7 @@ describe('event catalogue', () => {
 
   it('has the expected size and no duplicates', () => {
     expect(EVENT_TYPES).toHaveLength(83);
-    expect(AUDIT_ONLY_ACTIONS).toHaveLength(36);
+    expect(AUDIT_ONLY_ACTIONS).toHaveLength(38);
     expect(new Set(AUDIT_ACTIONS).size).toBe(EVENT_TYPES.length + AUDIT_ONLY_ACTIONS.length);
   });
 

@@ -182,6 +182,47 @@ export const meResponseSchema = z
   .meta({ id: 'Me', description: 'The signed-in user and their organizations' });
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
+/** Languages a user can pick for themselves (`PATCH /me`): those of the UI and of emails. */
+export const USER_LOCALES = ['en', 'vi'] as const;
+
+/** `PATCH /api/v1/me` (CONTRACTS §12.0, T831): keys left out keep their value. */
+export const updateMeRequestSchema = z
+  .strictObject({
+    display_name: displayNameSchema.optional(),
+    locale: z.enum(USER_LOCALES).optional().meta({ description: 'UI and email language' }),
+    timezone: timeZoneSchema.optional(),
+  })
+  .refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: 'At least one property is required',
+  })
+  .meta({ id: 'UpdateMeRequest' });
+export type UpdateMeRequest = z.infer<typeof updateMeRequestSchema>;
+
+/**
+ * Detail code (`errors[].code` of `422 VALIDATION_FAILED`, path
+ * `current_password`) of `POST /me/password` with a wrong current password.
+ */
+export const CURRENT_PASSWORD_INVALID = 'CURRENT_PASSWORD_INVALID';
+
+/**
+ * `POST /api/v1/me/password` (CONTRACTS §12.0, T831). `revoke_tokens`
+ * defaults to `false`, unlike a reset: the caller proved the current
+ * password, so a routine change keeps their integrations working.
+ */
+export const changePasswordRequestSchema = z
+  .strictObject({
+    // Length only: the current password is checked, not re-validated.
+    current_password: z.string().min(1).max(PASSWORD_MAX_LENGTH).meta({ format: 'password' }),
+    new_password: newPasswordSchema,
+    revoke_tokens: z.boolean().default(false).meta({
+      description:
+        'Also revoke every API token of the caller, in every organization (default `false`)',
+    }),
+  })
+  .meta({ id: 'ChangePasswordRequest' });
+export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
+export type ChangePasswordRequestInput = z.input<typeof changePasswordRequestSchema>;
+
 // --- Password reset (SPEC §14.2, CONTRACTS §12.1) --------------------------------
 
 export const forgotPasswordRequestSchema = z

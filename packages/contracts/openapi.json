@@ -3843,6 +3843,34 @@
         ],
         "type": "object"
       },
+      "ChangePasswordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "new_password": {
+            "description": "At least 10 characters, not a common password",
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 10,
+            "type": "string"
+          },
+          "revoke_tokens": {
+            "default": false,
+            "description": "Also revoke every API token of the caller, in every organization (default `false`)",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "type": "object"
+      },
       "ColorRule": {
         "properties": {
           "broken": {
@@ -17926,6 +17954,32 @@
             "maximum": 1000,
             "minimum": 1,
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateMeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "locale": {
+            "description": "UI and email language",
+            "enum": [
+              "en",
+              "vi"
+            ],
+            "type": "string"
+          },
+          "timezone": {
+            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "example": "Asia/Ho_Chi_Minh",
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
           }
         },
         "type": "object"
@@ -33356,6 +33410,72 @@
           "auth"
         ],
         "x-api-token-scope": "schema:read"
+      },
+      "patch": {
+        "description": "Session only. Keys left out keep their value; an empty body → `422`. Returns the caller as `GET /me` does. Audited as `user.updated` (changed keys only, one entry per organization of the user). Requests other than GET/HEAD/OPTIONS that carry the session cookie must send the value of the `ob_csrf` cookie in the `x-csrf-token` header, otherwise `403 CSRF_INVALID`.",
+        "operationId": "updateMe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "The updated user"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`INSUFFICIENT_SCOPE` (API token) or `CSRF_INVALID`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Change my display name, language or time zone",
+        "tags": [
+          "auth"
+        ],
+        "x-api-token-scope": "session"
       }
     },
     "/api/v1/me/identities": {
@@ -33615,6 +33735,77 @@
           }
         ],
         "summary": "Disconnect a sign-in provider from my account",
+        "tags": [
+          "auth"
+        ],
+        "x-api-token-scope": "session"
+      }
+    },
+    "/api/v1/me/password": {
+      "post": {
+        "description": "Session only. Checks `current_password`, applies the password policy to `new_password`, then signs out every other session of the caller (this one stays). With `revoke_tokens` (default `false`) every API token of the caller, in every organization, is revoked in the same transaction. An account without a password (external sign-in only) sets one with a reset link instead. 10 attempts per hour per user. Audited as `auth.password_changed` (one entry per organization of the user; never the password). Ignores `Idempotency-Key`. Requests other than GET/HEAD/OPTIONS that carry the session cookie must send the value of the `ob_csrf` cookie in the `x-csrf-token` header, otherwise `403 CSRF_INVALID`.",
+        "operationId": "changeMyPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`INSUFFICIENT_SCOPE` (API token) or `CSRF_INVALID`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`: `CURRENT_PASSWORD_INVALID` (path `current_password`), `NO_PASSWORD`, or a weak new password (`TOO_SMALL`, `PASSWORD_TOO_COMMON`)"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED`, with `Retry-After`"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Change my password",
         "tags": [
           "auth"
         ],

@@ -144,6 +144,13 @@ export class SessionService {
     return revoked;
   }
 
+  /** Deletes every other session of a user (and closes their WebSockets); returns how many. */
+  async revokeOthersOfUser(userId: Id<'usr'>, keep: Id<'ses'>, tx?: Tx): Promise<number> {
+    const revoked = await this.sessions.deleteOthersOfUser(userId, keep, tx);
+    if (revoked.length > 0) await this.publishRevoked(userId, revoked, tx);
+    return revoked.length;
+  }
+
   private async publishRevoked(
     userId: Id<'usr'>,
     sessionIds: readonly Id<'ses'>[] | undefined,

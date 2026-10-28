@@ -127,6 +127,17 @@ export class SessionsRepository extends GlobalRepository<'sessions'> {
     return Number(result.numDeletedRows);
   }
 
+  /** Revokes every session of a user but `keep`; returns the ids deleted. */
+  async deleteOthersOfUser(userId: Id<'usr'>, keep: Id<'ses'>, tx?: Tx): Promise<Id<'ses'>[]> {
+    const rows = await this.executor(tx)
+      .deleteFrom('meta.sessions')
+      .where('user_id', '=', userId)
+      .where('id', '!=', keep)
+      .returning('id')
+      .execute();
+    return rows.map((row) => row.id);
+  }
+
   /** Removes sessions that expired before `before`; returns how many. */
   async deleteExpired(before: Date, tx?: Tx): Promise<number> {
     const result = await this.executor(tx)

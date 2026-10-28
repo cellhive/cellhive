@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  changePasswordRequestSchema,
   CSRF_COOKIE,
   CSRF_HEADER,
   forgotPasswordRequestSchema,
@@ -13,6 +14,7 @@ import {
   setupRequestSchema,
   setupResponseSchema,
   setupStatusSchema,
+  updateMeRequestSchema,
 } from '../../auth.js';
 import { idOf } from '../../ids.js';
 import { problemResponse, type RouteRegistrar } from '../types.js';
@@ -141,6 +143,54 @@ export const registerAuthRoutes: RouteRegistrar = (registry, components) => {
     responses: {
       200: { description: 'The signed-in user', content: json(meResponseSchema) },
       401: problem('`UNAUTHENTICATED`'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/me',
+    operationId: 'updateMe',
+    tags: ['auth'],
+    summary: 'Change my display name, language or time zone',
+    description:
+      'Session only. Keys left out keep their value; an empty body → `422`. Returns the ' +
+      'caller as `GET /me` does. Audited as `user.updated` (changed keys only, one entry per ' +
+      `organization of the user). ${CSRF_NOTE}`,
+    security: session,
+    request: { body: { content: json(updateMeRequestSchema), required: true } },
+    responses: {
+      200: { description: 'The updated user', content: json(meResponseSchema) },
+      401: problem('`UNAUTHENTICATED`'),
+      403: problem('`INSUFFICIENT_SCOPE` (API token) or `CSRF_INVALID`'),
+      422: problem('`VALIDATION_FAILED`'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/me/password',
+    operationId: 'changeMyPassword',
+    tags: ['auth'],
+    summary: 'Change my password',
+    description:
+      'Session only. Checks `current_password`, applies the password policy to ' +
+      '`new_password`, then signs out every other session of the caller (this one stays). ' +
+      'With `revoke_tokens` (default `false`) every API token of the caller, in every ' +
+      'organization, is revoked in the same transaction. An account without a password ' +
+      '(external sign-in only) sets one with a reset link instead. 10 attempts per hour per ' +
+      'user. Audited as `auth.password_changed` (one entry per organization of the user; ' +
+      `never the password). Ignores \`Idempotency-Key\`. ${CSRF_NOTE}`,
+    security: session,
+    request: { body: { content: json(changePasswordRequestSchema), required: true } },
+    responses: {
+      204: { description: 'Password changed' },
+      401: problem('`UNAUTHENTICATED`'),
+      403: problem('`INSUFFICIENT_SCOPE` (API token) or `CSRF_INVALID`'),
+      422: problem(
+        '`VALIDATION_FAILED`: `CURRENT_PASSWORD_INVALID` (path `current_password`), ' +
+          '`NO_PASSWORD`, or a weak new password (`TOO_SMALL`, `PASSWORD_TOO_COMMON`)',
+      ),
+      429: problem('`RATE_LIMITED`, with `Retry-After`'),
     },
   });
 

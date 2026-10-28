@@ -17,6 +17,9 @@ export const IDEMPOTENCY_EXCLUDED_ROUTES: Readonly<Record<string, string>> = {
   '/me/identities/:provider/start':
     'Not bound to an organization; a retry only starts a new link attempt with a fresh state ' +
     'cookie (CONTRACTS §1.1, §27.3).',
+  '/me/password':
+    'Not bound to an organization; a retry checks the current password again (CONTRACTS ' +
+    '§1.1, §12.0).',
   '/invitations/:token/accept':
     'Public and token-scoped: the caller may have no account yet, so there is no principal ' +
     'to own a key; the single-use token already makes a retry harmless.',

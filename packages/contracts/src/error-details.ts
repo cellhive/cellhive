@@ -391,6 +391,7 @@ export const AUTH_DETAIL_CODES = [
   'NO_PASSWORD',
   'INVALID_LOCALE',
   'INVALID_TIME_ZONE',
+  'CURRENT_PASSWORD_INVALID',
 ] as const;
 
 /**

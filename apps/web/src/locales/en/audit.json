@@ -144,6 +144,7 @@
     "login": "signed in",
     "login_failed": "sign-in failed",
     "logout": "signed out",
+    "password_changed": "password changed",
     "password_reset": "password reset",
     "password_reset_requested": "password reset requested",
     "purged": "deleted permanently",

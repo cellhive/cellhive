@@ -59,6 +59,7 @@ export const API_TOKEN_ROUTE_SCOPES = {
     scope: 'session',
   },
   // auth
+  changeMyPassword: { method: 'POST', path: '/api/v1/me/password', scope: 'session' },
   completeOidcLogin: {
     method: 'GET',
     path: '/api/v1/auth/oidc/{provider}/callback',
@@ -87,6 +88,7 @@ export const API_TOKEN_ROUTE_SCOPES = {
     scope: 'session',
   },
   startOidcLogin: { method: 'GET', path: '/api/v1/auth/oidc/{provider}/start', scope: 'public' },
+  updateMe: { method: 'PATCH', path: '/api/v1/me', scope: 'session' },
   // automations
   cancelAutomationRun: {
     method: 'POST',

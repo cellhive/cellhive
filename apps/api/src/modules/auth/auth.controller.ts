@@ -1,18 +1,34 @@
 import {
+  changePasswordRequestSchema,
   forgotPasswordRequestSchema,
   loginRequestSchema,
   passwordResetRequestSchema,
+  updateMeRequestSchema,
+  type ChangePasswordRequest,
   type ForgotPasswordRequest,
   type LoginRequest,
   type MeResponse,
   type PasswordResetRequest,
+  type UpdateMeRequest,
 } from '@cellhive/contracts';
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 
 import {
   CurrentPrincipal,
   OptionalSessionPrincipal,
   Public,
+  sessionOf,
   type Principal,
   type SessionPrincipal,
 } from '../../common/auth/principal.js';
@@ -25,7 +41,10 @@ import { PasswordResetService } from './password-reset.service.js';
 
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-/** Sign-in/out, `GET /me` and the public password reset endpoints (SPEC §13.1). */
+/**
+ * Sign-in/out, `GET|PATCH /me`, `POST /me/password` and the public password
+ * reset endpoints (SPEC §13.1).
+ */
 @Controller()
 export class AuthController {
   constructor(
@@ -73,6 +92,27 @@ export class AuthController {
       this.sessions.setCsrfCookie(reply, request, principal.session.id);
     }
     return this.auth.me(principal);
+  }
+
+  /** Session only (`api-token-scopes.ts`). */
+  @Patch('me')
+  updateMe(
+    @Body(new ZodValidationPipe(updateMeRequestSchema)) body: UpdateMeRequest,
+    @CurrentPrincipal() principal: Principal,
+    @Req() request: FastifyRequest,
+  ): Promise<MeResponse> {
+    return this.auth.updateProfile(sessionOf(principal), body, requestMetaOf(request));
+  }
+
+  /** Session only (`api-token-scopes.ts`); never logs or audits a password. */
+  @Post('me/password')
+  @HttpCode(204)
+  async changePassword(
+    @Body(new ZodValidationPipe(changePasswordRequestSchema)) body: ChangePasswordRequest,
+    @CurrentPrincipal() principal: Principal,
+    @Req() request: FastifyRequest,
+  ): Promise<void> {
+    await this.auth.changePassword(sessionOf(principal), body, requestMetaOf(request));
   }
 
   @Post('auth/forgot-password')

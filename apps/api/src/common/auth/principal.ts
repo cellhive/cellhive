@@ -48,6 +48,27 @@ export function principalKeyOf(principal: Principal): string {
   return principal.kind === 'api_token' ? principal.tokenId : principal.userId;
 }
 
+/**
+ * Session only (`api-token-scopes.ts`): `ScopeGuard` already refuses API
+ * tokens with `403 INSUFFICIENT_SCOPE`; this keeps the type narrow.
+ */
+export function sessionOf(principal: Principal): SessionPrincipal {
+  if (principal.kind !== 'session') {
+    throw new AppError('INSUFFICIENT_SCOPE', {
+      detail: 'This route needs a signed-in session; API tokens cannot use it.',
+      errors: [
+        {
+          path: '',
+          code: 'INSUFFICIENT_SCOPE',
+          message: 'The API token does not allow this route',
+          params: { required: ['session'] },
+        },
+      ],
+    });
+  }
+  return principal;
+}
+
 /** Metadata key of `@Public()`. */
 export const PUBLIC_ACCESS = 'app:publicAccess';
 

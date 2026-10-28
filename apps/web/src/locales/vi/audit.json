@@ -144,6 +144,7 @@
     "login": "đã đăng nhập",
     "login_failed": "đăng nhập thất bại",
     "logout": "đã đăng xuất",
+    "password_changed": "đã đổi mật khẩu",
     "password_reset": "đã đặt lại mật khẩu",
     "password_reset_requested": "đã yêu cầu đặt lại mật khẩu",
     "purged": "đã xoá vĩnh viễn",

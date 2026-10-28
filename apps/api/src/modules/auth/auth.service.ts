@@ -1,4 +1,5 @@
 import {
+  ApiTokensRepository,
   OrganizationsRepository,
   UsersRepository,
   type AppConfig,
@@ -10,19 +11,28 @@ import { AppError } from '@cellhive/server-core/errors';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { PasswordHasher } from '../../common/auth/password/password-hasher.js';
+import { assertPasswordPolicy } from '../../common/auth/password/password-policy.js';
 import { auditContextOf, type RequestMeta } from '../../common/auth/request-meta.js';
 import { SessionService } from '../../common/auth/session.service.js';
 import { RateLimiter } from '../../common/rate-limit/rate-limiter.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
+import { revokeUserApiTokens } from '../api-token/revoke-user-tokens.js';
 
 import { emailKey, LoginThrottle } from './login-throttle.js';
 import { auditForUser } from './user-audit.js';
 
 import type { Principal, SessionPrincipal } from '../../common/auth/principal.js';
-import type { LoginRequest, MeResponse } from '@cellhive/contracts';
+import type {
+  ChangePasswordRequest,
+  LoginRequest,
+  MeResponse,
+  UpdateMeRequest,
+} from '@cellhive/contracts';
 
 /** Sign-in attempts per client IP (SPEC §13.1: public endpoints, 429 + Retry-After). */
 export const LOGIN_RATE_LIMIT = { limit: 20, windowSeconds: 60 } as const;
+/** `POST /me/password` attempts per user: bounds guessing the current password from a session. */
+export const PASSWORD_CHANGE_RATE_LIMIT = { limit: 10, windowSeconds: 60 * 60 } as const;
 
 export interface LoginResult {
   readonly session: Session;
@@ -38,6 +48,19 @@ function accountLocked(retryAfterSeconds: number): AppError {
   return new AppError('ACCOUNT_LOCKED', {
     detail: 'Too many failed sign-in attempts; try again later.',
     retryAfterSeconds,
+  });
+}
+
+function currentPasswordInvalid(): AppError {
+  return new AppError('VALIDATION_FAILED', {
+    detail: 'The current password is wrong.',
+    errors: [
+      {
+        path: 'current_password',
+        code: 'CURRENT_PASSWORD_INVALID',
+        message: 'The current password is wrong',
+      },
+    ],
   });
 }
 
@@ -61,6 +84,7 @@ export class AuthService {
     @Inject(PasswordHasher) private readonly hasher: PasswordHasher,
     @Inject(LoginThrottle) private readonly throttle: LoginThrottle,
     @Inject(RateLimiter) private readonly rateLimiter: RateLimiter,
+    @Inject(ApiTokensRepository) private readonly apiTokens: ApiTokensRepository,
   ) {}
 
   /**
@@ -136,6 +160,108 @@ export class AuthService {
         after: { user_id: principal.userId },
         context: auditContextOf(meta, { type: 'user', id: principal.userId }),
       });
+    });
+  }
+
+  /**
+   * `PATCH /me` (CONTRACTS §12.0): sets the given keys and returns the
+   * caller as `GET /me`. Audited as `user.updated` with the changed keys
+   * only; nothing changed → nothing written.
+   */
+  async updateProfile(
+    principal: SessionPrincipal,
+    input: UpdateMeRequest,
+    meta: RequestMeta,
+  ): Promise<MeResponse> {
+    const user = await this.db.withTx(async (tx) => {
+      const current = await this.users.lockById(principal.userId, tx);
+      if (current === undefined) throw new AppError('UNAUTHENTICATED');
+      const before: Record<string, string | null> = {};
+      const after: Record<string, string> = {};
+      for (const key of ['display_name', 'locale', 'timezone'] as const) {
+        const value = input[key];
+        if (value === undefined || value === current[key]) continue;
+        before[key] = current[key];
+        after[key] = value;
+      }
+      if (Object.keys(after).length === 0) return current;
+      const updated = await this.users.updateProfile(principal.userId, after, tx);
+      await auditForUser(tx, this.organizations, principal.userId, {
+        action: 'user.updated',
+        entityType: 'user',
+        entityId: principal.userId,
+        before,
+        after,
+        context: auditContextOf(meta, { type: 'user', id: principal.userId }),
+      });
+      return updated ?? current;
+    });
+    return this.me({ ...principal, user });
+  }
+
+  /**
+   * `POST /me/password` (CONTRACTS §12.0): checks the current password,
+   * sets the new one, signs out every other session of the caller and,
+   * with `revoke_tokens`, revokes their API tokens in every organization —
+   * in one transaction. No password (external sign-in only) → `NO_PASSWORD`.
+   */
+  async changePassword(
+    principal: SessionPrincipal,
+    input: ChangePasswordRequest,
+    meta: RequestMeta,
+  ): Promise<void> {
+    const userId = principal.userId;
+    await this.rateLimiter.hit(`password-change:user:${userId}`, PASSWORD_CHANGE_RATE_LIMIT);
+    const passwordHash = principal.user.password_hash;
+    if (passwordHash === null) {
+      throw new AppError('VALIDATION_FAILED', {
+        detail: 'This account signs in with an external identity provider and has no password.',
+        errors: [
+          {
+            path: 'current_password',
+            code: 'NO_PASSWORD',
+            message: 'The account has no password; set one with a reset link',
+          },
+        ],
+      });
+    }
+    if (!(await this.hasher.verify(passwordHash, input.current_password))) {
+      throw currentPasswordInvalid();
+    }
+    assertPasswordPolicy(input.new_password, 'new_password');
+    const newHash = await this.hasher.hash(input.new_password);
+
+    await this.db.withTx(async (tx) => {
+      // Changed by another request since it was checked: that check no longer holds.
+      const locked = await this.users.lockById(userId, tx);
+      if (locked?.password_hash !== passwordHash) throw currentPasswordInvalid();
+      await this.users.setPasswordHash(userId, newHash, tx);
+      const revoked = await this.sessions.revokeOthersOfUser(userId, principal.session.id, tx);
+      const context = auditContextOf(meta, { type: 'user', id: userId });
+      const revokedTokens = input.revoke_tokens
+        ? await revokeUserApiTokens(
+            { db: this.db, organizations: this.organizations, apiTokens: this.apiTokens },
+            tx,
+            { userId, reason: 'password_change', context },
+          )
+        : 0;
+      await auditForUser(tx, this.organizations, userId, {
+        action: 'auth.password_changed',
+        entityType: 'user',
+        entityId: userId,
+        after: { revoked_sessions: revoked, revoked_tokens: revokedTokens },
+        context,
+      });
+      if (revoked > 0) {
+        // CONTRACTS §8: every session revocation other than sign-out is audited.
+        await auditForUser(tx, this.organizations, userId, {
+          action: 'auth.session_revoked',
+          entityType: 'user',
+          entityId: userId,
+          after: { reason: 'password_change', revoked_sessions: revoked },
+          context,
+        });
+      }
     });
   }
 

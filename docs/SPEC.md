@@ -1016,6 +1016,7 @@ POST   /api/v1/fields/:id/convert-preview | /restore | /revert-conversion
 GET    /api/v1/bases/:id/audit-logs (+ POST /export), /orgs/:id/audit-logs (+ POST /export, POST /redact — chỉ route org)   # C§11.4
 GET    /api/v1/bases/:id/members/:userId/access, GET /api/v1/bases/:id/principals   # C§5A, C§14 (T711), chỉ session
 GET    /api/v1/me/identities, POST /api/v1/me/identities/:provider/start, DELETE /api/v1/me/identities/:userIdentityId   # C§27.3 (T708), chỉ session
+PATCH  /api/v1/me, POST /api/v1/me/password   # C§12.0 (T831): hồ sơ (tên, ngôn ngữ, múi giờ) và đổi mật khẩu, chỉ session
 CRUD   /api/v1/orgs/:id/invitations, POST /api/v1/invitations/:token/accept
 GET|POST /api/v1/orgs/:orgId/me/api-tokens, PATCH|DELETE /api/v1/api-tokens/:id, GET /api/v1/orgs/:orgId/api-tokens   # C§26.4 (T703), chỉ session
 ```

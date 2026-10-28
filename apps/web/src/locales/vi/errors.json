@@ -115,6 +115,7 @@
     "PASSWORD_TOO_COMMON": "Mật khẩu này quá phổ biến. Hãy chọn mật khẩu khác.",
     "PASSWORD_MISMATCH": "Hai mật khẩu không khớp.",
     "NO_PASSWORD": "Tài khoản này đăng nhập qua nhà cung cấp bên ngoài và không có mật khẩu.",
+    "CURRENT_PASSWORD_INVALID": "Mật khẩu hiện tại không đúng.",
     "INVALID_LOCALE": "Ngôn ngữ không xác định.",
     "INVALID_TIME_ZONE": "Múi giờ không xác định.",
     "DEPENDENCY_DOWN": "Một dịch vụ không khả dụng.",
