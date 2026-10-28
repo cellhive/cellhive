@@ -10,13 +10,14 @@ import {
   Spinner,
 } from '@cellhive/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Database, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { baseAdminApi } from '../../../lib/api/base-admin';
 import { workspaceAdminApi } from '../../../lib/api/workspace-admin';
+import { BaseIcon } from '../../../lib/brand/BaseIcon';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
 import { canCreateBase, isOrgAdmin } from '../../../lib/permissions/org';
@@ -290,7 +291,7 @@ export function DeletedBases({ workspace }: { readonly workspace: WorkspaceDto }
             className="flex flex-wrap items-center gap-3 px-4 py-3"
             data-testid={`deleted-base-${base.id}`}
           >
-            <Database aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
+            <BaseIcon base={base} size="sm" className="grayscale" />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-medium">{base.name}</span>
               <span className="text-label font-normal text-fg-muted">

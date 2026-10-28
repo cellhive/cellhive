@@ -98,6 +98,27 @@ describe('base settings › General', () => {
     expect(await axeViolations(document.body)).toEqual([]);
   });
 
+  it('picks a tile for the base: glyph and color, saved as icon', async () => {
+    const { calls } = serve();
+    await renderApp(`/b/${BASE}/settings`);
+    const picker = await screen.findByTestId('base-icon-picker');
+    await userEvent.click(within(picker).getByRole('radio', { name: 'Support' }));
+    await userEvent.click(within(picker).getByRole('radio', { name: 'Teal' }));
+    expect(await axeViolations(document.body)).toEqual([]);
+    await userEvent.click(
+      within(screen.getByTestId('base-info-form')).getByRole('button', { name: 'Save changes' }),
+    );
+    await waitFor(() => {
+      expect(calls).toEqual([['PATCH', { icon: 'support:5' }]]);
+    });
+    // Saved: the form starts again from the stored value, nothing left to save.
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId('base-info-form')).getByRole('button', { name: 'Save changes' }),
+      ).toBeDisabled();
+    });
+  });
+
   it('deletes the base once its name is typed, and Undo restores it', async () => {
     const { calls } = serve();
     const { router } = await renderApp(`/b/${BASE}/settings`);

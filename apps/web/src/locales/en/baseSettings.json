@@ -24,12 +24,43 @@
   "general": {
     "title": "General",
     "info": {
-      "title": "Name and description",
+      "title": "Name, icon and description",
       "name": "Base name",
       "description": "Description",
       "descriptionHint": "Shown under the base name on its page.",
       "save": "Save changes",
-      "saved": "Saved."
+      "saved": "Saved.",
+      "icon": "Icon",
+      "glyph": "Symbol",
+      "color": "Color",
+      "glyphs": {
+        "database": "Database",
+        "table": "Table",
+        "tasks": "Tasks",
+        "users": "People",
+        "support": "Support",
+        "cart": "Sales",
+        "package": "Products",
+        "truck": "Delivery",
+        "wallet": "Finance",
+        "briefcase": "Work",
+        "calendar": "Calendar",
+        "megaphone": "Marketing",
+        "rocket": "Launch",
+        "school": "Training",
+        "health": "Health",
+        "building": "Office"
+      },
+      "colors": {
+        "0": "Gray",
+        "1": "Blue",
+        "2": "Green",
+        "3": "Amber",
+        "4": "Red",
+        "5": "Teal",
+        "6": "Orange",
+        "7": "Indigo"
+      }
     },
     "facts": {
       "title": "Details",

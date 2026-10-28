@@ -1,10 +1,11 @@
 import { Button, cn, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Database, Plus } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import { lazy, Suspense, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
 
+import { BaseIcon } from '../../../lib/brand/BaseIcon';
 import { canCreateWorkspace } from '../../../lib/permissions/org';
 import { basesQuery, workspacesQuery } from '../api';
 import { basePath, workspacePath } from '../hooks';
@@ -76,7 +77,7 @@ function WorkspaceBases({
               )
             }
           >
-            <Database aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
+            <BaseIcon base={base} size="sm" />
             <span className="truncate">{base.name}</span>
           </NavLink>
           {baseMenu?.({ id: base.id, name: base.name })}

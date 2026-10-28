@@ -1,10 +1,11 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Database, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { BaseIcon } from '../../../lib/brand/BaseIcon';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { canCreateBase } from '../../../lib/permissions/org';
 import { basesQuery } from '../api';
@@ -46,15 +47,15 @@ export function WorkspaceBaseList({
               <Link
                 to={basePath(base)}
                 // Lifts a little under the pointer (motion pass).
-                className="flex h-full flex-col gap-1 rounded-lg border border-line bg-surface p-4 transition-[border-color,box-shadow,transform] duration-(--motion-enter) ease-(--ease-enter) hover:border-line-strong hover:shadow-sm motion-safe:hover:-translate-y-px"
+                className="flex h-full items-start gap-3 rounded-lg border border-line bg-surface p-4 transition-[border-color,box-shadow,transform] duration-(--motion-enter) ease-(--ease-enter) hover:border-line-strong hover:shadow-sm motion-safe:hover:-translate-y-px"
               >
-                <span className="flex items-center gap-2 font-medium">
-                  <Database aria-hidden="true" className="size-4 shrink-0 text-accent" />
-                  <span className="truncate">{base.name}</span>
+                <BaseIcon base={base} />
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate font-medium">{base.name}</span>
+                  {base.description === null ? null : (
+                    <span className="line-clamp-2 text-fg-muted">{base.description}</span>
+                  )}
                 </span>
-                {base.description === null ? null : (
-                  <span className="line-clamp-2 text-fg-muted">{base.description}</span>
-                )}
               </Link>
             </li>
           ))}

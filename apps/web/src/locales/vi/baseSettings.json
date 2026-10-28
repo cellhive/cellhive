@@ -24,12 +24,43 @@
   "general": {
     "title": "Chung",
     "info": {
-      "title": "Tên và mô tả",
+      "title": "Tên, biểu tượng và mô tả",
       "name": "Tên base",
       "description": "Mô tả",
       "descriptionHint": "Hiện dưới tên base ở trang của base.",
       "save": "Lưu thay đổi",
-      "saved": "Đã lưu."
+      "saved": "Đã lưu.",
+      "icon": "Biểu tượng",
+      "glyph": "Hình",
+      "color": "Màu",
+      "glyphs": {
+        "database": "Cơ sở dữ liệu",
+        "table": "Bảng",
+        "tasks": "Công việc",
+        "users": "Con người",
+        "support": "Hỗ trợ",
+        "cart": "Bán hàng",
+        "package": "Sản phẩm",
+        "truck": "Giao hàng",
+        "wallet": "Tài chính",
+        "briefcase": "Công tác",
+        "calendar": "Lịch",
+        "megaphone": "Marketing",
+        "rocket": "Khởi động",
+        "school": "Đào tạo",
+        "health": "Sức khoẻ",
+        "building": "Văn phòng"
+      },
+      "colors": {
+        "0": "Xám",
+        "1": "Xanh dương",
+        "2": "Xanh lá",
+        "3": "Vàng",
+        "4": "Đỏ",
+        "5": "Xanh ngọc",
+        "6": "Cam",
+        "7": "Chàm"
+      }
     },
     "facts": {
       "title": "Chi tiết",

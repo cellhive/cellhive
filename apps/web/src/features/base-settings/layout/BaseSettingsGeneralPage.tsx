@@ -7,6 +7,14 @@ import { useNavigate, useParams } from 'react-router';
 
 import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { baseAdminApi } from '../../../lib/api/base-admin';
+import {
+  BASE_COLOR_COUNT,
+  BASE_GLYPHS,
+  BaseIcon,
+  baseIconValue,
+  baseLook,
+  type BaseGlyph,
+} from '../../../lib/brand/BaseIcon';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
 import { PAGE_GUTTER, PageHeading } from '../../../lib/layout/page-heading';
@@ -55,7 +63,10 @@ export function BaseSettingsGeneralPage() {
         data-testid="base-settings-general"
       >
         {/* Saved values remount the form, so it starts clean from them. */}
-        <BaseInfoForm key={`${base.name}\u0000${base.description ?? ''}`} base={base} />
+        <BaseInfoForm
+          key={`${base.name}\u0000${base.description ?? ''}\u0000${base.icon ?? ''}`}
+          base={base}
+        />
         <BaseFacts base={base} />
         <DeleteBaseSection base={base} />
       </div>
@@ -68,10 +79,13 @@ function BaseInfoForm({ base }: { readonly base: BaseDetail }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(base.name);
   const [description, setDescription] = useState(base.description ?? '');
+  const [look, setLook] = useState(() => baseLook(base));
   const nextDescription = description.trim() === '' ? null : description;
+  const icon = baseIconValue(look);
   const changes = {
     ...(name.trim() === base.name ? {} : { name: name.trim() }),
     ...(nextDescription === base.description ? {} : { description: nextDescription }),
+    ...(icon === baseIconValue(baseLook(base)) ? {} : { icon }),
   };
   const save = useMutation({
     mutationFn: () => baseAdminApi.update(base.id, changes),
@@ -108,6 +122,7 @@ function BaseInfoForm({ base }: { readonly base: BaseDetail }) {
             />
           )}
         </FormField>
+        <IconPicker base={base} look={look} onChange={setLook} />
         <FormField label={t('general.info.description')} hint={t('general.info.descriptionHint')}>
           {(control) => (
             <textarea
@@ -131,6 +146,93 @@ function BaseInfoForm({ base }: { readonly base: BaseDetail }) {
         </div>
       </form>
     </section>
+  );
+}
+
+const GLYPHS = Object.keys(BASE_GLYPHS) as BaseGlyph[];
+const COLORS = Array.from({ length: BASE_COLOR_COUNT }, (_, index) => index);
+const CHOICE =
+  'flex cursor-pointer items-center justify-center border-2 border-transparent text-fg-muted hover:bg-surface-sunken ' +
+  'peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-accent ' +
+  'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent';
+
+/**
+ * The tile of the base (motion/polish pass, like Lark Base): a glyph and one
+ * of the eight solid colors, saved as `icon` with the name. Native radios, so
+ * arrows move within each group and screen readers name the choice.
+ */
+function IconPicker({
+  base,
+  look,
+  onChange,
+}: {
+  readonly base: BaseDetail;
+  readonly look: ReturnType<typeof baseLook>;
+  readonly onChange: (look: ReturnType<typeof baseLook>) => void;
+}) {
+  const { t } = useTranslation('baseSettings');
+  return (
+    <fieldset className="flex flex-col gap-2" data-testid="base-icon-picker">
+      <legend className="mb-1 text-label font-medium">{t('general.info.icon')}</legend>
+      <div className="flex flex-wrap items-start gap-4">
+        <BaseIcon base={base} look={look} size="lg" />
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div
+            role="radiogroup"
+            aria-label={t('general.info.glyph')}
+            className="flex flex-wrap gap-1"
+          >
+            {GLYPHS.map((glyph) => {
+              const Glyph = BASE_GLYPHS[glyph];
+              return (
+                <label key={glyph} title={t(`general.info.glyphs.${glyph}`)}>
+                  <input
+                    type="radio"
+                    name="base-glyph"
+                    className="peer sr-only"
+                    checked={look.glyph === glyph}
+                    aria-label={t(`general.info.glyphs.${glyph}`)}
+                    onChange={() => {
+                      onChange({ ...look, glyph });
+                    }}
+                  />
+                  <span className={cn(CHOICE, 'size-8 rounded-md max-lg:size-11')}>
+                    <Glyph aria-hidden="true" className="size-4" />
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div
+            role="radiogroup"
+            aria-label={t('general.info.color')}
+            className="flex flex-wrap gap-1.5"
+          >
+            {COLORS.map((color) => (
+              <label key={color} title={t(`general.info.colors.${String(color)}`)}>
+                <input
+                  type="radio"
+                  name="base-color"
+                  className="peer sr-only"
+                  checked={look.color === color}
+                  aria-label={t(`general.info.colors.${String(color)}`)}
+                  onChange={() => {
+                    onChange({ ...look, color });
+                  }}
+                />
+                <span
+                  className={cn(CHOICE, 'size-7 rounded-full p-0.5 max-lg:size-11')}
+                  style={{
+                    backgroundClip: 'content-box',
+                    backgroundColor: `var(--avatar-${String(color)})`,
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </fieldset>
   );
 }
 
