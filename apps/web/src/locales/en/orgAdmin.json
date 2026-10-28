@@ -1,0 +1,142 @@
+{
+  "page": {
+    "back": "Back to {{name}}",
+    "close": "Close",
+    "cancel": "Cancel",
+    "done": "Done"
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member"
+  },
+  "general": {
+    "title": "General",
+    "info": {
+      "title": "Organization",
+      "name": "Organization name",
+      "save": "Save changes",
+      "saved": "Saved."
+    },
+    "facts": {
+      "title": "Details",
+      "id": "Organization ID",
+      "slug": "URL slug",
+      "created": "Created",
+      "copy": "Copy",
+      "copied": "Copied."
+    }
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "People in {{org}} and their role in the organization.",
+    "invite": "Invite people",
+    "rules": "Owners and admins manage the organization, its members and every base. Only owners can change an owner or make someone an owner, and an organization keeps at least one owner.",
+    "caption": "Members of the organization",
+    "columns": {
+      "name": "Name",
+      "role": "Role",
+      "joined": "Joined",
+      "actions": "Actions"
+    },
+    "you": "You",
+    "onlyOwner": "Only owner",
+    "roleOf": "Role of {{name}}",
+    "roleChanged": "Changed the role of {{name}} to {{role}}.",
+    "actionsOf": "Actions for {{name}}",
+    "resetPassword": "Create password reset link",
+    "remove": "Remove from organization"
+  },
+  "remove": {
+    "title": "Remove {{name}} from {{org}}?",
+    "description": "They lose access to every workspace and base of the organization. Their groups, base roles and API tokens are removed, and the invitations they sent are revoked.",
+    "transferTo": "Bases they own go to",
+    "transferHint": "Only applies when they own bases, including bases in the trash.",
+    "confirm": "Remove member",
+    "done": "Removed {{name}} from the organization."
+  },
+  "reset": {
+    "title": "Password reset link for {{name}}",
+    "description": "A one-time link to choose a new password, valid for 24 hours. Creating it revokes their API tokens.",
+    "create": "Create link",
+    "label": "Password reset link",
+    "once": "Shown only once: copy it now and send it to {{name}} yourself. It expires {{date}}.",
+    "denied": "This person also belongs to another organization or owns one. Reset their password with the server CLI: cellhive user reset-password."
+  },
+  "invitations": {
+    "title": "Pending invitations",
+    "intro": "Invitation links are valid for 7 days and shown only when they are created.",
+    "empty": "No pending invitations.",
+    "caption": "Pending invitations",
+    "columns": {
+      "email": "Email",
+      "role": "Role",
+      "expires": "Expires"
+    },
+    "revoke": "Revoke",
+    "revokeOf": "Revoke the invitation of {{email}}",
+    "revokeTitle": "Revoke the invitation of {{email}}?",
+    "revokeDescription": "The link stops working. You can invite them again later.",
+    "revoked": "Invitation revoked."
+  },
+  "invite": {
+    "title": "Invite people",
+    "description": "They join {{org}} with this role when they open the link.",
+    "email": "Email",
+    "role": "Role",
+    "submit": "Create invitation",
+    "createdTitle": "Invitation for {{email}}",
+    "link": "Invitation link",
+    "once": "Shown only once: copy the link now. It is valid for 7 days.",
+    "emailSent": "An email with this link is also on its way.",
+    "noEmail": "This server sends no email: send the link yourself.",
+    "another": "Invite someone else"
+  },
+  "groups": {
+    "title": "Groups",
+    "subtitle": "Give a group a workspace or a base role once instead of person by person.",
+    "new": "New group",
+    "caption": "Groups of the organization",
+    "empty": "No groups yet.",
+    "columns": {
+      "name": "Name",
+      "members": "Members"
+    },
+    "count_one": "{{count, number}} member",
+    "count_other": "{{count, number}} members",
+    "manage": "Members",
+    "manageOf": "Members of {{name}}",
+    "actionsOf": "Actions for {{name}}",
+    "rename": "Rename",
+    "delete": "Delete",
+    "create": {
+      "title": "New group",
+      "name": "Group name",
+      "submit": "Create group",
+      "done": "Created group {{name}}."
+    },
+    "renameDialog": {
+      "title": "Rename {{name}}",
+      "submit": "Save",
+      "done": "Renamed the group to {{name}}."
+    },
+    "deleteDialog": {
+      "title": "Delete group {{name}}?",
+      "description": "The group is removed from every workspace and base role. Its people stay in the organization.",
+      "confirm": "Delete group",
+      "done": "Deleted group {{name}}."
+    },
+    "membersDialog": {
+      "title": "Members of {{name}}",
+      "description": "People of the organization in this group.",
+      "pick": "Add a person",
+      "choose": "Choose a person",
+      "add": "Add",
+      "added": "Added {{name}} to the group.",
+      "everyone": "Everyone in the organization is in this group.",
+      "empty": "No one in this group yet.",
+      "removeOf": "Remove {{name}} from the group",
+      "removed": "Removed {{name}} from the group."
+    }
+  }
+}

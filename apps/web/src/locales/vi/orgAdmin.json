@@ -1,0 +1,141 @@
+{
+  "page": {
+    "back": "Quay lại {{name}}",
+    "close": "Đóng",
+    "cancel": "Huỷ",
+    "done": "Xong"
+  },
+  "roles": {
+    "owner": "Chủ sở hữu",
+    "admin": "Quản trị viên",
+    "member": "Thành viên"
+  },
+  "general": {
+    "title": "Chung",
+    "info": {
+      "title": "Tổ chức",
+      "name": "Tên tổ chức",
+      "save": "Lưu thay đổi",
+      "saved": "Đã lưu."
+    },
+    "facts": {
+      "title": "Thông tin",
+      "id": "ID tổ chức",
+      "slug": "Đường dẫn (slug)",
+      "created": "Ngày tạo",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép."
+    }
+  },
+  "members": {
+    "title": "Thành viên",
+    "subtitle": "Những người trong {{org}} và vai trò của họ trong tổ chức.",
+    "invite": "Mời thành viên",
+    "rules": "Chủ sở hữu và quản trị viên quản lý tổ chức, thành viên và mọi base. Chỉ chủ sở hữu mới đổi được vai trò của chủ sở hữu hoặc đặt ai đó làm chủ sở hữu; tổ chức luôn cần ít nhất một chủ sở hữu.",
+    "caption": "Thành viên của tổ chức",
+    "columns": {
+      "name": "Tên",
+      "role": "Vai trò",
+      "joined": "Ngày tham gia",
+      "actions": "Thao tác"
+    },
+    "you": "Bạn",
+    "onlyOwner": "Chủ sở hữu duy nhất",
+    "roleOf": "Vai trò của {{name}}",
+    "roleChanged": "Đã đổi vai trò của {{name}} thành {{role}}.",
+    "actionsOf": "Thao tác với {{name}}",
+    "resetPassword": "Tạo link đặt lại mật khẩu",
+    "remove": "Xoá khỏi tổ chức"
+  },
+  "remove": {
+    "title": "Xoá {{name}} khỏi {{org}}?",
+    "description": "Người này mất quyền vào mọi không gian làm việc và base của tổ chức. Nhóm, vai trò trong base và API token của họ bị gỡ; các lời mời họ đã gửi bị thu hồi.",
+    "transferTo": "Chuyển các base họ sở hữu cho",
+    "transferHint": "Chỉ áp dụng khi họ sở hữu base, kể cả base trong thùng rác.",
+    "confirm": "Xoá thành viên",
+    "done": "Đã xoá {{name}} khỏi tổ chức."
+  },
+  "reset": {
+    "title": "Link đặt lại mật khẩu cho {{name}}",
+    "description": "Link dùng một lần để đặt mật khẩu mới, có hiệu lực 24 giờ. Khi tạo link, mọi API token của người này bị thu hồi.",
+    "create": "Tạo link",
+    "label": "Link đặt lại mật khẩu",
+    "once": "Link chỉ hiện một lần: hãy sao chép ngay và tự gửi cho {{name}}. Link hết hạn lúc {{date}}.",
+    "denied": "Người này còn thuộc tổ chức khác hoặc đang sở hữu một tổ chức. Hãy đặt lại mật khẩu bằng CLI trên máy chủ: cellhive user reset-password."
+  },
+  "invitations": {
+    "title": "Lời mời đang chờ",
+    "intro": "Link mời có hiệu lực 7 ngày và chỉ hiện lúc tạo.",
+    "empty": "Không có lời mời nào đang chờ.",
+    "caption": "Lời mời đang chờ",
+    "columns": {
+      "email": "Email",
+      "role": "Vai trò",
+      "expires": "Hết hạn"
+    },
+    "revoke": "Thu hồi",
+    "revokeOf": "Thu hồi lời mời của {{email}}",
+    "revokeTitle": "Thu hồi lời mời của {{email}}?",
+    "revokeDescription": "Link mời sẽ không dùng được nữa. Bạn có thể mời lại sau.",
+    "revoked": "Đã thu hồi lời mời."
+  },
+  "invite": {
+    "title": "Mời thành viên",
+    "description": "Người được mời vào {{org}} với vai trò này khi mở link.",
+    "email": "Email",
+    "role": "Vai trò",
+    "submit": "Tạo lời mời",
+    "createdTitle": "Lời mời cho {{email}}",
+    "link": "Link mời",
+    "once": "Link chỉ hiện một lần: hãy sao chép ngay. Link có hiệu lực 7 ngày.",
+    "emailSent": "Email kèm link này cũng đang được gửi đi.",
+    "noEmail": "Máy chủ này không gửi email: hãy tự gửi link cho người được mời.",
+    "another": "Mời người khác"
+  },
+  "groups": {
+    "title": "Nhóm",
+    "subtitle": "Cấp quyền vào không gian làm việc hoặc vai trò trong base cho cả nhóm một lần, thay vì từng người.",
+    "new": "Nhóm mới",
+    "caption": "Nhóm của tổ chức",
+    "empty": "Chưa có nhóm nào.",
+    "columns": {
+      "name": "Tên",
+      "members": "Thành viên"
+    },
+    "count_other": "{{count, number}} thành viên",
+    "manage": "Thành viên",
+    "manageOf": "Thành viên của {{name}}",
+    "actionsOf": "Thao tác với {{name}}",
+    "rename": "Đổi tên",
+    "delete": "Xoá",
+    "create": {
+      "title": "Nhóm mới",
+      "name": "Tên nhóm",
+      "submit": "Tạo nhóm",
+      "done": "Đã tạo nhóm {{name}}."
+    },
+    "renameDialog": {
+      "title": "Đổi tên {{name}}",
+      "submit": "Lưu",
+      "done": "Đã đổi tên nhóm thành {{name}}."
+    },
+    "deleteDialog": {
+      "title": "Xoá nhóm {{name}}?",
+      "description": "Nhóm bị gỡ khỏi mọi không gian làm việc và vai trò trong base. Thành viên của nhóm vẫn ở lại tổ chức.",
+      "confirm": "Xoá nhóm",
+      "done": "Đã xoá nhóm {{name}}."
+    },
+    "membersDialog": {
+      "title": "Thành viên của {{name}}",
+      "description": "Những người của tổ chức thuộc nhóm này.",
+      "pick": "Thêm người",
+      "choose": "Chọn một người",
+      "add": "Thêm",
+      "added": "Đã thêm {{name}} vào nhóm.",
+      "everyone": "Mọi người trong tổ chức đều đã ở trong nhóm này.",
+      "empty": "Nhóm chưa có ai.",
+      "removeOf": "Gỡ {{name}} khỏi nhóm",
+      "removed": "Đã gỡ {{name}} khỏi nhóm."
+    }
+  }
+}

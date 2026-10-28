@@ -365,15 +365,6 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                 },
               ],
             },
-            {
-              path: 'o/:orgSlug/settings/share-links',
-              loader: guards.orgSettings,
-              errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
-                Component: (await import('../features/share/manage/components/OrgShareLinksPage'))
-                  .default,
-              }),
-            },
             // Organization settings for owners/admins (FRONTEND §15): the layout with the
             // "Organization settings" nav (T526) and its pages. The guard is on the layout
             // so other members get the 404 screen without the nav.
@@ -386,6 +377,33 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                   .default,
               }),
               children: [
+                // T830: "General" — the organization's name, ID and slug.
+                {
+                  index: true,
+                  errorElement: <RouteErrorPanel />,
+                  lazy: async () => ({
+                    Component: (await import('../features/org-settings/admin/OrgGeneralPage'))
+                      .default,
+                  }),
+                },
+                // T830: members with their organization role, and invitations (SPEC §13.1).
+                {
+                  path: 'members',
+                  errorElement: <RouteErrorPanel />,
+                  lazy: async () => ({
+                    Component: (await import('../features/org-settings/admin/OrgMembersPage'))
+                      .default,
+                  }),
+                },
+                // T830: groups and their members (SPEC §14.1).
+                {
+                  path: 'groups',
+                  errorElement: <RouteErrorPanel />,
+                  lazy: async () => ({
+                    Component: (await import('../features/org-settings/admin/OrgGroupsPage'))
+                      .default,
+                  }),
+                },
                 // T526: email settings of the organization (CONTRACTS §23.2, §23.4).
                 {
                   path: 'email',
@@ -423,6 +441,17 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                   lazy: async () => ({
                     Component: (
                       await import('../features/org-settings/integrations/components/IntegrationsPage')
+                    ).default,
+                  }),
+                },
+                // T316: the public sharing policy and share links of the organization (T830:
+                // moved under this layout as it was).
+                {
+                  path: 'share-links',
+                  errorElement: <RouteErrorPanel />,
+                  lazy: async () => ({
+                    Component: (
+                      await import('../features/share/manage/components/OrgShareLinksPage')
                     ).default,
                   }),
                 },

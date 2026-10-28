@@ -48,6 +48,7 @@ export const NAMESPACES = [
   'automationHttp',
   'orgIntegrations',
   'baseSettings',
+  'orgAdmin',
   'account',
   'apiTokens',
   'audit',
