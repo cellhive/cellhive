@@ -509,7 +509,7 @@ describe('form submissions (T306)', () => {
       expectProblem(
         await submitLink(link.token, {
           fields: { [primary.id]: 'tok-4' },
-          submit_token: `${retry.slice(0, -2)}AA`,
+          submit_token: `${retry.slice(0, -2)}${retry.endsWith('AA') ? 'BB' : 'AA'}`,
         }),
         422,
         'VALIDATION_FAILED',

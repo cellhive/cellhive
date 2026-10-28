@@ -165,7 +165,9 @@ describe('sealed SMTP passwords', () => {
     expect(first).not.toContain('secret');
     expect(unsealSecret(SMTP_KEY, first)).toBe('secret');
     expect(() => unsealSecret(CODE_KEY, first)).toThrow();
-    expect(() => unsealSecret(SMTP_KEY, `${first.slice(0, -2)}AA`)).toThrow();
+    expect(() =>
+      unsealSecret(SMTP_KEY, `${first.slice(0, -2)}${first.endsWith('AA') ? 'BB' : 'AA'}`),
+    ).toThrow();
     expect(deriveSecretKey(MASTER, 'idempotency-response').equals(SMTP_KEY)).toBe(false);
   });
 });
