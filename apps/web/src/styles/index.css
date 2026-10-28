@@ -114,6 +114,16 @@
   --animate-sheet-out: ob-sheet-out var(--motion-exit) var(--ease-exit) forwards;
   --animate-fade-in: ob-fade-in var(--motion-enter) var(--ease-enter);
   --animate-fade-out: ob-fade-out var(--motion-exit) var(--ease-exit) forwards;
+  /*
+   * (Motion pass) The record panel slides in from the edge it sits on; lists
+   * that open (a workspace's bases, a new filter condition) drop in by 4 px;
+   * a kanban card lands in its new column; skeletons shimmer instead of
+   * blinking. Enter only: leaving stays instant, like the Radix menus.
+   */
+  --animate-panel-in: ob-panel-in var(--motion-sheet) var(--ease-enter);
+  --animate-reveal: ob-reveal var(--motion-enter) var(--ease-enter);
+  --animate-land: ob-land var(--motion-sheet) var(--ease-enter);
+  --animate-shimmer: ob-shimmer 1.6s linear infinite;
 
   @keyframes ob-pop-in {
     from {
@@ -147,6 +157,33 @@
   @keyframes ob-fade-out {
     to {
       opacity: 0;
+    }
+  }
+  @keyframes ob-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+  @keyframes ob-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+  @keyframes ob-land {
+    from {
+      opacity: 0.5;
+      transform: scale(0.96);
+    }
+  }
+  @keyframes ob-shimmer {
+    /* The band (half the width) starts and ends fully outside: no jump between loops. */
+    from {
+      background-position: -100% 0;
+    }
+    to {
+      background-position: 200% 0;
     }
   }
 }
@@ -205,6 +242,26 @@
   samp {
     font-family: var(--font-code);
     font-size: var(--font-size-mono);
+  }
+
+  /*
+   * (Motion pass) Hover, pressed and selected colors fade in 120 ms instead of
+   * snapping, on every link, button, tab and menu item at once. `:where` keeps
+   * it at zero specificity: a component's own `transition-*` utility wins.
+   */
+  :where(
+    a,
+    button,
+    summary,
+    [role='tab'],
+    [role='menuitem'],
+    [role='menuitemradio'],
+    [role='menuitemcheckbox'],
+    [role='option']
+  ) {
+    transition-property: color, background-color, border-color, text-decoration-color, box-shadow;
+    transition-duration: 120ms;
+    transition-timing-function: var(--ease-enter);
   }
 
   /* One visible focus indicator for every focusable element (FRONTEND §9.2). */

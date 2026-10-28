@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { allThemeTokens, darkBlocks, themeTokens } from '../../../test/tokens';
-import { GRID_TOKENS, OPTION_COLOR_COUNT, tokensToAppearance, withAlphaHex } from '../theme';
+import {
+  GRID_TOKENS,
+  mixHex,
+  OPTION_COLOR_COUNT,
+  tokensToAppearance,
+  withAlphaHex,
+} from '../theme';
 
 /** WCAG 2.x relative luminance of `#rrggbb`. */
 function luminance(hex: string): number {
@@ -146,5 +152,17 @@ describe('withAlphaHex', () => {
     ['not-a-color', 0.2, 'not-a-color'],
   ])('%s at %d → %s', (hex, alpha, expected) => {
     expect(withAlphaHex(hex, alpha)).toBe(expected);
+  });
+});
+
+describe('mixHex (row hover, motion pass)', () => {
+  it.each([
+    ['#ffffff', '#f1f3f5', 0.6, '#f7f8f9'],
+    ['#000000', '#ffffff', 0.5, '#808080'],
+    ['#181b1e', '#1f2327', 0, '#181b1e'],
+    ['#181B1E', '#1F2327', 1, '#1f2327'],
+    ['rgb(0 0 0)', '#ffffff', 0.5, 'rgb(0 0 0)'],
+  ])('%s → %s by %d: %s', (from, to, share, expected) => {
+    expect(mixHex(from, to, share)).toBe(expected);
   });
 });

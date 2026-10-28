@@ -61,7 +61,8 @@ function WorkspaceBases({
     );
   }
   return (
-    <ul id={id} className="flex flex-col gap-0.5 py-0.5 pl-6">
+    // The bases drop in when the workspace opens (motion pass).
+    <ul id={id} className="flex animate-reveal flex-col gap-0.5 py-0.5 pl-6">
       {data.items.map((base) => (
         <li key={base.id} className="group/base relative flex">
           <NavLink

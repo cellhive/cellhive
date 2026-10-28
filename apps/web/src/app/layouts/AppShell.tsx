@@ -125,7 +125,7 @@ export function AppShell() {
       {navOpen ? (
         <div
           aria-hidden="true"
-          className="fixed inset-0 z-30 bg-overlay lg:hidden"
+          className="fixed inset-0 z-30 animate-fade-in bg-overlay lg:hidden"
           onClick={() => {
             setNavOpen(false);
           }}
@@ -136,7 +136,8 @@ export function AppShell() {
         aria-label={t('nav.sidebar')}
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col gap-4 border-r border-line bg-surface p-3',
-          'transition-transform motion-reduce:transition-none lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0',
+          // Slides on the sheet timing; `visibility` waits for the slide out to end.
+          'transition-[transform,visibility] duration-(--motion-sheet) ease-(--ease-enter) motion-reduce:transition-none lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0',
           // Closed drawer: off screen and out of the tab order (visible again from lg).
           navOpen ? 'visible translate-x-0' : 'invisible -translate-x-full lg:visible',
         )}

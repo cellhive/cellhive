@@ -84,6 +84,8 @@ export interface GridPalette {
   /** Group cards (T320a): card background and the tint of selected cells. */
   readonly surface: string;
   readonly selected: string;
+  /** (Motion pass) The row under the pointer: between the cell and the header background. */
+  readonly rowHover: string;
 }
 
 export interface GridAppearance {
@@ -104,6 +106,21 @@ export function withAlphaHex(hex: string, alpha: number): string {
   const channel = (index: number) => Number.parseInt(full.slice(index, index + 2), 16);
   if (!/^[0-9a-f]{6}$/iu.test(full)) return hex;
   return `rgba(${String(channel(0))}, ${String(channel(2))}, ${String(channel(4))}, ${String(alpha)})`;
+}
+
+/** `#rrggbb` `from` moved toward `to` by `share` (0–1), as `#rrggbb`; another format comes back as `from`. */
+export function mixHex(from: string, to: string, share: number): string {
+  const parse = (hex: string) => /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/iu.exec(hex.trim());
+  const [a, b] = [parse(from), parse(to)];
+  if (a === null || b === null) return from;
+  const channel = (index: number) => {
+    const start = Number.parseInt(a[index] ?? '0', 16);
+    const end = Number.parseInt(b[index] ?? '0', 16);
+    return Math.round(start + (end - start) * share)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${channel(1)}${channel(2)}${channel(3)}`;
 }
 
 /** Density of the grid rows (FRONTEND §9.3): 34 px compact, 44 px comfortable. */
@@ -172,6 +189,7 @@ export function tokensToAppearance(tokens: GridTokens): GridAppearance {
     border: tokens.border,
     surface: tokens.surface,
     selected: withAlphaHex(tokens.accent, 0.14),
+    rowHover: mixHex(tokens.surface, tokens['surface-sunken'], 0.8),
   };
   return { theme, palette };
 }

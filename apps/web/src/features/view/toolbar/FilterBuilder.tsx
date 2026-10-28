@@ -93,7 +93,8 @@ function ConditionRow({ item, context }: { item: ConditionItem; context: Context
   return (
     <li
       className={cn(
-        'flex flex-col gap-1 rounded-md px-1 py-1',
+        // A new condition drops in (motion pass).
+        'flex animate-reveal flex-col gap-1 rounded-md px-1 py-1',
         invalid && 'bg-danger/5 ring-1 ring-danger',
       )}
       data-testid="filter-condition"

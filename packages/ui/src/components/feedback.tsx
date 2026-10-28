@@ -20,7 +20,8 @@ export function Skeleton({ className, ...props }: ComponentProps<'div'>) {
     <div
       aria-hidden="true"
       className={cn(
-        'animate-pulse rounded-md bg-surface-sunken motion-reduce:animate-none',
+        // A light band sweeps across (motion pass), steadier to look at than a blink.
+        'rounded-md bg-surface-sunken bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-surface)_60%,transparent),transparent)] bg-size-[50%_100%] bg-no-repeat motion-safe:animate-shimmer',
         className,
       )}
       {...props}

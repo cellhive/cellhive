@@ -1877,7 +1877,32 @@ export function GridView({
     return true;
   };
 
+  // (Motion pass) The row under the pointer is tinted, as in Lark and Airtable. A ref
+  // and a redraw of the two rows that changed: hovering never renders React. Grouped
+  // rows draw their own cards, so they keep theirs.
+  const hoveredRow = useRef<number | undefined>(undefined);
+  const rowHoverTheme = useMemo<Partial<Theme>>(
+    () => ({ bgCell: palette.rowHover }),
+    [palette.rowHover],
+  );
+  const getRowThemeOverride = useCallback(
+    (row: number) => (row === hoveredRow.current ? rowHoverTheme : undefined),
+    [rowHoverTheme],
+  );
+  const hoverRow = (row: number | undefined) => {
+    const previous = hoveredRow.current;
+    if (previous === row) return;
+    hoveredRow.current = row;
+    const cells: { cell: Item }[] = [];
+    for (const each of [previous, row]) {
+      if (each === undefined) continue;
+      for (let col = 0; col < columns.length; col++) cells.push({ cell: [col, each] });
+    }
+    editorRef.current?.updateCells(cells);
+  };
+
   const onItemHovered = (args: GridMouseEventArgs) => {
+    hoverRow(args.kind === 'cell' && !grouped ? args.location[1] : undefined);
     showExpand(args);
     showLinkTargets(args);
     if (args.kind === 'cell') {
@@ -2552,6 +2577,7 @@ export function GridView({
         onGridSelectionChange={onGridSelectionChange}
         onCellActivated={onCellActivated}
         onItemHovered={onItemHovered}
+        {...(grouped ? {} : { getRowThemeOverride })}
         onCellClicked={onCellClicked}
         onKeyDown={onKeyDown}
         {...(edit === undefined

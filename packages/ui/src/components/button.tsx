@@ -13,7 +13,9 @@ import type { ComponentProps } from 'react';
 export const buttonVariants = cva(
   [
     'inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap',
-    'text-body transition-colors select-none motion-reduce:transition-none',
+    'text-body transition-[color,background-color,border-color,box-shadow,transform] select-none motion-reduce:transition-none',
+    // A press gives way a little (motion pass); the global reduced-motion rule keeps it still.
+    'motion-safe:enabled:active:scale-[0.98]',
     'disabled:cursor-not-allowed disabled:opacity-60',
     '[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   ],

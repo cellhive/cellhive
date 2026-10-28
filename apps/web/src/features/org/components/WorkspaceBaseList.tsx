@@ -45,7 +45,8 @@ export function WorkspaceBaseList({
             <li key={base.id}>
               <Link
                 to={basePath(base)}
-                className="flex h-full flex-col gap-1 rounded-lg border border-line bg-surface p-4 hover:border-line-strong"
+                // Lifts a little under the pointer (motion pass).
+                className="flex h-full flex-col gap-1 rounded-lg border border-line bg-surface p-4 transition-[border-color,box-shadow,transform] duration-(--motion-enter) ease-(--ease-enter) hover:border-line-strong hover:shadow-sm motion-safe:hover:-translate-y-px"
               >
                 <span className="flex items-center gap-2 font-medium">
                   <Database aria-hidden="true" className="size-4 shrink-0 text-accent" />

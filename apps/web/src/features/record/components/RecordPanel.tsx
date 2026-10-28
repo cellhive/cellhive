@@ -167,7 +167,11 @@ function FieldList({ fields, hidden, render }: FieldListProps) {
             {showHidden ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
             {t('hiddenFields', { count: hidden.length })}
           </Button>
-          <div id={hiddenId} hidden={!showHidden} className="flex flex-col gap-4 sm:gap-0">
+          <div
+            id={hiddenId}
+            hidden={!showHidden}
+            className="flex animate-reveal flex-col gap-4 sm:gap-0"
+          >
             {showHidden ? hidden.map(render) : null}
           </div>
         </div>
@@ -628,7 +632,7 @@ export function RecordPanel({
         <div
           aria-hidden="true"
           data-testid="record-panel-backdrop"
-          className="fixed inset-0 z-40 bg-overlay xl:hidden"
+          className="fixed inset-0 z-40 animate-fade-in bg-overlay xl:hidden"
           onClick={onClose}
         />
       )}
@@ -643,9 +647,10 @@ export function RecordPanel({
         data-covers-grid=""
         className={cn(
           'fixed z-50 flex flex-col bg-surface text-fg outline-none',
+          // It comes from where it sits (motion pass): up on phones, in from the right edge beside.
           fullScreen
-            ? 'inset-0'
-            : 'top-0 right-0 bottom-0 w-[min(1080px,100vw)] border-l border-line shadow-popover xl:w-[clamp(40rem,50vw,67.5rem)]',
+            ? 'inset-0 animate-sheet-in'
+            : 'top-0 right-0 bottom-0 animate-panel-in w-[min(1080px,100vw)] border-l border-line shadow-popover xl:w-[clamp(40rem,50vw,67.5rem)]',
         )}
         onKeyDown={onKeyDown}
       >

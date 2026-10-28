@@ -28,7 +28,7 @@ export function Switch({ className, ...props }: SwitchProps) {
           'pointer-events-none relative h-5 w-9 rounded-full bg-line-control transition-colors motion-reduce:transition-none',
           'peer-checked:bg-accent peer-disabled:opacity-60',
           'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
-          'after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-surface after:transition-transform motion-reduce:after:transition-none',
+          'after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-surface after:transition-transform after:duration-(--motion-enter) after:ease-(--ease-enter) motion-reduce:after:transition-none',
           'peer-checked:after:translate-x-4',
         )}
       />

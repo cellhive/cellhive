@@ -314,10 +314,11 @@ export function KanbanCard({
         }}
         className={cn(
           'flex cursor-pointer flex-col overflow-hidden rounded-lg border border-line bg-surface p-3 text-left text-body',
-          'hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+          'transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
           draggable && 'touch-none',
           isDragging && 'opacity-40',
-          moving && 'border-dashed border-accent',
+          // Lands in its new column while the move is on its way (motion pass).
+          moving && 'animate-land border-dashed border-accent',
         )}
       >
         <CardBody
