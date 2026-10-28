@@ -66,7 +66,14 @@ function WorkspaceBases({
         <li key={base.id} className="group/base relative flex">
           <NavLink
             to={basePath(base)}
-            className={(state) => cn(linkClasses(state), baseMenu !== undefined && 'pr-9')}
+            // From 1024 px the menu shows on hover/focus only: the name keeps the room until then.
+            className={(state) =>
+              cn(
+                linkClasses(state),
+                baseMenu !== undefined &&
+                  'max-lg:pr-12 lg:group-focus-within/base:pr-9 lg:group-hover/base:pr-9 lg:group-has-[[data-state=open]]/base:pr-9',
+              )
+            }
           >
             <Database aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
             <span className="truncate">{base.name}</span>
