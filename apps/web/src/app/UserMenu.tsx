@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Code, KeyRound, LogOut, Settings } from 'lucide-react';
+import { Bell, Code, KeyRound, LogOut, Settings, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -56,6 +56,12 @@ export function UserMenu({ me, orgSlug }: { me: MeResponse; orgSlug?: string | u
           <span className="truncate font-normal">{me.user.email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/account">
+            <UserRound aria-hidden="true" />
+            {t('userMenu.profile')}
+          </Link>
+        </DropdownMenuItem>
         {hasProviders ? (
           <DropdownMenuItem asChild>
             <Link to="/account/connections">

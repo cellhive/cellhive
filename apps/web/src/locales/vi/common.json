@@ -42,6 +42,7 @@
   },
   "userMenu": {
     "label": "Menu tài khoản của {{name}}",
+    "profile": "Hồ sơ",
     "connections": "Tài khoản đã kết nối",
     "apiTokens": "API token",
     "notifications": "Cài đặt thông báo"

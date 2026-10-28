@@ -42,6 +42,7 @@
   },
   "userMenu": {
     "label": "Account menu for {{name}}",
+    "profile": "Profile",
     "connections": "Connected accounts",
     "apiTokens": "API tokens",
     "notifications": "Notification settings"

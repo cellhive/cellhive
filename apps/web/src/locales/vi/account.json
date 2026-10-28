@@ -1,4 +1,30 @@
 {
+  "page": {
+    "title": "Tài khoản",
+    "subtitle": "Hồ sơ, mật khẩu và các tài khoản bạn dùng để đăng nhập."
+  },
+  "profile": {
+    "title": "Hồ sơ",
+    "displayName": "Tên hiển thị",
+    "language": "Ngôn ngữ",
+    "languageHint": "Dùng cho email, thông báo và trên các thiết bị bạn chưa chọn ngôn ngữ ở menu tài khoản. Lưu cũng đổi ngôn ngữ của thiết bị này.",
+    "timezone": "Múi giờ",
+    "timezoneHint": "Ngày giờ được hiển thị theo múi giờ này.",
+    "save": "Lưu thay đổi",
+    "saved": "Đã lưu hồ sơ."
+  },
+  "password": {
+    "title": "Mật khẩu",
+    "description": "Bạn vẫn đăng nhập trên thiết bị này; mọi thiết bị khác sẽ bị đăng xuất.",
+    "current": "Mật khẩu hiện tại",
+    "new": "Mật khẩu mới",
+    "newHint": "Tối thiểu {{min}} ký tự.",
+    "confirm": "Nhập lại mật khẩu mới",
+    "revokeTokens": "Thu hồi mọi API token của tôi",
+    "revokeTokensHint": "Các tích hợp dùng token của bạn sẽ ngừng hoạt động. Hãy chọn nếu người khác có thể biết mật khẩu của bạn.",
+    "submit": "Đổi mật khẩu",
+    "changed": "Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất."
+  },
   "connections": {
     "title": "Tài khoản đã kết nối",
     "subtitle": "Đăng nhập Cellhive bằng tài khoản của nhà cung cấp danh tính trong tổ chức của bạn.",

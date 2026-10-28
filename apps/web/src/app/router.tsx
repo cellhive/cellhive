@@ -498,13 +498,20 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                 ).notificationSettingsRedirect(queryClient),
               }),
             },
-            // T715: the caller's connected OIDC accounts (CONTRACTS §27.3).
+            // T831: the caller's profile, password and (T715) connected OIDC accounts;
+            // `account/connections` is the same page scrolled to the latter (CONTRACTS §27.3).
+            {
+              path: 'account',
+              errorElement: <RouteErrorPanel />,
+              lazy: async () => ({
+                Component: (await import('../features/account/AccountPage')).default,
+              }),
+            },
             {
               path: 'account/connections',
               errorElement: <RouteErrorPanel />,
               lazy: async () => ({
-                Component: (await import('../features/account/connections/ConnectionsPage'))
-                  .default,
+                Component: (await import('../features/account/AccountPage')).default,
               }),
             },
             // T520: the automations of a base (FRONTEND §13).

@@ -125,7 +125,7 @@ test('connect the provider from the account menu, then sign in with it and land 
     .click();
   await page.getByRole('menuitem', { name: 'Connected accounts' }).click();
   await expect(page).toHaveURL(/\/account\/connections$/u);
-  await expect(page.getByRole('heading', { name: 'Connected accounts', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Connected accounts', level: 2 })).toBeVisible();
   await expect(page.getByText('No account is connected yet.')).toBeVisible();
   await expectNoSeriousA11yViolations(page, '/account/connections, none connected');
 
@@ -269,7 +269,7 @@ test('Vietnamese at 375 px: sign-in errors and connected accounts', async ({ bro
 
   const jit = await newPage(browser, { session: jitSession, language: 'vi', viewport });
   await jit.goto('/account/connections?error=OIDC_STATE_INVALID');
-  await expect(jit.getByRole('heading', { name: 'Tài khoản đã kết nối', level: 1 })).toBeVisible();
+  await expect(jit.getByRole('heading', { name: 'Tài khoản đã kết nối', level: 2 })).toBeVisible();
   await expect(jit.getByTestId('link-error')).toContainText('Quá trình kết nối quá lâu');
   await expect(jit.getByTestId('identity-row')).toContainText(JIT_EMAIL);
   expect(await overflow(jit)).toBeLessThanOrEqual(0);

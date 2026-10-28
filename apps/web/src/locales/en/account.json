@@ -1,4 +1,30 @@
 {
+  "page": {
+    "title": "Account",
+    "subtitle": "Your profile, password and the accounts you sign in with."
+  },
+  "profile": {
+    "title": "Profile",
+    "displayName": "Display name",
+    "language": "Language",
+    "languageHint": "Used for emails and notifications, and on devices where you have not picked a language in the account menu. Saving also switches this device.",
+    "timezone": "Time zone",
+    "timezoneHint": "Dates and times are shown in this time zone.",
+    "save": "Save changes",
+    "saved": "Profile saved."
+  },
+  "password": {
+    "title": "Password",
+    "description": "You stay signed in on this device; every other device is signed out.",
+    "current": "Current password",
+    "new": "New password",
+    "newHint": "At least {{min}} characters.",
+    "confirm": "Confirm new password",
+    "revokeTokens": "Revoke all my API tokens",
+    "revokeTokensHint": "Integrations that use your tokens stop working. Choose this if someone else may know your password.",
+    "submit": "Change password",
+    "changed": "Password changed. Other devices are signed out."
+  },
   "connections": {
     "title": "Connected accounts",
     "subtitle": "Sign in to Cellhive with an account of your organization's identity provider.",

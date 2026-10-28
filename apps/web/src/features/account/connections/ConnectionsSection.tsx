@@ -1,15 +1,14 @@
 import { Alert, Button, cn, Dialog, Skeleton, Spinner } from '@cellhive/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Unplug } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
-import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
-import { PAGE_GUTTER, PageHeading } from '../../../lib/layout/page-heading';
 import { setupStatusQuery } from '../../../lib/session/session';
+import { SECTION_CLASSES } from '../profile/ProfileSection';
 
 import { connectionsApi, meIdentitiesQuery } from './api';
 import { isLastLoginMethod, linkErrorKey, providerNavigation } from './link-error';
@@ -135,14 +134,16 @@ function IdentityRow({
 }
 
 /**
- * `/account/connections` (T715, CONTRACTS §27.3): the caller's OIDC
- * identities, "Connect <provider>" (`POST …/start`, then the provider) and
- * "Disconnect" with a confirmation. `?error=<CODE>` from the link callback
- * shows its translated message, never the raw value.
+ * "Connected accounts" of the account page (T715, CONTRACTS §27.3): the
+ * caller's OIDC identities, "Connect <provider>" (`POST …/start`, then the
+ * provider) and "Disconnect" with a confirmation. `?error=<CODE>` from the
+ * link callback shows its translated message, never the raw value. Shown
+ * when the server has a provider or the caller has an identity, and always
+ * on `/account/connections` (where the link callback returns), scrolled
+ * into view there.
  */
-export function ConnectionsPage() {
+export function ConnectionsSection({ scrollIntoView }: { readonly scrollIntoView: boolean }) {
   const { t } = useTranslation('account');
-  useDocumentTitle(t('connections.title'));
   const [searchParams, setSearchParams] = useSearchParams();
   const linkError = linkErrorKey(searchParams.get('error'));
   const dismissLinkError = () => {
@@ -158,8 +159,10 @@ export function ConnectionsPage() {
   const setup = useQuery(setupStatusQuery());
   const providers = setup.data?.auth_config.providers ?? [];
   const [disconnecting, setDisconnecting] = useState<MeIdentity | null>(null);
+  const heading = useId();
   const linkedHeading = useId();
   const connectHeading = useId();
+  const sectionRef = useRef<HTMLElement>(null);
   const start = useMutation({
     mutationFn: connectionsApi.startLink,
     onSuccess: ({ authorization_url }) => {
@@ -170,89 +173,92 @@ export function ConnectionsPage() {
   const starting = start.isPending || start.isSuccess;
   const linked = new Set(identities.data?.items.map((item) => item.provider));
   const connectable = providers.filter((provider) => !linked.has(provider.slug));
+  const visible = scrollIntoView || providers.length > 0 || linked.size > 0;
 
+  useEffect(() => {
+    if (!scrollIntoView) return;
+    const element = sectionRef.current as Partial<Pick<HTMLElement, 'scrollIntoView'>> | null;
+    // Not in every environment (jsdom).
+    element?.scrollIntoView?.({ block: 'start' });
+  }, [scrollIntoView]);
+
+  if (!visible) return null;
   return (
-    <div className="flex min-h-full flex-col bg-canvas">
-      <PageHeading
-        icon={KeyRound}
-        title={t('connections.title')}
-        subtitle={t('connections.subtitle')}
-      />
-      <div className={cn('flex max-w-3xl flex-col gap-6 py-6', PAGE_GUTTER)}>
-        {linkError === null ? null : (
-          <Alert variant="danger" data-testid="link-error">
-            <p>{t(linkError)}</p>
-            <Button
-              variant="link"
-              className="w-fit max-lg:min-h-control"
-              onClick={dismissLinkError}
-            >
-              {t('connections.dismiss')}
-            </Button>
-          </Alert>
-        )}
-        <section aria-labelledby={linkedHeading} className="flex flex-col gap-3">
-          <h2 id={linkedHeading} className="text-heading">
-            {t('connections.linkedHeading')}
-          </h2>
-          {identities.isPending ? (
-            <div role="status" aria-busy="true" aria-label={t('connections.loading')}>
-              <Skeleton className="h-16" />
-            </div>
-          ) : identities.isError ? (
-            <ErrorAlert error={identities.error} />
-          ) : identities.data.items.length === 0 ? (
-            <p className="text-body text-fg-muted">{t('connections.empty')}</p>
-          ) : (
-            <ul className="flex flex-col rounded-lg border border-line bg-surface">
-              {identities.data.items.map((identity) => (
-                <IdentityRow
-                  key={identity.id}
-                  identity={identity}
-                  onDisconnect={setDisconnecting}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
-        <section aria-labelledby={connectHeading} className="flex flex-col gap-3">
-          <h2 id={connectHeading} className="text-heading">
-            {t('connections.connectHeading')}
-          </h2>
-          <p className="text-body text-fg-muted">{t('connections.connectHint')}</p>
-          {start.isError ? <ErrorAlert error={start.error} /> : null}
-          {providers.length === 0 ? (
-            <p className="text-body text-fg-muted">{t('connections.noProviders')}</p>
-          ) : connectable.length === 0 ? (
-            <p className="text-body text-fg-muted">{t('connections.allConnected')}</p>
-          ) : (
-            <ul className="flex flex-wrap gap-2">
-              {connectable.map((provider) => (
-                <li key={provider.slug}>
-                  <Button
-                    variant="secondary"
-                    disabled={starting || identities.isPending}
-                    onClick={() => {
-                      start.mutate(provider.slug);
-                    }}
-                  >
-                    {starting && start.variables === provider.slug ? <Spinner /> : null}
-                    {t('connections.connect', { provider: provider.name })}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+    <section
+      ref={sectionRef}
+      aria-labelledby={heading}
+      className={cn(SECTION_CLASSES, 'scroll-mt-4')}
+      data-testid="connections-section"
+    >
+      <div className="flex flex-col gap-1">
+        <h2 id={heading} className="text-heading">
+          {t('connections.title')}
+        </h2>
+        <p className="text-fg-muted">{t('connections.subtitle')}</p>
       </div>
+      {linkError === null ? null : (
+        <Alert variant="danger" data-testid="link-error">
+          <p>{t(linkError)}</p>
+          <Button variant="link" className="w-fit max-lg:min-h-control" onClick={dismissLinkError}>
+            {t('connections.dismiss')}
+          </Button>
+        </Alert>
+      )}
+      <section aria-labelledby={linkedHeading} className="flex flex-col gap-3">
+        <h3 id={linkedHeading} className="font-medium">
+          {t('connections.linkedHeading')}
+        </h3>
+        {identities.isPending ? (
+          <div role="status" aria-busy="true" aria-label={t('connections.loading')}>
+            <Skeleton className="h-16" />
+          </div>
+        ) : identities.isError ? (
+          <ErrorAlert error={identities.error} />
+        ) : identities.data.items.length === 0 ? (
+          <p className="text-body text-fg-muted">{t('connections.empty')}</p>
+        ) : (
+          <ul className="flex flex-col rounded-lg border border-line">
+            {identities.data.items.map((identity) => (
+              <IdentityRow key={identity.id} identity={identity} onDisconnect={setDisconnecting} />
+            ))}
+          </ul>
+        )}
+      </section>
+      <section aria-labelledby={connectHeading} className="flex flex-col gap-3">
+        <h3 id={connectHeading} className="font-medium">
+          {t('connections.connectHeading')}
+        </h3>
+        <p className="text-body text-fg-muted">{t('connections.connectHint')}</p>
+        {start.isError ? <ErrorAlert error={start.error} /> : null}
+        {providers.length === 0 ? (
+          <p className="text-body text-fg-muted">{t('connections.noProviders')}</p>
+        ) : connectable.length === 0 ? (
+          <p className="text-body text-fg-muted">{t('connections.allConnected')}</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {connectable.map((provider) => (
+              <li key={provider.slug}>
+                <Button
+                  variant="secondary"
+                  disabled={starting || identities.isPending}
+                  onClick={() => {
+                    start.mutate(provider.slug);
+                  }}
+                >
+                  {starting && start.variables === provider.slug ? <Spinner /> : null}
+                  {t('connections.connect', { provider: provider.name })}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <DisconnectDialog
         identity={disconnecting}
         onClose={() => {
           setDisconnecting(null);
         }}
       />
-    </div>
+    </section>
   );
 }
-
-export default ConnectionsPage;
