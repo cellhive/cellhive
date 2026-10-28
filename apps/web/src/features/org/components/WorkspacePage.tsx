@@ -4,9 +4,10 @@ import { Link } from 'react-router';
 import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { orgPath, useRouteOrg, useRouteWorkspace } from '../hooks';
 
+import { DeletedBases, WorkspaceActions } from './WorkspaceAdmin';
 import { WorkspaceBaseList } from './WorkspaceBaseList';
 
-/** `/o/:orgSlug/w/:workspaceId`: the bases of one workspace. */
+/** `/o/:orgSlug/w/:workspaceId`: the bases of one workspace, its "⋯" (rename, delete) and its bases in the trash. */
 export function WorkspacePage() {
   const { t } = useTranslation('org');
   const org = useRouteOrg();
@@ -27,11 +28,15 @@ export function WorkspacePage() {
           </li>
         </ol>
       </nav>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-title">{workspace.name}</h1>
-        <p className="text-fg-muted">{t('workspace.subtitle')}</p>
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h1 className="text-title break-words">{workspace.name}</h1>
+          <p className="text-fg-muted">{t('workspace.subtitle')}</p>
+        </div>
+        <WorkspaceActions org={org} workspace={workspace} />
       </div>
       <WorkspaceBaseList org={org} workspace={workspace} />
+      <DeletedBases workspace={workspace} />
     </div>
   );
 }

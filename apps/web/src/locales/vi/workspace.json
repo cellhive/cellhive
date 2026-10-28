@@ -1,0 +1,26 @@
+{
+  "menu": "Tuỳ chọn của {{name}}",
+  "rename": {
+    "action": "Đổi tên",
+    "title": "Đổi tên không gian làm việc",
+    "name": "Tên không gian làm việc",
+    "submit": "Lưu",
+    "saved": "Đã lưu."
+  },
+  "delete": {
+    "action": "Xoá không gian làm việc",
+    "title": "Xoá {{name}}?",
+    "description": "Chỉ xoá được không gian làm việc trống: chuyển hoặc xoá các base trước, kể cả base trong thùng rác. Không hoàn tác được.",
+    "submit": "Xoá",
+    "deleted": "Đã xoá không gian làm việc {{name}}."
+  },
+  "trash": {
+    "title": "Base đã xoá",
+    "hint": "Base đã xoá khỏi không gian làm việc này mà bạn khôi phục được.",
+    "deletedAt": "Xoá lúc {{date}}",
+    "restore": "Khôi phục",
+    "restoreName": "Khôi phục {{name}}",
+    "restored": "Đã khôi phục {{name}}.",
+    "open": "Mở"
+  }
+}

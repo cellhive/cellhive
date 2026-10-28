@@ -1,0 +1,26 @@
+{
+  "menu": "Options for {{name}}",
+  "rename": {
+    "action": "Rename",
+    "title": "Rename workspace",
+    "name": "Workspace name",
+    "submit": "Save",
+    "saved": "Saved."
+  },
+  "delete": {
+    "action": "Delete workspace",
+    "title": "Delete {{name}}?",
+    "description": "Only an empty workspace can be deleted: move or delete its bases first, including those in the trash. This cannot be undone.",
+    "submit": "Delete",
+    "deleted": "Deleted workspace {{name}}."
+  },
+  "trash": {
+    "title": "Deleted bases",
+    "hint": "Bases deleted from this workspace that you can restore.",
+    "deletedAt": "Deleted {{date}}",
+    "restore": "Restore",
+    "restoreName": "Restore {{name}}",
+    "restored": "Restored {{name}}.",
+    "open": "Open"
+  }
+}
