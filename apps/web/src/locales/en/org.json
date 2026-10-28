@@ -1,13 +1,11 @@
 {
   "home": {
-    "shareLinks": "Share links",
-    "emailSettings": "Email settings",
     "subtitle": "Workspaces and bases of this organization.",
     "newWorkspace": "New workspace",
     "emptyTitle": "No workspaces yet",
     "emptyAdmin": "Create a workspace to group your bases.",
     "emptyMember": "You do not have access to any workspace yet. Ask an administrator to add you.",
-    "emailIdentities": "Sender identities"
+    "settings": "Organization settings"
   },
   "workspace": {
     "breadcrumb": "Breadcrumb",
@@ -38,18 +36,20 @@
     "label": "Organization settings",
     "title": "Organization settings",
     "groups": {
+      "people": "Members & groups",
       "email": "Email",
       "automation": "Automation",
-      "personal": "Personal",
-      "organization": "Organization"
+      "data": "Data"
     },
     "items": {
+      "general": "General",
+      "members": "Members",
+      "groups": "Groups",
       "emailSettings": "Email settings",
       "emailIdentities": "Sender identities",
       "telegramBots": "Telegram bots",
-      "notifications": "Your notifications",
       "integrations": "Integrations",
-      "apiTokens": "API tokens",
+      "shareLinks": "Share links",
       "audit": "Audit log"
     }
   }

@@ -285,9 +285,11 @@ describe('EmailSettingsPage (T526)', () => {
       'href',
       `/o/${ORG.slug}/settings/email/identities`,
     );
-    expect(within(nav).getByRole('link', { name: 'Your notifications' })).toHaveAttribute(
+    // T830: the personal pages (notifications, API tokens) are in the account menu instead.
+    expect(within(nav).queryByRole('link', { name: 'API tokens' })).toBeNull();
+    expect(within(nav).getByRole('link', { name: 'Share links' })).toHaveAttribute(
       'href',
-      `/o/${ORG.slug}/settings/notifications`,
+      `/o/${ORG.slug}/settings/share-links`,
     );
   });
 

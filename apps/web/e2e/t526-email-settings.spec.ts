@@ -146,7 +146,9 @@ test('no SMTP: configuration guide, footer locked by the instance; entry on the 
   const { context, page, demo } = await signedIn(browser);
   const csp = collectCspViolations(page);
   await page.goto(`/o/${demo.orgSlug}`);
-  await page.getByTestId('org-email-settings').click();
+  // T830: one "Organization settings" entry on the org home, then the settings nav.
+  await page.getByTestId('org-settings-open').click();
+  await page.getByTestId('nav-email').click();
   await expect(page).toHaveURL(new RegExp(`${settingsPath(demo)}$`, 'u'));
   await expect(page.getByRole('heading', { level: 1, name: 'Email' })).toBeVisible();
   await expect(page.getByTestId('smtp-status')).toHaveText('Not configured');

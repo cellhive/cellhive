@@ -258,7 +258,8 @@ test.describe('T316 share link management', () => {
   }) => {
     await asAdmin(page);
     await page.goto(`/o/${ids.orgSlug}`);
-    await page.getByRole('link', { name: 'Share links' }).click();
+    await page.getByTestId('org-settings-open').click();
+    await page.getByTestId('nav-share-links').click();
     await expect(page.getByRole('heading', { name: 'Share links', level: 1 })).toBeVisible();
 
     await test.step('the impact is shown before saving', async () => {

@@ -320,7 +320,8 @@ test('adds an identity, sends a verification email and verifies it by code', asy
   const { context, page } = await openAs(browser);
   const csp = collectCspViolations(page);
   await page.goto(`/o/${encodeURIComponent(org.slug)}`);
-  await page.getByRole('link', { name: 'Sender identities' }).click();
+  await page.getByTestId('org-settings-open').click();
+  await page.getByTestId('nav-email-identities').click();
   await expect(page).toHaveURL(new RegExp(`${identitiesPath()}$`, 'u'));
   await expect(page.getByRole('heading', { name: 'Sender identities', level: 1 })).toBeVisible();
   await expect(page.getByTestId('domains-note')).toContainText('acme.test');

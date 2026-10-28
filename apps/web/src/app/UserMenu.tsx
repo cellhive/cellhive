@@ -8,11 +8,12 @@ import {
   DropdownMenuTrigger,
 } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Code, KeyRound, LogOut } from 'lucide-react';
+import { Bell, Code, KeyRound, LogOut, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Avatar } from '../grid/display/Avatar';
+import { isOrgAdmin } from '../lib/permissions/org';
 import { setupStatusQuery, signOut } from '../lib/session/session';
 
 import { PreferenceMenuItems } from './preferences-controls';
@@ -72,6 +73,23 @@ export function UserMenu({ me, orgSlug }: { me: MeResponse; orgSlug?: string | u
             </Link>
           </DropdownMenuItem>
         )}
+        {/* T830: the caller's notification settings in that organization, its settings for owners/admins. */}
+        {orgSlug === undefined ? null : (
+          <DropdownMenuItem asChild>
+            <Link to={`/o/${encodeURIComponent(orgSlug)}/settings/notifications`}>
+              <Bell aria-hidden="true" />
+              {t('userMenu.notifications')}
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {orgSlug !== undefined && isOrgAdmin(me.orgs.find((org) => org.slug === orgSlug)?.role) ? (
+          <DropdownMenuItem asChild>
+            <Link to={`/o/${encodeURIComponent(orgSlug)}/settings`}>
+              <Settings aria-hidden="true" />
+              {t('nav.orgSettings')}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <PreferenceMenuItems />
         <DropdownMenuSeparator />
         <DropdownMenuItem

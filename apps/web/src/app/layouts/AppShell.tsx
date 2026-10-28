@@ -1,9 +1,9 @@
 import { Button, cn, Skeleton, TooltipProvider } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, X } from 'lucide-react';
+import { Menu, Settings, X } from 'lucide-react';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, Outlet, useLocation, useParams } from 'react-router';
+import { Link, Navigate, NavLink, Outlet, useLocation, useParams } from 'react-router';
 
 import { AutomationNavLink } from '../../features/automation/nav/AutomationNavLink';
 import { baseQuery } from '../../features/base/api';
@@ -18,6 +18,7 @@ import { Logo } from '../../lib/brand/Logo';
 import { PageHeaderSlotProvider } from '../../lib/layout/page-header';
 import { loginPathFor } from '../../lib/navigation/safe-next';
 import { canManageAutomations } from '../../lib/permissions/access';
+import { isOrgAdmin } from '../../lib/permissions/org';
 import { PREFERENCE_KEYS, readPreference } from '../../lib/preferences';
 import { useBaseChannel, useUserChannel } from '../../lib/realtime/channels';
 import { meQuery } from '../../lib/session/session';
@@ -168,7 +169,25 @@ export function AppShell() {
           </div>
         ) : (
           <>
-            <OrgSwitcher orgs={orgs} current={current} />
+            <div className="flex flex-col gap-0.5">
+              <OrgSwitcher orgs={orgs} current={current} />
+              {/* T830: the organization's settings, for owners/admins like the route guard. */}
+              {isOrgAdmin(current.role) ? (
+                <NavLink
+                  to={`${orgPath(current)}/settings`}
+                  data-testid="sidebar-org-settings"
+                  className={({ isActive }) =>
+                    cn(
+                      'flex min-h-8 min-w-0 items-center gap-2 rounded-md px-2 text-body text-fg hover:bg-surface-sunken max-lg:min-h-control',
+                      isActive && 'bg-accent-soft font-medium text-accent',
+                    )
+                  }
+                >
+                  <Settings aria-hidden="true" className="size-4 shrink-0" />
+                  <span className="min-w-0 truncate">{t('nav.orgSettings')}</span>
+                </NavLink>
+              ) : null}
+            </div>
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
               {/* Inside a base: its tables first (design), then the workspace tree. */}
               {baseId === undefined ? null : (

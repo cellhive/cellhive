@@ -10,6 +10,7 @@
   },
   "nav": {
     "baseSettings": "Base settings",
+    "orgSettings": "Organization settings",
     "automations": "Automations",
     "skipToContent": "Skip to content",
     "sidebar": "Sidebar",
@@ -42,7 +43,8 @@
   "userMenu": {
     "label": "Account menu for {{name}}",
     "connections": "Connected accounts",
-    "apiTokens": "API tokens"
+    "apiTokens": "API tokens",
+    "notifications": "Notification settings"
   },
   "preferences": {
     "menu": "Display",

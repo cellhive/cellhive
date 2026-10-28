@@ -1,6 +1,6 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
-import { AtSign, FolderPlus, Link2, Mail } from 'lucide-react';
+import { FolderPlus, Settings } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -37,25 +37,11 @@ export function OrgHomePage() {
         </div>
         {allowed ? (
           <div className="flex flex-wrap gap-2">
-            {/* Organization owners/admins manage share links (T316, FRONTEND §2). */}
+            {/* T830: members, groups, email, share links… of the organization (FRONTEND §15.0). */}
             <Button variant="secondary" asChild>
-              <Link to={`${orgPath(org)}/settings/share-links`}>
-                <Link2 aria-hidden="true" />
-                {t('home.shareLinks')}
-              </Link>
-            </Button>
-            {/* T526: email settings of the organization (FRONTEND §15). */}
-            <Button variant="secondary" asChild>
-              <Link to={`${orgPath(org)}/settings/email`} data-testid="org-email-settings">
-                <Mail aria-hidden="true" />
-                {t('home.emailSettings')}
-              </Link>
-            </Button>
-            {/* Sender identities of automation emails (T533, ADR-33). */}
-            <Button variant="secondary" asChild>
-              <Link to={`${orgPath(org)}/settings/email/identities`}>
-                <AtSign aria-hidden="true" />
-                {t('home.emailIdentities')}
+              <Link to={`${orgPath(org)}/settings`} data-testid="org-settings-open">
+                <Settings aria-hidden="true" />
+                {t('home.settings')}
               </Link>
             </Button>
             <Button

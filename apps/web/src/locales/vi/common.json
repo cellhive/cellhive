@@ -10,6 +10,7 @@
   },
   "nav": {
     "baseSettings": "Cài đặt base",
+    "orgSettings": "Cài đặt tổ chức",
     "automations": "Automation",
     "skipToContent": "Bỏ qua tới nội dung",
     "sidebar": "Thanh bên",
@@ -42,7 +43,8 @@
   "userMenu": {
     "label": "Menu tài khoản của {{name}}",
     "connections": "Tài khoản đã kết nối",
-    "apiTokens": "API token"
+    "apiTokens": "API token",
+    "notifications": "Cài đặt thông báo"
   },
   "preferences": {
     "menu": "Hiển thị",
