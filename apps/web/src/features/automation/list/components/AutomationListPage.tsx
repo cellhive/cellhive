@@ -1,11 +1,12 @@
 import { Button, cn, Input, Skeleton } from '@cellhive/ui';
 import { useQueries, useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { ChevronRight, History, Info, Lock, Plus, Search, Zap } from 'lucide-react';
+import { ChevronRight, History, Info, Lock, Plus, Search, Sparkles, Zap } from 'lucide-react';
 import { useCallback, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { useDocumentTitle } from '../../../../lib/a11y/use-document-title';
+import { useAiAvailability } from '../../../../lib/ai/use-ai-availability';
 import { isApiError } from '../../../../lib/api/client';
 import { ErrorAlert } from '../../../../lib/errors/ErrorAlert';
 import { PageHeader } from '../../../../lib/layout/page-header';
@@ -16,6 +17,7 @@ import { baseQuery, fieldsQuery, tablesQuery, viewsQuery } from '../../../../lib
 import { meQuery } from '../../../../lib/session/session';
 import { showToast } from '../../../../lib/toast/toast';
 import { baseRunsPath } from '../../runs/components/AutomationTabs';
+import { type AiDraftState } from '../model/ai-draft';
 import {
   filterAutomations,
   STATUS_FILTERS,
@@ -27,6 +29,7 @@ import { useAutomationActions } from '../use-automation-actions';
 import { useAutomationRealtime } from '../use-automation-realtime';
 import { useDuplicateAutomation } from '../use-duplicate-automation';
 
+import { AiDraftDialog } from './AiDraftDialog';
 import { AutomationCards, AutomationTable, switchIdOf } from './AutomationRows';
 import { DeleteAutomationDialog, EnableDialog, TakeOverDialog } from './ConfirmDialogs';
 import { CreateAutomationDialog } from './CreateAutomationDialog';
@@ -35,7 +38,7 @@ import type { AutomationDto } from '@cellhive/contracts';
 
 type Pending =
   | { readonly kind: 'enable' | 'takeOver' | 'delete'; readonly automation: AutomationDto }
-  | { readonly kind: 'create' }
+  | { readonly kind: 'create' | 'ai' }
   | null;
 
 const NARROW_QUERY = '(max-width: 767.98px)';
@@ -195,6 +198,7 @@ export function AutomationListPage() {
   const actions = useAutomationActions(baseId);
   const duplicate = useDuplicateAutomation(baseId, { linkToSource: true });
   const navigate = useNavigate();
+  const ai = useAiAvailability(base.organization_id);
   useDocumentTitle(`${t('page.title')} · ${base.name}`);
 
   const items = list.data?.items ?? [];
@@ -289,9 +293,20 @@ export function AutomationListPage() {
   const counts = statusCounts(items);
   const shown = filterAutomations(items, status, query);
   const canCreate = manages && !forbidden && !narrow;
+  // T913: "Create with AI" only with AI on for the organization (never hidden by CSS only).
+  const canDraft = canCreate && ai.available;
   const openCreate = () => {
     setPending({ kind: 'create' });
   };
+  const openDraft = () => {
+    setPending({ kind: 'ai' });
+  };
+  const draftButton = canDraft ? (
+    <Button variant="secondary" onClick={openDraft} data-testid="create-automation-ai">
+      <Sparkles aria-hidden="true" />
+      {t('ai.create')}
+    </Button>
+  ) : null;
 
   let body;
   if (forbidden) {
@@ -309,10 +324,13 @@ export function AutomationListPage() {
       <Message icon={Zap} title={t('empty.title')} data-testid="automations-empty">
         <p className="max-w-[60ch] text-body text-fg-muted">{t('empty.description')}</p>
         {canCreate ? (
-          <Button onClick={openCreate}>
-            <Plus aria-hidden="true" />
-            {t('page.create')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={openCreate}>
+              <Plus aria-hidden="true" />
+              {t('page.create')}
+            </Button>
+            {draftButton}
+          </div>
         ) : null}
       </Message>
     );
@@ -412,6 +430,7 @@ export function AutomationListPage() {
                 <span className="max-sm:sr-only">{t('page.runs')}</span>
               </Link>
             </Button>
+            {draftButton}
             {canCreate ? (
               <Button onClick={openCreate} data-testid="create-automation">
                 <Plus aria-hidden="true" />
@@ -431,6 +450,17 @@ export function AutomationListPage() {
             // T521: the builder creates it on the first save.
             const query = new URLSearchParams({ name: start.name, trigger: start.trigger });
             void navigate(`/b/${baseId}/automations/new?${query.toString()}`);
+          }}
+        />
+      ) : null}
+      {pending?.kind === 'ai' ? (
+        <AiDraftDialog
+          base={base}
+          onCancel={close}
+          onDraft={(draft) => {
+            // The builder opens it unsaved and off (T913); nothing is stored before "Create".
+            const state: AiDraftState = { aiDraft: draft };
+            void navigate(`/b/${baseId}/automations/new`, { state });
           }}
         />
       ) : null}

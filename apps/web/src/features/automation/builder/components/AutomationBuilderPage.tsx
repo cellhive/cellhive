@@ -1,5 +1,6 @@
 import {
   AUTOMATION_TRIGGER_TYPES,
+  type AiAutomationDraft,
   type AutomationAction,
   type AutomationDefinition,
   type AutomationDto,
@@ -27,7 +28,14 @@ import {
   type ComponentType,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
+import {
+  Link,
+  useBlocker,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router';
 
 import { useDocumentTitle } from '../../../../lib/a11y/use-document-title';
 import { automationsApi } from '../../../../lib/api/automations';
@@ -48,6 +56,7 @@ import {
 } from '../../../../lib/query/queries';
 import { meQuery } from '../../../../lib/session/session';
 import { showErrorToast, showToast } from '../../../../lib/toast/toast';
+import { aiDraftOf } from '../../list/model/ai-draft';
 import { useDuplicateAutomation } from '../../list/use-duplicate-automation';
 import { AutomationTabs } from '../../runs/components/AutomationTabs';
 import { baseEmailIdentitiesQuery, builderEmailSettingsQuery } from '../actions/send-email/queries';
@@ -83,6 +92,7 @@ import { scopeOf, triggerTableOf } from '../model/scope';
 import { sampleQuery } from '../triggers/webhook/queries';
 
 import {
+  AiDraftBanner,
   ConflictDialog,
   DeleteStepDialog,
   IssueSummary,
@@ -193,6 +203,8 @@ export function AutomationBuilderPage({ ConditionEditor, webhookKit }: Automatio
   const { t } = useTranslation(['automationBuilder', 'automation']);
   const { baseId = '', automationId } = useParams();
   const [search] = useSearchParams();
+  // (T913) A draft of "Create with AI": opened unsaved, off.
+  const aiDraft = aiDraftOf(useLocation().state);
   const { data: base } = useSuspenseQuery(baseQuery(baseId));
   const manages = canManageAutomations(base.access);
   const existing = useQuery({
@@ -262,6 +274,7 @@ export function AutomationBuilderPage({ ConditionEditor, webhookKit }: Automatio
       baseId={baseId}
       automation={existing.data ?? null}
       spec={spec}
+      aiDraft={automationId === undefined ? aiDraft : null}
       firstTable={firstManaged}
       ConditionEditor={ConditionEditor}
       webhookKit={webhookKit}
@@ -275,6 +288,8 @@ interface BuilderProps {
   readonly baseId: string;
   readonly automation: AutomationDto | null;
   readonly spec: NewSpec;
+  /** (T913) A new automation from "Create with AI": name, definition, the sentence, notes. */
+  readonly aiDraft: AiAutomationDraft | null;
   /** Table a new automation starts on (the first the caller manages). */
   readonly firstTable: TableId;
   readonly ConditionEditor: AutomationBuilderPageProps['ConditionEditor'];
@@ -302,6 +317,7 @@ function Builder({
   baseId,
   automation,
   spec,
+  aiDraft,
   firstTable,
   ConditionEditor,
   webhookKit,
@@ -333,15 +349,15 @@ function Builder({
   const viewLists = useQueries({ queries: managedTables.map((table) => viewsQuery(table.id)) });
 
   const [saved, setSaved] = useState<AutomationDto | null>(automation);
-  const [name, setName] = useState(automation?.name ?? spec.name);
+  const [name, setName] = useState(automation?.name ?? aiDraft?.name ?? spec.name);
   const [definition, setDefinition] = useState<AutomationDefinition>(
-    () => automation?.definition ?? initialDefinition(spec, firstTable),
+    () => automation?.definition ?? aiDraft?.definition ?? initialDefinition(spec, firstTable),
   );
   const [selected, setSelected] = useState<StepKey | null>('trigger');
   const [issues, setIssues] = useState<BuilderIssue[]>([]);
   const [conditions, setConditions] = useState<ReadonlyMap<string, ConditionSlotState>>(new Map());
   const [resetKey, setResetKey] = useState(0);
-  const [renaming, setRenaming] = useState(saved === null && spec.name === '');
+  const [renaming, setRenaming] = useState(saved === null && name === '');
   const [conflict, setConflict] = useState<{ by: string | null; version: number } | null>(null);
   const [deleting, setDeleting] = useState<AutomationAction | null>(null);
   const [asking, setAsking] = useState(false);
@@ -474,7 +490,13 @@ function Builder({
     mutationFn: async (version: number | null) => {
       const trimmed = name.trim();
       if (saved === null) {
-        return automationsApi.create(baseId, { name: trimmed, definition, enabled: false });
+        return automationsApi.create(baseId, {
+          name: trimmed,
+          // (T913) The sentence of an AI draft is its description.
+          ...(aiDraft === null ? {} : { description: aiDraft.description }),
+          definition,
+          enabled: false,
+        });
       }
       return automationsApi.update(saved.id, version ?? saved.version, {
         ...(trimmed === saved.name ? {} : { name: trimmed }),
@@ -750,30 +772,30 @@ function Builder({
             </>
           )}
         </nav>
-        {saved === null ? null : (
-          <span className="flex shrink-0 items-center gap-2">
-            <Switch
-              id={switchId}
-              checked={enabled}
-              disabled={!canToggle}
-              aria-describedby={dirty ? switchHint : undefined}
-              data-testid="builder-enabled"
-              onChange={(event) => {
-                const on = event.target.checked;
-                if (on && saved.run_as.id !== meId) setAsking(true);
-                else toggle.mutate(on);
-              }}
-            />
-            <label htmlFor={switchId} className="text-body whitespace-nowrap max-sm:sr-only">
-              {enabled ? t('page.on') : t('page.off')}
-            </label>
-            {dirty ? (
-              <span id={switchHint} className="sr-only">
-                {t('page.saveFirst')}
-              </span>
-            ) : null}
-          </span>
-        )}
+        {/* A new automation shows its switch off too (T913): it is created off, turned on after. */}
+        <span className="flex shrink-0 items-center gap-2">
+          <Switch
+            id={switchId}
+            checked={enabled}
+            disabled={!canToggle}
+            aria-describedby={dirty ? switchHint : undefined}
+            data-testid="builder-enabled"
+            onChange={(event) => {
+              if (saved === null) return;
+              const on = event.target.checked;
+              if (on && saved.run_as.id !== meId) setAsking(true);
+              else toggle.mutate(on);
+            }}
+          />
+          <label htmlFor={switchId} className="text-body whitespace-nowrap max-sm:sr-only">
+            {enabled ? t('page.on') : t('page.off')}
+          </label>
+          {dirty ? (
+            <span id={switchHint} className="sr-only">
+              {t('page.saveFirst')}
+            </span>
+          ) : null}
+        </span>
         {/* T523: "Configuration | Run history" of a saved automation (below the header on phones). */}
         {saved === null || narrow ? null : (
           <AutomationTabs baseId={baseId} automationId={saved.id} current="config" />
@@ -842,6 +864,7 @@ function Builder({
             {t('automation:page.mobileNote')}
           </p>
         ) : null}
+        {aiDraft === null ? null : <AiDraftBanner draft={aiDraft} />}
         {saved !== null && meId !== null && saved.run_as.id !== meId ? (
           <RunAsBanner
             automation={saved}

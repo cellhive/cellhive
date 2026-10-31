@@ -467,12 +467,24 @@ export function useActionSummary(
         body: (
           <>
             {t('summary.notifyTo', { count: action.config.recipients.length })}
+            {/* (T913) Recipient fields and steps by name ("Send notification · Phụ trách"). */}
+            {action.config.recipients.map((value, index) =>
+              'field' in value || 'step' in value ? (
+                <Fragment key={index}>
+                  {' '}
+                  <Chip name={sourceNameOf(value, scope, env)} />
+                </Fragment>
+              ) : null,
+            )}
             <br />
             {action.config.title.template === '' ? (
               <em>{t('summary.empty')}</em>
             ) : (
               <ValueSummary value={{ template: action.config.title.template }} scope={scope} />
             )}
+            {/* Coordinator decision (T908): a person's Telegram goes through their channels. */}
+            <br />
+            <span data-testid="notify-channels-hint">{t('summary.notifyChannels')}</span>
           </>
         ),
       };

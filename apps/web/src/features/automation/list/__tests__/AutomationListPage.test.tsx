@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { json, ME, ORG, problem, renderApp, stubApi } from '../../../../../test/app-harness';
 import { axeViolations } from '../../../../../test/axe';
-import { BASE_ID, FIELD, fieldList, NOW, TABLE_ID } from '../../../../../test/records';
+import { BASE_ID, FIELD, fieldList, NOW, OPTION, TABLE_ID } from '../../../../../test/records';
 import { clearToasts } from '../../../../lib/toast/toast';
 
 import type { ChannelMessage } from '../../../../lib/realtime/socket';
@@ -147,6 +147,7 @@ function serve(
   kind: 'admin' | 'manager' | 'editor',
   initial: Automation[],
   duplicates: Readonly<Record<string, DuplicateAnswer>> = {},
+  extra: Record<string, (init: RequestInit | undefined) => Response> = {},
 ) {
   let items = initial;
   const calls: Call[] = [];
@@ -276,6 +277,7 @@ function serve(
       routes[`GET /automations/${answer.id}`] = () => json(dtoOf(answer));
     }
   }
+  Object.assign(routes, extra);
   const fetchMock = stubApi({ signedIn: true, routes });
   return {
     calls,
@@ -538,5 +540,119 @@ describe('AutomationListPage (T520)', () => {
       await screen.findByText('“Sync stock” just turned off: too many runs failed.'),
     ).toBeVisible();
     expect(await screen.findByTestId(`disabled-note-${item.id}`)).toBeVisible();
+  });
+});
+
+/** T913: "Create with AI" (CONTRACTS §29.3) — the milestone draft, never saved or turned on here. */
+describe('Create with AI (T913)', () => {
+  const draft = {
+    name: 'Notify the owner when done',
+    description: 'When an order is DONE, notify its owner',
+    definition: {
+      trigger: {
+        type: 'record.updated',
+        table_id: TABLE_ID,
+        watch_fields: [FIELD.status],
+        skip_bulk: false,
+      },
+      condition: { field: FIELD.status, operator: 'changed_to', value: OPTION.done },
+      actions: [
+        {
+          id: 'act_1',
+          type: 'send_notification',
+          config: {
+            recipients: [{ field: FIELD.owner }],
+            title: { template: 'Order done' },
+            body: { template: '' },
+            link_record: 'trigger',
+            skip_actor: false,
+          },
+        },
+      ],
+    },
+    explanation: 'Sent through the notification channels of the owner.',
+    warnings: [{ code: 'unsupported_action', message: 'Calling the shop API is left out.' }],
+  };
+  const aiOn = (prompts: unknown[]) => ({
+    [`GET /orgs/${ORG.id}`]: () => json({ ...ORG, ai: { available: true, record_data: false } }),
+    [`POST /bases/${BASE_ID}/ai/automation-draft`]: (init: RequestInit | undefined) => {
+      prompts.push(JSON.parse(init?.body as string));
+      return json(draft);
+    },
+  });
+
+  it('drafts from a sentence and opens the builder unsaved and off; saving creates it off', async () => {
+    const prompts: unknown[] = [];
+    const { calls } = serve('manager', [], {}, aiOn(prompts));
+    const { router } = await renderApp(PAGE);
+    const empty = await screen.findByTestId('automations-empty');
+    await userEvent.click(await within(empty).findByRole('button', { name: 'Create with AI' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Create an automation with AI' });
+    const examples = await within(dialog).findAllByTestId('ai-draft-example');
+    expect(examples.map((example) => example.textContent)).toEqual([
+      'When Status in Orders changes to Done, notify Owner',
+      'One day before the due date, remind the person in charge',
+      'When a record is added to Orders, notify Owner',
+    ]);
+    // One table managed: no table choice.
+    expect(within(dialog).queryByTestId('ai-draft-table')).toBeNull();
+    expect(await axeViolations(document.body)).toEqual([]);
+    const prompt = within(dialog).getByRole('textbox', { name: 'What should the automation do?' });
+    await userEvent.click(examples[0] as HTMLElement);
+    expect(prompt).toHaveValue('When Status in Orders changes to Done, notify Owner');
+    await userEvent.clear(prompt);
+    // Shift+Enter is a new line, Enter sends.
+    await userEvent.type(prompt, 'When an order is DONE,{Shift>}{Enter}{/Shift}notify its owner');
+    expect(prompt).toHaveValue('When an order is DONE,\nnotify its owner');
+    await userEvent.type(prompt, '{Enter}');
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/b/${BASE_ID}/automations/new`);
+    });
+    expect(prompts).toEqual([
+      { prompt: 'When an order is DONE,\nnotify its owner', table_id: TABLE_ID },
+    ]);
+    const banner = await screen.findByTestId('ai-draft-banner', {}, { timeout: 5000 });
+    expect(banner).toHaveTextContent(
+      'AI draft: check every step before you save it and turn it on.',
+    );
+    expect(within(banner).getByTestId('ai-draft-request')).toHaveTextContent(draft.description);
+    expect(within(banner).getByTestId('ai-draft-explanation')).toHaveTextContent(draft.explanation);
+    expect(within(banner).getByTestId('ai-draft-warnings')).toHaveTextContent(
+      'Not included: Calling the shop API is left out.',
+    );
+    expect(screen.getByTestId('builder-title')).toHaveTextContent(draft.name);
+    expect(await screen.findByTestId('step-trigger')).toHaveTextContent('When a record is updated');
+    expect(screen.getByTestId('step-condition')).toHaveTextContent('Status');
+    expect(screen.getByTestId('step-condition')).toHaveTextContent('Done');
+    const step = screen.getByTestId('step-act_1');
+    expect(step).toHaveTextContent('Send notification');
+    expect(step).toHaveTextContent('Owner');
+    expect(within(step).getByTestId('notify-channels-hint')).toHaveTextContent(
+      "Sent through each recipient's notification channels (Telegram when linked).",
+    );
+    const enabled = screen.getByTestId('builder-enabled');
+    expect(enabled).not.toBeChecked();
+    expect(enabled).toBeDisabled();
+    expect(await axeViolations(document.body)).toEqual([]);
+
+    await userEvent.click(screen.getByTestId('builder-save'));
+    await waitFor(() => {
+      expect(calls.filter((call) => call.path === 'create')).toHaveLength(1);
+    });
+    expect(calls.find((call) => call.path === 'create')?.body).toEqual({
+      name: draft.name,
+      description: draft.description,
+      definition: draft.definition,
+      enabled: false,
+    });
+  });
+
+  it('shows no AI entry with AI off', async () => {
+    serve('admin', [automation({ name: 'Existing' })]);
+    await renderApp(PAGE);
+    await screen.findByTestId('create-automation');
+    expect(screen.queryByTestId('create-automation-ai')).toBeNull();
+    expect(document.querySelector('svg.lucide-sparkles')).toBeNull();
   });
 });

@@ -188,5 +188,33 @@
     "openSource": "Open the automation",
     "close": "Close",
     "saveFirst": "Save or discard your changes first: the copy is made from the saved version."
+  },
+  "ai": {
+    "create": "Create with AI",
+    "title": "Create an automation with AI",
+    "description": "Describe what should happen. You check the draft in the builder: nothing is saved or turned on until you do.",
+    "prompt": "What should the automation do?",
+    "placeholder": "e.g. When a ticket is done, notify the person in charge",
+    "keys": "Enter creates the draft · Shift+Enter for a new line",
+    "count": "{{count, number}} / {{limit}}",
+    "examplesLabel": "Examples",
+    "examples": {
+      "status": "When {{field}} in {{table}} changes to {{option}}, notify {{user}}",
+      "reminder": "One day before {{date}} in {{table}}, remind {{user}}",
+      "created": "When a record is added to {{table}}, notify {{user}}",
+      "genericStatus": "When the status changes to Done, notify the person in charge",
+      "genericReminder": "One day before the due date, remind the person in charge",
+      "genericCreated": "When a record is added, email the person in charge"
+    },
+    "table": "Mainly about the table",
+    "submit": "Create draft",
+    "waiting": "Drafting the automation…",
+    "waitingLater": "Checking the draft like a save and fixing it if needed…",
+    "waitingHint": "AI can take up to 90 seconds to answer.",
+    "errors": {
+      "AI_INVALID_OUTPUT": "The AI could not make a valid draft in 3 tries. Rephrase the sentence, or name the table and fields.",
+      "AI_TIMEOUT": "The AI took longer than 90 seconds. Try again, or describe a simpler automation.",
+      "AI_QUOTA_EXCEEDED": "Your organization has used up today's AI quota."
+    }
   }
 }

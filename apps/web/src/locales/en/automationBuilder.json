@@ -338,7 +338,8 @@
       },
       "signature": "With signature"
     },
-    "urlChoose": "Enter a URL"
+    "urlChoose": "Enter a URL",
+    "notifyChannels": "Sent through each recipient's notification channels (Telegram when linked)."
   },
   "values": {
     "insert": "Insert a value",
@@ -506,5 +507,17 @@
     "copyReference": "Copy reference",
     "copied": "Copied",
     "copiedAnnounce": "Reference copied."
+  },
+  "ai": {
+    "banner": "AI draft: check every step before you save it and turn it on.",
+    "request": "Your request",
+    "explanation": "What it does",
+    "warnings_one": "{{count, number}} note from the AI",
+    "warnings_other": "{{count, number}} notes from the AI",
+    "warning": {
+      "unsupported_action": "Not included:",
+      "unsupported_trigger": "Trigger not supported:",
+      "ambiguous": "Guessed:"
+    }
   }
 }

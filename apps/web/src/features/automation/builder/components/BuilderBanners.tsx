@@ -1,5 +1,5 @@
 import { Button, Dialog, Spinner } from '@cellhive/ui';
-import { CircleAlert, UserRound } from 'lucide-react';
+import { AlertTriangle, CircleAlert, Sparkles, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,7 +9,61 @@ import { stepOrder, type BuilderIssue, type StepKey } from '../model/issues';
 import { useBuilderEnv } from './env';
 import { useIssueText } from './issue-text';
 
-import type { AutomationDefinition, AutomationDto } from '@cellhive/contracts';
+import type { AiAutomationDraft, AutomationDefinition, AutomationDto } from '@cellhive/contracts';
+
+/**
+ * (T913, research S8 §5.3) The band of a draft from "Create with AI": check
+ * every step before saving and turning it on, the sentence it came from, the
+ * model's explanation and its warnings (what it left out or guessed — they
+ * carry no step, CONTRACTS §29.3) — all model text as plain text. Gone once
+ * saved (the automation is then an ordinary one, off).
+ */
+export function AiDraftBanner({ draft }: { readonly draft: AiAutomationDraft }) {
+  const { t } = useTranslation('automationBuilder');
+  return (
+    <section
+      aria-labelledby="ai-draft-banner-title"
+      data-testid="ai-draft-banner"
+      className="flex flex-col gap-2 border-b border-line bg-accent-soft px-4 py-2.5 text-label font-normal text-fg motion-safe:animate-reveal"
+    >
+      <h2 id="ai-draft-banner-title" className="flex items-start gap-2 text-body font-semibold">
+        <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent" />
+        {t('ai.banner')}
+      </h2>
+      <dl className="grid max-w-[90ch] gap-x-3 gap-y-1 pl-6 sm:grid-cols-[auto_minmax(0,1fr)]">
+        <dt className="text-fg-muted">{t('ai.request')}</dt>
+        <dd className="break-words whitespace-pre-line" data-testid="ai-draft-request">
+          {draft.description}
+        </dd>
+        {draft.explanation === '' ? null : (
+          <>
+            <dt className="text-fg-muted">{t('ai.explanation')}</dt>
+            <dd className="break-words whitespace-pre-line" data-testid="ai-draft-explanation">
+              {draft.explanation}
+            </dd>
+          </>
+        )}
+      </dl>
+      {draft.warnings.length === 0 ? null : (
+        <ul
+          aria-label={t('ai.warnings', { count: draft.warnings.length })}
+          className="ml-6 flex max-w-[90ch] flex-col gap-1 rounded-md border border-option-3 bg-option-3 px-3 py-2 text-on-option-3"
+          data-testid="ai-draft-warnings"
+        >
+          {draft.warnings.map((warning, index) => (
+            <li key={index} className="flex items-start gap-2">
+              <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+              <span className="min-w-0 break-words">
+                <strong className="font-semibold">{t(`ai.warning.${warning.code}`)}</strong>{' '}
+                {warning.message}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 /**
  * The `run_as` band (ADR-25 §4, board "S5 · Automation builder"): shown

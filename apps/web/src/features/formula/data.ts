@@ -1,7 +1,9 @@
 import { useQueries, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { useAiAvailability } from '../../lib/ai/use-ai-availability';
 import { api } from '../../lib/api';
+import { canManageSchema } from '../../lib/permissions/access';
 import { keys } from '../../lib/query/keys';
 import { baseQuery, fieldsQuery, orgQuery, tableQuery, tablesQuery } from '../../lib/query/queries';
 
@@ -54,6 +56,20 @@ export function useFormulaEnvironment(tableId: string, fieldId?: string): Formul
     timeZone: org.data?.settings.timezone,
     currency: org.data?.settings.currency,
   };
+}
+
+/**
+ * (T913) Whether the editor offers "Describe the formula": AI on for the
+ * organization (research S8 §5.1) and the caller changes this table's schema
+ * (`manage` or base admin, the rule of the AI route). Here, not in the box, so
+ * that the box's code loads only when it renders.
+ */
+export function useAiFormulaEntry(tableId: string): boolean {
+  const table = useQuery(tableQuery(tableId));
+  const baseId = table.data?.base_id;
+  const base = useQuery({ ...baseQuery(baseId ?? ''), enabled: baseId !== undefined });
+  const ai = useAiAvailability(base.data?.organization_id);
+  return ai.available && canManageSchema(base.data?.access, tableId);
 }
 
 /**

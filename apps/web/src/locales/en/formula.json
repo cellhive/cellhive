@@ -10,6 +10,25 @@
     "placeholder": "Type [ for fields and tables, or a function name",
     "confirm": "Confirm"
   },
+  "ai": {
+    "label": "Describe the formula",
+    "placeholder": "e.g. Profit: amount minus cost, 0 when the order is not done",
+    "write": "Write formula",
+    "waiting": "Writing the formula…",
+    "waitingLater": "Checking the formula and fixing it if needed…",
+    "waitingHint": "AI can take up to 90 seconds to answer.",
+    "suggestion": "Suggested formula",
+    "tries_one": "Written in {{count, number}} try",
+    "tries_other": "Written in {{count, number}} tries",
+    "use": "Use",
+    "dismiss": "Dismiss",
+    "ready": "Suggested formula: {{formula}}",
+    "errors": {
+      "AI_INVALID_OUTPUT": "The AI could not write a valid formula in 3 tries. Describe it differently or name the fields to use.",
+      "AI_TIMEOUT": "The AI took longer than 90 seconds. Try again, or describe a smaller formula.",
+      "AI_QUOTA_EXCEEDED": "Your organization has used up today's AI quota."
+    }
+  },
   "field": {
     "empty": "No formula yet",
     "missing": "Write the formula of this field.",

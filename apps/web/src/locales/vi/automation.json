@@ -180,5 +180,33 @@
     "openSource": "Mở automation",
     "close": "Đóng",
     "saveFirst": "Hãy lưu hoặc huỷ thay đổi trước: bản sao được tạo từ phiên bản đã lưu."
+  },
+  "ai": {
+    "create": "Tạo bằng AI",
+    "title": "Tạo automation bằng AI",
+    "description": "Mô tả việc cần tự động. Bạn kiểm tra bản nháp trong trình dựng: chưa có gì được lưu hay bật cho tới khi bạn làm.",
+    "prompt": "Automation cần làm gì?",
+    "placeholder": "VD: Khi ticket xong thì gửi thông báo cho người phụ trách",
+    "keys": "Enter để tạo bản nháp · Shift+Enter để xuống dòng",
+    "count": "{{count, number}} / {{limit}}",
+    "examplesLabel": "Ví dụ",
+    "examples": {
+      "status": "Khi {{field}} của {{table}} chuyển sang {{option}} thì gửi thông báo cho {{user}}",
+      "reminder": "Trước {{date}} của {{table}} một ngày, nhắc {{user}}",
+      "created": "Khi có bản ghi mới trong {{table}}, gửi thông báo cho {{user}}",
+      "genericStatus": "Khi trạng thái chuyển sang Đã xong thì gửi thông báo cho người phụ trách",
+      "genericReminder": "Trước hạn một ngày, nhắc người phụ trách",
+      "genericCreated": "Khi có bản ghi mới, gửi email cho người phụ trách"
+    },
+    "table": "Chủ yếu về bảng",
+    "submit": "Tạo bản nháp",
+    "waiting": "Đang tạo bản nháp automation…",
+    "waitingLater": "Đang kiểm tra bản nháp như lúc lưu và sửa nếu cần…",
+    "waitingHint": "AI có thể cần tới 90 giây để trả lời.",
+    "errors": {
+      "AI_INVALID_OUTPUT": "AI không tạo được bản nháp hợp lệ sau 3 lần thử. Hãy diễn đạt lại câu, hoặc nêu tên bảng và trường.",
+      "AI_TIMEOUT": "AI trả lời quá 90 giây. Hãy thử lại, hoặc mô tả một automation đơn giản hơn.",
+      "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay."
+    }
   }
 }

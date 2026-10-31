@@ -10,6 +10,24 @@
     "placeholder": "Gõ [ để chọn trường, bảng, hoặc gõ tên hàm",
     "confirm": "Xác nhận"
   },
+  "ai": {
+    "label": "Mô tả công thức",
+    "placeholder": "VD: Lãi = tiền trừ chi phí, 0 khi đơn chưa xong",
+    "write": "Viết công thức",
+    "waiting": "Đang viết công thức…",
+    "waitingLater": "Đang kiểm tra công thức và sửa nếu cần…",
+    "waitingHint": "AI có thể cần tới 90 giây để trả lời.",
+    "suggestion": "Công thức gợi ý",
+    "tries_other": "Viết sau {{count, number}} lần thử",
+    "use": "Dùng",
+    "dismiss": "Bỏ",
+    "ready": "Công thức gợi ý: {{formula}}",
+    "errors": {
+      "AI_INVALID_OUTPUT": "AI không viết được công thức hợp lệ sau 3 lần thử. Hãy mô tả theo cách khác hoặc nêu tên các trường cần dùng.",
+      "AI_TIMEOUT": "AI trả lời quá 90 giây. Hãy thử lại, hoặc mô tả một công thức nhỏ hơn.",
+      "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay."
+    }
+  },
   "field": {
     "empty": "Chưa có công thức",
     "missing": "Hãy viết công thức cho trường này.",

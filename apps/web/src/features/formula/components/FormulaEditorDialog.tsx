@@ -8,11 +8,12 @@ import {
   WandSparkles,
   X,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../../lib/api/client';
 import { useFormatters } from '../../../lib/i18n/format';
+import { useAiFormulaEntry } from '../data';
 import { FormulaInput, type FormulaInputHandle } from '../editor/FormulaInput';
 import { FORMULA_LIMITS } from '../model/analysis';
 import { formatFormula } from '../model/format';
@@ -34,6 +35,9 @@ import type { FieldDto } from '@cellhive/contracts';
  * server otherwise), the signature bar, the function catalogue, the format
  * of the result, and "Confirm" that saves the field.
  */
+
+/** (T913) "Describe the formula": its own chunk, loaded only with AI on (no download otherwise). */
+const AiFormulaBox = lazy(() => import('./AiFormulaBox'));
 
 export interface FormulaEditorDialogProps {
   readonly tableId: string;
@@ -67,6 +71,7 @@ export function FormulaEditorDialog({
   const reasonId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const input = useRef<FormulaInputHandle>(null);
+  const aiEntry = useAiFormulaEntry(tableId);
   const [expression, setExpression] = useState(initial.expression);
   const [style, setStyle] = useState(initial.style);
   const [styleTouched, setStyleTouched] = useState(initial.styleTouched);
@@ -349,6 +354,20 @@ export function FormulaEditorDialog({
       <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_300px] lg:overflow-hidden">
         <div className="flex min-h-0 min-w-0 flex-col">
           <div className="flex min-w-0 flex-col gap-2 px-5 pt-4">
+            {/* T913: "Describe the formula" → a checked suggestion; renders only with AI on. */}
+            {aiEntry ? (
+              <Suspense fallback={null}>
+                <AiFormulaBox
+                  tableId={tableId}
+                  fieldId={fieldId}
+                  schema={schema}
+                  expression={expression}
+                  onUse={(formula) => {
+                    input.current?.replaceAll(formula);
+                  }}
+                />
+              </Suspense>
+            ) : null}
             <div className="flex items-center gap-2">
               <span className="text-label text-fg-muted">{t('formula:editor.label')}</span>
               <span className="ml-auto text-label font-normal text-fg-muted">
