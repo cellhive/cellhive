@@ -159,7 +159,6 @@ export {
 } from './generation/jobs.js';
 export {
   AI_FIELD_TYPES,
-  aiFieldLocked,
   aiOptionsOf,
   aiSourceFieldIds,
   aiSourcesOf,
@@ -176,3 +175,11 @@ export {
   type RenderedAiInput,
 } from './generation/prompt.js';
 export { AiGenerationQueueRepository, type TakenAiRow } from './generation/queue.repository.js';
+export {
+  aiAnalysisOf,
+  aiCrossRecordSources,
+  aiFieldLockedFor,
+  aiReadFieldIds,
+  loadAiLockRule,
+  type AiLockRule,
+} from './generation/sources.js';

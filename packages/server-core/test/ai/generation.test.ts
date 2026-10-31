@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   aiFailureReason,
-  aiFieldLocked,
+  aiFieldLockedFor,
   aiInvalidOutput,
   aiOptionsOf,
   aiProviderError,
@@ -73,9 +73,10 @@ describe('AI field generation helpers (T910)', () => {
       type: 'text',
       options: { ai: { ...AI, prompt: `{{ [${TITLE}] }} {{ [${NOTES}] }}` } },
     };
-    expect(aiFieldLocked(field, () => true)).toBe(false);
-    expect(aiFieldLocked(field, (id) => id !== NOTES)).toBe(true);
-    expect(aiFieldLocked({ type: 'text', options: {} }, () => false)).toBe(false);
+    const rows = { baseId: 'bse_GenBase000000001', tables: [], fields: [] } as const;
+    expect(aiFieldLockedFor(field, rows, () => true)).toBe(false);
+    expect(aiFieldLockedFor(field, rows, (id) => id !== NOTES)).toBe(true);
+    expect(aiFieldLockedFor({ type: 'text', options: {} }, rows, () => false)).toBe(false);
   });
 
   it('renders values in data blocks, the template text as is', () => {

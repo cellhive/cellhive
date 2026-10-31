@@ -20,6 +20,7 @@ import { AppError } from '../../errors/app-error.js';
 import { zodIssuesToProblemErrors } from '../../errors/zod-issues.js';
 
 import { isAiField } from './options.js';
+import { aiAnalysisOf, aiCrossRecordSources } from './sources.js';
 
 /** What the person saving an AI field may reference (T910; permission checks belong to the caller). */
 export interface AiFieldContext {
@@ -45,7 +46,8 @@ function failed(errors: ProblemErrorItem[]): AppError {
  * like an automation template against what the saver reads — a field they
  * cannot read is a field that does not exist (`UNKNOWN_FIELD`, like a
  * formula, C§13) — then stored with field ids. Only fields of the same
- * record (`same_row`; `CROSS_TABLE_NOT_SUPPORTED` otherwise), never an
+ * record (`same_row`, and a formula/lookup only when it reads the same
+ * record alone, transitively; `CROSS_TABLE_NOT_SUPPORTED` otherwise), never an
  * attachment, a button, another AI field or the field itself
  * (`INVALID_FIELD_TYPE`); not on a primary field. Returns the stored options
  * and the dependency edges (`same_row`) of the field.
@@ -87,11 +89,14 @@ export function prepareAiOptions(
     params: { ...problem.params },
   }));
   const byId = new Map(rows.fields.map((row) => [row.id as string, row]));
+  const analysisOf = aiAnalysisOf(rows);
   const dependencies = check.placeholders.flatMap((placeholder) => {
     const at = { position: { start: placeholder.start, length: placeholder.length } };
     return placeholder.dependencies.filter((dependency) => {
       const source = byId.get(dependency.field_id);
-      if (dependency.kind !== 'same_row') {
+      // A formula/lookup reading another record or table, at any depth, is no same-record source.
+      const crossRecord = aiCrossRecordSources([dependency.field_id], rows, analysisOf).length > 0;
+      if (dependency.kind !== 'same_row' || crossRecord) {
         errors.push({
           path: PATH,
           code: 'CROSS_TABLE_NOT_SUPPORTED',

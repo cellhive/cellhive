@@ -39,6 +39,7 @@ import {
   type RenderedAiInput,
 } from './prompt.js';
 import { AiGenerationQueueRepository, type TakenAiRow } from './queue.repository.js';
+import { aiCrossRecordSources } from './sources.js';
 
 import type { Db } from '../../db/create-db.js';
 import type { FieldRow, JsonValue } from '../../db/schema.js';
@@ -343,6 +344,8 @@ export class AiFieldGenerator {
       rows.fields.filter((row) => row.deleted_at === null).map((row) => row.id),
     );
     const sources = aiSourcesOf(field).filter((id) => active.has(id));
+    // A source formula edited since to read another record or table: no call, no value.
+    const crossRecord = aiCrossRecordSources(sources, rows).length > 0;
     const found =
       access === null
         ? []
@@ -387,6 +390,7 @@ export class AiFieldGenerator {
       }
       const formulaRow: FormulaRecord = { id: record.id, fields: record.fields };
       try {
+        if (crossRecord) throw new AiRenderError('A source reads another record or table');
         const input = renderAiInput(ai.prompt, snapshot, formulaRow, {
           ...context,
           now: this.now(),

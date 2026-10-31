@@ -4,6 +4,7 @@ import {
   fieldSchema,
   type FieldDto,
   type Id,
+  type RealtimeServerMessage,
 } from '@cellhive/contracts';
 import {
   AiFieldGenerator,
@@ -28,8 +29,9 @@ import { ApiRateLimits } from '../../src/common/rate-limit/api-rate-limits.js';
 import { AiAccess } from '../../src/modules/ai/ai-access.js';
 
 import { createMigratedDatabase, createTestDb, type TestDatabase } from './database.js';
+import { closeSockets, listen, TestSocket } from './realtime-support.js';
 import { expectProblem, buildRecordFixture, type RecordFixture } from './record-fixture.js';
-import { captureLogger, startTestApp, type TestApp } from './support.js';
+import { captureLogger, startTestApp, TEST_PUBLIC_URL, type TestApp } from './support.js';
 
 import type { LightMyRequestResponse } from 'fastify';
 
@@ -72,6 +74,7 @@ describe('AI fields (T910)', () => {
   };
 
   const chats = () => fake.chatRequests();
+  const sockets: TestSocket[] = [];
   const waitFor = async (check: () => Promise<boolean>, what: string, ms = 60_000) => {
     const deadline = Date.now() + ms;
     while (!(await check())) {
@@ -174,6 +177,7 @@ describe('AI fields (T910)', () => {
   }, 120_000);
 
   afterAll(async () => {
+    await closeSockets(sockets);
     await fake.close();
     await t.close();
     await db.destroy();
@@ -598,6 +602,137 @@ describe('AI fields (T910)', () => {
     expectProblem(await patchRecord(records.r1, { ai_note: 'again' }), 403, 'FIELD_READ_ONLY');
   });
 
+  const addField = async (body: Record<string, unknown>): Promise<FieldDto> => {
+    const created = await fx.call('u_admin', 'POST', `/tables/${fx.orders.id}/fields`, body);
+    expect(created.statusCode, created.body).toBe(201);
+    return fieldSchema.parse(created.json());
+  };
+
+  it('a formula of the prompt reading a field hidden from the reader locks the AI field (base not strict)', async () => {
+    // `title_cost` reads `cost`, hidden from u_sales1; the base is not strict, so the
+    // formula itself shows to them — its summary must not.
+    const formula = await addField({
+      name: 'title_cost',
+      type: 'formula',
+      options: { expression: '[title] & " " & [cost]' },
+    });
+    const summary = await addField({
+      name: 'ai_title_cost',
+      type: 'text',
+      options: { ai: { task: 'summarize', prompt: '{{ [title_cost] }}', auto_update: false } },
+    });
+    // Realtime: the value reaches u_admin, never u_sales1.
+    const url = await listen(t.app);
+    const watch = async (user: 'u_admin' | 'u_sales1') => {
+      const socket = await TestSocket.connect(url, {
+        origin: TEST_PUBLIC_URL,
+        cookie: await fx.cookie(user),
+      });
+      sockets.push(socket);
+      expect(await socket.subscribe(`table:${fx.orders.id}`, 's1')).toMatchObject({
+        type: 'subscribed',
+      });
+      return socket;
+    };
+    const adminSocket = await watch('u_admin');
+    const salesSocket = await watch('u_sales1');
+    const carriesSummary = (message: RealtimeServerMessage) =>
+      message.type === 'record.updated' &&
+      message.record_id === records.r1 &&
+      Object.hasOwn(message.fields, summary.id);
+
+    const generated = await fx.call('u_admin', 'POST', `/fields/${summary.id}/ai/generate`, {
+      scope: 'records',
+      record_ids: [records.r1],
+    });
+    expect(generated.statusCode, generated.body).toBe(202);
+    await drain(summary.id);
+    expect((await cell(records.r1))?.fields[summary.id]).toMatch(/^fake: /u);
+    await adminSocket.next(carriesSummary);
+    await salesSocket.expectNone(carriesSummary);
+
+    const own = await cell(records.r1, 'u_sales1');
+    // The formula is visible to u_sales1 (only `cost` is hidden): the lock comes from `cost`.
+    expect(own?.fields).toHaveProperty(formula.id);
+    expect(own?.fields).toHaveProperty(summary.id, null);
+    const field = await fx.call('u_sales1', 'GET', `/fields/${summary.id}`);
+    expect(field.json()).toMatchObject({ locked: true });
+    const history = await fx.call(
+      'u_sales1',
+      'GET',
+      `/tables/${fx.orders.id}/records/${records.r1}/history?field_key_type=id`,
+    );
+    expect(history.statusCode, history.body).toBe(200);
+    expect(history.body).not.toContain(summary.id);
+    const forAdmin = await fx.call(
+      'u_admin',
+      'GET',
+      `/tables/${fx.orders.id}/records/${records.r1}/history?field_key_type=id`,
+    );
+    expect(forAdmin.body).toContain(summary.id);
+  });
+
+  it('refuses a prompt reading a formula over a lookup; a source edited later fails the row', async () => {
+    const link = await addField({
+      name: 'customer',
+      type: 'link',
+      options: { link_table: fx.customers.id },
+    });
+    await addField({
+      name: 'customer_name',
+      type: 'lookup',
+      options: {
+        from: fx.customers.id,
+        select: fld('customerName'),
+        where: { field: '__id', operator: 'is_any_of', value: { field_ref: link.id } },
+      },
+    });
+    await addField({
+      name: 'customer_upper',
+      type: 'formula',
+      options: { expression: 'UPPER(ARRAYJOIN([customer_name]))' },
+    });
+    const refused = await fx.call('u_admin', 'POST', `/tables/${fx.orders.id}/fields`, {
+      name: 'ai_customer',
+      type: 'text',
+      options: { ai: { task: 'summarize', prompt: 'About {{ [customer_upper] }}' } },
+    });
+    expectProblem(refused, 422, 'VALIDATION_FAILED');
+    const errors = refused.json<{ errors: { path: string; code: string; params: object }[] }>()
+      .errors;
+    expect(errors.map(({ path, code }) => ({ path, code }))).toEqual([
+      { path: 'options.ai.prompt', code: 'CROSS_TABLE_NOT_SUPPORTED' },
+    ]);
+    expect(errors[0]?.params).toEqual({ position: { start: 6, length: 22 } });
+
+    // A same-record formula, edited after the AI field was saved to read another table.
+    const upper = await addField({
+      name: 'title_upper',
+      type: 'formula',
+      options: { expression: 'UPPER([title])' },
+    });
+    const field = await addField({
+      name: 'ai_upper',
+      type: 'text',
+      options: { ai: { task: 'summarize', prompt: '{{ [title_upper] }}', auto_update: false } },
+    });
+    const edited = await fx.call('u_admin', 'PATCH', `/fields/${upper.id}`, {
+      options: { expression: 'UPPER([customer_upper])' },
+    });
+    expect(edited.statusCode, edited.body).toBe(200);
+    await fx.call('u_admin', 'POST', `/fields/${field.id}/ai/generate`, {
+      scope: 'records',
+      record_ids: [records.r1],
+    });
+    await drain(field.id);
+    expect(chats()).toEqual([]);
+    expect(await queue().recordIdsOf(orgScope(fx.orgId), field.id, 'failed')).toEqual([records.r1]);
+    const reason = await sql<{ reason: string }>`
+      SELECT reason FROM meta.ai_generation_queue WHERE field_id = ${field.id}`.execute(db.kysely);
+    expect(reason.rows).toEqual([{ reason: 'render_error' }]);
+    expect((await cell(records.r1))?.fields[field.id]).toBeNull();
+  });
+
   it('the worker runs ai.* on its own runner: 500 queued rows never delay events.dispatch', async () => {
     const { logger } = captureLogger();
     let worker: WorkerHandle | undefined;
@@ -619,6 +754,7 @@ describe('AI fields (T910)', () => {
       });
       // Every call takes 5 s: the AI runner (AI_CONCURRENCY 2) is busy for minutes.
       fake.capabilities.delayMs = 5_000;
+      const since = (await sql<{ now: Date }>`SELECT now() AS now`.execute(db.kysely)).rows[0]?.now;
       const created = await fx.call('u_admin', 'POST', `/tables/${fx.orders.id}/records`, {
         records: Array.from({ length: 500 }, (_, index) => ({
           fields: { title: `Import ${String(index)}`, cost: index },
@@ -627,7 +763,16 @@ describe('AI fields (T910)', () => {
       expect(created.statusCode, created.body).toBe(201);
       expect((await queued()).length + (await running())).toBe(500);
       await waitFor(() => Promise.resolve(chats().length > 0), 'the first AI call');
-      // A record of another table: its event is dispatched at once by the main runner.
+      // The 500 record.created events are dispatched while the AI runner is busy …
+      await waitFor(async () => {
+        const { rows } = await sql<{ n: number }>`
+          SELECT count(*)::int AS n FROM meta.events
+           WHERE organization_id = ${fx.orgId} AND dispatched_at IS NULL
+             AND created_at >= ${since}`.execute(db.kysely);
+        return rows[0]?.n === 0;
+      }, 'the dispatch of the import');
+      expect(chats().length).toBeLessThan(500);
+      // … and a record of another table: its event is dispatched at once by the main runner.
       const customer = await fx.call('u_admin', 'POST', `/tables/${fx.customers.id}/records`, {
         records: [{ fields: { Tên: 'An Phát' } }],
       });

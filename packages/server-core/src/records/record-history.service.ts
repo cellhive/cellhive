@@ -10,7 +10,7 @@ import { isViewVisible, type TableAccess } from '@cellhive/permissions';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
-import { aiFieldLocked } from '../ai/generation/options.js';
+import { loadAiLockRule } from '../ai/generation/sources.js';
 import { apiTokenViaPresenter, type AuditViewer } from '../audit/api-token-via.js';
 import { AuditLogsRepository, type AuditLogRow } from '../audit/audit-logs.repository.js';
 import { decodeCursor } from '../db/cursor.js';
@@ -466,6 +466,7 @@ export class RecordHistoryService {
     const tableAccess: TableAccess | undefined = access.resolved.access.tables[tableId];
     if (tableAccess === undefined) throw recordNotFound();
     const rows: FieldRow[] = await this.fields.listByTable(scope, tableId);
+    const locks = await loadAiLockRule(this.db, scope, access.baseId, rows);
     return (
       rows
         .flatMap((row): HistoryField[] => {
@@ -480,8 +481,7 @@ export class RecordHistoryService {
         // AI fields (T910) are always strict: not shown to a reader missing a field of the prompt.
         .filter(
           (entry) =>
-            entry.kind !== 'column' ||
-            !aiFieldLocked(entry.field.row, (id) => readable(tableAccess, id)),
+            entry.kind !== 'column' || !locks(entry.field.row, (id) => readable(tableAccess, id)),
         )
     );
   }

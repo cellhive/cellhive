@@ -1,7 +1,7 @@
 import { isId } from '@cellhive/contracts';
 import {
   AiGenerationQueueRepository,
-  aiFieldLocked,
+  aiFieldLockedFor,
   aiOptionsForReader,
   aiOptionsOf,
   AiSettingsRepository,
@@ -141,7 +141,7 @@ export class FieldService {
           ...(field.options as Record<string, unknown>),
           ai: aiOptionsForReader(ai, loaded.rows, field.table_id, readable),
         },
-        locked: aiFieldLocked(field, (id) => readable.field(field.table_id, id)),
+        locked: aiFieldLockedFor(field, loaded.rows, (id) => readable.field(field.table_id, id)),
         ...(state === undefined ? {} : { ai_state: state }),
       };
     }

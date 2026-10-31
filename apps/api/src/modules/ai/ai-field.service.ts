@@ -12,7 +12,7 @@ import {
   AiGenerationQueueRepository,
   AiSettingsRepository,
   AppError,
-  aiFieldLocked,
+  aiFieldLockedFor,
   aiOptionsOf,
   aiSourceFieldIds,
   aiTargetOf,
@@ -102,6 +102,11 @@ export class AiFieldService {
       field = { id: row.id, isPrimary: row.is_primary };
     }
     const prepared = prepareAiOptions(body.ai, rows, { ...field, tableId: table.id }, { readable });
+    // A formula of the prompt reading a field the caller cannot: its values would reach them.
+    const asField = { type: 'text', options: { ai: prepared.ai } };
+    if (aiFieldLockedFor(asField, rows, (id) => readable.field(table.id, id))) {
+      throw permissionDenied('The prompt reads values you cannot read.');
+    }
     const access = await recordAccessContextOf(
       { groupMembers: this.groupMembers, config: this.config },
       principal.user,
@@ -200,11 +205,12 @@ export class AiFieldService {
       });
     }
     const readable = readabilityOf(base.access);
+    const scope = base.org.scope;
+    const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
     // Generating values the caller could not read: refused like a missing right.
-    if (aiFieldLocked(field, (id) => readable.field(field.table_id, id))) {
+    if (aiFieldLockedFor(field, rows, (id) => readable.field(field.table_id, id))) {
       throw permissionDenied('Generating this field needs every field of its prompt readable.');
     }
-    const scope = base.org.scope;
     requireAi(await this.settings.find(scope), { recordData: true });
     const access = await recordAccessContextOf(
       { groupMembers: this.groupMembers, config: this.config },

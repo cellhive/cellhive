@@ -61,15 +61,3 @@ export function aiSourcesOf(field: {
   const ai = aiOptionsOf(field);
   return ai === null ? [] : aiSourceFieldIds(ai.prompt);
 }
-
-/**
- * Whether a reader who reads field `isReadable` sees the values of an AI
- * field: every source must be readable (Quyết định S8 #9 — "strict"
- * whatever `strict_computed_permissions` says).
- */
-export function aiFieldLocked(
-  field: { readonly type: string; readonly options: unknown },
-  isReadable: (fieldId: Id<'fld'>) => boolean,
-): boolean {
-  return aiSourcesOf(field).some((id) => !isReadable(id));
-}

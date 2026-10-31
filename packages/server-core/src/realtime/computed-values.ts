@@ -2,6 +2,8 @@ import { isId, type Id } from '@cellhive/contracts';
 import { isValidTimeZone, type LocaleContext, type UserRef } from '@cellhive/field-types';
 import { sql } from 'kysely';
 
+import { isAiField } from '../ai/generation/options.js';
+import { aiAnalysisOf, aiReadFieldIds } from '../ai/generation/sources.js';
 import { analysisOfField } from '../computed/definition/compute-model.js';
 import { isComputedRow, publicResultType } from '../computed/definition/definition.js';
 import {
@@ -580,15 +582,49 @@ export class ComputedImages {
     this.linkImages = new LinkImageReader(db);
   }
 
+  /**
+   * AI fields of the images (T910, always strict) carry the meta of a
+   * same-record computed value: every field flowing into their prompt
+   * (`aiReadFieldIds`), `strict`, so each receiver locks them for a
+   * subscriber missing one — the base's rows are read only then.
+   */
+  private async withAiMeta(
+    scope: OrgScope,
+    table: TableRow,
+    fields: readonly RecordChangeField[],
+  ): Promise<readonly RecordChangeField[]> {
+    if (!fields.some((field) => isAiField(field))) return fields;
+    const rows = await loadBaseSchemaRows(this.db, scope, table.base_id);
+    const analysisOf = aiAnalysisOf(rows);
+    return fields.map((field) =>
+      isAiField(field)
+        ? {
+            ...field,
+            computed: {
+              tables: [],
+              cross_fields: [],
+              same_row_fields: aiReadFieldIds(field, rows, analysisOf).map((id) => ({
+                table_id: table.id,
+                field_id: id,
+              })),
+              strict: true,
+            },
+          }
+        : field,
+    );
+  }
+
   async augment(
     scope: OrgScope,
     table: TableRow,
     changes: readonly RecordChange[],
-    fields: readonly RecordChangeField[],
+    given: readonly RecordChangeField[],
   ): Promise<{ changes: RecordChange[]; fields: RecordChangeField[] }> {
     const tx = scope.tx;
+    if (tx === undefined || changes.length === 0)
+      return { changes: [...changes], fields: [...given] };
+    const fields = await this.withAiMeta(scope, table, given);
     const unchanged = { changes: [...changes], fields: [...fields] };
-    if (tx === undefined || changes.length === 0) return unchanged;
     const ruleIds = await this.ruleFields.of(scope, table.base_id, table.id);
     const imaged = new Set<string>(fields.map((field) => field.id));
     const missing = new Set<string>([...ruleIds].filter((fieldId) => !imaged.has(fieldId)));

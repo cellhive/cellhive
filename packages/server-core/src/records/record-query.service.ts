@@ -40,8 +40,9 @@ import { permissionFingerprintMaterial, type TableAccess } from '@cellhive/permi
 import { sql, type RawBuilder, type SqlBool } from 'kysely';
 import { z } from 'zod';
 
-import { aiFieldLocked, isAiField } from '../ai/generation/options.js';
+import { isAiField } from '../ai/generation/options.js';
 import { AiGenerationQueueRepository } from '../ai/generation/queue.repository.js';
+import { loadAiLockRule } from '../ai/generation/sources.js';
 import { ComputeModel } from '../computed/definition/compute-model.js';
 import { loadBaseSchemaRows } from '../computed/definition/schema-rows.js';
 import { runComputedPreview, type ComputedPreviewRow } from '../computed/preview/preview.js';
@@ -2944,20 +2945,20 @@ export class RecordQueryService implements ButtonRecordMatcher {
             : model.visibleParent,
       };
     }
-    // AI fields (T910, Quyết định S8 #9) are always strict: a source the reader
-    // cannot read (hidden by a share link's view too, or a locked formula) locks them.
+    // AI fields (T910, Quyết định S8 #9) are always strict: a field flowing into
+    // the prompt (a source, or a same-record field a computed source reads) the
+    // reader cannot read — or a share link's view hides — locks them.
     const hiddenInView =
       view !== null && through.viewScope === 'share_link'
         ? new Set<string>(view.config.hidden_fields)
         : new Set<string>();
-    const lockedComputed = new Set<string>(
-      computed.filter((field) => field.locked).map((field) => field.id),
-    );
-    const lockedAi = model.visible.filter((field) =>
-      aiFieldLocked(
-        field.row,
-        (id) => fieldReadable(tableAccess, id) && !hiddenInView.has(id) && !lockedComputed.has(id),
-      ),
+    const aiFields = model.visible.filter((field) => isAiField(field.row));
+    const locks =
+      aiFields.length === 0 ? null : await loadAiLockRule(this.db, scope, table.base_id, rows);
+    const lockedAi = aiFields.filter(
+      (field) =>
+        locks?.(field.row, (id) => fieldReadable(tableAccess, id) && !hiddenInView.has(id)) ===
+        true,
     );
     if (lockedAi.length > 0) {
       const ids = new Set<string>(lockedAi.map((field) => field.id));

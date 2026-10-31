@@ -459,4 +459,72 @@ describe('RecordDeliveryStrategy with AI fields (T910)', () => {
     ]);
     expect(to(out, noPhone)).toEqual([]);
   });
+
+  it('a formula of the prompt reading a hidden field locks the AI field, base not strict', async () => {
+    // The prompt reads `total`, a formula of the same record that reads `phone`.
+    const prompt = `{{ [${F.total}] }}`;
+    const viaFormula = (meta: 'producer' | 'envelope'): RecordChangesEnvelope => {
+      const base = aiEnvelope('Summary of the total');
+      const ai = {
+        task: 'summarize',
+        prompt,
+        instructions: null,
+        auto_update: true,
+        max_output_tokens: 300,
+      };
+      const reads = [
+        { table_id: CUSTOMERS, field_id: F.phone },
+        { table_id: CUSTOMERS, field_id: F.total },
+      ];
+      return {
+        ...base,
+        fields:
+          meta === 'producer'
+            ? // What producers send: the AI field's own meta (every field flowing in, strict).
+              [
+                {
+                  id: summary,
+                  type: 'text',
+                  options: { ai },
+                  computed: { tables: [], cross_fields: [], same_row_fields: reads, strict: true },
+                },
+              ]
+            : // An older producer: the formula's meta in the envelope gives its reads.
+              [
+                { id: summary, type: 'text', options: { ai } },
+                {
+                  id: F.total,
+                  type: 'formula',
+                  options: {},
+                  computed: {
+                    tables: [],
+                    cross_fields: [],
+                    same_row_fields: [{ table_id: CUSTOMERS, field_id: F.phone }],
+                    strict: false,
+                  },
+                },
+              ],
+      };
+    };
+    const reader = sub(
+      U.admin,
+      access({
+        [CUSTOMERS]: {
+          fields: { [F.phone]: 'edit', [F.total]: 'read', [summary]: 'read' },
+          rule: null,
+        },
+      }),
+    );
+    const noPhone = sub(
+      U.reader,
+      access({ [CUSTOMERS]: { fields: { [F.total]: 'read', [summary]: 'read' }, rule: null } }),
+    );
+    for (const meta of ['producer', 'envelope'] as const) {
+      const out = await strategy.deliver(viaFormula(meta), [reader, noPhone]);
+      expect(to(out, reader)).toMatchObject([
+        { type: 'record.updated', fields: { [summary]: 'Summary of the total' } },
+      ]);
+      expect(to(out, noPhone)).toEqual([]);
+    }
+  });
 });
