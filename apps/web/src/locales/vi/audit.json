@@ -213,7 +213,8 @@
     "api_token": "API token",
     "automation": "Automation",
     "share_link": "Liên kết chia sẻ và biểu mẫu",
-    "import": "Nhập dữ liệu"
+    "import": "Nhập dữ liệu",
+    "mcp": "MCP"
   },
   "columns": {
     "time": "Thời gian",
@@ -235,6 +236,8 @@
   "via": {
     "apiTokenNamed": "qua API token {{name}}",
     "apiToken": "qua một API token",
+    "mcpNamed": "qua MCP bằng API token {{name}}",
+    "mcp": "qua MCP",
     "automation": "qua automation",
     "incoming_webhook": "qua webhook nhận vào",
     "share_link": "qua liên kết chia sẻ",

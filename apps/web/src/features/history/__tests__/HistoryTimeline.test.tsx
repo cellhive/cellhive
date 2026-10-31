@@ -191,6 +191,22 @@ describe('HistoryTimeline (T206)', () => {
     expect(unnamed).toHaveTextContent('Share link created this record');
   });
 
+  it('says "Via MCP" for a change made through the MCP server (T923)', async () => {
+    serve({
+      entries: [
+        entry(
+          { [FIELD.status]: { from: 'New', to: 'Done' } },
+          { via: { api_token_id: null, api_token_name: null, mcp: true } },
+        ),
+      ],
+    });
+    await renderTimeline('admin');
+    const timeline = await screen.findByRole('list', { name: 'Changes' });
+    expect(timeline).toHaveTextContent('Bình Trần changed Status');
+    expect(timeline).toHaveTextContent('Via MCP');
+    expect(timeline).not.toHaveTextContent('Via an API token');
+  });
+
   it('groups a paste of 12 cells into one item, collapsed, with its batch', async () => {
     const notes = noteFields(12);
     const changes = Object.fromEntries(

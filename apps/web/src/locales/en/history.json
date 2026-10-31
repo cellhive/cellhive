@@ -27,6 +27,7 @@
     "app": "In the app",
     "automation": "Via an automation",
     "apiToken": "Via an API token",
+    "mcp": "Via MCP",
     "shareLink": "Via a share link or form",
     "import": "Via an import",
     "revert": "Restored from an earlier change"

@@ -213,7 +213,8 @@
     "api_token": "API tokens",
     "automation": "Automations",
     "share_link": "Share links and forms",
-    "import": "Imports"
+    "import": "Imports",
+    "mcp": "MCP"
   },
   "columns": {
     "time": "Time",
@@ -235,6 +236,8 @@
   "via": {
     "apiTokenNamed": "via API token {{name}}",
     "apiToken": "via an API token",
+    "mcpNamed": "via MCP with API token {{name}}",
+    "mcp": "via MCP",
     "automation": "via automation",
     "incoming_webhook": "via incoming webhook",
     "share_link": "via share link",

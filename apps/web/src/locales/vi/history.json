@@ -26,6 +26,7 @@
     "app": "Trong ứng dụng",
     "automation": "Qua automation",
     "apiToken": "Qua API token",
+    "mcp": "Qua MCP",
     "shareLink": "Qua link chia sẻ hoặc form",
     "import": "Qua nhập dữ liệu",
     "revert": "Khôi phục từ một thay đổi trước"

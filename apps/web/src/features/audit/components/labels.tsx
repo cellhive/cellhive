@@ -55,12 +55,11 @@ export function useActorText(): (actor: ActorLabel) => string {
 export function useViaText(): (via: ViaLabel) => string {
   const { t } = useTranslation('audit');
   return useCallback(
-    (via: ViaLabel) =>
-      via.kind === 'api_token'
-        ? via.name === null
-          ? t('via.apiToken')
-          : t('via.apiTokenNamed', { name: via.name })
-        : t(`via.${via.kind}`),
+    (via: ViaLabel) => {
+      if (via.kind !== 'api_token' && via.kind !== 'mcp') return t(`via.${via.kind}`);
+      const key = via.kind === 'mcp' ? 'mcp' : 'apiToken';
+      return via.name === null ? t(`via.${key}`) : t(`via.${key}Named`, { name: via.name });
+    },
     [t],
   );
 }

@@ -84,6 +84,7 @@ function useSource(actor: AuditActorDto, via: AuditViaDto | null): string | null
   const { t } = useTranslation('history');
   if (via?.reverted_from !== undefined) return t('via.revert');
   if (via?.automation_id !== undefined) return t('via.automation');
+  if (via?.mcp === true) return t('via.mcp');
   if (via?.api_token_id !== undefined) return t('via.apiToken');
   if (via?.share_link_id !== undefined) return t('via.shareLink');
   if (via?.import_job_id !== undefined) return t('via.import');

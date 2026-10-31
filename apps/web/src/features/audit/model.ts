@@ -370,7 +370,7 @@ export function actorOf(entry: AuditLogEntryDto, refs: AuditRefsDto): ActorLabel
 
 /** Where the change came from besides the actor (`via`). */
 export type ViaLabel =
-  | { readonly kind: 'api_token'; readonly name: string | null }
+  | { readonly kind: 'api_token' | 'mcp'; readonly name: string | null }
   | { readonly kind: 'automation' | 'share_link' | 'import' | 'reverted' | 'incoming_webhook' };
 
 export function viaOf(entry: AuditLogEntryDto, refs: AuditRefsDto): ViaLabel[] {
@@ -382,7 +382,8 @@ export function viaOf(entry: AuditLogEntryDto, refs: AuditRefsDto): ViaLabel[] {
     // a masked token (`api_token_id: null`) reads "through an API token".
     const id = via.api_token_id ?? null;
     const name = id === null ? null : (via.api_token_name ?? refs.api_tokens[id]?.name ?? null);
-    labels.push({ kind: 'api_token', name });
+    // Through the MCP server (T923): the same token rule, labelled "via MCP".
+    labels.push({ kind: via.mcp === true ? 'mcp' : 'api_token', name });
   }
   if (via.automation_id !== undefined) labels.push({ kind: 'automation' });
   if (via.incoming_webhook_id !== undefined) labels.push({ kind: 'incoming_webhook' });

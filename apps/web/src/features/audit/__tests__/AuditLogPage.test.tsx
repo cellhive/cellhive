@@ -297,6 +297,30 @@ describe('organization audit log (T716)', () => {
     expect(screen.getByTestId('audit-filter-action')).toHaveTextContent('Records');
   });
 
+  it('labels changes made through MCP and filters by that source (T923)', async () => {
+    const { listQueries } = serve({
+      items: [
+        entry('M1', {
+          via: { api_token_id: 'tok_0123456789ABCDEF', api_token_name: 'CRM sync', mcp: true },
+        }),
+        entry('M2', { via: { api_token_id: null, api_token_name: null, mcp: true } }),
+      ],
+    });
+    await renderApp(ORG_PATH);
+    const [named, masked] = within(await screen.findByTestId('audit-table')).getAllByTestId(
+      'audit-row',
+    );
+    expect(named).toHaveTextContent('via MCP with API token CRM sync');
+    expect(masked).toHaveTextContent('via MCP');
+    expect(masked).not.toHaveTextContent('API token');
+
+    await userEvent.click(screen.getByTestId('audit-filter-via'));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'MCP' }));
+    await waitFor(() => {
+      expect(listQueries().at(-1)?.getAll('via')).toEqual(['mcp']);
+    });
+  });
+
   it('opens the details with the keyboard: diff by field name, values as text; Esc returns focus', async () => {
     serve();
     await renderApp(ORG_PATH);

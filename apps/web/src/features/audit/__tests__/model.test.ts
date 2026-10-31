@@ -221,6 +221,16 @@ describe('names from refs', () => {
       [{ kind: 'api_token', name: 'CRM sync' }],
     ],
     [
+      'through MCP, named',
+      { api_token_id: 'tok_0000000000000001', api_token_name: 'CRM sync', mcp: true },
+      [{ kind: 'mcp', name: 'CRM sync' }],
+    ],
+    [
+      'through MCP, masked',
+      { api_token_id: null, api_token_name: null, mcp: true },
+      [{ kind: 'mcp', name: null }],
+    ],
+    [
       'automation run',
       { automation_id: 'aut_0000000000000001', run_id: 'run_0000000000000001' },
       [{ kind: 'automation' }],
