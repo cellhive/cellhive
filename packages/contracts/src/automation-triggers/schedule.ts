@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { canonicalTimeZone } from '../time-zones.js';
+
 /** The `schedule` trigger fires at most every 5 minutes (SPEC §11.2, BACKLOG T508). */
 export const SCHEDULE_MIN_INTERVAL_MINUTES = 5;
 
@@ -31,10 +33,19 @@ export const scheduleTriggerSchema = z
       .min(9)
       .max(100)
       .meta({ description: 'Five-field cron expression', example: '0 8 * * *' }),
-    timezone: z.string().min(1).max(64).nullable().default(null).meta({
-      description: 'IANA time zone; `null` = the organization’s',
-      example: 'Asia/Ho_Chi_Minh',
-    }),
+    timezone: z
+      .string()
+      .min(1)
+      .max(64)
+      // Stored as the IANA primary name PostgreSQL knows (`Asia/Saigon` → `Asia/Ho_Chi_Minh`, T901).
+      .overwrite((zone) => canonicalTimeZone(zone) ?? zone)
+      .nullable()
+      .default(null)
+      .meta({
+        description:
+          'IANA time zone, an alias replaced by its IANA primary name; `null` = the organization’s',
+        example: 'Asia/Ho_Chi_Minh',
+      }),
   })
   .meta({
     id: 'ScheduleTrigger',

@@ -14592,7 +14592,7 @@
           },
           "timezone": {
             "default": null,
-            "description": "IANA time zone; `null` = the organization’s",
+            "description": "IANA time zone, an alias replaced by its IANA primary name; `null` = the organization’s",
             "example": "Asia/Ho_Chi_Minh",
             "maxLength": 64,
             "minLength": 1,

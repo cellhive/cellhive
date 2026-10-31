@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { setupRequestSchema, timeZoneSchema } from '../src/auth.js';
+import { scheduleTriggerSchema } from '../src/automation-triggers/schedule.js';
 import { widgetDataRequestSchema } from '../src/dashboard-data.js';
 import { canonicalTimeZone, canonicalTimeZones } from '../src/time-zones.js';
 
@@ -56,6 +57,15 @@ describe('timeZoneSchema', () => {
     expect(widgetDataRequestSchema.parse({ timezone: 'Asia/Calcutta' }).timezone).toBe(
       'Asia/Kolkata',
     );
+  });
+
+  it('stores the zone of a schedule trigger by its IANA primary name (T901)', () => {
+    const parse = (timezone: string | null) =>
+      scheduleTriggerSchema.parse({ type: 'schedule', cron: '0 8 * * *', timezone }).timezone;
+    expect(parse('Asia/Saigon')).toBe('Asia/Ho_Chi_Minh');
+    expect(parse(null)).toBeNull();
+    // The server answers INVALID_TIME_ZONE (automation validation), not the schema.
+    expect(parse('Mars/Olympus')).toBe('Mars/Olympus');
   });
 
   it('still refuses an unknown zone', () => {
