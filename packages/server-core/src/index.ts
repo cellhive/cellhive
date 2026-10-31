@@ -27,3 +27,4 @@ export * from './secrets/index.js';
 export * from './http-allowlist/index.js';
 export * from './net/index.js';
 export * from './http-out/index.js';
+export * from './ai/index.js';
