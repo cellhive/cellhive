@@ -11,6 +11,7 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { GenericContainer, Wait } from 'testcontainers';
 import { createServer, preview } from 'vite';
 
+import { startFakeLlm } from './fake-llm';
 import { startFakeOidc } from './fake-oidc';
 import { E2E_API_PORT, E2E_STACK_ENV, E2E_WEB_PORT, E2E_WEB_URL } from './ports';
 
@@ -47,7 +48,7 @@ async function waitUntilUp(url: string, child: ChildProcess): Promise<void> {
  * Boots the E2E stack: PostgreSQL 18 + Valkey 8 (Testcontainers, no host
  * ports to clash with `pnpm dev:infra`), migrations, the built API
  * (`apps/api/dist`, MODE=all: API + worker, local file storage, the fake OIDC provider of
- * `fake-oidc.ts`) and `vite preview` of the
+ * `fake-oidc.ts`, the fake AI provider of `fake-llm.ts`) and `vite preview` of the
  * built SPA proxying `/api` to it. Returns the teardown.
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
@@ -64,6 +65,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const storage = await mkdtemp(join(tmpdir(), 'cellhive-e2e-'));
   // T715: an OIDC provider (HTTPS, self-signed) for the SSO specs; the API trusts its certificate.
   const idp = await startFakeOidc();
+  // T912: an OpenAI-compatible provider on loopback; the worker fixture points each org at it.
+  const closeLlm = await startFakeLlm();
 
   // A clean environment: nothing from the developer's shell or .env leaks in.
   const env: NodeJS.ProcessEnv = {
@@ -115,7 +118,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       api.kill('SIGTERM');
       await exited;
     }
-    await Promise.all([postgres.stop(), valkey.stop(), idp.close()]);
+    await Promise.all([postgres.stop(), valkey.stop(), idp.close(), closeLlm()]);
     await rm(storage, { recursive: true, force: true });
   };
 }

@@ -15,7 +15,7 @@ import { Section } from '../api-tokens/components/parts';
 
 import { AdminPage, useSettingsOrg } from './shared';
 
-import type { OrganizationDto } from '@cellhive/contracts';
+import type { OrganizationDetailDto, OrganizationDto } from '@cellhive/contracts';
 
 /** The limit of the organization name (`updateOrganizationRequestSchema`). */
 const NAME_MAX = 100;
@@ -47,7 +47,10 @@ function OrgInfoForm({ org }: { readonly org: OrganizationDto }) {
   const save = useMutation({
     mutationFn: () => orgAdminApi.update(org.id, { name: next }),
     onSuccess: async (updated) => {
-      queryClient.setQueryData(keys.org(org.id), updated);
+      // `PATCH` answers without `ai` (T912): keep the one of `GET /orgs/:id`.
+      queryClient.setQueryData<OrganizationDetailDto>(keys.org(org.id), (old) =>
+        old === undefined ? undefined : { ...old, ...updated },
+      );
       // The sidebar and the settings nav show the name from `GET /me`.
       await queryClient.invalidateQueries({ queryKey: keys.me() });
       showToast({ variant: 'success', message: t('general.info.saved') });

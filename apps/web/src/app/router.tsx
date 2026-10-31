@@ -386,6 +386,16 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                       .default,
                   }),
                 },
+                // T912: the AI provider, quota and usage of the organization (CONTRACTS §29.1).
+                {
+                  path: 'ai',
+                  errorElement: <RouteErrorPanel />,
+                  lazy: async () => ({
+                    Component: (
+                      await import('../features/org-settings/ai/components/AiSettingsPage')
+                    ).default,
+                  }),
+                },
                 // T830: members with their organization role, and invitations (SPEC §13.1).
                 {
                   path: 'members',

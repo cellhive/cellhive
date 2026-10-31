@@ -8,6 +8,7 @@ import {
   type ApiTokenPolicy,
   type ApiTokenStatus,
   type CreateApiTokenRequest,
+  type OrganizationDetailDto,
   type OrganizationDto,
 } from '@cellhive/contracts';
 import { infiniteQueryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -111,7 +112,10 @@ export function useSetTokenPolicy(orgId: string) {
   return useMutation({
     mutationFn: (policy: Partial<ApiTokenPolicy>) => apiTokensApi.setPolicy(orgId, policy),
     onSuccess: (org) => {
-      queryClient.setQueryData(keys.org(orgId), org);
+      // `PATCH` answers without `ai` (T912): keep the one of `GET /orgs/:id`.
+      queryClient.setQueryData<OrganizationDetailDto>(keys.org(orgId), (old) =>
+        old === undefined ? undefined : { ...old, ...org },
+      );
     },
   });
 }

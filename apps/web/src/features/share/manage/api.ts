@@ -6,6 +6,7 @@ import {
   shareLinkPreviewSchema,
   shareLinkSchema,
   type CreateShareLinkRequest,
+  type OrganizationDetailDto,
   type OrgShareLinkListQuery,
   type PublicSharingPolicy,
   type ShareLinkListQuery,
@@ -230,7 +231,10 @@ export function useSetPublicSharing(orgId: string) {
   return useMutation({
     mutationFn: (policy: PublicSharingPolicy) => shareLinksApi.setPublicSharing(orgId, policy),
     onSuccess: (org) => {
-      queryClient.setQueryData(keys.org(orgId), org);
+      // `PATCH` answers without `ai` (T912): keep the one of `GET /orgs/:id`.
+      queryClient.setQueryData<OrganizationDetailDto>(keys.org(orgId), (old) =>
+        old === undefined ? undefined : { ...old, ...org },
+      );
     },
     onSettled: () =>
       Promise.all([

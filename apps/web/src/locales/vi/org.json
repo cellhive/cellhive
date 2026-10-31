@@ -43,6 +43,7 @@
     },
     "items": {
       "general": "Chung",
+      "ai": "AI",
       "members": "Thành viên",
       "groups": "Nhóm",
       "emailSettings": "Cài đặt email",

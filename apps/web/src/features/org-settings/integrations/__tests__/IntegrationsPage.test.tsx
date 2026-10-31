@@ -41,6 +41,15 @@ const HEADER: SecretDto = {
   updated_at: NOW,
 };
 
+/** T912 (from T906): the AI provider key is managed on the AI page, never listed here. */
+const AI_KEY: SecretDto = {
+  ...HEADER,
+  id: 'sec_AiKey00000000001',
+  kind: 'ai_api_key',
+  name: 'AI provider key',
+  allowed_hosts: ['api.openai.com'],
+};
+
 const BOT: SecretDto = {
   ...HEADER,
   id: 'sec_Bot0000000000001',
@@ -63,7 +72,7 @@ function serve(
   } = {},
 ) {
   let entries: HttpAllowlistEntryDto[] = [ENTRY];
-  let secrets: SecretDto[] = [HEADER, BOT];
+  let secrets: SecretDto[] = [HEADER, BOT, AI_KEY];
   const calls: Call[] = [];
   const body = (init: RequestInit | undefined): unknown =>
     typeof init?.body === 'string' ? JSON.parse(init.body) : null;
@@ -178,6 +187,7 @@ describe('IntegrationsPage (T613)', () => {
     const rows = await within(section).findAllByTestId('http-secret-row');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent('CRM API key');
+    expect(within(section).queryByText('AI provider key')).toBeNull();
     expect(rows[0]).toHaveTextContent('Header value');
 
     await userEvent.click(within(section).getByTestId('secret-add'));

@@ -43,6 +43,7 @@
     },
     "items": {
       "general": "General",
+      "ai": "AI",
       "members": "Members",
       "groups": "Groups",
       "emailSettings": "Email settings",

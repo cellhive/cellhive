@@ -182,6 +182,7 @@ describe('organization settings (T830)', () => {
         .map((link) => link.textContent),
     ).toEqual([
       'General',
+      'AI',
       'Members',
       'Groups',
       'Email settings',

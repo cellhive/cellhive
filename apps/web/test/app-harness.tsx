@@ -16,6 +16,8 @@ export const ORG = {
   role: 'owner',
   created_at: '2026-09-01T00:00:00.000Z',
   updated_at: '2026-09-01T00:00:00.000Z',
+  // T912: `GET /orgs/:id` says whether AI entry points render (CONTRACTS §29.1).
+  ai: { available: false, record_data: false },
 } as const;
 
 export const ME = {
