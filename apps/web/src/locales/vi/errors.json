@@ -56,7 +56,10 @@
     "SUBMISSION_LIMIT_REACHED": "Bạn đã điền biểu mẫu này. Bạn có thể gửi lại sau.",
     "EMAIL_VERIFICATION_INVALID": "Xác minh không hợp lệ.",
     "SECRET_IN_USE": "Vẫn còn automation dùng bot này. Hãy đổi các automation đó trước.",
-    "WEBHOOK_IN_USE": "Vẫn còn automation chạy từ webhook này. Hãy đổi hoặc xoá các automation đó trước."
+    "WEBHOOK_IN_USE": "Vẫn còn automation chạy từ webhook này. Hãy đổi hoặc xoá các automation đó trước.",
+    "AI_INVALID_OUTPUT": "AI không đưa ra được câu trả lời dùng được. Hãy thử diễn đạt lại yêu cầu.",
+    "AI_PROVIDER_ERROR": "Không gọi được nhà cung cấp AI hoặc nhà cung cấp trả lỗi.",
+    "AI_TIMEOUT": "AI trả lời quá lâu. Hãy thử lại."
   },
   "client": {
     "NETWORK_ERROR": "Không kết nối được tới máy chủ. Hãy kiểm tra mạng rồi thử lại.",
@@ -329,7 +332,18 @@
     "UNKNOWN_FILTER": "Bộ lọc này không còn trong dashboard. Hãy tải lại dashboard.",
     "INVALID_FILTER_VALUE": "Giá trị không hợp với bộ lọc.",
     "WIDGET_NOT_EXPORTABLE": "Widget này không có bảng số liệu để xuất.",
-    "NO_FITTING_FIELD": "Bảng này không có field nào dùng được cho widget này."
+    "NO_FITTING_FIELD": "Bảng này không có field nào dùng được cho widget này.",
+    "AI_PROVIDER_ERROR": "Nhà cung cấp AI gặp lỗi.",
+    "AI_PROVIDER_ERROR_http_status": "Nhà cung cấp AI trả mã HTTP {{status}}.",
+    "AI_PROVIDER_ERROR_network": "Kết nối tới nhà cung cấp AI thất bại.",
+    "AI_PROVIDER_ERROR_ssrf_blocked": "Không được phép gọi địa chỉ của nhà cung cấp AI. Quản trị viên tổ chức có thể cho phép host này trong cài đặt tổ chức.",
+    "AI_PROVIDER_ERROR_secret_host_not_allowed": "Không được gửi API key tới host của URL nhà cung cấp.",
+    "AI_PROVIDER_ERROR_secret_unavailable": "API key của nhà cung cấp AI không còn hoặc không đọc được. Quản trị viên tổ chức có thể nhập lại.",
+    "AI_PROVIDER_ERROR_invalid_response": "Không đọc được câu trả lời của nhà cung cấp AI.",
+    "AI_PROVIDER_ERROR_response_too_large": "Câu trả lời của nhà cung cấp AI quá lớn.",
+    "AI_PROVIDER_ERROR_refused": "Model từ chối trả lời.",
+    "AI_PROVIDER_ERROR_truncated": "Câu trả lời của model bị cắt vì chạm giới hạn độ dài.",
+    "AI_INVALID_OUTPUT": "Câu trả lời vẫn không hợp lệ sau {{attempts}} lần thử."
   },
   "retryAfter_other": "Hãy thử lại sau {{count, number}} giây.",
   "retryAfterMinutes_other": "Hãy thử lại sau {{count, number}} phút.",

@@ -7273,11 +7273,14 @@
           "SMTP_NOT_CONFIGURED",
           "TELEGRAM_NOT_CONFIGURED",
           "EMAIL_VERIFICATION_INVALID",
+          "AI_INVALID_OUTPUT",
           "ACCOUNT_LOCKED",
           "RATE_LIMITED",
           "INTERNAL",
+          "AI_PROVIDER_ERROR",
           "DEPENDENCY_UNAVAILABLE",
-          "QUERY_TIMEOUT"
+          "QUERY_TIMEOUT",
+          "AI_TIMEOUT"
         ],
         "type": "string"
       },

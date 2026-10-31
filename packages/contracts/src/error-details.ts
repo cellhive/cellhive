@@ -610,6 +610,38 @@ export const REQUEST_DETAIL_CODES = [
   'EXPECTED_OBJECT',
 ] as const;
 
+/**
+ * The AI core (CONTRACTS §29.7, ADR-39; T905): `errors[0]` of
+ * `502 AI_PROVIDER_ERROR` (`params.reason` ∈ {@link AI_PROVIDER_ERROR_REASONS},
+ * plus `status` for `http_status`) and of `422 AI_INVALID_OUTPUT`
+ * (`params.attempts`), both with path `""`.
+ */
+export const AI_DETAIL_CODES = ['AI_PROVIDER_ERROR', 'AI_INVALID_OUTPUT'] as const;
+
+/**
+ * Why a call to the AI provider failed (`params.reason` of
+ * `AI_PROVIDER_ERROR`): `http_status` (an error status, or a `3xx` — never
+ * followed), `network`, `ssrf_blocked` (the base URL may not be called; no
+ * connection opened), `secret_host_not_allowed` (the key may not go to this
+ * host; not sent, not decrypted), `secret_unavailable` (the key is gone or
+ * cannot be decrypted), `invalid_response` (not a Chat Completions answer),
+ * `response_too_large` (> 1 MiB), `refused` (the model's `refusal`),
+ * `truncated` (`finish_reason = length`).
+ */
+export const AI_PROVIDER_ERROR_REASONS = [
+  'http_status',
+  'network',
+  'ssrf_blocked',
+  'secret_host_not_allowed',
+  'secret_unavailable',
+  'invalid_response',
+  'response_too_large',
+  'refused',
+  'truncated',
+] as const;
+
+export type AiProviderErrorReason = (typeof AI_PROVIDER_ERROR_REASONS)[number];
+
 /** Every documented detail code, once. */
 export const ERROR_DETAIL_CODES = [
   ...new Set([
@@ -646,6 +678,7 @@ export const ERROR_DETAIL_CODES = [
     ...OIDC_LINK_DETAIL_CODES,
     ...HEALTH_DETAIL_CODES,
     ...REQUEST_DETAIL_CODES,
+    ...AI_DETAIL_CODES,
   ]),
 ] as readonly ErrorDetailCode[];
 
@@ -682,4 +715,5 @@ export type ErrorDetailCode =
   | (typeof OIDC_LOGIN_DETAIL_CODES)[number]
   | (typeof OIDC_LINK_DETAIL_CODES)[number]
   | (typeof HEALTH_DETAIL_CODES)[number]
-  | (typeof REQUEST_DETAIL_CODES)[number];
+  | (typeof REQUEST_DETAIL_CODES)[number]
+  | (typeof AI_DETAIL_CODES)[number];

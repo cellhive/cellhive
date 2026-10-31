@@ -56,7 +56,10 @@
     "SUBMISSION_LIMIT_REACHED": "You have already filled in this form. You can submit it again later.",
     "EMAIL_VERIFICATION_INVALID": "The verification is not valid.",
     "SECRET_IN_USE": "Automations still use this bot. Change them first.",
-    "WEBHOOK_IN_USE": "Automations are triggered by this webhook. Change or delete them first."
+    "WEBHOOK_IN_USE": "Automations are triggered by this webhook. Change or delete them first.",
+    "AI_INVALID_OUTPUT": "The AI did not give a usable answer. Try rephrasing your request.",
+    "AI_PROVIDER_ERROR": "The AI provider could not be reached or answered with an error.",
+    "AI_TIMEOUT": "The AI took too long to answer. Try again."
   },
   "client": {
     "NETWORK_ERROR": "The server could not be reached. Check your connection and try again.",
@@ -329,7 +332,18 @@
     "UNKNOWN_FILTER": "This filter is not part of the dashboard any more. Reload the dashboard.",
     "INVALID_FILTER_VALUE": "This filter value does not fit the filter.",
     "WIDGET_NOT_EXPORTABLE": "This widget has no table of numbers to export.",
-    "NO_FITTING_FIELD": "No field of this table can be used for this widget."
+    "NO_FITTING_FIELD": "No field of this table can be used for this widget.",
+    "AI_PROVIDER_ERROR": "The AI provider failed.",
+    "AI_PROVIDER_ERROR_http_status": "The AI provider answered with HTTP status {{status}}.",
+    "AI_PROVIDER_ERROR_network": "The connection to the AI provider failed.",
+    "AI_PROVIDER_ERROR_ssrf_blocked": "The address of the AI provider may not be called. An organization admin can allow its host in the organization settings.",
+    "AI_PROVIDER_ERROR_secret_host_not_allowed": "The API key may not be sent to the host of the provider URL.",
+    "AI_PROVIDER_ERROR_secret_unavailable": "The API key of the AI provider is missing or cannot be read. An organization admin can enter it again.",
+    "AI_PROVIDER_ERROR_invalid_response": "The answer of the AI provider could not be read.",
+    "AI_PROVIDER_ERROR_response_too_large": "The answer of the AI provider is too large.",
+    "AI_PROVIDER_ERROR_refused": "The model refused to answer.",
+    "AI_PROVIDER_ERROR_truncated": "The answer of the model was cut off at its length limit.",
+    "AI_INVALID_OUTPUT": "The answer was still not valid after {{attempts}} tries."
   },
   "retryAfter_one": "Try again in {{count, number}} second.",
   "retryAfter_other": "Try again in {{count, number}} seconds.",
