@@ -101,7 +101,17 @@ export function CopyField({
       </label>
       <div className="flex min-w-0 items-start gap-2">
         {multiline ? (
-          <textarea {...shared} rows={rows} className={cn(box, 'resize-none py-1.5 break-all')} />
+          // Lines of their own (JSON): scroll sideways rather than break a key mid-word.
+          <textarea
+            {...shared}
+            rows={rows}
+            wrap={value.includes('\n') ? 'off' : 'soft'}
+            className={cn(
+              box,
+              'resize-none py-1.5',
+              value.includes('\n') ? 'overflow-x-auto whitespace-pre' : 'break-all',
+            )}
+          />
         ) : (
           <input {...shared} className={cn(box, 'h-control')} />
         )}
