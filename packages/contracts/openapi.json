@@ -218,6 +218,71 @@
         ],
         "description": "`{ value }` stores the key as an `ai_api_key` secret (replacing the value of the current one) with `allowed_hosts` = the host (and port) of the provider URL; `{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key"
       },
+      "AiFormula": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "description": "Provider calls: 1 + repair rounds",
+            "maximum": 3,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "explanation": {
+            "description": "What the formula does, written by the model",
+            "type": "string"
+          },
+          "formula": {
+            "description": "The formula in display form (names), checked like `POST /tables/{tableId}/fields` would check it for the caller; not saved",
+            "example": "[amount] - [cost]",
+            "type": "string"
+          },
+          "result_type": {
+            "$ref": "#/components/schemas/ComputedResultType"
+          }
+        },
+        "required": [
+          "formula",
+          "result_type",
+          "explanation",
+          "attempts"
+        ],
+        "type": "object"
+      },
+      "AiFormulaRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "current": {
+            "default": null,
+            "description": "The formula in the editor (display form, names), possibly broken: the model may fix or extend it",
+            "maxLength": 4000,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "description": "What the formula should compute, in any language",
+            "example": "Profit: amount minus cost, 0 when the order is not done",
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "field_id": {
+            "default": null,
+            "description": "The formula field being edited, if any: left out of the schema sent to the model, and the answer may not refer to it, directly or through a cycle",
+            "example": "fld_A1b2C3d4E5f6G7h8",
+            "pattern": "^fld_[0-9A-Za-z]{16}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "type": "object"
+      },
       "AiSettings": {
         "description": "AI settings of an organization (never the key)",
         "properties": {
@@ -45355,6 +45420,156 @@
           "tables"
         ],
         "x-api-token-scope": "schema:write"
+      }
+    },
+    "/api/v1/tables/{tableId}/ai/formula": {
+      "post": {
+        "description": "Needs schema rights on the table like `POST /tables/{tableId}/computed-preview` (a reader of the table without them gets `403`, anyone else `404`, before anything about AI). The model sees only the tables and fields the caller reads (never values or ids) and answers with a formula, checked exactly like a save for the caller (a field they cannot read is a field that does not exist); errors go back to the model, at most 2 repair rounds. Nothing is stored: put the formula in the editor, preview it with `computed-preview`, save it with the field routes. Counts towards the quota (feature `formula`) and the AI rate limit; audited as `ai.requested` (CONTRACTS §29.2). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "operationId": "generateAiFormula",
+        "parameters": [
+          {
+            "description": "tbl ID",
+            "in": "path",
+            "name": "tableId",
+            "required": true,
+            "schema": {
+              "description": "tbl ID",
+              "example": "tbl_A1b2C3d4E5f6G7h8",
+              "pattern": "^tbl_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[\\x21-\\x7e]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiFormulaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiFormula"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PERMISSION_DENIED` (visible but not allowed) or `CSRF_INVALID`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`IDEMPOTENCY_KEY_REUSED`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`; `AI_NOT_CONFIGURED`: AI is off or has no provider; `AI_INVALID_OUTPUT` (`errors[0].params.attempts`): still no valid formula after 2 repair rounds"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute, or 2 at once, by the user (8 at once on the instance); `AI_QUOTA_EXCEEDED` with `Retry-After` and `errors[0].params.reset_at`: the daily token quota is used up"
+          },
+          "502": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed"
+          },
+          "504": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AI_TIMEOUT`: no valid answer within the 90 s budget of the request"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiToken": [
+              "schema:read"
+            ]
+          }
+        ],
+        "summary": "Write a formula from a description",
+        "tags": [
+          "ai"
+        ],
+        "x-api-token-scope": "schema:read"
       }
     },
     "/api/v1/tables/{tableId}/computed-preview": {
