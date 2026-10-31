@@ -28,6 +28,10 @@ export interface FakeLlm {
   readonly baseUrl: string;
   /** Answers of the next chat calls, in order (`FakeOpenAiReply`: `content`, `status`, `delayMs`…). */
   script(...replies: Record<string, unknown>[]): void;
+  /** (T915) Answers every chat call whose last message contains `marker` (after the script). */
+  when(marker: string, reply: Record<string, unknown>): void;
+  /** (T915) What it supports now (`delayMs`, `failWith`, `usage`…): tests change it between calls. */
+  readonly capabilities: Record<string, unknown>;
   /** The `POST /v1/chat/completions` requests received so far. */
   chatRequests(): { readonly body: Record<string, unknown> | null }[];
   close(): Promise<void>;
@@ -54,6 +58,26 @@ async function listen(server: Server, port: number, host: string): Promise<void>
   ]);
 }
 
+/** What a spec drives, the server of server-core under it. */
+function ownOf(
+  fake: Omit<FakeLlm, 'when'> & {
+    whenLastMessageContains: (marker: string, reply: Record<string, unknown>) => void;
+  },
+): Omit<FakeLlm, 'close'> {
+  return {
+    port: fake.port,
+    baseUrl: fake.baseUrl,
+    capabilities: fake.capabilities,
+    script: (...replies) => {
+      fake.script(...replies);
+    },
+    when: (marker, reply) => {
+      fake.whenLastMessageContains(marker, reply);
+    },
+    chatRequests: () => fake.chatRequests(),
+  };
+}
+
 /**
  * Starts a fake provider. It listens on 127.0.0.1 while its URL says
  * `localhost`, and the API pins the first address `localhost` resolves to —
@@ -64,7 +88,13 @@ export async function startOwnFakeLlm(): Promise<FakeLlm> {
   const testing = (await import(
     new URL('../../../packages/server-core/dist/ai/testing/fake-openai-server.js', import.meta.url)
       .href
-  )) as { startFakeOpenAiServer: () => Promise<FakeLlm> };
+  )) as {
+    startFakeOpenAiServer: () => Promise<
+      Omit<FakeLlm, 'when'> & {
+        whenLastMessageContains: (marker: string, reply: Record<string, unknown>) => void;
+      }
+    >;
+  };
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const fake = await testing.startFakeOpenAiServer();
     const forward = createServer((socket) => {
@@ -83,15 +113,10 @@ export async function startOwnFakeLlm(): Promise<FakeLlm> {
         continue;
       }
       // No IPv6 loopback: `localhost` is 127.0.0.1 only.
-      return fake;
+      return { ...ownOf(fake), close: () => fake.close() };
     }
     return {
-      port: fake.port,
-      baseUrl: fake.baseUrl,
-      script: (...replies) => {
-        fake.script(...replies);
-      },
-      chatRequests: () => fake.chatRequests(),
+      ...ownOf(fake),
       close: async () => {
         forward.close();
         await fake.close();

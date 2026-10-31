@@ -351,7 +351,7 @@ test('ai.available = true: the AI entries render on the screens that carry one',
   browser,
 }) => {
   const { context, page } = await openAsDemoAdmin(browser);
-  const { demo, baseId, ticketsId } = await demoBase(page);
+  const { demo, baseId, ticketsId, automationId } = await demoBase(page);
   expect(await aiOf(page, demo.id)).toEqual({ available: true, record_data: false });
 
   // Grid toolbar: "Ask AI" (T914) opens its panel.
@@ -366,20 +366,40 @@ test('ai.available = true: the AI entries render on the screens that carry one',
   await page.keyboard.press('Escape');
   await expect(askPanel).toHaveCount(0);
 
+  // Field types: the "AI" group (T915), disabled without record values, with the reason.
+  const { dialog, type } = await openFormulaEditor(page, baseId, ticketsId, 'T912 AI on');
+  const aiType = type.locator('optgroup[label="AI"] option');
+  await expect(aiType).toHaveText(['AI field (needs record values)']);
+  await expect(aiType).toBeDisabled();
+  await expect(dialog.getByTestId('ai-type-blocked')).toContainText(
+    'Open Organization settings › AI',
+  );
+  await expect(dialog.getByTestId('ai-type-blocked').locator(SPARKLES)).toHaveCount(1);
+
   // Formula editor: "Describe the formula" (T913).
-  await openFormulaEditor(page, baseId, ticketsId, 'T912 AI on');
   const formulaAi = page.getByTestId('formula-editor').getByTestId('formula-ai');
   await expect(formulaAi.locator(SPARKLES).first()).toBeVisible();
   await expect(formulaAi.getByRole('textbox', { name: 'Describe the formula' })).toBeVisible();
   await expectNoSeriousA11yViolations(page, 'formula editor, AI on');
   await page.keyboard.press('Escape');
 
-  // Automation list: "Create with AI" (T913). Field types and the step picker (T915) add
-  // theirs.
+  // Automation list: "Create with AI" (T913).
   await page.goto(`/b/${baseId}/automations`);
   const create = page.getByTestId('create-automation-ai');
   await expect(create).toHaveText('Create with AI');
   await expect(create.locator(SPARKLES)).toHaveCount(1);
   await expectNoSeriousA11yViolations(page, 'automation list, AI on');
+
+  // The step picker: the AI steps (T915), disabled without record values, with the reason.
+  await page.goto(`/b/${baseId}/automations/${automationId}`);
+  await page.getByTestId('add-step').click();
+  for (const step of ['add-ai_generate_text', 'add-ai_classify']) {
+    const item = page.getByTestId(step);
+    await expect(item).toHaveAttribute('aria-disabled', 'true');
+    await expect(item).toContainText('AI may not read record values');
+    await expect(item.locator(SPARKLES)).toHaveCount(1);
+  }
+  await expect(page.getByTestId('add-ai-settings')).toBeVisible();
+  await expectNoSeriousA11yViolations(page, 'step picker, AI on');
   await context.close();
 });
