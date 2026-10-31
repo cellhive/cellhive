@@ -12,6 +12,7 @@
     "FIELD_READ_ONLY": "Bạn chỉ được xem trường này.",
     "PUBLIC_SHARING_DISABLED": "Tổ chức đã tắt chia sẻ công khai.",
     "API_TOKENS_DISABLED": "Tổ chức đã tắt API token.",
+    "MCP_DISABLED": "Tổ chức đã tắt MCP.",
     "CSRF_INVALID": "Không xác thực được phiên làm việc. Hãy tải lại trang rồi thử lại.",
     "NOT_FOUND": "Không tìm thấy, hoặc bạn không có quyền truy cập.",
     "VERSION_CONFLICT": "Người khác vừa thay đổi dữ liệu này.",

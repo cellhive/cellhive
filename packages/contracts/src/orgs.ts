@@ -18,6 +18,7 @@ import {
 } from './auth.js';
 import { booleanQueryParam, isoDateTimeSchema } from './common.js';
 import { idOf } from './ids.js';
+import { DEFAULT_MCP_POLICY, mcpPolicySchema, updateMcpPolicySchema } from './mcp.js';
 import { offsetListSchema, offsetQuerySchema } from './pagination.js';
 import { publicSharingPolicySchema } from './share-links.js';
 
@@ -68,6 +69,7 @@ export const organizationSettingsSchema = z
     public_sharing: publicSharingPolicySchema,
     automation_max_depth: automationMaxDepthSchema.default(DEFAULT_AUTOMATION_MAX_DEPTH),
     api_tokens: apiTokenPolicySchema.default(DEFAULT_API_TOKEN_POLICY),
+    mcp: mcpPolicySchema.default(DEFAULT_MCP_POLICY),
   })
   .meta({ id: 'OrganizationSettings', description: 'Defaults of the organization (SPEC §20)' });
 export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>;
@@ -117,6 +119,9 @@ export const updateOrganizationRequestSchema = z
         automation_max_depth: automationMaxDepthSchema.optional(),
         api_tokens: updateApiTokenPolicySchema.optional().meta({
           description: 'API token policy (CONTRACTS §26.4); keys left out keep their value',
+        }),
+        mcp: updateMcpPolicySchema.optional().meta({
+          description: 'MCP server policy (CONTRACTS §30.1); keys left out keep their value',
         }),
       })
       .refine(atLeastOneKey, AT_LEAST_ONE)

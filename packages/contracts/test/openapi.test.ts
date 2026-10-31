@@ -25,6 +25,8 @@ const READ_POSTS = new Set([
   '/api/v1/me/identities/{provider}/start',
   // Not bound to an organization; a retry checks the current password again (CONTRACTS §12.0).
   '/api/v1/me/password',
+  // JSON-RPC of the MCP server: `Idempotency-Key` is ignored (CONTRACTS §30.1).
+  '/api/v1/mcp',
 ]);
 
 describe('OpenAPI generation', () => {

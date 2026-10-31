@@ -12,6 +12,7 @@
     "FIELD_READ_ONLY": "This field is read-only for you.",
     "PUBLIC_SHARING_DISABLED": "Public sharing is turned off for this organization.",
     "API_TOKENS_DISABLED": "API tokens are turned off for this organization.",
+    "MCP_DISABLED": "MCP is turned off for this organization.",
     "CSRF_INVALID": "Your session could not be verified. Reload the page and try again.",
     "NOT_FOUND": "Not found, or you do not have access.",
     "VERSION_CONFLICT": "Someone else changed this in the meantime.",

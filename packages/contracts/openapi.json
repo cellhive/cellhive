@@ -7657,6 +7657,7 @@
           "FIELD_READ_ONLY",
           "PUBLIC_SHARING_DISABLED",
           "API_TOKENS_DISABLED",
+          "MCP_DISABLED",
           "CSRF_INVALID",
           "SHARE_PASSWORD_REQUIRED",
           "SHARE_PASSWORD_INVALID",
@@ -10840,6 +10841,114 @@
         ],
         "type": "object"
       },
+      "McpPolicy": {
+        "default": {
+          "allow_writes": false,
+          "enabled": false
+        },
+        "properties": {
+          "allow_writes": {
+            "description": "Off (default): tools that write are never listed nor callable, whatever the token scopes. On: listed for tokens with `records:write`",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "Off (default): `POST /api/v1/mcp` answers `403 MCP_DISABLED` before any JSON-RPC. On: members bring the data they can read to the LLM of the MCP client they choose",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "allow_writes"
+        ],
+        "type": "object"
+      },
+      "McpRequest": {
+        "additionalProperties": {},
+        "description": "JSON-RPC 2.0 request or notification (MCP)",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Absent for notifications"
+          },
+          "jsonrpc": {
+            "enum": [
+              "2.0"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "description": "`server/discover`, `tools/list`, `tools/call` (2026-07-28, `_meta` envelope on every request); `initialize` and `notifications/initialized` for 2025-era clients",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ],
+        "type": "object"
+      },
+      "McpResponse": {
+        "additionalProperties": {},
+        "description": "JSON-RPC 2.0 response (MCP)",
+        "properties": {
+          "error": {
+            "description": "`-32602`: unknown or unlisted tool, bad params; `-32022`: unsupported protocol version; `-32020`: `Mcp-*` headers do not match the body",
+            "properties": {
+              "code": {
+                "type": "integer"
+              },
+              "data": {},
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jsonrpc": {
+            "enum": [
+              "2.0"
+            ],
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id"
+        ],
+        "type": "object"
+      },
       "Me": {
         "description": "The signed-in user and their organizations",
         "properties": {
@@ -12091,6 +12200,9 @@
           },
           "locale": {
             "type": "string"
+          },
+          "mcp": {
+            "$ref": "#/components/schemas/McpPolicy"
           },
           "public_sharing": {
             "$ref": "#/components/schemas/PublicSharingPolicy"
@@ -18809,6 +18921,21 @@
                 "maxLength": 35,
                 "minLength": 2,
                 "type": "string"
+              },
+              "mcp": {
+                "additionalProperties": false,
+                "description": "MCP server policy (CONTRACTS §30.1); keys left out keep their value",
+                "properties": {
+                  "allow_writes": {
+                    "description": "Off (default): tools that write are never listed nor callable, whatever the token scopes. On: listed for tokens with `records:write`",
+                    "type": "boolean"
+                  },
+                  "enabled": {
+                    "description": "Off (default): `POST /api/v1/mcp` answers `403 MCP_DISABLED` before any JSON-RPC. On: members bring the data they can read to the LLM of the MCP client they choose",
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
               },
               "public_sharing": {
                 "$ref": "#/components/schemas/PublicSharingPolicy"
@@ -34031,6 +34158,104 @@
         "x-api-token-scope": "records:read"
       }
     },
+    "/api/v1/mcp": {
+      "post": {
+        "description": "Model Context Protocol endpoint for MCP clients (Claude Code, Cursor, VS Code…). Serves the 2026-07-28 revision (`server/discover`, `_meta` envelope on every request) and 2025-era clients (`initialize` without a session) on the same URL; answers are always `application/json`, never `Mcp-Session-Id`. `Authorization: Bearer cht_…` only: the session cookie is ignored. Tools are listed by the scopes of the token and `settings.mcp.allow_writes`; calling an unlisted tool is JSON-RPC `-32602`; a failed tool call is a result with `isError` and `{ code, message, errors }`. `GET` and `DELETE` answer `405`. Not idempotent (`Idempotency-Key` is ignored).",
+        "operationId": "mcp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpResponse"
+                }
+              }
+            },
+            "description": "JSON-RPC response"
+          },
+          "202": {
+            "description": "Notification accepted"
+          },
+          "400": {
+            "description": "JSON-RPC error without a usable request (malformed message, `Mcp-*` headers that do not match the body)"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`, `TOKEN_REVOKED`, `TOKEN_EXPIRED` with `WWW-Authenticate: Bearer error=\"invalid_token\"`: no Bearer token (a session cookie is not enough), or an invalid one"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`MCP_DISABLED`: the organization of the token has not turned MCP on (`settings.mcp.enabled`); `INSUFFICIENT_SCOPE`: the token lacks `schema:read`; `PERMISSION_DENIED`: an `Origin` header other than the origin of the server"
+          },
+          "406": {
+            "description": "A 2025-era request whose `Accept` lacks `application/json` or `text/event-stream`"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PAYLOAD_TOO_LARGE`: body over 10 MiB"
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNSUPPORTED_MEDIA_TYPE`: send `application/json`"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 60 requests/s by the token (a tool call on a base over 20/s on that base is an `isError` result instead)"
+          }
+        },
+        "security": [
+          {
+            "apiToken": [
+              "schema:read"
+            ]
+          }
+        ],
+        "summary": "MCP server (Streamable HTTP, stateless)",
+        "tags": [
+          "mcp"
+        ],
+        "x-api-token-scope": "schema:read"
+      }
+    },
     "/api/v1/me": {
       "get": {
         "description": "Also re-issues the `ob_csrf` cookie when it is missing.",
@@ -34818,7 +35043,7 @@
         "x-api-token-scope": "schema:read"
       },
       "patch": {
-        "description": "Organization owner/admin only. `settings.api_tokens` (CONTRACTS §26.4): `enabled: false` stops token creation and makes every token of the organization stop authenticating; `max_lifetime_days` applies to new tokens only. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "description": "Organization owner/admin only. `settings.api_tokens` (CONTRACTS §26.4): `enabled: false` stops token creation and makes every token of the organization stop authenticating; `max_lifetime_days` applies to new tokens only. `settings.mcp` (CONTRACTS §30.1, default off): `enabled` opens `POST /api/v1/mcp` to the API tokens of the organization, `allow_writes` lists the tools that write. Audited as `org.updated`. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
         "operationId": "updateOrganization",
         "parameters": [
           {

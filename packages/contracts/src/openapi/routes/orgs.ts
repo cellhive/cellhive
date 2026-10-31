@@ -120,7 +120,9 @@ export const registerOrgRoutes: RouteRegistrar = (registry, components) => {
     description:
       'Organization owner/admin only. `settings.api_tokens` (CONTRACTS §26.4): `enabled: false` ' +
       'stops token creation and makes every token of the organization stop authenticating; ' +
-      '`max_lifetime_days` applies to new tokens only.',
+      '`max_lifetime_days` applies to new tokens only. `settings.mcp` (CONTRACTS §30.1, default ' +
+      'off): `enabled` opens `POST /api/v1/mcp` to the API tokens of the organization, ' +
+      '`allow_writes` lists the tools that write. Audited as `org.updated`.',
     params: orgParams,
     body: updateOrganizationRequestSchema,
     status: 200,

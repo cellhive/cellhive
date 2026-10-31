@@ -17,6 +17,7 @@ import { registerHttpAllowlistRoutes } from './routes/http-allowlist.js';
 import { registerImportRoutes } from './routes/imports.js';
 import { registerIncomingWebhookRoutes } from './routes/incoming-webhooks.js';
 import { registerLinkRoutes } from './routes/links.js';
+import { registerMcpRoutes } from './routes/mcp.js';
 import { registerMemberAccessRoutes } from './routes/member-access.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerOidcRoutes } from './routes/oidc.js';
@@ -67,4 +68,5 @@ export const routeRegistrars: readonly RouteRegistrar[] = [
   registerLinkRoutes,
   registerAutomationRoutes,
   registerDashboardRoutes,
+  registerMcpRoutes,
 ];

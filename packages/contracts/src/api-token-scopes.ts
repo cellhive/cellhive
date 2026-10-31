@@ -662,6 +662,8 @@ export const API_TOKEN_ROUTE_SCOPES = {
   // jobs
   downloadExport: { method: 'GET', path: '/api/v1/files/exports/{jobId}', scope: 'records:read' },
   getJob: { method: 'GET', path: '/api/v1/jobs/{jobId}', scope: 'records:read' },
+  // mcp (S8): one route for every tool; each tool checks its own scope (CONTRACTS §30.1)
+  mcp: { method: 'POST', path: '/api/v1/mcp', scope: 'schema:read' },
   // notifications
   countMyUnreadNotifications: {
     method: 'GET',
