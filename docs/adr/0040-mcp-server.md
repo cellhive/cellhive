@@ -1,6 +1,6 @@
 # ADR-0040: Server MCP tích hợp sẵn — `POST /api/v1/mcp` không trạng thái cho hai thời kỳ giao thức, chỉ API token, tool khai báo scope tập trung, SDK `@modelcontextprotocol/server` v2 sau guard của Nest
 
-- Trạng thái: Proposed (viết ở BACKLOG T920; Accepted khi T920 merge)
+- Trạng thái: Accepted (viết ở BACKLOG T920, có hiệu lực khi T920 merge)
 - Ngày: 2026-10-31
 - Thay thế / sửa: SPEC §2 (dòng ADR-40), §13.1 (mục MCP); CONTRACTS §30 (mới), §26.3, §26.4, §6 (`MCP_DISABLED`), §5 (P93–P102). Sửa BACKLOG "Quyết định S8" #23 ("không dependency mới") theo ngoại lệ đã nêu ở #28. Nguồn: BACKLOG "Quyết định S8" #25–#28; `docs/reviews/S8-mcp-research.md` §2.1, §3.2–§3.9, §6.
 
