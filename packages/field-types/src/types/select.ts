@@ -1,4 +1,4 @@
-import { idOf, isId } from '@cellhive/contracts';
+import { aiFieldStoredOptionsSchema, idOf, isId } from '@cellhive/contracts';
 import { z } from 'zod';
 
 import {
@@ -45,8 +45,17 @@ export const selectOptionsSchema = z
       .union([optionIdSchema, z.array(optionIdSchema)])
       .nullable()
       .optional(),
+    /** An AI field (T910): single select only, the model picks one option by name. */
+    ai: aiFieldStoredOptionsSchema.nullable().optional(),
   })
   .superRefine((value, ctx) => {
+    if (value.multiple && value.ai != null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ai'],
+        message: 'An AI field is a single select',
+      });
+    }
     const ids = new Set<string>();
     const names = new Set<string>();
     value.options.forEach((option, index) => {

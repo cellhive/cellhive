@@ -50,6 +50,17 @@ export const API_TOKEN_ROUTE_SCOPES = {
   },
   // Q&A: the numbers are record values, as `POST /widgets/{widgetId}/data`
   askAiQuestion: { method: 'POST', path: '/api/v1/tables/{tableId}/ai/ask', scope: 'records:read' },
+  // AI field (T910): the preview reads record values, generating writes cells
+  generateAiFieldValues: {
+    method: 'POST',
+    path: '/api/v1/fields/{fieldId}/ai/generate',
+    scope: 'records:write',
+  },
+  previewAiField: {
+    method: 'POST',
+    path: '/api/v1/tables/{tableId}/ai/field-preview',
+    scope: 'records:read',
+  },
   getAiSettings: { method: 'GET', path: '/api/v1/orgs/{orgId}/ai-settings', scope: 'session' },
   getAiUsage: { method: 'GET', path: '/api/v1/orgs/{orgId}/ai-usage', scope: 'session' },
   testAiSettings: {

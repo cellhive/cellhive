@@ -2,6 +2,12 @@ import { z } from 'zod';
 
 import { aiAskRequestSchema, aiAskSchema } from '../../ai-ask.js';
 import { aiAutomationDraftRequestSchema, aiAutomationDraftSchema } from '../../ai-automation.js';
+import {
+  aiFieldGenerateRequestSchema,
+  aiFieldGenerateSchema,
+  aiFieldPreviewRequestSchema,
+  aiFieldPreviewSchema,
+} from '../../ai-fields.js';
 import { aiFormulaRequestSchema, aiFormulaSchema } from '../../ai-formula.js';
 import {
   aiSettingsSchema,
@@ -19,6 +25,7 @@ import { register, type RouteSpec } from './route-spec.js';
 const orgParams = z.object({ orgId: idOf('org') });
 const tableParams = z.object({ tableId: idOf('tbl') });
 const baseParams = z.object({ baseId: idOf('bse') });
+const fieldParams = z.object({ fieldId: idOf('fld') });
 
 const ADMIN_ONLY =
   '`PERMISSION_DENIED`: the caller is a member but not an owner/admin of the organization ' +
@@ -220,6 +227,56 @@ export const registerAiRoutes: RouteRegistrar = (registry, components) => {
       429: AI_LIMITED,
       502: '`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed',
       504: '`AI_TIMEOUT`: no valid answer within the 90 s budget of the request',
+    },
+  });
+  add({
+    method: 'post',
+    path: '/api/v1/tables/{tableId}/ai/field-preview',
+    operationId: 'previewAiField',
+    tag: 'ai',
+    summary: 'Preview an AI field on 5 records',
+    description:
+      'Needs schema rights on the table (a reader without them gets `403`, anyone else ' +
+      '`404`), before anything about AI; the organization must let AI see record values ' +
+      '(`422 AI_RECORD_DATA_DISABLED`). Renders the prompt (`ai.prompt`, with names) on the ' +
+      'first 5 records the caller reads (or `record_ids`) and asks the model once per record, ' +
+      'like the AI worker would; per record the start of the input, the answer or the error. ' +
+      'Nothing is written. `estimate`: live records and the tokens generating them all would ' +
+      'take, from this preview. Counts towards the quota (feature `field`) and the AI rate ' +
+      'limit; audited as one `ai.requested` (CONTRACTS §29.5).',
+    params: tableParams,
+    body: aiFieldPreviewRequestSchema,
+    status: 200,
+    response: aiFieldPreviewSchema,
+    errors: {
+      422:
+        '`VALIDATION_FAILED` (the prompt, like saving the field); `AI_NOT_CONFIGURED`; ' +
+        '`AI_RECORD_DATA_DISABLED`',
+      429: AI_LIMITED,
+    },
+  });
+  add({
+    method: 'post',
+    path: '/api/v1/fields/{fieldId}/ai/generate',
+    operationId: 'generateAiFieldValues',
+    tag: 'ai',
+    summary: 'Generate the values of an AI field',
+    description:
+      'Needs schema rights on the table of the AI field and every field of its prompt readable ' +
+      '(`403` otherwise for a reader of the field, `404` for anyone else), before anything ' +
+      'about AI; AI and record data on (`422`). Queues the `empty` cells, the `failed` ones, ' +
+      '`all` (overwriting: old values stay in the record history) or the `records` listed, ' +
+      'among the records the caller reads; paused rows of the field resume. The AI worker ' +
+      'generates them in the background (`job_id`: `GET /jobs/{jobId}`, `job.progress`); cells ' +
+      'show their state in `record.meta.ai` (CONTRACTS §29.5).',
+    params: fieldParams,
+    body: aiFieldGenerateRequestSchema,
+    status: 202,
+    response: aiFieldGenerateSchema,
+    errors: {
+      422:
+        '`VALIDATION_FAILED`: not an AI field, or `record_ids` without `scope: records`; ' +
+        '`AI_NOT_CONFIGURED`; `AI_RECORD_DATA_DISABLED`',
     },
   });
 };

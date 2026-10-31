@@ -73,6 +73,9 @@ export const auditViaSchema = z
       .literal(true)
       .optional()
       .meta({ description: 'Through the MCP server, next to `api_token_id` (T921)' }),
+    ai_field_id: idOf('fld')
+      .optional()
+      .meta({ description: 'A value generated for this AI field by the AI worker (T910)' }),
   })
   .meta({ id: 'AuditVia' });
 export type AuditViaDto = z.infer<typeof auditViaSchema>;

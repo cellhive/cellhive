@@ -617,6 +617,245 @@
         ],
         "type": "object"
       },
+      "AiFieldGenerate": {
+        "additionalProperties": false,
+        "properties": {
+          "estimated_tokens": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "job_id": {
+            "description": "Follow it with `GET /jobs/{jobId}` or `job.progress`",
+            "example": "job_A1b2C3d4E5f6G7h8",
+            "pattern": "^job_[0-9A-Za-z]{16}$",
+            "type": "string"
+          },
+          "rows": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "rows",
+          "estimated_tokens"
+        ],
+        "type": "object"
+      },
+      "AiFieldGenerateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "record_ids": {
+            "description": "With `scope: records` only",
+            "items": {
+              "description": "rec ID",
+              "example": "rec_A1b2C3d4E5f6G7h8",
+              "pattern": "^rec_[0-9A-Za-z]{16}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "type": "array"
+          },
+          "scope": {
+            "description": "`empty` cells, `failed` cells, `all` (overwrites; old values stay in the record history) or the `records` listed",
+            "enum": [
+              "empty",
+              "failed",
+              "all",
+              "records"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "type": "object"
+      },
+      "AiFieldOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "auto_update": {
+            "default": true,
+            "description": "Generate again when the record is created or restored, or a source field changes",
+            "type": "boolean"
+          },
+          "instructions": {
+            "default": null,
+            "description": "Extra guidance for the model (tone, language, length)",
+            "maxLength": 2000,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_output_tokens": {
+            "default": 300,
+            "maximum": 2000,
+            "minimum": 16,
+            "type": "integer"
+          },
+          "prompt": {
+            "description": "Template with `{{ [Field] }}` placeholders of fields of the same record. Sent and returned with names; stored with field ids, so renaming a field keeps it",
+            "example": "Summarize in one sentence: {{ [Mô tả] }}",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "task": {
+            "description": "Preset the prompt was written from",
+            "enum": [
+              "summarize",
+              "classify",
+              "extract",
+              "translate",
+              "custom"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "prompt"
+        ],
+        "type": "object"
+      },
+      "AiFieldPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "additionalProperties": false,
+            "properties": {
+              "rows": {
+                "description": "Live records of the table",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "tokens": {
+                "description": "Tokens to generate every row, estimated",
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "rows",
+              "tokens"
+            ],
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "error": {
+                  "additionalProperties": false,
+                  "description": "`AI_INVALID_OUTPUT`, `AI_PROVIDER_ERROR` (`reason`), `AI_TIMEOUT`",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "input_preview": {
+                  "description": "The rendered prompt input, cut at 300 characters",
+                  "type": "string"
+                },
+                "output": {
+                  "description": "Text, or the option name of a `select` field",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "record_id": {
+                  "description": "rec ID",
+                  "example": "rec_A1b2C3d4E5f6G7h8",
+                  "pattern": "^rec_[0-9A-Za-z]{16}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_id",
+                "input_preview",
+                "output",
+                "error"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "estimate"
+        ],
+        "type": "object"
+      },
+      "AiFieldPreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "ai": {
+            "$ref": "#/components/schemas/AiFieldOptions"
+          },
+          "choices": {
+            "default": [],
+            "description": "Option names of a new `select` field (`field_id: null`)",
+            "items": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "field_id": {
+            "default": null,
+            "description": "The AI field being edited (its type and options are used), or `null` for a new field",
+            "example": "fld_A1b2C3d4E5f6G7h8",
+            "pattern": "^fld_[0-9A-Za-z]{16}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_ids": {
+            "description": "Records to preview (default: the first records of the table)",
+            "items": {
+              "description": "rec ID",
+              "example": "rec_A1b2C3d4E5f6G7h8",
+              "pattern": "^rec_[0-9A-Za-z]{16}$",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "type": "array"
+          },
+          "type": {
+            "default": "text",
+            "description": "Type of a new field (`field_id: null`)",
+            "enum": [
+              "text",
+              "select"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "ai"
+        ],
+        "type": "object"
+      },
       "AiFormula": {
         "additionalProperties": false,
         "properties": {
@@ -1634,6 +1873,12 @@
       "AuditVia": {
         "additionalProperties": false,
         "properties": {
+          "ai_field_id": {
+            "description": "A value generated for this AI field by the AI worker (T910)",
+            "example": "fld_A1b2C3d4E5f6G7h8",
+            "pattern": "^fld_[0-9A-Za-z]{16}$",
+            "type": "string"
+          },
           "api_token_id": {
             "description": "The change was made through an API token; `null` when the reader may not know which (only organization owners/admins and the token owner do)",
             "example": "tok_A1b2C3d4E5f6G7h8",
@@ -8159,6 +8404,44 @@
       },
       "Field": {
         "properties": {
+          "ai_state": {
+            "additionalProperties": false,
+            "description": "Only on AI fields (`options.ai`, T910): counts of rows waiting, failed and paused",
+            "properties": {
+              "failed": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "paused": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "paused_reason": {
+                "enum": [
+                  "quota",
+                  "ai_disabled",
+                  "record_data_disabled",
+                  null
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "queued": {
+                "description": "Rows waiting or being generated",
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "queued",
+              "failed",
+              "paused",
+              "paused_reason"
+            ],
+            "type": "object"
+          },
           "button": {
             "additionalProperties": false,
             "description": "Only on `button` fields returned by the field endpoints (T517): the automation attached to the button and its `min_permission`",
@@ -8309,7 +8592,7 @@
             "type": "boolean"
           },
           "locked": {
-            "description": "Only on `formula`/`lookup` fields (T457): `true` when the reader cannot read what the value is computed from — another table, a field of other records, or (base setting `strict_computed_permissions`) a field of the same record it cannot read. Its cells read `null`; filtering, sorting and grouping by it answer like a hidden field (`422 INVALID_FILTER` / `INVALID_SORT`)",
+            "description": "Only on `formula`/`lookup` fields (T457): `true` when the reader cannot read what the value is computed from — another table, a field of other records, or (base setting `strict_computed_permissions`) a field of the same record it cannot read. Its cells read `null`; filtering, sorting and grouping by it answer like a hidden field (`422 INVALID_FILTER` / `INVALID_SORT`). Also on AI fields (T910, always strict): `true` when the reader cannot read every field of its prompt",
             "type": "boolean"
           },
           "name": {
@@ -13515,8 +13798,21 @@
       },
       "RecordMeta": {
         "additionalProperties": false,
-        "description": "Present when the record is read through a view (`view_id`) with color rules that apply to the reader (T816); `color: {}` = no rule matches",
+        "description": "`color`: present when the record is read through a view (`view_id`) with color rules that apply to the reader (T816; `{}` = no rule matches). `ai`: see below (T910)",
         "properties": {
+          "ai": {
+            "additionalProperties": {
+              "enum": [
+                "queued",
+                "running",
+                "failed",
+                "paused"
+              ],
+              "type": "string"
+            },
+            "description": "AI field id → state of its cell when it is not simply its value (T910): `queued`, `running`, `failed`, `paused`. Present on every record of a table with AI fields the reader sees (and is not locked out of); `{}` = every AI value is current",
+            "type": "object"
+          },
           "color": {
             "$ref": "#/components/schemas/RecordColor"
           }
@@ -18851,6 +19147,44 @@
       },
       "UpdateFieldResponse": {
         "properties": {
+          "ai_state": {
+            "additionalProperties": false,
+            "description": "Only on AI fields (`options.ai`, T910): counts of rows waiting, failed and paused",
+            "properties": {
+              "failed": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "paused": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "paused_reason": {
+                "enum": [
+                  "quota",
+                  "ai_disabled",
+                  "record_data_disabled",
+                  null
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "queued": {
+                "description": "Rows waiting or being generated",
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "queued",
+              "failed",
+              "paused",
+              "paused_reason"
+            ],
+            "type": "object"
+          },
           "button": {
             "additionalProperties": false,
             "description": "Only on `button` fields returned by the field endpoints (T517): the automation attached to the button and its `min_permission`",
@@ -19010,7 +19344,7 @@
             "type": "boolean"
           },
           "locked": {
-            "description": "Only on `formula`/`lookup` fields (T457): `true` when the reader cannot read what the value is computed from — another table, a field of other records, or (base setting `strict_computed_permissions`) a field of the same record it cannot read. Its cells read `null`; filtering, sorting and grouping by it answer like a hidden field (`422 INVALID_FILTER` / `INVALID_SORT`)",
+            "description": "Only on `formula`/`lookup` fields (T457): `true` when the reader cannot read what the value is computed from — another table, a field of other records, or (base setting `strict_computed_permissions`) a field of the same record it cannot read. Its cells read `null`; filtering, sorting and grouping by it answer like a hidden field (`422 INVALID_FILTER` / `INVALID_SORT`). Also on AI fields (T910, always strict): `true` when the reader cannot read every field of its prompt",
             "type": "boolean"
           },
           "name": {
@@ -31397,6 +31731,136 @@
           "fields"
         ],
         "x-api-token-scope": "schema:write"
+      }
+    },
+    "/api/v1/fields/{fieldId}/ai/generate": {
+      "post": {
+        "description": "Needs schema rights on the table of the AI field and every field of its prompt readable (`403` otherwise for a reader of the field, `404` for anyone else), before anything about AI; AI and record data on (`422`). Queues the `empty` cells, the `failed` ones, `all` (overwriting: old values stay in the record history) or the `records` listed, among the records the caller reads; paused rows of the field resume. The AI worker generates them in the background (`job_id`: `GET /jobs/{jobId}`, `job.progress`); cells show their state in `record.meta.ai` (CONTRACTS §29.5). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "operationId": "generateAiFieldValues",
+        "parameters": [
+          {
+            "description": "fld ID",
+            "in": "path",
+            "name": "fieldId",
+            "required": true,
+            "schema": {
+              "description": "fld ID",
+              "example": "fld_A1b2C3d4E5f6G7h8",
+              "pattern": "^fld_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[\\x21-\\x7e]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiFieldGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiFieldGenerate"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PERMISSION_DENIED` (visible but not allowed) or `CSRF_INVALID`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`IDEMPOTENCY_KEY_REUSED`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`: not an AI field, or `record_ids` without `scope: records`; `AI_NOT_CONFIGURED`; `AI_RECORD_DATA_DISABLED`"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 60 requests/s by the user, or 20 requests/s by the user on one base"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiToken": [
+              "records:write"
+            ]
+          }
+        ],
+        "summary": "Generate the values of an AI field",
+        "tags": [
+          "ai"
+        ],
+        "x-api-token-scope": "records:write"
       }
     },
     "/api/v1/fields/{fieldId}/convert-preview": {
@@ -46325,6 +46789,136 @@
           }
         ],
         "summary": "Answer a question about the records of a table",
+        "tags": [
+          "ai"
+        ],
+        "x-api-token-scope": "records:read"
+      }
+    },
+    "/api/v1/tables/{tableId}/ai/field-preview": {
+      "post": {
+        "description": "Needs schema rights on the table (a reader without them gets `403`, anyone else `404`), before anything about AI; the organization must let AI see record values (`422 AI_RECORD_DATA_DISABLED`). Renders the prompt (`ai.prompt`, with names) on the first 5 records the caller reads (or `record_ids`) and asks the model once per record, like the AI worker would; per record the start of the input, the answer or the error. Nothing is written. `estimate`: live records and the tokens generating them all would take, from this preview. Counts towards the quota (feature `field`) and the AI rate limit; audited as one `ai.requested` (CONTRACTS §29.5). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "operationId": "previewAiField",
+        "parameters": [
+          {
+            "description": "tbl ID",
+            "in": "path",
+            "name": "tableId",
+            "required": true,
+            "schema": {
+              "description": "tbl ID",
+              "example": "tbl_A1b2C3d4E5f6G7h8",
+              "pattern": "^tbl_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[\\x21-\\x7e]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiFieldPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiFieldPreview"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PERMISSION_DENIED` (visible but not allowed) or `CSRF_INVALID`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`IDEMPOTENCY_KEY_REUSED`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED` (the prompt, like saving the field); `AI_NOT_CONFIGURED`; `AI_RECORD_DATA_DISABLED`"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute, or 2 at once, by the user (8 at once on the instance); `AI_QUOTA_EXCEEDED` with `Retry-After` and `errors[0].params.reset_at`: the daily token quota is used up"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiToken": [
+              "records:read"
+            ]
+          }
+        ],
+        "summary": "Preview an AI field on 5 records",
         "tags": [
           "ai"
         ],

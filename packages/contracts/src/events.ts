@@ -230,7 +230,8 @@ export type EventBatch = z.infer<typeof eventBatchSchema>;
  * `record.updated` written from recomputed
  * formula/lookup values (T509, ADR-26 §2), `computed_recompute: true` and
  * `job_id`: the `computed.recompute` run (`job_…`, always a bulk event), or
- * `null` when the write itself recomputed them (its `batch` and `causation`).
+ * `null` when the write itself recomputed them (its `batch` and `causation`);
+ * `ai_field_id` for a value written by the AI worker (T910, actor `system`).
  */
 export const eventViaSchema = z
   .strictObject({
@@ -243,6 +244,7 @@ export const eventViaSchema = z
     incoming_webhook_id: idOf('hok').optional(),
     computed_recompute: z.literal(true).optional(),
     job_id: idOf('job').nullable().optional(),
+    ai_field_id: idOf('fld').optional(),
   })
   .meta({ id: 'EventVia' });
 export type EventVia = z.infer<typeof eventViaSchema>;

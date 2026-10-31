@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { AI_CELL_STATES } from './ai-fields.js';
 import { idOf } from './ids.js';
 
 // Kept apart from `records.ts` so that `realtime.ts` (part of light entries)
@@ -26,11 +27,20 @@ export type RecordColorDto = z.infer<typeof recordColorSchema>;
 export const recordMetaSchema = z
   .strictObject({
     color: recordColorSchema.optional(),
+    ai: z
+      .record(idOf('fld'), z.enum(AI_CELL_STATES))
+      .optional()
+      .meta({
+        description:
+          'AI field id → state of its cell when it is not simply its value (T910): `queued`, ' +
+          '`running`, `failed`, `paused`. Present on every record of a table with AI fields ' +
+          'the reader sees (and is not locked out of); `{}` = every AI value is current',
+      }),
   })
   .meta({
     id: 'RecordMeta',
     description:
-      'Present when the record is read through a view (`view_id`) with color rules that apply ' +
-      'to the reader (T816); `color: {}` = no rule matches',
+      '`color`: present when the record is read through a view (`view_id`) with color rules ' +
+      'that apply to the reader (T816; `{}` = no rule matches). `ai`: see below (T910)',
   });
 export type RecordMetaDto = z.infer<typeof recordMetaSchema>;

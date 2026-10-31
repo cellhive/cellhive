@@ -102,6 +102,15 @@ export const SCHEMA_DETAIL_CODES = [
   'UNKNOWN_FIELD',
   'INVALID_FIELD_TYPE',
   'USER_NOT_FOUND',
+  // `options.ai` of an AI field (T910, CONTRACTS §29.5): its prompt is a template of
+  // fields of the same record (`params.position`), plus the `FORMULA_DETAIL_CODES` of
+  // each `{{ }}` expression; a field of another record or table is `CROSS_TABLE_NOT_SUPPORTED`,
+  // an attachment, button or other AI field (or the primary field) `INVALID_FIELD_TYPE`.
+  'UNSUPPORTED_FUNCTION',
+  'CROSS_TABLE_NOT_SUPPORTED',
+  'UNTERMINATED_PLACEHOLDER',
+  'EMPTY_PLACEHOLDER',
+  'TOO_MANY_PLACEHOLDERS',
 ] as const;
 
 /**

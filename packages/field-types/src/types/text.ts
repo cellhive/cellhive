@@ -1,3 +1,4 @@
+import { aiFieldStoredOptionsSchema } from '@cellhive/contracts';
 import { z } from 'zod';
 
 import { assertValid, cast, describe, invalid, issue, OK } from '../internal/results.js';
@@ -11,6 +12,8 @@ export const textOptionsSchema = z.strictObject({
   /** Display/input hint only: values are never rejected because of the style. */
   style: z.strictObject({ type: z.enum(TEXT_STYLES).default('plain') }).default({ type: 'plain' }),
   default_value: z.string().nullable().optional(),
+  /** An AI field (T910, CONTRACTS §29.5): read-only cells generated from a prompt; `null` = none. */
+  ai: aiFieldStoredOptionsSchema.nullable().optional(),
 });
 
 export type TextStyle = (typeof TEXT_STYLES)[number];

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { aiFieldStateSchema } from './ai-fields.js';
 import { buttonFieldSummarySchema } from './buttons.js';
 import { booleanQueryParam, isoDateTimeSchema } from './common.js';
 import {
@@ -346,8 +347,13 @@ export const fieldSchema = z
           'the value is computed from — another table, a field of other records, or (base ' +
           'setting `strict_computed_permissions`) a field of the same record it cannot read. ' +
           'Its cells read `null`; filtering, sorting and grouping by it answer like a hidden ' +
-          'field (`422 INVALID_FILTER` / `INVALID_SORT`)',
+          'field (`422 INVALID_FILTER` / `INVALID_SORT`). Also on AI fields (T910, always ' +
+          'strict): `true` when the reader cannot read every field of its prompt',
       }),
+    ai_state: aiFieldStateSchema.optional().meta({
+      description:
+        'Only on AI fields (`options.ai`, T910): counts of rows waiting, failed and paused',
+    }),
     button: buttonFieldSummarySchema.optional().meta({
       description:
         'Only on `button` fields returned by the field endpoints (T517): the automation ' +

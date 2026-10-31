@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { aiFieldStateSchema } from './ai-fields.js';
 import { errorCodeSchema, problemErrorItemSchema } from './errors.js';
 import { idOf, isId, type Id } from './ids.js';
 import { JOB_STATUSES } from './jobs.js';
@@ -370,6 +371,11 @@ export const realtimeSchemaChangedSchema = z.strictObject({
   entity: z.enum(SCHEMA_CHANGE_ENTITIES),
   entity_id: z.string(),
   action: z.enum(SCHEMA_CHANGE_ACTIONS),
+  /**
+   * (T910) An AI field whose generation queue was paused or resumed as a
+   * whole: its counts (never record ids). Absent on every other change.
+   */
+  ai_state: aiFieldStateSchema.optional(),
 });
 
 /** Statuses of a `computed.recomputing` message (T459). */
