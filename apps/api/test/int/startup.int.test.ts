@@ -306,9 +306,9 @@ describe('process startup', () => {
     expect(first.logs).toContainEqual(
       expect.objectContaining({ migration: '0052_audit_logs_actor_action_idx' }),
     );
-    expect(first.logs).toContainEqual(expect.objectContaining({ migration: '0053_dashboards' }));
+    expect(first.logs).toContainEqual(expect.objectContaining({ migration: '0054_ai_settings' }));
     expect(first.logs).toContainEqual(
-      expect.objectContaining({ msg: 'database is up to date', applied: 53 }),
+      expect.objectContaining({ msg: 'database is up to date', applied: 54 }),
     );
     expect(first.logs).toContainEqual(
       expect.objectContaining({ msg: 'job queue schema is up to date' }),

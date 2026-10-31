@@ -1,4 +1,8 @@
-import { API_TOKEN_BEARER_FAILURES_PER_IP, type Id } from '@cellhive/contracts';
+import {
+  AI_REQUESTS_PER_MINUTE,
+  API_TOKEN_BEARER_FAILURES_PER_IP,
+  type Id,
+} from '@cellhive/contracts';
 import { hashApiToken, parseApiToken } from '@cellhive/server-core';
 import { AppError } from '@cellhive/server-core/errors';
 import { Inject, Injectable } from '@nestjs/common';
@@ -39,6 +43,8 @@ export class ApiRateLimits {
   perBase: RateLimitRule = DEFAULT_BASE_RATE_LIMIT;
   /** Failed Bearer authentications per client IP (CONTRACTS §26.1). */
   bearerFailures: RateLimitRule = API_TOKEN_BEARER_FAILURES_PER_IP;
+  /** Interactive AI requests per person (CONTRACTS §29.1, T906), whatever the credential. */
+  ai: RateLimitRule = { limit: AI_REQUESTS_PER_MINUTE, windowSeconds: 60 };
 
   /** Token hash (hex) → when this process last marked it recently valid. */
   readonly #marked = new Map<string, number>();
@@ -111,6 +117,12 @@ export class ApiRateLimits {
 
   private bearerFailureKey(ip: string): string {
     return `bearer_fail:${String(this.bearerFailures.windowSeconds)}:ip:${ip}`;
+  }
+
+  /** Counts an interactive AI request of `userId` (`429 RATE_LIMITED` past 10 a minute). */
+  hitAi(userId: Id<'usr'>): Promise<void> {
+    const rule = this.ai;
+    return this.limiter.hit(`ai:${String(rule.windowSeconds)}:${userId}`, rule);
   }
 
   /** Counts a request of `principalKey` on `baseId`. */

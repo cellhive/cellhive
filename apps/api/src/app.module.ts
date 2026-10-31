@@ -8,6 +8,7 @@ import { DataServicesModule } from './common/infra/data-services.module.js';
 import { DbModule } from './common/infra/db.module.js';
 import { RepositoriesModule } from './common/infra/repositories.module.js';
 import { SchemaCoreModule } from './common/schema/schema-core.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 import { ApiTokenModule } from './modules/api-token/api-token.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -77,6 +78,7 @@ export class AppModule {
         EmailIdentityModule,
         SecretModule,
         HttpAllowlistModule,
+        AiModule,
         HttpDeliveryModule,
         IncomingWebhookModule,
         ApiTokenModule,

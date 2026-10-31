@@ -3,11 +3,16 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import { newId, PROBLEM_CONTENT_TYPE, type ErrorCode } from '@cellhive/contracts';
 import {
+  aiQuotaExhaustedCount,
+  aiRequestCounts,
+  aiRetryCounts,
+  aiTokenCounts,
   AppError,
   buildProblem,
   causationRejectedCounts,
   httpDeliveriesRescuedCount,
   measureHttpDeliveryBacklog,
+  observeAiDurations,
   secretHostBlockedCounts,
   ssrfBlockedCounts,
   webhookRequestCounts,
@@ -140,6 +145,57 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
       labelNames: ['result'],
       buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
       registers: [this.registry],
+    });
+    // AI requests (T906, research S8 §4.9): counts kept in server-core, duration observed here.
+    new Counter({
+      name: 'ai_requests_total',
+      help: 'AI requests (interactive, batches, action steps), by feature and outcome',
+      labelNames: ['feature', 'status'],
+      registers: [this.registry],
+      collect() {
+        this.reset();
+        for (const { feature, status, count } of aiRequestCounts())
+          this.inc({ feature, status }, count);
+      },
+    });
+    new Counter({
+      name: 'ai_tokens_total',
+      help: 'Tokens of AI calls (provider usage, estimated without one), by feature and kind',
+      labelNames: ['feature', 'kind'],
+      registers: [this.registry],
+      collect() {
+        this.reset();
+        for (const { feature, kind, count } of aiTokenCounts()) this.inc({ feature, kind }, count);
+      },
+    });
+    new Counter({
+      name: 'ai_output_retries_total',
+      help: 'Repair rounds of AI answers that did not fit their schema, by feature',
+      labelNames: ['feature'],
+      registers: [this.registry],
+      collect() {
+        this.reset();
+        for (const [feature, count] of aiRetryCounts()) this.inc({ feature }, count);
+      },
+    });
+    new Counter({
+      name: 'ai_quota_exhausted_total',
+      help: 'AI calls refused because the daily token quota of the organization was used up',
+      registers: [this.registry],
+      collect() {
+        this.reset();
+        this.inc(aiQuotaExhaustedCount());
+      },
+    });
+    const aiDuration = new Histogram({
+      name: 'ai_request_seconds',
+      help: 'Duration of AI requests, every provider call and repair round included, by feature',
+      labelNames: ['feature'],
+      buckets: [0.25, 0.5, 1, 2.5, 5, 10, 20, 30, 45, 60, 90],
+      registers: [this.registry],
+    });
+    observeAiDurations((feature, seconds) => {
+      aiDuration.observe({ feature }, seconds);
     });
     this.tokenDigest = config.metrics.token === null ? null : digest(config.metrics.token);
   }

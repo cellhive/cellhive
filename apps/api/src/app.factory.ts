@@ -44,6 +44,8 @@ export interface CreateAppOptions {
   readonly imports?: AppModuleOptions['imports'];
   /** Tests only: a fake Telegram Bot API (T549); production uses `api.telegram.org`. */
   readonly telegramClient?: AppModuleOptions['telegramClient'];
+  /** Tests only: DNS of the API's outbound calls (the fake AI provider on `localhost`, T906). */
+  readonly outboundLookup?: AppModuleOptions['outboundLookup'];
 }
 
 /**
@@ -80,6 +82,7 @@ export async function createApp(
       rootLogger,
       imports: options.imports,
       ...(options.telegramClient === undefined ? {} : { telegramClient: options.telegramClient }),
+      ...(options.outboundLookup === undefined ? {} : { outboundLookup: options.outboundLookup }),
     }),
     adapter,
     {

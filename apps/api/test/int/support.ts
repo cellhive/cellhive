@@ -106,7 +106,7 @@ export interface TestApp {
  */
 export async function startTestApp(
   env: Env = {},
-  options: Pick<CreateAppOptions, 'telegramClient'> = {},
+  options: Pick<CreateAppOptions, 'telegramClient' | 'outboundLookup'> = {},
 ): Promise<TestApp> {
   const storageRoot = await mkdtemp(join(tmpdir(), 'cellhive-api-'));
   const config = loadConfig({

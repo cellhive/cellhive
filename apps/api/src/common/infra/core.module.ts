@@ -6,6 +6,7 @@ import {
   valkeyQuotaClient,
   type AppConfig,
   type EmailQuota,
+  type HostLookup,
   type Mailer,
   type StorageDriver,
   type TelegramClientOptions,
@@ -27,6 +28,7 @@ import {
   EMAIL_QUOTA,
   MAIL_SERVICE,
   MAILER,
+  OUTBOUND_LOOKUP,
   ROOT_LOGGER,
   STORAGE_DRIVER,
   TELEGRAM_BOT_API,
@@ -50,6 +52,8 @@ export interface CoreModuleOptions {
    * notification bot (T549). Never configurable in production.
    */
   readonly telegramClient?: TelegramClientOptions;
+  /** Tests only: DNS of the API's outbound calls (the AI provider on `localhost`, T906). */
+  readonly outboundLookup?: HostLookup;
 }
 
 /** Closes shared connections after the HTTP server stopped accepting requests. */
@@ -123,6 +127,7 @@ export class CoreModule {
             mailer.instanceConfigured ? mailer : null,
         },
         { provide: TELEGRAM_BOT_API, useValue: new TelegramBotApi(options.telegramClient) },
+        { provide: OUTBOUND_LOOKUP, useValue: options.outboundLookup ?? null },
         ConnectionCloser,
       ],
       exports: [
@@ -135,6 +140,7 @@ export class CoreModule {
         MAIL_SERVICE,
         EMAIL_QUOTA,
         TELEGRAM_BOT_API,
+        OUTBOUND_LOOKUP,
       ],
     };
   }

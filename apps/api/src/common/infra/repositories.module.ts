@@ -1,4 +1,5 @@
 import {
+  AiSettingsRepository,
   ApiTokensRepository,
   AuditLogsRepository,
   AuditRefsRepository,
@@ -96,6 +97,7 @@ const REPOSITORIES: readonly RepositoryClass[] = [
   ApiTokensRepository,
   DashboardsRepository,
   DashboardWidgetsRepository,
+  AiSettingsRepository,
 ];
 
 /**

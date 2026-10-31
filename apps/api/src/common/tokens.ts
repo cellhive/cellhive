@@ -32,3 +32,9 @@ export const REALTIME_BUS = Symbol('REALTIME_BUS');
  * base URL (`CreateAppOptions.telegramClient`).
  */
 export const TELEGRAM_BOT_API = Symbol('TELEGRAM_BOT_API');
+/**
+ * `HostLookup | null` (T906): DNS of the API's own outbound calls (the AI
+ * provider); `null` = the system resolver. Only tests pass one
+ * (`CreateAppOptions.outboundLookup`: `localhost` → `127.0.0.1`).
+ */
+export const OUTBOUND_LOOKUP = Symbol('OUTBOUND_LOOKUP');

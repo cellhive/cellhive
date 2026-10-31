@@ -2,7 +2,7 @@ import {
   BOT_IN_USE,
   canonicalAllowedHosts,
   INVALID_BOT_TOKEN,
-  isHttpSecretKind,
+  isHostBoundSecretKind,
   INVALID_SECRET_VALUE,
   isValidSecretValue,
   newId,
@@ -24,6 +24,7 @@ import {
   type UpdateSecretRequest,
 } from '@cellhive/contracts';
 import {
+  AiSettingsRepository,
   AuditWriter,
   canSeeAutomation,
   deriveSecretKey,
@@ -68,7 +69,7 @@ function invalidField(path: string, code: string, message: string): AppError {
   return new AppError('VALIDATION_FAILED', { detail: message, errors: [{ path, code, message }] });
 }
 
-/** Audit snapshot: never the value or the ciphertext (HTTP kinds: their allowed hosts, T701). */
+/** Audit snapshot: never the value or the ciphertext (host-bound kinds: their allowed hosts, T701). */
 function snapshotOf(
   secret: Pick<SecretRow, 'kind' | 'name' | 'base_scope' | 'allowed_hosts'>,
   baseIds: readonly Id<'bse'>[],
@@ -78,7 +79,7 @@ function snapshotOf(
     name: secret.name,
     base_scope: secret.base_scope,
     base_ids: [...baseIds],
-    ...(isHttpSecretKind(secret.kind) ? { allowed_hosts: [...secret.allowed_hosts] } : {}),
+    ...(isHostBoundSecretKind(secret.kind) ? { allowed_hosts: [...secret.allowed_hosts] } : {}),
   };
 }
 
@@ -116,6 +117,7 @@ export class SecretService {
     @Inject(SecretUsageRepository) private readonly usage: SecretUsageRepository,
     @Inject(OrganizationsRepository) private readonly organizations: OrganizationsRepository,
     @Inject(TELEGRAM_BOT_API) private readonly telegram: TelegramBotApi,
+    @Inject(AiSettingsRepository) private readonly aiSettings: AiSettingsRepository,
   ) {
     this.key = deriveSecretKey(config.security.appMasterKey, 'org-secret');
   }
@@ -184,8 +186,8 @@ export class SecretService {
           name: body.name,
           ciphertext: sealSecret(this.key, value),
           base_scope: body.base_scope,
-          // The schema requires 1–20 patterns for HTTP kinds and refuses them for others.
-          allowed_hosts: isHttpSecretKind(body.kind)
+          // The schema requires 1–20 patterns for host-bound kinds and refuses them for others.
+          allowed_hosts: isHostBoundSecretKind(body.kind)
             ? canonicalAllowedHosts(body.allowed_hosts ?? [])
             : [],
           created_by: principal.userId,
@@ -213,11 +215,18 @@ export class SecretService {
         'Only webhook signing secrets can be generated.',
       );
     }
-    if (body.allowed_hosts !== undefined && !isHttpSecretKind(current.kind)) {
+    if (body.allowed_hosts !== undefined && !isHostBoundSecretKind(current.kind)) {
       throw invalidField(
         'allowed_hosts',
         'UNRECOGNIZED_KEY',
-        'Only http_header and webhook_signing secrets have allowed hosts.',
+        'Only http_header, webhook_signing and ai_api_key secrets have allowed hosts.',
+      );
+    }
+    if (current.kind === 'ai_api_key' && body.base_scope === 'selected') {
+      throw invalidField(
+        'base_scope',
+        'NOT_ALLOWED',
+        'An AI API key belongs to the whole organization.',
       );
     }
     const generated = body.generate === true ? generateSigningSecret() : undefined;
@@ -328,6 +337,8 @@ export class SecretService {
       const locked = await this.secrets.findById(txScope, secretId, { forUpdate: true });
       if (locked === undefined) throw notFound();
       if (notificationBot) return true;
+      // The key of the AI settings (T906); a save racing this delete leaves no key (FK `SET NULL`).
+      if (await this.aiSettings.usesKey(txScope, secretId)) return true;
       if ((await this.usage.list(txScope, secretId)).length > 0) return true;
       const baseIds = (await this.secrets.baseIdsOf(txScope, [secretId])).get(secretId) ?? [];
       await this.secrets.delete(txScope, secretId);
@@ -340,7 +351,9 @@ export class SecretService {
     const usages = await this.usagesOf(principal, scope, secretId);
     const message = usages.items.some((item) => item.kind === 'notification_channel')
       ? 'This bot sends the notifications of the organization: choose another one first.'
-      : 'Automations use this secret: change them first.';
+      : usages.items.some((item) => item.kind === 'ai_settings')
+        ? 'This is the API key of the AI settings: change them first.'
+        : 'Automations use this secret: change them first.';
     throw new AppError('SECRET_IN_USE', {
       detail: message,
       errors: [
@@ -451,6 +464,7 @@ export class SecretService {
     if (await isNotificationBotSecret(this.db, scope.organizationId, secretId)) {
       items.push({ kind: 'notification_channel' });
     }
+    if (await this.aiSettings.usesKey(scope, secretId)) items.push({ kind: 'ai_settings' });
     for (const row of rows) {
       const base = await this.access.findBase(principal, row.baseId);
       const visible = base !== undefined && canSeeAutomation(base.access, row.triggerTableId);
@@ -506,9 +520,9 @@ export class SecretService {
     throw invalidField(
       'value',
       INVALID_SECRET_VALUE,
-      kind === 'http_header'
-        ? 'A header value is printable ASCII text without line breaks (at most 4,096 characters).'
-        : 'A signing secret is whsec_ followed by 24 to 64 bytes in base64.',
+      kind === 'webhook_signing'
+        ? 'A signing secret is whsec_ followed by 24 to 64 bytes in base64.'
+        : 'A header value or API key is printable ASCII text without line breaks (at most 4,096 characters).',
     );
   }
 

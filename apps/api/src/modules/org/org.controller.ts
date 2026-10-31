@@ -8,6 +8,7 @@ import {
   type CreateOrganizationRequest,
   type Id,
   type OffsetQuery,
+  type OrganizationDetailDto,
   type OrganizationDto,
   type OrganizationList,
   type OrgMemberDto,
@@ -72,7 +73,7 @@ export class OrgController {
   get(
     @Param('orgId', orgIdPipe) orgId: Id<'org'>,
     @CurrentPrincipal() principal: Principal,
-  ): Promise<OrganizationDto> {
+  ): Promise<OrganizationDetailDto> {
     return this.orgs.get(principal, orgId);
   }
 

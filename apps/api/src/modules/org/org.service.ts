@@ -1,7 +1,9 @@
 import {
+  AiSettingsRepository,
   apiTokenPolicyOf,
   automationMaxDepthOf,
   ComputedRecomputeService,
+  organizationAiOf,
   OrganizationsRepository,
   OrgMembersRepository,
   publishApiTokensRevoked,
@@ -27,6 +29,7 @@ import type {
   CreateOrganizationRequest,
   Id,
   OffsetQuery,
+  OrganizationDetailDto,
   OrganizationDto,
   OrganizationList,
   OrganizationSettings,
@@ -53,6 +56,7 @@ export class OrgService {
     @Inject(OrganizationsRepository) private readonly organizations: OrganizationsRepository,
     @Inject(OrgMembersRepository) orgMembers: OrgMembersRepository,
     @Inject(AccessService) private readonly access: AccessService,
+    @Inject(AiSettingsRepository) private readonly aiSettings: AiSettingsRepository,
   ) {
     this.provisioner = new OrganizationProvisioner(organizations, orgMembers);
     this.recompute = new ComputedRecomputeService(db, {
@@ -124,11 +128,15 @@ export class OrgService {
     return this.toDto(organization, 'owner');
   }
 
-  async get(principal: Principal, organizationId: Id<'org'>): Promise<OrganizationDto> {
+  /** Any member; `ai` tells whether AI entry points exist (T906), never the provider. */
+  async get(principal: Principal, organizationId: Id<'org'>): Promise<OrganizationDetailDto> {
     const org = await this.access.requireOrg(principal, organizationId);
     const organization = await this.organizations.findById(organizationId);
     if (organization === undefined) throw notFound();
-    return this.toDto(organization, org.role);
+    return {
+      ...this.toDto(organization, org.role),
+      ai: organizationAiOf(await this.aiSettings.find(org.scope)),
+    };
   }
 
   async update(
