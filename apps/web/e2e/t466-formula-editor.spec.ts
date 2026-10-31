@@ -128,7 +128,7 @@ async function openEditor(page: Page, dialog: ReturnType<Page['getByRole']>) {
   await page.keyboard.press('Enter');
   const editor = page.getByTestId('formula-editor');
   await expect(editor).toBeVisible();
-  const input = editor.getByRole('textbox', { name: 'Formula' });
+  const input = editor.getByRole('textbox', { name: 'Formula', exact: true });
   await expect(input).toBeFocused();
   return { editor, input };
 }

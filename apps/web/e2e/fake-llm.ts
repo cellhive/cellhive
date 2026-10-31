@@ -11,7 +11,10 @@ import { connect, createServer, type Server } from 'node:net';
  * The global setup starts one for the whole run and publishes its base URL
  * (`http://localhost:<port>/v1`) in {@link FAKE_LLM_ENV}; the worker fixture
  * points each worker organization at it (`useFakeLlm` of `fixtures.ts`). Scripted
- * replies (`POST /__script`) are one queue for every worker.
+ * replies (`POST /__script`) are one queue for every worker, so a spec that
+ * needs exact answers starts a provider of its own (`startOwnFakeLlm`, in the
+ * worker's process: `script`, `chatRequests`) and points its worker's
+ * organization at it while it runs (T913, `t913-ai-formula-automation.spec.ts`).
  */
 
 /** Name of the variable through which the global setup hands the base URL to the workers. */
@@ -19,9 +22,14 @@ export const FAKE_LLM_ENV = 'CELLHIVE_E2E_FAKE_LLM';
 /** The one model the fake provider lists. */
 export const FAKE_LLM_MODEL = 'fake-model';
 
-interface FakeOpenAiServer {
+/** What a spec drives on a fake provider of its own (`FakeOpenAiServer` of server-core). */
+export interface FakeLlm {
   readonly port: number;
   readonly baseUrl: string;
+  /** Answers of the next chat calls, in order (`FakeOpenAiReply`: `content`, `status`, `delayMs`…). */
+  script(...replies: Record<string, unknown>[]): void;
+  /** The `POST /v1/chat/completions` requests received so far. */
+  chatRequests(): { readonly body: Record<string, unknown> | null }[];
   close(): Promise<void>;
 }
 
@@ -47,16 +55,16 @@ async function listen(server: Server, port: number, host: string): Promise<void>
 }
 
 /**
- * Starts the fake provider. It listens on 127.0.0.1 while its URL says
+ * Starts a fake provider. It listens on 127.0.0.1 while its URL says
  * `localhost`, and the API pins the first address `localhost` resolves to —
  * `::1` first on many machines (macOS) — so the same port on `::1` forwards
  * to it (T906 hand-off): the API reaches it whichever address it pins.
  */
-export async function startFakeLlm(): Promise<() => Promise<void>> {
+export async function startOwnFakeLlm(): Promise<FakeLlm> {
   const testing = (await import(
     new URL('../../../packages/server-core/dist/ai/testing/fake-openai-server.js', import.meta.url)
       .href
-  )) as { startFakeOpenAiServer: () => Promise<FakeOpenAiServer> };
+  )) as { startFakeOpenAiServer: () => Promise<FakeLlm> };
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const fake = await testing.startFakeOpenAiServer();
     const forward = createServer((socket) => {
@@ -75,14 +83,27 @@ export async function startFakeLlm(): Promise<() => Promise<void>> {
         continue;
       }
       // No IPv6 loopback: `localhost` is 127.0.0.1 only.
-      process.env[FAKE_LLM_ENV] = fake.baseUrl;
-      return () => fake.close();
+      return fake;
     }
-    process.env[FAKE_LLM_ENV] = fake.baseUrl;
-    return async () => {
-      forward.close();
-      await fake.close();
+    return {
+      port: fake.port,
+      baseUrl: fake.baseUrl,
+      script: (...replies) => {
+        fake.script(...replies);
+      },
+      chatRequests: () => fake.chatRequests(),
+      close: async () => {
+        forward.close();
+        await fake.close();
+      },
     };
   }
   throw new Error('No loopback port free on both 127.0.0.1 and ::1 for the fake AI provider.');
+}
+
+/** Starts the fake provider of the whole run (global setup) and publishes its URL to the workers. */
+export async function startFakeLlm(): Promise<() => Promise<void>> {
+  const fake = await startOwnFakeLlm();
+  process.env[FAKE_LLM_ENV] = fake.baseUrl;
+  return () => fake.close();
 }

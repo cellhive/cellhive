@@ -24,7 +24,9 @@ import {
  * - Vietnamese, dark, 375 px: no horizontal scroll, the test still green;
  * - `ai.available = false` (the demo organization, AI off for the test): no
  *   AI entry renders on the screens that carry one from T913–T915 — the
- *   "AI" item of the settings nav is the positive control of the check.
+ *   "AI" item of the settings nav is the positive control of the check;
+ * - `ai.available = true` (the demo organization): the same screens show their
+ *   entry (T913: formula editor, automation list; T914–T915 add theirs).
  *
  * axe on every state. `beforeAll` resets the AI settings and the allowlist
  * entry of the administrator's organization (retries); the demo
@@ -233,16 +235,8 @@ test('Vietnamese, dark, 375 px: no horizontal scroll, the test still green', asy
   await context.close();
 });
 
-test('ai.available = false: no AI entry renders on the screens that carry one', async ({
-  browser,
-}) => {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await context.addInitScript(() => {
-    window.localStorage.setItem('cellhive.language', 'en');
-  });
-  const page = await context.newPage();
-  await page.goto('/login');
-  await apiSignIn(page, WORKER_ORG.email('admin'), DEMO_PASSWORD);
+/** The demo organization of the worker, its base "Chăm sóc khách hàng", Tickets and an automation. */
+async function demoBase(page: Page) {
   const me = await ok<{ orgs: Org[] }>(page, 'GET', '/me');
   const demo = me.orgs.find((org) => org.name === WORKER_ORG.orgName);
   if (demo === undefined) throw new Error(`The organization ${WORKER_ORG.orgName} is missing.`);
@@ -273,6 +267,42 @@ test('ai.available = false: no AI entry renders on the screens that carry one', 
   );
   const automationId = automations.items[0]?.id ?? '';
   expect(automationId, 'a demo automation').not.toBe('');
+  return { demo, baseId, ticketsId, automationId };
+}
+
+/** The demo administrator (AI on: the worker fixture's setting). */
+async function openAsDemoAdmin(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(() => {
+    window.localStorage.setItem('cellhive.language', 'en');
+  });
+  const page = await context.newPage();
+  await page.goto('/login');
+  await apiSignIn(page, WORKER_ORG.email('admin'), DEMO_PASSWORD);
+  return { context, page };
+}
+
+/** "⋯" → "Add field" → "Formula" → the editor, on Tickets. */
+async function openFormulaEditor(page: Page, baseId: string, ticketsId: string, name: string) {
+  await page.goto(`/b/${baseId}/t/${ticketsId}`);
+  await expect(page.locator('.ob-grid canvas').first()).toBeVisible();
+  await page.getByTestId('grid-toolbar-more').click();
+  await page.getByRole('menuitem', { name: 'Add field' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New field' });
+  const type = dialog.getByLabel('Type');
+  await expect(type.locator('option').first()).toBeAttached();
+  await dialog.getByLabel('Name').fill(name);
+  await type.selectOption('formula');
+  await dialog.getByTestId('formula-open-editor').click();
+  await expect(page.getByTestId('formula-editor')).toBeVisible();
+  return { dialog, type };
+}
+
+test('ai.available = false: no AI entry renders on the screens that carry one', async ({
+  browser,
+}) => {
+  const { context, page } = await openAsDemoAdmin(browser);
+  const { demo, baseId, ticketsId, automationId } = await demoBase(page);
 
   await ok(page, 'PUT', `/orgs/${demo.id}/ai-settings`, { enabled: false });
   try {
@@ -296,17 +326,9 @@ test('ai.available = false: no AI entry renders on the screens that carry one', 
     await page.goto(`/b/${baseId}/t/${ticketsId}`);
     await expect(page.locator('.ob-grid canvas').first()).toBeVisible();
     await noAiEntry('grid and its toolbar');
-    await page.getByTestId('grid-toolbar-more').click();
-    await page.getByRole('menuitem', { name: 'Add field' }).click();
-    const dialog = page.getByRole('dialog', { name: 'New field' });
-    const type = dialog.getByLabel('Type');
-    await expect(type.locator('option').first()).toBeAttached();
+    const { type } = await openFormulaEditor(page, baseId, ticketsId, 'T912 no AI');
     await expect(type.locator('option, optgroup').filter({ hasText: /\bAI\b/u })).toHaveCount(0);
     await expect(type.locator('optgroup[label="AI"]')).toHaveCount(0);
-    await dialog.getByLabel('Name').fill('T912 no AI');
-    await type.selectOption('formula');
-    await dialog.getByTestId('formula-open-editor').click();
-    await expect(page.getByTestId('formula-editor')).toBeVisible();
     await noAiEntry('formula editor');
     await page.keyboard.press('Escape');
 
@@ -323,4 +345,29 @@ test('ai.available = false: no AI entry renders on the screens that carry one', 
     await ok(page, 'PUT', `/orgs/${demo.id}/ai-settings`, { enabled: true });
     await context.close();
   }
+});
+
+test('ai.available = true: the AI entries render on the screens that carry one', async ({
+  browser,
+}) => {
+  const { context, page } = await openAsDemoAdmin(browser);
+  const { demo, baseId, ticketsId } = await demoBase(page);
+  expect(await aiOf(page, demo.id)).toEqual({ available: true, record_data: false });
+
+  // Formula editor: "Describe the formula" (T913).
+  await openFormulaEditor(page, baseId, ticketsId, 'T912 AI on');
+  const formulaAi = page.getByTestId('formula-editor').getByTestId('formula-ai');
+  await expect(formulaAi.locator(SPARKLES).first()).toBeVisible();
+  await expect(formulaAi.getByRole('textbox', { name: 'Describe the formula' })).toBeVisible();
+  await expectNoSeriousA11yViolations(page, 'formula editor, AI on');
+  await page.keyboard.press('Escape');
+
+  // Automation list: "Create with AI" (T913). Grid toolbar (T914), field types and the
+  // step picker (T915) add theirs.
+  await page.goto(`/b/${baseId}/automations`);
+  const create = page.getByTestId('create-automation-ai');
+  await expect(create).toHaveText('Create with AI');
+  await expect(create.locator(SPARKLES)).toHaveCount(1);
+  await expectNoSeriousA11yViolations(page, 'automation list, AI on');
+  await context.close();
 });
