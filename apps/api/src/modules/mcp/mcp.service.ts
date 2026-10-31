@@ -178,7 +178,7 @@ export class McpService implements OnApplicationShutdown {
     return this.endpoint.handle(webRequestOf(request, this.config.publicUrl), request.body, {
       principal,
       policy,
-      meta: requestMetaOf(request),
+      meta: { ...requestMetaOf(request), mcp: true },
     });
   }
 

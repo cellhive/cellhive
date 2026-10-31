@@ -1738,7 +1738,7 @@
                 "type": "array"
               }
             ],
-            "description": "Written through an API token, an automation, a share link/form or an import (`via`). Repeat it for several values (at most 20, combined with OR)."
+            "description": "Written through an API token, an automation, a share link/form, an import or the MCP server (`via`); `api_token` includes the MCP entries. Repeat it for several values (at most 20, combined with OR)."
           }
         },
         "type": "object"
@@ -1914,7 +1914,7 @@
             "type": "string"
           },
           "mcp": {
-            "description": "Through the MCP server, next to `api_token_id` (T921)",
+            "description": "Through the MCP server, next to `api_token_id` (T921, T923)",
             "enum": [
               true
             ],
@@ -1949,7 +1949,8 @@
           "api_token",
           "automation",
           "share_link",
-          "import"
+          "import",
+          "mcp"
         ],
         "type": "string"
       },
@@ -4504,7 +4505,7 @@
                 "type": "array"
               }
             ],
-            "description": "Written through an API token, an automation, a share link/form or an import (`via`). Repeat it for several values (at most 20, combined with OR)."
+            "description": "Written through an API token, an automation, a share link/form, an import or the MCP server (`via`); `api_token` includes the MCP entries. Repeat it for several values (at most 20, combined with OR)."
           }
         },
         "type": "object"
@@ -25134,7 +25135,7 @@
             }
           },
           {
-            "description": "Written through an API token, an automation, a share link/form or an import (`via`). Repeat it for several values (at most 20, combined with OR).",
+            "description": "Written through an API token, an automation, a share link/form, an import or the MCP server (`via`); `api_token` includes the MCP entries. Repeat it for several values (at most 20, combined with OR).",
             "in": "query",
             "name": "via",
             "required": false,
@@ -25152,7 +25153,7 @@
                   "type": "array"
                 }
               ],
-              "description": "Written through an API token, an automation, a share link/form or an import (`via`). Repeat it for several values (at most 20, combined with OR)."
+              "description": "Written through an API token, an automation, a share link/form, an import or the MCP server (`via`); `api_token` includes the MCP entries. Repeat it for several values (at most 20, combined with OR)."
             }
           },
           {
@@ -36882,7 +36883,7 @@
             }
           },
           {
-            "description": "Written through an API token, an automation, a share link/form or an import (`via`). Repeat it for several values (at most 20, combined with OR).",
+            "description": "Written through an API token, an automation, a share link/form, an import or the MCP server (`via`); `api_token` includes the MCP entries. Repeat it for several values (at most 20, combined with OR).",
             "in": "query",
             "name": "via",
             "required": false,
@@ -36900,7 +36901,7 @@
                   "type": "array"
                 }
               ],
-              "description": "Written through an API token, an automation, a share link/form or an import (`via`). Repeat it for several values (at most 20, combined with OR)."
+              "description": "Written through an API token, an automation, a share link/form, an import or the MCP server (`via`); `api_token` includes the MCP entries. Repeat it for several values (at most 20, combined with OR)."
             }
           },
           {

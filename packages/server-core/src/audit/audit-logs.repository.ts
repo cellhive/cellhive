@@ -81,6 +81,7 @@ const VIA_KEYS: Readonly<Record<AuditViaKind, string>> = {
   automation: 'automation_id',
   share_link: 'share_link_id',
   import: 'import_job_id',
+  mcp: 'mcp',
 };
 
 /**

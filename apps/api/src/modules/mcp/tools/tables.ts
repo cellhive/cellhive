@@ -42,17 +42,18 @@ export function mcpFieldOf(field: FieldDto, access: EffectiveAccess): McpField {
     link_table?: unknown;
     options?: { name: string }[];
   };
+  const perm = table?.fields[field.id];
+  const fixed =
+    READ_ONLY_TYPES.has(field.type) || field.locked === true || table?.perm === 'read_only';
   const out: McpField = {
     name: field.name,
     type: field.type,
     description: field.description,
     is_primary: field.is_primary,
-    read_only:
-      READ_ONLY_TYPES.has(field.type) ||
-      field.locked === true ||
-      table?.perm === 'read_only' ||
-      table?.fields[field.id] !== 'edit',
+    read_only: fixed || (perm !== 'edit' && perm !== 'create'),
   };
+  // `create` permission: written by create_records only (T923).
+  if (!fixed && perm === 'create') out.create_only = true;
   // Defaults of the field types: one option, several users, several links.
   if (field.type === 'user') out.multiple = options.multiple !== false;
   if (field.type === 'select') {

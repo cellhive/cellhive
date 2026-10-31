@@ -8,7 +8,7 @@ import type { z } from 'zod';
 export interface McpCallContext {
   readonly principal: ApiTokenPrincipal;
   readonly policy: McpPolicy;
-  /** The HTTP request, for audit entries (`via = { api_token_id, mcp: true }`). */
+  /** The HTTP request (with `mcp: true`), for audit entries: `via = { api_token_id, mcp: true }`. */
   readonly meta: RequestMeta;
 }
 

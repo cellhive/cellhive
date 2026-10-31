@@ -72,7 +72,7 @@ export const auditViaSchema = z
     mcp: z
       .literal(true)
       .optional()
-      .meta({ description: 'Through the MCP server, next to `api_token_id` (T921)' }),
+      .meta({ description: 'Through the MCP server, next to `api_token_id` (T921, T923)' }),
     ai_field_id: idOf('fld')
       .optional()
       .meta({ description: 'A value generated for this AI field by the AI worker (T910)' }),
@@ -268,9 +268,10 @@ export function auditActionsOfPrefix(prefix: AuditActionPrefix): AuditAction[] {
 /**
  * Sources of `via` (CONTRACTS §11.1, §11.4): an entry written through an API
  * token (`via.api_token_id`), an automation (`via.automation_id`), a share
- * link or form (`via.share_link_id`) or an import (`via.import_job_id`).
+ * link or form (`via.share_link_id`), an import (`via.import_job_id`) or the
+ * MCP server (`via.mcp`, always with `api_token_id`, T923).
  */
-export const AUDIT_VIA_KINDS = ['api_token', 'automation', 'share_link', 'import'] as const;
+export const AUDIT_VIA_KINDS = ['api_token', 'automation', 'share_link', 'import', 'mcp'] as const;
 export type AuditViaKind = (typeof AUDIT_VIA_KINDS)[number];
 
 /**
@@ -309,7 +310,8 @@ const auditFilterShape = {
   ),
   via: oneOrMany(
     z.enum(AUDIT_VIA_KINDS).meta({ id: 'AuditViaKind' }),
-    'Written through an API token, an automation, a share link/form or an import (`via`)',
+    'Written through an API token, an automation, a share link/form, an import or the MCP ' +
+      'server (`via`); `api_token` includes the MCP entries',
   ),
   batch_id: z.string().min(1).max(64).optional(),
   from: isoDateTimeSchema.optional().meta({ description: 'Inclusive lower bound of `created_at`' }),

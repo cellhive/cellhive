@@ -224,7 +224,8 @@ export type EventBatch = z.infer<typeof eventBatchSchema>;
  * `via` of an event (CONTRACTS §8): the audit `via` (§11.1) — `{ automation_id,
  * run_id }`, `{ api_token_id }` (the actor user wrote through that token, T705 —
  * events always carry the id, only readers of history/audit get it hidden),
- * `{ share_link_id }`, `{ import_job_id }`,
+ * `{ api_token_id, mcp: true }` through the MCP server (T923), `{ share_link_id }`,
+ * `{ import_job_id }`,
  * `{ reverted_from }`, and `incoming_webhook_id` next to `{ automation_id, run_id }`
  * when the run was started by `webhook.received` (T604, ADR-35 §6) — plus, for a
  * `record.updated` written from recomputed
@@ -238,6 +239,7 @@ export const eventViaSchema = z
     automation_id: idOf('aut').optional(),
     run_id: idOf('run').optional(),
     api_token_id: idOf('tok').optional(),
+    mcp: z.literal(true).optional(),
     share_link_id: idOf('shl').optional(),
     import_job_id: idOf('job').optional(),
     reverted_from: idOf('aud').optional(),

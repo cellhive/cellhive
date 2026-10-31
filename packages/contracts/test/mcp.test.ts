@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AUDIT_VIA_KINDS,
+  createRecordsInputSchema,
   DEFAULT_MCP_POLICY,
+  eventViaSchema,
   listBasesInputSchema,
+  MCP_WRITE_RECORDS_MAX,
+  orgAuditLogQuerySchema,
   organizationSettingsSchema,
   updateOrganizationRequestSchema,
+  updateRecordsInputSchema,
 } from '../src/index.js';
 import { generateOpenApiDocument } from '../src/openapi/index.js';
 
@@ -33,6 +39,38 @@ describe('MCP contracts (CONTRACTS §30, T920)', () => {
   it('takes no input for list_bases', () => {
     expect(listBasesInputSchema.safeParse({}).success).toBe(true);
     expect(listBasesInputSchema.safeParse({ base_id: 'bse_x' }).success).toBe(false);
+  });
+
+  it('takes 1–50 records by field name to write (T923)', () => {
+    const table_id = 'tbl_A1b2C3d4E5f6G7h8';
+    const id = 'rec_A1b2C3d4E5f6G7h8';
+    const many = (n: number) => Array.from({ length: n }, () => ({ fields: { Name: 'x' } }));
+    expect(createRecordsInputSchema.safeParse({ table_id, records: many(1) }).success).toBe(true);
+    expect(
+      createRecordsInputSchema.safeParse({ table_id, records: many(MCP_WRITE_RECORDS_MAX) })
+        .success,
+    ).toBe(true);
+    for (const records of [[], many(MCP_WRITE_RECORDS_MAX + 1), [{ fields: {}, typecast: true }]]) {
+      expect(createRecordsInputSchema.safeParse({ table_id, records }).success).toBe(false);
+    }
+    expect(
+      updateRecordsInputSchema.safeParse({ table_id, records: [{ id, fields: { Name: 'y' } }] })
+        .success,
+    ).toBe(true);
+    // No upsert, no version, no record without its id.
+    for (const record of [{ fields: {} }, { id, version: 2, fields: {} }]) {
+      expect(updateRecordsInputSchema.safeParse({ table_id, records: [record] }).success).toBe(
+        false,
+      );
+    }
+  });
+
+  it('marks writes through MCP in event via and filters the audit log by it (T923)', () => {
+    const via = { api_token_id: 'tok_A1b2C3d4E5f6G7h8', mcp: true };
+    expect(eventViaSchema.parse(via)).toEqual(via);
+    expect(eventViaSchema.safeParse({ ...via, mcp: false }).success).toBe(false);
+    expect(AUDIT_VIA_KINDS).toContain('mcp');
+    expect(orgAuditLogQuerySchema.parse({ via: 'mcp' }).via).toEqual(['mcp']);
   });
 
   it('documents one token-only operation with the schema:read route scope', () => {

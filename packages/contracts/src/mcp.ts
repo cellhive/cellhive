@@ -137,9 +137,13 @@ export const mcpFieldSchema = z.object({
   is_primary: z.boolean().meta({ description: 'The title of a record (link cells show it)' }),
   read_only: z.boolean().meta({
     description:
-      'Computed, system or locked field, or the caller may not edit it (table or field ' +
-      'permission below `edit`)',
+      'Computed, system or locked field, or the caller may not write it (table read-only, ' +
+      'field permission `read`)',
   }),
+  create_only: z
+    .literal(true)
+    .optional()
+    .meta({ description: 'Only `create_records` may write it (field permission `create`)' }),
   multiple: z
     .boolean()
     .optional()
@@ -385,3 +389,48 @@ export const aggregateRecordsResultSchema = z.object({
     .meta({ description: 'Each metric over every matching record; `null` when none match' }),
 });
 export type AggregateRecordsResult = z.infer<typeof aggregateRecordsResultSchema>;
+
+// --- Record writes (CONTRACTS §30.5, T923) -----------------------------------------
+
+/** Most records of one `create_records` / `update_records` call. */
+export const MCP_WRITE_RECORDS_MAX = 50;
+
+const writeFieldsSchema = z.record(z.string(), z.unknown()).meta({
+  description:
+    'Cells by field name (describe_table): option names for select, numbers, ISO dates, ' +
+    '[{"id": "usr_…"}] for users, [{"id": "rec_…"}] for links. Values are never converted ' +
+    'and select options are never created.',
+});
+
+/** `create_records`: like `POST /tables/:id/records` with field names, `typecast: false`. */
+export const createRecordsInputSchema = z.strictObject({
+  table_id: idOf('tbl'),
+  records: z
+    .array(z.strictObject({ fields: writeFieldsSchema }))
+    .min(1)
+    .max(MCP_WRITE_RECORDS_MAX),
+});
+export type CreateRecordsInput = z.infer<typeof createRecordsInputSchema>;
+
+/** `update_records`: like `PATCH /tables/:id/records` — only the given fields change. */
+export const updateRecordsInputSchema = z.strictObject({
+  table_id: idOf('tbl'),
+  records: z
+    .array(z.strictObject({ id: idOf('rec'), fields: writeFieldsSchema }))
+    .min(1)
+    .max(MCP_WRITE_RECORDS_MAX),
+});
+export type UpdateRecordsInput = z.infer<typeof updateRecordsInputSchema>;
+
+/**
+ * `create_records` / `update_records` result: the written records as the
+ * caller reads them now (cut like a read), in input order; those it can no
+ * longer read are absent from both lists.
+ */
+export const writeRecordsResultSchema = z.object({
+  record_ids: z.array(idOf('rec')).meta({
+    description: 'Every written record the caller reads, also those left out of `records`',
+  }),
+  ...recordsPartSchema,
+});
+export type WriteRecordsResult = z.infer<typeof writeRecordsResultSchema>;

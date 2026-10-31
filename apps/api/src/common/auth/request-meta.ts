@@ -18,6 +18,8 @@ export interface RequestMeta {
    * `via.api_token_id` (BACKLOG T705).
    */
   readonly apiToken?: { readonly id: Id<'tok'>; readonly userId: Id<'usr'> };
+  /** Through the MCP server (`POST /api/v1/mcp`): `via.mcp` next to `via.api_token_id` (T923). */
+  readonly mcp?: true;
 }
 
 export function requestMetaOf(request: FastifyRequest): RequestMeta {
@@ -45,7 +47,7 @@ export function auditContextOf(meta: RequestMeta, actor: Actor): AuditContext {
     actor,
     via:
       token !== undefined && actor.type === 'user' && actor.id === token.userId
-        ? { api_token_id: token.id }
+        ? { api_token_id: token.id, ...(meta.mcp === true ? { mcp: true as const } : {}) }
         : null,
     batch_id: null,
     request_id: isId('req', meta.requestId) ? meta.requestId : null,

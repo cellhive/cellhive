@@ -109,7 +109,19 @@ describe('MCP tools: registry and central checks (T920)', () => {
       { name: 'query_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'get_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'aggregate_records', scope: 'records:read', writes: false, readOnly: true },
+      { name: 'create_records', scope: 'records:write', writes: true, readOnly: false },
+      { name: 'update_records', scope: 'records:write', writes: true, readOnly: false },
     ]);
+    // T923: hints of the writing tools (research MCP §3.4).
+    expect(Object.fromEntries(tools.map((tool) => [tool.name, tool.annotations]))).toMatchObject({
+      create_records: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      update_records: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    });
     for (const tool of tools) {
       // A read-only tool never writes; a tool that writes is never read-only.
       expect(tool.writes, tool.name).toBe(tool.annotations.readOnlyHint !== true);
@@ -129,7 +141,9 @@ describe('MCP tools: registry and central checks (T920)', () => {
           ? ['list_bases', 'list_tables', 'describe_table']
           : scope === 'records:read'
             ? ['query_records', 'get_records', 'aggregate_records']
-            : [],
+            : scope === 'records:write' && allowWrites
+              ? ['create_records', 'update_records']
+              : [],
       );
       expect(names(FAKE_TOOLS)).toEqual(
         scope === 'records:read'
@@ -227,6 +241,33 @@ describe('MCP tools: registry and central checks (T920)', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it('keeps only the records[i].id items of a NOT_FOUND (T923)', async () => {
+    const item = { path: 'records[1].id', code: 'NOT_FOUND', message: 'The record does not exist' };
+    const missing = defineTool({
+      name: 'missing',
+      title: 'Missing',
+      description: 'Fails',
+      scope: 'records:write',
+      writes: true,
+      input: z.strictObject({}),
+      annotations: { readOnlyHint: false },
+      run: () =>
+        Promise.reject(
+          new AppError('NOT_FOUND', {
+            detail: 'The record does not exist.',
+            errors: [item, { path: 'table_id', code: 'NOT_FOUND', message: 'Gone' }],
+          }),
+        ),
+    });
+    const context = contextOf(['records:write'], { allow_writes: true });
+    const result = await callTool([missing], 'missing', {}, context, depsOf());
+    expect(errorOf(result)).toEqual({
+      code: 'NOT_FOUND',
+      message: MCP_NOT_FOUND_MESSAGE,
+      errors: [item],
+    });
+  });
+
   it('hides an unexpected failure as INTERNAL and logs it', async () => {
     const deps = depsOf();
     const broken = defineTool({
@@ -279,7 +320,7 @@ describe('MCP describe_table fields (T921)', () => {
   it.each([
     ['an editable text field', field('text'), 'edit', 'edit', false],
     ['a field the role only reads', field('text'), 'edit', 'read', true],
-    ['a field written on create only', field('text'), 'edit', 'create', true],
+    ['a field written on create only (create_records)', field('text'), 'edit', 'create', false],
     ['any field of a read-only table', field('text'), 'read_only', 'edit', true],
     ['a formula', field('formula'), 'manage', 'read', true],
     ['a locked lookup', field('lookup', { locked: true }), 'manage', 'edit', true],
@@ -288,6 +329,23 @@ describe('MCP describe_table fields (T921)', () => {
     ['a button', field('button'), 'manage', 'edit', true],
   ])('read_only for %s', (_case, dto, perm, fieldPerm, readOnly) => {
     expect(mcpFieldOf(dto, access(perm, fieldPerm)).read_only).toBe(readOnly);
+  });
+
+  it('flags the fields only create_records may write (T923)', () => {
+    expect(mcpFieldOf(field('text'), access('edit', 'create'))).toMatchObject({
+      read_only: false,
+      create_only: true,
+    });
+    for (const [perm, fieldPerm] of [
+      ['edit', 'edit'],
+      ['edit', 'read'],
+      ['read_only', 'create'],
+    ] as const) {
+      expect(mcpFieldOf(field('text'), access(perm, fieldPerm))).not.toHaveProperty('create_only');
+    }
+    expect(mcpFieldOf(field('formula'), access('edit', 'create'))).toMatchObject({
+      read_only: true,
+    });
   });
 
   it('gives option names (at most 50), multiplicity and the linked table', () => {

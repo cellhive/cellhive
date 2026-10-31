@@ -2,6 +2,7 @@ import { aggregateRecordsTool } from './aggregate.js';
 import { listBasesTool } from './bases.js';
 import { getRecordsTool, queryRecordsTool } from './records.js';
 import { describeTableTool, listTablesTool } from './tables.js';
+import { createRecordsTool, updateRecordsTool } from './write.js';
 
 import type { AccessService } from '../../../common/access/access.service.js';
 import type { SchemaAccess } from '../../../common/schema/schema-access.js';
@@ -20,7 +21,7 @@ import type {
   RecordQueryService,
 } from '@cellhive/server-core';
 
-/** Services the tools read through (the same as the REST routes). */
+/** Services the tools read and write through (the same as the REST routes). */
 export interface McpToolServices {
   readonly db: Db;
   readonly access: AccessService;
@@ -52,5 +53,7 @@ export function mcpTools(services: McpToolServices): McpTool[] {
     queryRecordsTool(records, db),
     getRecordsTool(records, db),
     aggregateRecordsTool(services),
+    createRecordsTool(records),
+    updateRecordsTool(records),
   ];
 }
