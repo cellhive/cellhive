@@ -620,6 +620,11 @@ describe('automation draft compilation (T908)', () => {
       [{ path: 'trigger.watch_fields', code: 'REQUIRED' }],
     ],
     [
+      'changed_to on another trigger (never dropped)',
+      draft({ trigger: { ...TRIGGER, type: 'record.created', changed_to: 'Đã xong' } }),
+      [{ path: 'trigger.changed_to', code: 'NOT_ALLOWED' }],
+    ],
+    [
       'a field of another table',
       draft({ condition: { logic: 'and', conditions: [['title', '==', 'x']] } }),
       [{ path: 'condition.conditions[0][0]', code: 'UNKNOWN_FIELD' }],

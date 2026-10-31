@@ -569,6 +569,14 @@ export function compileAutomationDraft(
   const type = t.type;
   const rowTable = type === 'schedule' ? undefined : tableNamed(t.table, 'trigger.table');
   const noTable = type !== 'schedule' && rowTable === undefined;
+  // Dropping it would fire on every record: the model moves it to record.updated or the condition.
+  if (t.changed_to !== null && type !== 'record.updated') {
+    problem(
+      'trigger.changed_to',
+      'NOT_ALLOWED',
+      'Only record.updated uses changed_to: use record.updated, or put the value in condition',
+    );
+  }
   let condition: FilterNode | null = null;
   if (draft.condition !== null && type === 'schedule') {
     problem('condition', 'NO_TRIGGER_RECORD', 'This trigger has no record to test');
