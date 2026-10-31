@@ -1,4 +1,5 @@
 export * from './access.js';
+export * from './aggregate-plan.js';
 export * from './ai-automation.js';
 export * from './ai-formula.js';
 export * from './ai-settings.js';
