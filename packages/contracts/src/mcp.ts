@@ -1,6 +1,16 @@
 import { z } from 'zod';
 
+import { aggregatePlanDimensionSchema, aggregatePlanMetricSchema } from './aggregate-plan.js';
+import { timeZoneSchema } from './auth.js';
 import { computedResultTypeSchema } from './computed-fields.js';
+import {
+  dateBucketSchema,
+  DEFAULT_WIDGET_LIMIT,
+  MAX_WIDGET_LIMIT,
+  MAX_WIDGET_METRICS,
+  metricAggregationSchema,
+  widgetSortSchema,
+} from './dashboard-widgets.js';
 import { errorCodeSchema, problemErrorItemSchema } from './errors.js';
 import { idOf } from './ids.js';
 import { MAX_RECORD_SEARCH_LENGTH } from './records.js';
@@ -191,30 +201,33 @@ export const MCP_FILTER_OPERATORS = [
 const operatorSchema = z.enum(MCP_FILTER_OPERATORS);
 const fieldNameSchema = z.string().min(1).meta({ description: 'Field name' });
 
+/** The tuple filter of the tools that read records (CONTRACTS §3), by field name. */
+const mcpFilterSchema = z
+  .strictObject({
+    logic: z.enum(['and', 'or']).default('and'),
+    conditions: z
+      .array(
+        z.union([
+          z.tuple([fieldNameSchema, operatorSchema]),
+          z.tuple([fieldNameSchema, operatorSchema, z.unknown()]),
+        ]),
+      )
+      .min(1)
+      .max(MCP_FILTER_MAX_CONDITIONS),
+  })
+  .optional()
+  .meta({
+    description:
+      'One level of conditions [field name, operator, value]. Values: option names for ' +
+      'select, numbers, "ExactDate(2026-09-25)", "Today", "Yesterday", "Tomorrow", ' +
+      '"CurrentUser" or [{"id": "usr_…"}] for users, [{"id": "rec_…"}] for links; ' +
+      '`empty`/`non_empty` take no value. `intersects` on text = contains.',
+  });
+
 /** `query_records`: one page of records, like `POST /tables/:id/records/query` with field names. */
 export const queryRecordsInputSchema = z.strictObject({
   table_id: idOf('tbl'),
-  filter: z
-    .strictObject({
-      logic: z.enum(['and', 'or']).default('and'),
-      conditions: z
-        .array(
-          z.union([
-            z.tuple([fieldNameSchema, operatorSchema]),
-            z.tuple([fieldNameSchema, operatorSchema, z.unknown()]),
-          ]),
-        )
-        .min(1)
-        .max(MCP_FILTER_MAX_CONDITIONS),
-    })
-    .optional()
-    .meta({
-      description:
-        'One level of conditions [field name, operator, value]. Values: option names for ' +
-        'select, numbers, "ExactDate(2026-09-25)", "Today", "Yesterday", "Tomorrow", ' +
-        '"CurrentUser" or [{"id": "usr_…"}] for users, [{"id": "rec_…"}] for links; ' +
-        '`empty`/`non_empty` take no value. `intersects` on text = contains.',
-    }),
+  filter: mcpFilterSchema,
   sort: z
     .array(
       z.strictObject({
@@ -297,3 +310,78 @@ export type QueryRecordsResult = z.infer<typeof queryRecordsResultSchema>;
 /** `get_records` result: ids that do not exist or the caller cannot read are absent. */
 export const getRecordsResultSchema = z.object(recordsPartSchema);
 export type GetRecordsResult = z.infer<typeof getRecordsResultSchema>;
+
+// --- Aggregates (CONTRACTS §30.4, T922) --------------------------------------------
+
+/**
+ * `aggregate_records`: numbers over the records of a table, computed by the
+ * widget engine with the caller's permissions — the plan by name of
+ * `aggregate-plan.ts`: without `group_by` one `kpi` per metric, with it one
+ * `bar`.
+ */
+export const aggregateRecordsInputSchema = z.strictObject({
+  table_id: idOf('tbl'),
+  metrics: z
+    .array(aggregatePlanMetricSchema)
+    .min(1)
+    .max(MAX_WIDGET_METRICS)
+    .meta({
+      description:
+        '`count` takes no field; `sum`, `avg`, `min`, `max` a number field; `count_distinct` ' +
+        'a field that can be grouped',
+    }),
+  group_by: aggregatePlanDimensionSchema.optional().meta({
+    description:
+      'One group per value of a text, select (one per option), user, checkbox, link, date ' +
+      '(`date_bucket` required) or number (optional `bucket_width`) field',
+  }),
+  filter: mcpFilterSchema,
+  sort: widgetSortSchema.optional().meta({
+    description:
+      'Order of the groups: largest first metric by default, dates in time order (ignored ' +
+      'without `group_by`)',
+  }),
+  limit: z
+    .int()
+    .min(1)
+    .max(MAX_WIDGET_LIMIT)
+    .default(DEFAULT_WIDGET_LIMIT)
+    .meta({ description: 'Groups returned; the rest is summed up in `other`' }),
+  timezone: timeZoneSchema.optional().meta({
+    description:
+      'IANA zone of date buckets and relative dates (default: the user’s, then the ' +
+      'organization’s)',
+  }),
+});
+export type AggregateRecordsInput = z.output<typeof aggregateRecordsInputSchema>;
+
+/** A column of `aggregate_records`, by field name. */
+export const mcpAggregateColumnSchema = z.object({
+  role: z.enum(['group', 'metric']),
+  field: z.string().nullable().meta({ description: 'Field name; `null` for `count`' }),
+  aggregation: metricAggregationSchema.nullable(),
+  date_bucket: dateBucketSchema.nullable(),
+  bucket_width: z.number().nullable(),
+});
+export type McpAggregateColumn = z.infer<typeof mcpAggregateColumnSchema>;
+
+/** `aggregate_records` result. */
+export const aggregateRecordsResultSchema = z.object({
+  columns: z.array(mcpAggregateColumnSchema),
+  rows: z.array(z.array(z.unknown())).meta({
+    description:
+      'In `columns` order. With `group_by`, one row per group: its label (option or member ' +
+      'name, record title, first day of the date bucket, number, text, true/false; `null` for ' +
+      'the empty group or a linked record the caller cannot read), then the metrics. Without, ' +
+      'one row of metrics. `[]` when no record matches',
+  }),
+  other: z
+    .object({ groups: z.int().min(1), rows: z.array(z.array(z.unknown())) })
+    .nullable()
+    .meta({ description: 'Groups past `limit`, computed together (group cell `null`)' }),
+  total: z
+    .array(z.number().nullable())
+    .nullable()
+    .meta({ description: 'Each metric over every matching record; `null` when none match' }),
+});
+export type AggregateRecordsResult = z.infer<typeof aggregateRecordsResultSchema>;

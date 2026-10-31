@@ -1,4 +1,5 @@
 import {
+  aggregateRecordsInputSchema,
   API_TOKEN_SCOPES,
   DEFAULT_MCP_POLICY,
   MCP_FILTER_OPERATORS,
@@ -17,11 +18,13 @@ import { dataResult } from '../../src/modules/mcp/envelope.js';
 import { callTool, type McpToolDeps } from '../../src/modules/mcp/mcp-server.js';
 import { defineTool, listedTools, type McpTool } from '../../src/modules/mcp/tool-context.js';
 import { MCP_NOT_FOUND_MESSAGE } from '../../src/modules/mcp/tool-errors.js';
+import { aggregateResultOf, aggregateWidgetsOf } from '../../src/modules/mcp/tools/aggregate.js';
 import { mcpTools, type McpToolServices } from '../../src/modules/mcp/tools/index.js';
 import { mcpFieldOf } from '../../src/modules/mcp/tools/tables.js';
 
 import type { ApiTokenPrincipal } from '../../src/common/auth/principal.js';
 import type { EffectiveAccess } from '@cellhive/permissions';
+import type { WidgetAggregateResult, WidgetTableMeta } from '@cellhive/server-core';
 
 const BASE = 'bse_00000000000000000000000001' as Id<'bse'>;
 const TOKEN = 'tok_00000000000000000000000001' as Id<'tok'>;
@@ -105,6 +108,7 @@ describe('MCP tools: registry and central checks (T920)', () => {
       { name: 'describe_table', scope: 'schema:read', writes: false, readOnly: true },
       { name: 'query_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'get_records', scope: 'records:read', writes: false, readOnly: true },
+      { name: 'aggregate_records', scope: 'records:read', writes: false, readOnly: true },
     ]);
     for (const tool of tools) {
       // A read-only tool never writes; a tool that writes is never read-only.
@@ -124,7 +128,7 @@ describe('MCP tools: registry and central checks (T920)', () => {
         scope === 'schema:read'
           ? ['list_bases', 'list_tables', 'describe_table']
           : scope === 'records:read'
-            ? ['query_records', 'get_records']
+            ? ['query_records', 'get_records', 'aggregate_records']
             : [],
       );
       expect(names(FAKE_TOOLS)).toEqual(
@@ -324,5 +328,185 @@ describe('MCP data envelope (T920)', () => {
     expect((dataResult(data).content[0] as { text: string }).text).not.toContain(
       `<${String(tag)}>`,
     );
+  });
+});
+
+describe('MCP aggregate_records (T922)', () => {
+  const F = {
+    amount: 'fld_AggregateAmount0',
+    status: 'fld_AggregateStatus0',
+    date: 'fld_AggregateDate000',
+  } as const;
+  const NEW = 'opt_AggregateOptNew0';
+  /** Fields the widget engine reads for the caller: `cost` is hidden, so absent. */
+  const orders: WidgetTableMeta = {
+    id: 'tbl_AggregateOrders0',
+    fields: [
+      { id: 'fld_AggregateTitle00', name: 'title', type: 'text', options: {} },
+      { id: F.amount, name: 'amount', type: 'number', options: {} },
+      {
+        id: F.status,
+        name: 'status',
+        type: 'select',
+        options: { options: [{ id: NEW, name: 'Mới' }] },
+      },
+      { id: F.date, name: 'ngày', type: 'datetime', options: {} },
+    ],
+  };
+  const widgetsOf = (input: Record<string, unknown>) =>
+    aggregateWidgetsOf(
+      aggregateRecordsInputSchema.parse({ table_id: orders.id, ...input }),
+      orders,
+    );
+  const problemOf = (input: Record<string, unknown>) => {
+    try {
+      widgetsOf(input);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      const { code, errors } = error as AppError;
+      return { code, errors: (errors ?? []).map((item) => [item.path, item.code]) };
+    }
+    throw new TypeError('expected a problem');
+  };
+  const sumAmount = { aggregation: 'sum', field: 'amount' };
+
+  it('groups into one bar with "Other", field names → ids', () => {
+    const [bar, ...rest] = widgetsOf({
+      metrics: [sumAmount, { aggregation: 'count' }],
+      group_by: { field: 'status' },
+      filter: { conditions: [['status', '==', 'Mới']] },
+      limit: 5,
+    });
+    expect(rest).toEqual([]);
+    expect(bar).toMatchObject({
+      type: 'bar',
+      config: {
+        table_id: orders.id,
+        dimension: { field: F.status, date_bucket: null, bucket_width: null },
+        metrics: [
+          { id: 'm1', aggregation: 'sum', field: F.amount },
+          { id: 'm2', aggregation: 'count', field: null },
+        ],
+        sort: 'metric_desc',
+        limit: 5,
+        filter: { op: 'and', items: [{ field: F.status, operator: 'is', value: NEW }] },
+      },
+    });
+  });
+
+  it('makes one kpi per metric without group_by', () => {
+    const widgets = widgetsOf({ metrics: [sumAmount, { aggregation: 'count' }] });
+    expect(widgets).toMatchObject([
+      { type: 'kpi', config: { metrics: [{ id: 'm1', aggregation: 'sum', field: F.amount }] } },
+      { type: 'kpi', config: { metrics: [{ id: 'm1', aggregation: 'count', field: null }] } },
+    ]);
+  });
+
+  it.each<[string, Record<string, unknown>, string, [string, string][]]>([
+    [
+      'a hidden field is a field that does not exist',
+      { metrics: [{ aggregation: 'count' }, { aggregation: 'sum', field: 'cost' }] },
+      'VALIDATION_FAILED',
+      [['metrics[1].field', 'UNKNOWN_FIELD']],
+    ],
+    [
+      'a date group without a bucket',
+      { metrics: [sumAmount], group_by: { field: 'ngày' } },
+      'VALIDATION_FAILED',
+      [['group_by.date_bucket', 'DATE_BUCKET_REQUIRED']],
+    ],
+    [
+      'a numeric metric on a field that is not a number',
+      { metrics: [sumAmount, { aggregation: 'avg', field: 'status' }] },
+      'VALIDATION_FAILED',
+      [['metrics[1].field', 'INVALID_METRIC']],
+    ],
+    [
+      'a problem of the filter once, whatever the number of metrics',
+      {
+        metrics: [sumAmount, { aggregation: 'avg', field: 'nope' }],
+        filter: { conditions: [['xyz', '==', 1]] },
+      },
+      'VALIDATION_FAILED',
+      [
+        ['filter.conditions[0][0]', 'UNKNOWN_FIELD'],
+        ['metrics[1].field', 'UNKNOWN_FIELD'],
+      ],
+    ],
+    [
+      'a filter problem alone',
+      { metrics: [sumAmount], filter: { conditions: [['status', '==', 'Done']] } },
+      'INVALID_FILTER',
+      [['filter.conditions[0][2]', 'INVALID_SELECT_OPTION']],
+    ],
+  ])('%s', (_name, input, code, errors) => {
+    expect(problemOf(input)).toEqual({ code, errors });
+  });
+
+  it('answers with field names, group labels, "Other" and totals', () => {
+    const column = (role: 'dimension' | 'metric', field: string | null) => ({
+      key: role,
+      role,
+      field_id: field as Id<'fld'> | null,
+      field_type: null,
+      aggregation: null,
+      date_bucket: null,
+      bucket_width: null,
+    });
+    const bar: WidgetAggregateResult = {
+      status: 'ok',
+      columns: [column('dimension', F.status), { ...column('metric', F.amount), key: 'm1' }],
+      rows: [
+        [{ value: NEW, label: 'Mới' }, 100],
+        [{ value: 'rec_AggregateRecord0', label: null }, 50],
+        [{ value: null, label: null }, 300],
+      ],
+      other: { groups: 2, rows: [[null, 7]] },
+      total: [457],
+    };
+    const names = new Map([
+      [F.status, 'status'],
+      [F.amount, 'amount'],
+    ]);
+    expect(aggregateResultOf([bar], names, true)).toEqual({
+      columns: [
+        {
+          role: 'group',
+          field: 'status',
+          aggregation: null,
+          date_bucket: null,
+          bucket_width: null,
+        },
+        {
+          role: 'metric',
+          field: 'amount',
+          aggregation: null,
+          date_bucket: null,
+          bucket_width: null,
+        },
+      ],
+      rows: [
+        ['Mới', 100],
+        [null, 50],
+        [null, 300],
+      ],
+      other: { groups: 2, rows: [[null, 7]] },
+      total: [457],
+    });
+
+    const kpi = (value: number | null, rows = [[value]]): WidgetAggregateResult => ({
+      status: rows.length === 0 ? 'empty' : 'ok',
+      columns: [{ ...column('metric', null), key: 'm1' }],
+      rows,
+    });
+    expect(aggregateResultOf([kpi(3), kpi(null)], names, false)).toMatchObject({
+      rows: [[3, null]],
+      other: null,
+      total: [3, null],
+    });
+    expect(aggregateResultOf([kpi(0, []), kpi(0, [])], names, false)).toMatchObject({
+      rows: [],
+      total: null,
+    });
   });
 });

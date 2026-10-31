@@ -1,16 +1,24 @@
+import { aggregateRecordsTool } from './aggregate.js';
 import { listBasesTool } from './bases.js';
 import { getRecordsTool, queryRecordsTool } from './records.js';
 import { describeTableTool, listTablesTool } from './tables.js';
 
 import type { AccessService } from '../../../common/access/access.service.js';
+import type { SchemaAccess } from '../../../common/schema/schema-access.js';
 import type { BaseService } from '../../base/base.service.js';
+import type { WidgetQueryLimiter } from '../../dashboard/widget-query-limiter.js';
 import type { FieldService } from '../../field/field.service.js';
 import type { RecordService } from '../../record/record.service.js';
 import type { TableService } from '../../table/table.service.js';
 import type { ViewService } from '../../view/view.service.js';
 import type { WorkspaceService } from '../../workspace/workspace.service.js';
 import type { McpTool } from '../tool-context.js';
-import type { Db } from '@cellhive/server-core';
+import type {
+  AppConfig,
+  Db,
+  GroupMembersRepository,
+  RecordQueryService,
+} from '@cellhive/server-core';
 
 /** Services the tools read through (the same as the REST routes). */
 export interface McpToolServices {
@@ -22,6 +30,12 @@ export interface McpToolServices {
   readonly fields: FieldService;
   readonly views: ViewService;
   readonly records: RecordService;
+  /** `aggregate_records`: the widget engine, in the dashboards' query line. */
+  readonly config: AppConfig;
+  readonly schemaAccess: SchemaAccess;
+  readonly groupMembers: GroupMembersRepository;
+  readonly recordQuery: RecordQueryService;
+  readonly limiter: WidgetQueryLimiter;
 }
 
 /**
@@ -37,5 +51,6 @@ export function mcpTools(services: McpToolServices): McpTool[] {
     describeTableTool(access, tables, services.fields, services.views),
     queryRecordsTool(records, db),
     getRecordsTool(records, db),
+    aggregateRecordsTool(services),
   ];
 }

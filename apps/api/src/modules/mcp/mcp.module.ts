@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { BaseModule } from '../base/base.module.js';
+import { DashboardModule } from '../dashboard/dashboard.module.js';
 import { FieldModule } from '../field/field.module.js';
 import { MetricsModule } from '../metrics/metrics.module.js';
 import { RecordModule } from '../record/record.module.js';
@@ -13,7 +14,8 @@ import { McpService } from './mcp.service.js';
 
 /**
  * Built-in MCP server (CONTRACTS §30, ADR-40): `POST /api/v1/mcp` for API
- * tokens, tools over the services of the REST routes.
+ * tokens, tools over the services of the REST routes; `aggregate_records`
+ * runs in the dashboards' widget query line.
  */
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { McpService } from './mcp.service.js';
     FieldModule,
     ViewModule,
     RecordModule,
+    DashboardModule,
   ],
   controllers: [McpController],
   providers: [McpService],
