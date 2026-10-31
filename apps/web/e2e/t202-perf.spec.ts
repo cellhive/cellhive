@@ -143,7 +143,7 @@ test.describe('T202 grid performance @perf', () => {
     };
     test.info().annotations.push({ type: 'frames', description: JSON.stringify(report) });
     process.stdout.write(`[perf] frames: ${JSON.stringify(report)}\n`);
-    const frames = phaseFrameMetrics(report);
+    const frames = phaseFrameMetrics('t202', report);
     await recordPerf(
       browser,
       { ...frames, ...settleMetric(settled) },

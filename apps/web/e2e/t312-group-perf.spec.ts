@@ -138,7 +138,7 @@ test.describe('T312 grouped grid performance @perf', () => {
     process.stdout.write(`[perf] grouped frames: ${JSON.stringify(report)}\n`);
     const metrics = {
       'first data': budgeted('t312 first data', firstData),
-      ...phaseFrameMetrics(report),
+      ...phaseFrameMetrics('t312', report),
     };
     await recordPerf(
       browser,

@@ -44,6 +44,13 @@ const timing = (product: number, baselineMax: number): Budget => ({
   'ci-runner': Math.max(product, Math.ceil((baselineMax * 1.25) / 50) * 50),
 });
 
+/** Runner bound of a `jump`/`back` phase (T900): max(10 %, max(baseline) × 1.25), rounded up to 1 %. */
+const phase = (baselineMax: number): Budget => ({
+  unit: '%',
+  product: null,
+  'ci-runner': Math.max(10, Math.ceil(baselineMax * 1.25)),
+});
+
 /**
  * The one budget table of the `@perf` specs (FRONTEND §11.1 lists the same
  * numbers); `null` = recorded only. Timings: `timing(product, slowest run of
@@ -51,8 +58,10 @@ const timing = (product: number, baselineMax: number): Budget => ({
  * only in a commit that cites its baseline runs, never automatically.
  * Frames > 32 ms: the product bound covers the whole scroll; on the runner
  * the `steady` phase is only recorded (software rendering on 2 cores,
- * 14–36 % after settling) and `jump` / `back` must stay ≤ 10 %. t422 and
- * t468 scroll once at a steady pace, so the runner records their frames only.
+ * 14–36 % after settling) and each `jump` / `back` phase gets `phase(slowest
+ * run)`, at least 10 % (t312 is above it: 12.6–21.2 % on EPYC 7763 nights).
+ * t422 and t468 scroll once at a steady pace, so the runner records their
+ * frames only.
  */
 export const PERF_BUDGETS = {
   't202 first data': timing(1_500, 1_506),
@@ -66,8 +75,10 @@ export const PERF_BUDGETS = {
   't818 dashboard data': timing(2_000, 2_567),
   'frames > 32 ms': { unit: '%', product: 5, 'ci-runner': null },
   'steady frames > 32 ms': { unit: '%', product: null, 'ci-runner': null },
-  'jump frames > 32 ms': { unit: '%', product: null, 'ci-runner': 10 },
-  'back frames > 32 ms': { unit: '%', product: null, 'ci-runner': 10 },
+  't202 jump frames > 32 ms': phase(2.1),
+  't202 back frames > 32 ms': phase(5.8),
+  't312 jump frames > 32 ms': phase(19.3),
+  't312 back frames > 32 ms': phase(21.2),
 } satisfies Record<string, Budget>;
 
 export type BudgetName = keyof typeof PERF_BUDGETS;
@@ -148,17 +159,15 @@ export function frameMetrics(stats: FrameStats): Record<string, PerfMetric> {
 }
 
 /** A scroll in three phases (T202 harness): the whole scroll, then each phase's share. */
-export function phaseFrameMetrics(phases: {
-  steady: FrameStats;
-  jump: FrameStats;
-  back: FrameStats;
-  all: FrameStats;
-}): Record<string, PerfMetric> {
+export function phaseFrameMetrics(
+  spec: 't202' | 't312',
+  phases: { steady: FrameStats; jump: FrameStats; back: FrameStats; all: FrameStats },
+): Record<string, PerfMetric> {
   return {
     ...frameMetrics(phases.all),
     'steady frames > 32 ms': budgeted('steady frames > 32 ms', phases.steady.ratio * 100),
-    'jump frames > 32 ms': budgeted('jump frames > 32 ms', phases.jump.ratio * 100),
-    'back frames > 32 ms': budgeted('back frames > 32 ms', phases.back.ratio * 100),
+    'jump frames > 32 ms': budgeted(`${spec} jump frames > 32 ms`, phases.jump.ratio * 100),
+    'back frames > 32 ms': budgeted(`${spec} back frames > 32 ms`, phases.back.ratio * 100),
   };
 }
 
