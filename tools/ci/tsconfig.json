@@ -3,6 +3,9 @@
   "compilerOptions": {
     // Sources run directly on Node 24 (type stripping), so nothing is emitted.
     "noEmit": true,
+    // Type-checks the plain-Node tools the tests import (`tools/verify-push.mjs`).
+    "allowJs": true,
+    "checkJs": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,

@@ -26,6 +26,7 @@
     "test:e2e:perf": "turbo run build --filter=@cellhive/api... --filter=@cellhive/web... --output-logs=errors-only && pnpm --filter @cellhive/web test:e2e:perf",
     "licenses:check": "node tools/ci/src/cli/check-licenses.ts",
     "dco:check": "node tools/ci/src/cli/check-dco.ts",
+    "verify:push": "node tools/verify-push.mjs",
     "db:migrate": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --filter @cellhive/api db:migrate",
     "cellhive": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --silent --filter @cellhive/api cellhive",
     "seed:demo": "turbo run build --filter=@cellhive/api^... --output-logs=errors-only && pnpm --silent --filter @cellhive/api seed:demo",
