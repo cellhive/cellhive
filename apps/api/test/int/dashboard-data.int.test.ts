@@ -314,8 +314,8 @@ describe('Widget data: one entry point with the viewer permissions (T806, P21, P
       await fx.call('u_admin', 'PATCH', `/tables/${fx.orders.id}/records`, {
         records: rows.map((record) => ({
           id: record.id,
-          // 31 Oct 2026 20:00 UTC = 1 Nov 03:00 in Vietnam.
-          fields: { ordered: '2026-10-31T20:00:00.000Z' },
+          // 31 Jan 2020 20:00 UTC = 1 Feb 03:00 in Vietnam: in the past whatever today is.
+          fields: { ordered: '2020-01-31T20:00:00.000Z' },
         })),
       }),
     );
@@ -340,8 +340,8 @@ describe('Widget data: one entry point with the viewer permissions (T806, P21, P
       .execute();
     const legacy = await dataOf('u_admin', byMonth);
     expect(legacy.status).toBe('ok');
-    // Bucketed in Vietnam: November, not October.
-    expect(JSON.stringify(legacy.rows)).toContain('2026-11-01');
+    // Bucketed in Vietnam: February, not January.
+    expect(JSON.stringify(legacy.rows)).toContain('2020-02-01');
     expect((await dataOf('u_admin', compare)).status).toBe('empty');
   });
 
