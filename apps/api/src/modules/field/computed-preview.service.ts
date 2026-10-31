@@ -10,6 +10,7 @@ import {
   findCycle,
   formulaCycleProblem,
   GroupMembersRepository,
+  isAiField,
   isComputedRow,
   loadBaseSchemaRows,
   prepareComputedDefinition,
@@ -152,7 +153,9 @@ export async function prepareLikeSave(
     ),
     ...edgesOf(editing.id, prepared.analysis.dependencies),
   ];
-  const active = new Set<string>(rows.fields.filter(isComputedRow).map((row) => row.id));
+  const active = new Set<string>(
+    rows.fields.filter((row) => isComputedRow(row) || isAiField(row)).map((row) => row.id),
+  );
   const cycle = findCycle(editing.id, edges, active);
   if (cycle !== null) throw formulaCycleProblem(cycle, rows, context.readable);
   return prepared;

@@ -1,3 +1,5 @@
+import { isAiField } from '@cellhive/server-core';
+
 import type { Id } from '@cellhive/contracts';
 import type { FieldMeta, SchemaMeta, TableMeta } from '@cellhive/permissions';
 import type {
@@ -43,7 +45,8 @@ export class MetaBaseSchemaLoader implements BaseSchemaMetaLoader {
       byTable.get(field.table_id)?.push({
         id: field.id,
         type: field.type,
-        ...(field.compute_mode === null ? {} : { computed: true }),
+        // AI fields (T910) are written by the AI worker only: read at most, like formulas.
+        ...(field.compute_mode === null && !isAiField(field) ? {} : { computed: true }),
       });
     }
     return {

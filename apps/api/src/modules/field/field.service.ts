@@ -1,11 +1,18 @@
 import { isId } from '@cellhive/contracts';
 import {
+  AiGenerationQueueRepository,
+  aiFieldLocked,
+  aiOptionsForReader,
+  aiOptionsOf,
+  AiSettingsRepository,
   AutomationsRepository,
   buttonAutomationOf,
   FIELD_RESTORE_WINDOW_MS,
   FieldsRepository,
+  isAiField,
   isComputedRow,
   loadBaseSchemaRows,
+  requireAi,
   SchemaService,
   strictComputedPermissionsOf,
   TablesRepository,
@@ -38,6 +45,7 @@ import { FieldConversionService } from './field-conversion.service.js';
 import type { Principal } from '../../common/auth/principal.js';
 import type { RequestMeta } from '../../common/auth/request-meta.js';
 import type {
+  AiFieldStateDto,
   ButtonFieldSummary,
   CreateFieldRequest,
   DeletePreview,
@@ -66,7 +74,28 @@ export class FieldService {
     @Inject(TablesRepository) private readonly tables: TablesRepository,
     @Inject(DB) private readonly db: Db,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    @Inject(AiSettingsRepository) private readonly aiSettings: AiSettingsRepository,
   ) {}
+
+  /**
+   * AI fields (T910): giving `options.ai` needs AI on with record data
+   * allowed (`422 AI_NOT_CONFIGURED` / `AI_RECORD_DATA_DISABLED`), after the
+   * `404`/`403` of the route; removing it (`null`) does not.
+   */
+  private async requireAiFor(base: BaseAccess, options: unknown): Promise<void> {
+    if (typeof options !== 'object' || options === null || !('ai' in options)) return;
+    if (options.ai === null || options.ai === undefined) return;
+    requireAi(await this.aiSettings.find(base.org.scope), { recordData: true });
+  }
+
+  /** Queue counts of the AI fields among `fields` (T910). */
+  private async aiStatesOf(
+    base: BaseAccess,
+    fields: readonly FieldRow[],
+  ): Promise<Map<Id<'fld'>, AiFieldStateDto>> {
+    const ids = fields.filter(isAiField).map((field) => field.id);
+    return new AiGenerationQueueRepository(this.db).statesOf(base.org.scope, ids);
+  }
 
   /**
    * What the caller may reference in a formula/lookup (SPEC §9.5: tables
@@ -87,7 +116,7 @@ export class FieldService {
     base: BaseAccess,
     fields: readonly FieldRow[],
   ): Promise<{ rows: BaseSchemaRows; inactive: ErrorRefRows } | undefined> {
-    if (!fields.some(isComputedRow)) return undefined;
+    if (!fields.some((field) => isComputedRow(field) || isAiField(field))) return undefined;
     const rows = await loadBaseSchemaRows(this.db, base.org.scope, base.base.id);
     const inactive = await loadErrorRefs(base.org.scope, rows, fields, {
       fields: this.fields,
@@ -100,7 +129,22 @@ export class FieldService {
     base: BaseAccess,
     loaded: { rows: BaseSchemaRows; inactive: ErrorRefRows } | undefined,
     field: FieldRow,
+    aiStates?: ReadonlyMap<Id<'fld'>, AiFieldStateDto>,
   ) {
+    const ai = aiOptionsOf(field);
+    if (loaded !== undefined && ai !== null) {
+      // T910: the prompt in names for this reader; always strict.
+      const readable = readabilityOf(base.access);
+      const state = aiStates?.get(field.id);
+      return {
+        options: {
+          ...(field.options as Record<string, unknown>),
+          ai: aiOptionsForReader(ai, loaded.rows, field.table_id, readable),
+        },
+        locked: aiFieldLocked(field, (id) => readable.field(field.table_id, id)),
+        ...(state === undefined ? {} : { ai_state: state }),
+      };
+    }
     return loaded === undefined
       ? undefined
       : computedDtoPart(
@@ -167,12 +211,13 @@ export class FieldService {
     const deletedTargets = await this.deletedLinkTargets(base.org.scope, rows);
     const schemaRows = await this.rowsFor(base, rows);
     const buttons = await this.buttonsOf(base.org.scope, rows);
+    const aiStates = await this.aiStatesOf(base, live);
     const dto = (field: FieldRow) =>
       fieldDtoOf(
         field,
         deletedTargets,
         states.get(field.id) ?? null,
-        this.computedOf(base, schemaRows, field),
+        this.computedOf(base, schemaRows, field, aiStates),
         buttons.get(field.id),
       );
     if (!query.include_deleted) return pageOf(live, query, dto);
@@ -196,6 +241,8 @@ export class FieldService {
   ): Promise<FieldDto> {
     const { base } = await this.schemaAccess.requireTable(principal, tableId, 'manage');
     const link = input.type === 'link' ? this.newLinkContext(base, input.options) : undefined;
+    if (input.type === 'text' || input.type === 'select')
+      await this.requireAiFor(base, input.options);
     const field = await this.schema.addField(
       base.org.scope,
       tableId,
@@ -210,6 +257,9 @@ export class FieldService {
         ...(input.type === 'formula' || input.type === 'lookup'
           ? { computed: this.computedContextOf(base) }
           : {}),
+        ...(input.type === 'text' || input.type === 'select'
+          ? { ai: { readable: readabilityOf(base.access) } }
+          : {}),
       },
       mutationContextOf(meta, principal.userId),
     );
@@ -217,7 +267,12 @@ export class FieldService {
       field,
       undefined,
       null,
-      this.computedOf(base, await this.rowsFor(base, [field]), field),
+      this.computedOf(
+        base,
+        await this.rowsFor(base, [field]),
+        field,
+        await this.aiStatesOf(base, [field]),
+      ),
       (await this.buttonsOf(base.org.scope, [field])).get(field.id),
     );
   }
@@ -234,6 +289,8 @@ export class FieldService {
     meta: RequestMeta,
   ): Promise<UpdateFieldResponse> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
+    if (field.type === 'text' || field.type === 'select')
+      await this.requireAiFor(base, input.options);
     const link =
       field.type === 'link' && input.options !== undefined
         ? this.linkContextOf(base, linkTableOf(field.options))
@@ -254,6 +311,9 @@ export class FieldService {
         ...(input.position === undefined ? {} : { position: input.position }),
         ...(link === undefined ? {} : { link }),
         ...(isComputedRow(field) ? { computed: this.computedContextOf(base) } : {}),
+        ...(field.type === 'text' || field.type === 'select'
+          ? { ai: { readable: readabilityOf(base.access) } }
+          : {}),
       },
       mutationContextOf(meta, principal.userId),
     );
@@ -268,7 +328,12 @@ export class FieldService {
       field,
       await this.deletedLinkTargets(scope, [field]),
       states.get(field.id) ?? null,
-      this.computedOf(base, await this.rowsFor(base, [field]), field),
+      this.computedOf(
+        base,
+        await this.rowsFor(base, [field]),
+        field,
+        await this.aiStatesOf(base, [field]),
+      ),
       (await this.buttonsOf(scope, [field])).get(field.id),
     );
   }

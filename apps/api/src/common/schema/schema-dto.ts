@@ -37,11 +37,12 @@ export function fieldDtoOf(
   conversion?: FieldConversionState | null,
   /**
    * Formula/lookup fields (T456): options as the reader may see them and the
-   * computed state, from `computedDtoPart` of the field module.
+   * computed state, from `computedDtoPart` of the field module. AI fields
+   * (T910): options with the prompt in names, `locked`, `ai_state`.
    */
   computed?: Pick<
     FieldDto,
-    'result_type' | 'compute_mode' | 'compute_state' | 'compute_error' | 'locked'
+    'result_type' | 'compute_mode' | 'compute_state' | 'compute_error' | 'locked' | 'ai_state'
   > & {
     readonly options: FieldDto['options'];
   },

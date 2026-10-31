@@ -127,6 +127,7 @@ export const schemaChangedDelivery: DeliveryStrategy<SchemaChangedEnvelope> = {
           entity: envelope.entity,
           entity_id: envelope.entity_id,
           action: envelope.action,
+          ...(envelope.ai_state === undefined ? {} : { ai_state: envelope.ai_state }),
         },
       }));
   },

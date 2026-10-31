@@ -31,6 +31,7 @@ import {
   DashboardsRepository,
   FieldsRepository,
   GroupsRepository,
+  isAiField,
   OrgMembersRepository,
   TablesRepository,
   ViewsRepository,
@@ -507,7 +508,8 @@ export class RoleService {
         name: field.name,
         type: field.type as RoleFieldMeta['type'],
         options: field.options,
-        ...(field.compute_mode === null ? {} : { computed: true }),
+        // AI fields (T910) are written by the AI worker only: read at most, like formulas.
+        ...(field.compute_mode === null && !isAiField(field) ? {} : { computed: true }),
       });
     }
     return {

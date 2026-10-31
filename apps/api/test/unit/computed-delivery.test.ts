@@ -406,3 +406,57 @@ describe('computedRecomputingDelivery (T459)', () => {
     expect(to(out, hidden)).toEqual([]);
   });
 });
+
+describe('RecordDeliveryStrategy with AI fields (T910)', () => {
+  const summary = id('fld', 20);
+  /** An AI field of Customers whose prompt reads `name` and `phone`. */
+  const aiEnvelope = (to: string): RecordChangesEnvelope => ({
+    v: 1,
+    type: 'record.changes',
+    organization_id: ORG,
+    base_id: BSE,
+    table_id: CUSTOMERS,
+    actor_id: null,
+    fields: [
+      {
+        id: summary,
+        type: 'text',
+        options: {
+          ai: {
+            task: 'summarize',
+            prompt: `{{ [${F.name}] }} {{ [${F.phone}] }}`,
+            instructions: null,
+            auto_update: true,
+            max_output_tokens: 300,
+          },
+        },
+      },
+    ],
+    changes: [
+      {
+        op: 'updated',
+        record_id: C1,
+        version: 4,
+        event_id: id('evt', 1),
+        changed: [summary],
+        before: { [summary]: null },
+        after: { [summary]: to },
+        values: { [summary]: to },
+      },
+    ],
+  });
+
+  it('always strict: a subscriber missing a field of the prompt gets nothing, the others the value', async () => {
+    const fields: Perms = { [F.name]: 'edit', [F.phone]: 'edit', [summary]: 'read' };
+    const reader = sub(U.admin, access({ [CUSTOMERS]: { fields, rule: null } }));
+    const noPhone = sub(
+      U.reader,
+      access({ [CUSTOMERS]: { fields: { [F.name]: 'edit', [summary]: 'read' }, rule: null } }),
+    );
+    const out = await strategy.deliver(aiEnvelope('A short summary'), [reader, noPhone]);
+    expect(to(out, reader)).toMatchObject([
+      { type: 'record.updated', fields: { [summary]: 'A short summary' } },
+    ]);
+    expect(to(out, noPhone)).toEqual([]);
+  });
+});

@@ -8,6 +8,8 @@ import { AiAskController } from './ai-ask.controller.js';
 import { AiAskService } from './ai-ask.service.js';
 import { AiAutomationController } from './ai-automation.controller.js';
 import { AiAutomationService } from './ai-automation.service.js';
+import { AiFieldController } from './ai-field.controller.js';
+import { AiFieldService } from './ai-field.service.js';
 import { AiFormulaController } from './ai-formula.controller.js';
 import { AiFormulaService } from './ai-formula.service.js';
 import { AiSettingsController } from './ai-settings.controller.js';
@@ -22,8 +24,21 @@ import { AiSettingsService } from './ai-settings.service.js';
 @Module({
   // Q&A (T909) runs its widget in the dashboards' query line.
   imports: [AutomationModule, DashboardModule],
-  controllers: [AiSettingsController, AiFormulaController, AiAutomationController, AiAskController],
-  providers: [AiAccess, AiSettingsService, AiFormulaService, AiAutomationService, AiAskService],
+  controllers: [
+    AiSettingsController,
+    AiFormulaController,
+    AiAutomationController,
+    AiAskController,
+    AiFieldController,
+  ],
+  providers: [
+    AiAccess,
+    AiSettingsService,
+    AiFormulaService,
+    AiAutomationService,
+    AiAskService,
+    AiFieldService,
+  ],
   exports: [AiAccess],
 })
 export class AiModule {}

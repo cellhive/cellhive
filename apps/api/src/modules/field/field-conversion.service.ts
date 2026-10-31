@@ -48,6 +48,7 @@ import {
   findCycle,
   formulaCycleProblem,
   GroupMembersRepository,
+  isAiField,
   isComputedRow,
   loadBaseSchemaRows,
   MemberDirectoryRepository,
@@ -790,7 +791,9 @@ export class FieldConversionService {
       ),
       ...edgesOf(field.id, prepared.analysis.dependencies),
     ];
-    const active = new Set<string>(rows.fields.filter(isComputedRow).map((row) => row.id));
+    const active = new Set<string>(
+      rows.fields.filter((row) => isComputedRow(row) || isAiField(row)).map((row) => row.id),
+    );
     active.add(field.id);
     const cycle = findCycle(field.id, edges, active);
     if (cycle !== null) throw formulaCycleProblem(cycle, rows, readable);

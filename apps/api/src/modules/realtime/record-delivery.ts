@@ -19,6 +19,7 @@ import {
   type FilterNode,
   type FilterTableMeta,
 } from '@cellhive/filter-dsl';
+import { aiSourcesOf } from '@cellhive/server-core';
 
 import {
   colorOfImage,
@@ -342,9 +343,20 @@ interface ComputedClasses {
 function computedClasses(
   envelope: RecordChangesEnvelope,
 ): (base: BaseAccess) => ComputedClasses | null {
-  const computed = envelope.fields.flatMap((field) =>
-    field.computed === undefined ? [] : [{ id: field.id, meta: field.computed }],
-  );
+  const computed = envelope.fields.flatMap((field) => {
+    if (field.computed !== undefined) return [{ id: field.id, meta: field.computed }];
+    // AI fields (T910) are always strict: locked for a subscriber missing a field
+    // of their prompt (fields of the same record only), whatever the base setting.
+    const sources = aiSourcesOf(field);
+    if (sources.length === 0) return [];
+    const meta: ComputedMeta = {
+      tables: [],
+      cross_fields: [],
+      same_row_fields: sources.map((id) => ({ table_id: envelope.table_id, field_id: id })),
+      strict: true,
+    };
+    return [{ id: field.id, meta }];
+  });
   if (computed.length === 0) return () => null;
   const cache = new WeakMap<BaseAccess, ComputedClasses>();
   return (base) => {

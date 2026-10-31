@@ -11,6 +11,7 @@ import {
   buildProblem,
   causationRejectedCounts,
   httpDeliveriesRescuedCount,
+  measureAiGenerationQueue,
   measureHttpDeliveryBacklog,
   observeAiDurations,
   secretHostBlockedCounts,
@@ -115,6 +116,21 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
           this.set(backlog.oldestPendingSeconds);
         } catch (err: unknown) {
           backlogLogger.warn({ err }, 'http delivery backlog not measured');
+        }
+      },
+    });
+    // AI field generation queue (T910, research S8 §4.9), instance-wide, read when scraped.
+    new Gauge({
+      name: 'ai_generation_queue',
+      help: 'Rows of the AI field generation queue, by status',
+      labelNames: ['status'],
+      registers: [this.registry],
+      async collect() {
+        try {
+          const counts = await measureAiGenerationQueue(db);
+          for (const [status, count] of Object.entries(counts)) this.set({ status }, count);
+        } catch (err: unknown) {
+          backlogLogger.warn({ err }, 'ai generation queue not measured');
         }
       },
     });
