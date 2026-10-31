@@ -121,7 +121,12 @@ export {
   type WidgetMetricSpec,
   type WidgetQuery,
 } from './dashboard-aggregate/widget-query.js';
-export { widgetConfigOfPlan, type PlanByNameResult } from './dashboard-aggregate/plan-by-name.js';
+export {
+  planFieldsOf,
+  widgetConfigOfPlan,
+  type PlanByNameResult,
+  type PlanField,
+} from './dashboard-aggregate/plan-by-name.js';
 export {
   WIDGET_QUERY_BUILDER_VERSION,
   WidgetResultCache,

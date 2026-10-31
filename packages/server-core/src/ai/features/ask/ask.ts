@@ -20,13 +20,12 @@ import {
 import { TUPLE_OPERATORS } from '@cellhive/filter-dsl';
 import { z } from 'zod';
 
-import { isComputedRow } from '../../../computed/definition/definition.js';
 import {
   widgetFieldKindOf,
   type WidgetFieldKind,
   type WidgetFieldMeta,
 } from '../../../dashboards/widget-config.js';
-import { lockedComputedFieldIds } from '../../../records/computed/read/references.js';
+import { planFieldsOf } from '../../../records/dashboard-aggregate/plan-by-name.js';
 import { UNTRUSTED_DATA_INSTRUCTIONS, untrustedBlock } from '../../untrusted.js';
 import {
   FORMULA_DIGEST_MAX_DESCRIPTION,
@@ -49,9 +48,6 @@ import type { AiOutputProblem } from '../../repair.js';
  * model, and the aggregated rows of the narrative. Pure: the API route runs
  * the widget through `RecordQueryService.widgetData` with the asker's access.
  */
-
-/** Field types never in the digest: no value to count, group or filter. */
-const LEFT_OUT: ReadonlySet<string> = new Set(['button', 'parent']);
 
 export interface AskDigestField {
   readonly meta: WidgetFieldMeta;
@@ -83,13 +79,11 @@ function optionNames(options: unknown): string[] {
 }
 
 /**
- * The digest of a question on `tableId` (BACKLOG T909): the fields the
- * asker reads that the widget engine reads for them too — no locked
- * computed field (T457), no button or parent, a link only when they read
- * the linked table and its primary field (P67) — so a plan built from it
- * never ends in `no_permission`, and a hidden field is a field that does
- * not exist (P78). Names, types, option names (≤ 50), descriptions; never
- * an id or a value.
+ * The digest of a question on `tableId` (BACKLOG T909): the fields a plan
+ * may name for the asker (`planFieldsOf`: a plan built from them never ends
+ * in `no_permission`, a hidden field is a field that does not exist — P78)
+ * with names, types, option names (≤ 50), descriptions; never an id or a
+ * value.
  */
 export function askDigest(
   rows: BaseSchemaRows,
@@ -101,58 +95,25 @@ export function askDigest(
   if (table === undefined || !readable.table(tableId)) {
     throw new TypeError('The asked table must be readable');
   }
-  const locked = lockedComputedFieldIds(rows, tableId, readable, strict);
-  const titleTableOf = (targetId: unknown): string | null => {
-    if (typeof targetId !== 'string') return null;
-    const target = rows.tables.find((item) => item.id === targetId);
-    const primary = rows.fields.find((field) => field.table_id === targetId && field.is_primary);
-    return target !== undefined &&
-      primary !== undefined &&
-      readable.table(target.id) &&
-      readable.field(target.id, primary.id)
-      ? target.name
-      : null;
-  };
-  const fields = rows.fields
-    .filter(
-      (field) =>
-        field.table_id === tableId &&
-        !LEFT_OUT.has(field.type) &&
-        readable.field(tableId, field.id) &&
-        !(isComputedRow(field) && locked.has(field.id)),
-    )
-    .flatMap((field): AskDigestField[] => {
-      const linkTable =
-        field.type === 'link'
-          ? titleTableOf(isRecord(field.options) ? field.options['link_table'] : null)
-          : undefined;
-      if (linkTable === null) return [];
-      const meta: WidgetFieldMeta = {
-        id: field.id,
-        name: field.name,
-        type: field.type,
-        options: field.options,
-        result_type: field.result_type,
+  const fields = planFieldsOf(rows, tableId, readable, strict)
+    .slice(0, FORMULA_DIGEST_MAX_FIELDS)
+    .map(({ row, meta, linkTable }): AskDigestField => {
+      const options = row.type === 'select' ? optionNames(row.options) : undefined;
+      const description = row.description?.trim();
+      return {
+        meta,
+        kind: widgetFieldKindOf(meta),
+        ...(options === undefined ? {} : { options }),
+        ...(linkTable === null ? {} : { linkTable }),
+        ...(description === undefined || description === ''
+          ? {}
+          : {
+              description: Array.from(description)
+                .slice(0, FORMULA_DIGEST_MAX_DESCRIPTION)
+                .join(''),
+            }),
       };
-      const options = field.type === 'select' ? optionNames(field.options) : undefined;
-      const description = field.description?.trim();
-      return [
-        {
-          meta,
-          kind: widgetFieldKindOf(meta),
-          ...(options === undefined ? {} : { options }),
-          ...(linkTable === undefined ? {} : { linkTable }),
-          ...(description === undefined || description === ''
-            ? {}
-            : {
-                description: Array.from(description)
-                  .slice(0, FORMULA_DIGEST_MAX_DESCRIPTION)
-                  .join(''),
-              }),
-        },
-      ];
-    })
-    .slice(0, FORMULA_DIGEST_MAX_FIELDS);
+    });
   return { table: { id: table.id, name: table.name }, fields };
 }
 

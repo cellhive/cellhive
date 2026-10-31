@@ -1,3 +1,4 @@
+import { isComputedRow } from '../../computed/definition/definition.js';
 import {
   buildWidgetConfig,
   widgetFieldKindOf,
@@ -5,10 +6,14 @@ import {
   type WidgetTableMeta,
 } from '../../dashboards/widget-config.js';
 import { AppError } from '../../errors/app-error.js';
+import { lockedComputedFieldIds } from '../computed/read/references.js';
 
+import type { BaseSchemaRows, SchemaReadability } from '../../computed/definition/schema-rows.js';
+import type { FieldRow } from '../../db/schema.js';
 import type {
   AggregatePlan,
   AggregatePlanType,
+  Id,
   ProblemErrorItem,
   WidgetConfig,
 } from '@cellhive/contracts';
@@ -22,10 +27,73 @@ import type {
  * by AI Q&A and the MCP tool `aggregate_records` — nothing here knows
  * either.
  *
- * `table.fields` are the fields the caller reads and may use: a hidden
- * field is a field that does not exist (same problem, same message), so a
- * plan can never tell one from the other.
+ * `table.fields` are the fields a plan may name for the caller
+ * ({@link planFieldsOf}): a hidden field is a field that does not exist
+ * (same problem, same message), so a plan can never tell one from the other.
  */
+
+/** Field types a plan never names: no value to count, group or filter. */
+const NOT_PLANNED: ReadonlySet<string> = new Set(['button', 'parent']);
+
+/** A field a plan may name; `linkTable`: the linked table (links only). */
+export interface PlanField {
+  readonly row: FieldRow;
+  readonly meta: WidgetFieldMeta;
+  readonly linkTable: string | null;
+}
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * The fields of `tableId` a plan may name for one reader (`readable`, the
+ * base's `strict_computed_permissions`): those they read that the widget
+ * engine reads for them too — no locked computed field (T457), no button or
+ * parent, a link only when they read the linked table and its primary field
+ * (P67). A plan on these never ends in `no_permission`; any other field,
+ * hidden or not, is a field that does not exist.
+ */
+export function planFieldsOf(
+  rows: BaseSchemaRows,
+  tableId: Id<'tbl'>,
+  readable: SchemaReadability,
+  strict: boolean,
+): PlanField[] {
+  const locked = lockedComputedFieldIds(rows, tableId, readable, strict);
+  const titleTableOf = (targetId: unknown): string | null => {
+    const target = rows.tables.find((item) => item.id === targetId);
+    const primary = rows.fields.find((field) => field.table_id === targetId && field.is_primary);
+    return target !== undefined &&
+      primary !== undefined &&
+      readable.table(target.id) &&
+      readable.field(target.id, primary.id)
+      ? target.name
+      : null;
+  };
+  return rows.fields.flatMap((row): PlanField[] => {
+    if (
+      row.table_id !== tableId ||
+      NOT_PLANNED.has(row.type) ||
+      !readable.field(tableId, row.id) ||
+      (isComputedRow(row) && locked.has(row.id))
+    ) {
+      return [];
+    }
+    const linkTable =
+      row.type === 'link'
+        ? titleTableOf(isRecord(row.options) ? row.options['link_table'] : null)
+        : null;
+    if (row.type === 'link' && linkTable === null) return [];
+    const meta = {
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      options: row.options,
+      result_type: row.result_type,
+    };
+    return [{ row, meta, linkTable }];
+  });
+}
 
 export type PlanByNameResult =
   | { readonly ok: true; readonly type: AggregatePlanType; readonly config: WidgetConfig }
