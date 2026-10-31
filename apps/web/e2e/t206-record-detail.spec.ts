@@ -2,7 +2,13 @@ import { type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 import { expect, test, WORKER_ORG } from './fixtures';
 import { DEMO_PASSWORD } from './seed';
-import { apiSignIn, collectCspViolations, expectNoSeriousA11yViolations, ok } from './support';
+import {
+  animationsSettled,
+  apiSignIn,
+  collectCspViolations,
+  expectNoSeriousA11yViolations,
+  ok,
+} from './support';
 
 /**
  * T206: the record detail panel and its history on the demo base
@@ -305,6 +311,8 @@ test.describe.serial('T206 record detail and history', () => {
       await card.click();
       const panel = phone.page.getByRole('dialog');
       await expect(panel).toBeVisible();
+      // The full-screen panel slides in (`animate-sheet-in`); measure where it lands.
+      await animationsSettled(phone.page);
       const box = await panel.boundingBox();
       expect(box).toEqual({ x: 0, y: 0, width: viewport.width, height: viewport.height });
       await expect(panel.getByRole('tab', { name: 'Details' })).toHaveAttribute(
