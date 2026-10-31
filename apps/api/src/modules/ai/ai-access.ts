@@ -6,6 +6,7 @@ import {
   type Id,
 } from '@cellhive/contracts';
 import {
+  AI_REQUEST_BUDGET_MS,
   AiSettingsRepository,
   AiUsageLedger,
   AppError,
@@ -85,11 +86,13 @@ export interface AiCall {
  * and one `ai.requested` audit entry, a log line (provider host, never the
  * URL, prompt or key) and the metrics close the request.
  *
- * `now` is a plain field so tests can move the quota day.
+ * `now` and `budgetMs` are plain fields so tests can move the quota day
+ * and shorten the time budget.
  */
 @Injectable()
 export class AiAccess {
   now: () => Date = () => new Date();
+  budgetMs = AI_REQUEST_BUDGET_MS;
 
   /** The client of the saved settings (key from `meta.secrets`). */
   readonly llm: LlmClient;
@@ -174,7 +177,7 @@ export class AiAccess {
         return await work({
           organizationId: org.organizationId,
           settings: provider,
-          deadline: createDeadline(),
+          deadline: createDeadline(this.budgetMs),
           llm,
           onUsage: async (call) => {
             usage = {
@@ -190,6 +193,9 @@ export class AiAccess {
         });
       } catch (error) {
         status = error instanceof AppError ? error.code : 'INTERNAL';
+        // `AI_INVALID_OUTPUT` carries the calls made (1 + repair rounds).
+        const attempts = error instanceof AppError ? error.params?.['attempts'] : undefined;
+        if (typeof attempts === 'number') report = { attempts, ...report };
         throw error;
       } finally {
         await this.finish(principal, org, state, provider, options, {

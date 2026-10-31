@@ -15,8 +15,14 @@ import {
   prepareComputedDefinition,
   RecordQueryService,
   type AppConfig,
+  type BaseSchemaRows,
+  type ComputedDefinitionContext,
   type ComputedDefinitionInput,
   type Db,
+  type FieldRow,
+  type OrgScope,
+  type PreparedComputedDefinition,
+  type SchemaReadability,
 } from '@cellhive/server-core';
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -64,19 +70,7 @@ export class ComputedPreviewService {
     const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
     const readable = readabilityOf(base.access);
     const timeZone = organizationTimeZone(base, this.config.defaults.timezone);
-    const editing =
-      body.field_id === undefined
-        ? undefined
-        : rows.fields.find((field) => field.id === body.field_id);
-    if (
-      body.field_id !== undefined &&
-      (editing === undefined ||
-        editing.table_id !== table.id ||
-        !isComputedRow(editing) ||
-        !readable.field(table.id, editing.id))
-    ) {
-      throw notFound();
-    }
+    const editing = editedComputedField(rows, table.id, body.field_id ?? null, readable);
     const options = isRecord(body.options) ? body.options : {};
     const input: ComputedDefinitionInput = {
       type: body.type,
@@ -84,18 +78,13 @@ export class ComputedPreviewService {
       expressionForm: 'display',
       style: Object.hasOwn(options, 'style') ? { mode: 'given' } : { mode: 'default' },
     };
-    const prepared = prepareComputedDefinition(input, { rows, tableId, readable, timeZone });
-    if (editing !== undefined) {
-      const edges = [
-        ...(await new FieldDependenciesRepository(this.db).listByBase(scope, base.base.id)).filter(
-          (edge) => edge.fieldId !== editing.id,
-        ),
-        ...edgesOf(editing.id, prepared.analysis.dependencies),
-      ];
-      const active = new Set<string>(rows.fields.filter(isComputedRow).map((row) => row.id));
-      const cycle = findCycle(editing.id, edges, active);
-      if (cycle !== null) throw formulaCycleProblem(cycle, rows, readable);
-    }
+    const prepared = await prepareLikeSave(
+      this.db,
+      scope,
+      input,
+      { rows, tableId, readable, timeZone },
+      editing,
+    );
     const access = await recordAccessContextOf(
       { groupMembers: this.groupMembers, config: this.config },
       principal.user,
@@ -116,4 +105,55 @@ export class ComputedPreviewService {
       records: records.map((record) => ({ id: record.id, value: record.value })),
     };
   }
+}
+
+/**
+ * The computed field being edited (`field_id` of a preview or an AI
+ * formula): a formula/lookup field of `tableId` the caller reads, else
+ * `404`; `undefined` without one.
+ */
+export function editedComputedField(
+  rows: BaseSchemaRows,
+  tableId: Id<'tbl'>,
+  fieldId: Id<'fld'> | null,
+  readable: SchemaReadability,
+): FieldRow | undefined {
+  if (fieldId === null) return undefined;
+  const editing = rows.fields.find((field) => field.id === fieldId);
+  if (
+    editing === undefined ||
+    editing.table_id !== tableId ||
+    !isComputedRow(editing) ||
+    !readable.field(tableId, editing.id)
+  ) {
+    throw notFound();
+  }
+  return editing;
+}
+
+/**
+ * A definition checked like a save (`422` with positions): the formula
+ * engine against what the caller reads, then — for a field being edited —
+ * the cycles through it with the base's other dependencies.
+ */
+export async function prepareLikeSave(
+  db: Db,
+  scope: OrgScope,
+  input: ComputedDefinitionInput,
+  context: ComputedDefinitionContext,
+  editing: FieldRow | undefined,
+): Promise<PreparedComputedDefinition> {
+  const prepared = prepareComputedDefinition(input, context);
+  if (editing === undefined) return prepared;
+  const { rows } = context;
+  const edges = [
+    ...(await new FieldDependenciesRepository(db).listByBase(scope, rows.baseId)).filter(
+      (edge) => edge.fieldId !== editing.id,
+    ),
+    ...edgesOf(editing.id, prepared.analysis.dependencies),
+  ];
+  const active = new Set<string>(rows.fields.filter(isComputedRow).map((row) => row.id));
+  const cycle = findCycle(editing.id, edges, active);
+  if (cycle !== null) throw formulaCycleProblem(cycle, rows, context.readable);
+  return prepared;
 }
