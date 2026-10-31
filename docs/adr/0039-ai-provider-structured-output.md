@@ -1,6 +1,6 @@
 # ADR-0039: AI — một cửa Chat Completions, thang đầu ra có cấu trúc, đầu ra theo tên, dữ liệu tối thiểu, field AI chạy nền
 
-- Trạng thái: Proposed (viết ở BACKLOG T905; Accepted khi T905 merge)
+- Trạng thái: Accepted (viết ở BACKLOG T905, có hiệu lực khi T905 merge)
 - Ngày: 2026-10-31
 - Thay thế / sửa: SPEC §12 (viết lại), §2 (dòng ADR-39), §22 (dòng S8); cách hiểu ADR-12; CONTRACTS §29 (mới, §29.7 ở T905), §6 (`AI_INVALID_OUTPUT`, `AI_PROVIDER_ERROR`, `AI_TIMEOUT`). Nguồn: BACKLOG "Quyết định S8" #2–#5, #8–#18, #21–#23; `docs/reviews/S8-research.md` §2.2–§2.8, §4.
 

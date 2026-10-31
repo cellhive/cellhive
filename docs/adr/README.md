@@ -31,7 +31,7 @@ Dòng "Nguồn:" nhắc `docs/reviews/…` hoặc BACKLOG trỏ tới ghi chú l
 | [0036](0036-api-tokens-oidc-secret-hosts.md) | API token cá nhân có scope (HTTP + WS), OIDC generic cấp instance, secret HTTP gắn host được phép, cứu dòng giao HTTP | Accepted | 2026-10-19 |
 | [0037](0037-rename-to-cellhive.md) | Đổi tên OpenBase thành Cellhive; định danh nội bộ trung lập thương hiệu; sửa migration tại chỗ một lần | Accepted | 2026-10-24 |
 | [0038](0038-dashboards-widget-query-share-embed.md) | Dashboard: layout trên widget, truy vấn widget một cửa theo quyền người xem, cache theo dấu vân tay quyền, chia sẻ và nhúng | Accepted | 2026-10-25 |
-| [0039](0039-ai-provider-structured-output.md) | AI: một cửa Chat Completions, thang đầu ra có cấu trúc, đầu ra theo tên, dữ liệu tối thiểu, field AI chạy nền | Proposed | 2026-10-31 |
+| [0039](0039-ai-provider-structured-output.md) | AI: một cửa Chat Completions, thang đầu ra có cấu trúc, đầu ra theo tên, dữ liệu tối thiểu, field AI chạy nền | Accepted | 2026-10-31 |
 
 ## Mẫu
 
