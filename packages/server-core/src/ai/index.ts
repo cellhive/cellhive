@@ -60,6 +60,23 @@ export {
   type AiRequestedEntry,
 } from './audit/ai-requested.js';
 export {
+  AUTOMATION_DIGEST_MAX_TABLES,
+  AUTOMATION_DRAFT_ACTION_TYPES,
+  AUTOMATION_DRAFT_TRIGGER_TYPES,
+  automationDigestJson,
+  automationDigestTableIds,
+  automationDraftDigest,
+  automationDraftMessages,
+  automationDraftSchema,
+  automationDraftTypes,
+  automationValidationProblems,
+  compileAutomationDraft,
+  type AutomationDraft,
+  type AutomationDraftDigest,
+  type AutomationDraftSources,
+  type AutomationDraftView,
+} from './features/automation/automation.js';
+export {
   aiFormulaAnswerSchema,
   FORMULA_DIGEST_MAX_DESCRIPTION,
   FORMULA_DIGEST_MAX_FIELDS,
