@@ -662,6 +662,17 @@ describe('dashboard widget queries (T806, P21)', () => {
         audit(),
       )
     ).records.map((record) => record.id);
+    // T904: list values no case may count — a linked customer in the trash
+    // (linked from c), a record in the trash, `'{}'` next to `NULL` below.
+    const [delta] = (
+      await mutation.create(
+        scope,
+        fx.customers.id,
+        admin(),
+        { records: [{ fields: { name: 'Delta' } }] },
+        audit(),
+      )
+    ).records.map((record) => record.id);
     await mutation.create(
       scope,
       items.id,
@@ -680,12 +691,57 @@ describe('dashboard widget queries (T806, P21)', () => {
             status: item.status,
             tags: [...item.tags],
             people: item.people.map((key) => ({ id: fx.users[key].id })),
-            customer: item.customer.map((index) => customers[index]),
+            customer: [
+              ...item.customer.map((index) => customers[index]),
+              ...(item.title === 'c' ? [delta] : []),
+            ],
           },
         })),
       },
       audit(),
     );
+    const [trashed] = (
+      await mutation.create(
+        scope,
+        items.id,
+        admin(),
+        {
+          typecast: true,
+          records: [
+            {
+              fields: {
+                title: 'trashed',
+                region: 'north',
+                amount: 1,
+                qty: 1,
+                due: '2026-09-23',
+                at: '2026-09-10T00:00:00.000Z',
+                done: true,
+                status: 'B',
+                tags: ['X', 'Y', 'Z'],
+                people: [{ id: fx.users.u_sales2.id }, { id: fx.users.u_sales1.id }],
+                customer: [customers[1], delta],
+              },
+            },
+          ],
+        },
+        audit(),
+      )
+    ).records.map((record) => record.id) as [Id<'rec'>];
+    await mutation.delete(scope, items.id, admin(), { ids: [trashed] }, audit());
+    await mutation.delete(scope, fx.customers.id, admin(), { ids: [delta as Id<'rec'>] }, audit());
+    // TEST FIXTURE: empty lists stored as `'{}'` (the API stores `NULL`, as d).
+    const column = (name: string) => pg.escapeIdentifier(fld[name]?.db_column_name as string);
+    for (const [field, title] of [
+      ['tags', 'h'],
+      ['people', 'g'],
+    ] as const) {
+      const updated = await pool.query(
+        `UPDATE data.${pg.escapeIdentifier(items.db_table_name)} SET ${column(field)} = '{}' WHERE ${column('title')} = $1 AND ${column(field)} IS NULL`,
+        [title],
+      );
+      expect(updated.rowCount).toBe(1);
+    }
     if (fld['double'].compute_mode === 'stored') {
       let cursor = 0n;
       for (;;) {
@@ -799,9 +855,18 @@ describe('dashboard widget queries (T806, P21)', () => {
     );
     many = manyTable.table;
     fld['many.name'] = manyTable.primaryField;
+    fld['many.tags'] = await schema.addField(
+      scope,
+      many.id,
+      { name: 'tags', type: 'select', options: { multiple: true, options: [] } },
+      context,
+    );
     fx.schema.tables.push({
       id: many.id,
-      fields: [{ id: manyTable.primaryField.id, type: manyTable.primaryField.type }],
+      fields: [fld['many.name'], fld['many.tags']].map((field) => ({
+        id: field.id,
+        type: field.type,
+      })),
     });
     await insertBulk(pool, many, [
       {
@@ -1055,6 +1120,53 @@ describe('dashboard widget queries (T806, P21)', () => {
       dimension: { field: 'done' },
       metrics: [{ aggregation: 'count_distinct', field: 'tags' }],
     },
+    // T904: `count_distinct` of lists (select, user, link) in every part of
+    // the statement — groups, ranking over series, "Other", the empty group, total.
+    {
+      name: 'count_distinct of a single select',
+      dimension: { field: 'region' },
+      metrics: [{ aggregation: 'count_distinct', field: 'status' }],
+    },
+    {
+      name: 'count_distinct of every list next to row metrics, top 2 + Other',
+      dimension: { field: 'region' },
+      metrics: [
+        { aggregation: 'count_distinct', field: 'people' },
+        { aggregation: 'count' },
+        { aggregation: 'count_distinct', field: 'tags' },
+        { aggregation: 'sum', field: 'amount' },
+        { aggregation: 'count_distinct', field: 'customer' },
+        { aggregation: 'avg', field: 'qty' },
+        { aggregation: 'count_distinct', field: 'region' },
+      ],
+      limit: 2,
+      others: true,
+    },
+    {
+      name: 'multi-select × count_distinct of itself + Other',
+      dimension: { field: 'tags' },
+      metrics: [{ aggregation: 'count_distinct', field: 'tags' }, { aggregation: 'count' }],
+      limit: 2,
+      others: true,
+    },
+    {
+      name: 'series ranked by a link count_distinct + Other',
+      dimension: { field: 'people' },
+      series: { field: 'status' },
+      metrics: [
+        { aggregation: 'count_distinct', field: 'customer' },
+        { aggregation: 'max', field: 'amount' },
+      ],
+      sort: 'metric_asc',
+      limit: 2,
+      others: true,
+    },
+    {
+      name: 'count_distinct of users, empty link group',
+      dimension: { field: 'customer' },
+      metrics: [{ aggregation: 'count_distinct', field: 'people' }],
+      sort: 'dimension_asc',
+    },
     {
       name: 'formula metric',
       dimension: { field: 'status' },
@@ -1218,6 +1330,23 @@ describe('dashboard widget queries (T806, P21)', () => {
         [evalRows.reduce((total, row) => total + (row.amount ?? 0), 0)],
       ]);
       expect((await run(kpi('count_distinct', 'tags'))).rows).toEqual([[3]]);
+    });
+
+    it('count_distinct of each list field, over every record and by period (T904)', async () => {
+      const inMonth = (month: string) =>
+        evalRows.filter((row) => row.at !== null && localDate(row.at, TIME_ZONE).startsWith(month));
+      for (const field of ['tags', 'people', 'customer', 'status'] as const) {
+        const metric: EvalMetric = { aggregation: 'count_distinct', field };
+        expect((await run(kpi('count_distinct', field))).rows).toEqual([
+          [aggregate(evalRows, metric)],
+        ]);
+        // 2026-09-23 in HCM: September against August.
+        const month = await run(
+          kpi('count_distinct', field, { dateField: F('at'), period: 'month' }),
+        );
+        expect(month.rows).toEqual([[aggregate(inMonth('2026-09'), metric)]]);
+        expect(month.compare?.previous).toBe(aggregate(inMonth('2026-08'), metric));
+      }
     });
 
     it('compares this month with the previous one at the pinned clock (HCM vs UTC)', async () => {
@@ -1442,14 +1571,24 @@ describe('dashboard widget queries (T806, P21)', () => {
     ).toMatchObject({ status: 'broken' });
   });
 
-  it('more than 1 000 groups is 422 WIDGET_TOO_LARGE', async () => {
+  it.each([
+    { aggregation: 'count', field: null },
+    // T904: a list metric adds no group.
+    { aggregation: 'count_distinct', field: 'many.tags' },
+  ] as const)('more than 1 000 groups is 422 WIDGET_TOO_LARGE ($aggregation)', async (metric) => {
     const widget: GroupedWidgetQuery = {
       kind: 'grouped',
       tableId: many.id,
       filter: null,
       dimension: { field: F('many.name'), dateBucket: null, bucketWidth: null },
       series: null,
-      metrics: [{ id: 'm1', aggregation: 'count', field: null }],
+      metrics: [
+        {
+          id: 'm1',
+          aggregation: metric.aggregation,
+          field: metric.field === null ? null : F(metric.field),
+        },
+      ],
       sort: 'metric_desc',
       limit: 20,
       groupOthers: true,

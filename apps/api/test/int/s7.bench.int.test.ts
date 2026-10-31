@@ -17,7 +17,13 @@
  * 4. a large `count_distinct` (Email: one value per record) without cache;
  * 5. 100 record writes per second for 10 s while 50 WebSocket connections
  *    watch `dashboard:<id>`: `dashboard.data_changed` messages per
- *    connection (5 s gathering → 2–3 expected) and write latency.
+ *    connection (5 s gathering → 2–3 expected) and write latency;
+ * 6. (T904) `count_distinct` of list fields on 1 000 000 records × 3 values
+ *    (`S7_BENCH_LIST_ROWS` overrides; written directly, the services would
+ *    take hours): KPI of a multi-select, KPI of a link, bar select ×
+ *    multi-select + "Other", each run by `RecordQueryService.widgetData` on a
+ *    fresh backend — time, its peak private memory (`RssAnon`, with parallel
+ *    workers) and the `temp_bytes` it wrote.
  *
  * Numbers are always printed; asserted only when the 1-minute load is below
  * twice the CPU count (BACKLOG S7 "Test"). The < 2 s budget of the milestone
@@ -26,13 +32,24 @@
  */
 import { availableParallelism, loadavg } from 'node:os';
 
-import { widgetDataSchema, type Id } from '@cellhive/contracts';
-import { RecordQueryService, type Db } from '@cellhive/server-core';
+import { newId, widgetDataSchema, type Id } from '@cellhive/contracts';
+import {
+  AppError,
+  createDb,
+  orgScope,
+  RecordQueryService,
+  type Db,
+  type WidgetAggregateResult,
+  type WidgetQuery,
+} from '@cellhive/server-core';
+import { sql } from 'kysely';
+import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { RealtimeLimits } from '../../src/modules/realtime/realtime-limits.js';
 import { BENCH_EMAIL, BENCH_PASSWORD, seedBench } from '../../src/seed/bench-seed.js';
-import { BENCH_ROWS } from '../../src/seed/bench-table.js';
+import { BENCH_CUSTOMERS_TABLE_NAME, BENCH_ROWS } from '../../src/seed/bench-table.js';
+import { ownerAccessContext } from '../../src/seed/record-seeding.js';
 
 import { Browser } from './auth-support.js';
 import { createMigratedDatabase, createTestDb, type TestDatabase } from './database.js';
@@ -43,6 +60,10 @@ import { startTestApp, TEST_PUBLIC_URL, type TestApp } from './support.js';
 import type { LightMyRequestResponse as InjectResponse } from 'fastify';
 
 const ROWS = Number(process.env['S7_BENCH_ROWS'] ?? String(BENCH_ROWS));
+const LIST_ROWS = Number(process.env['S7_BENCH_LIST_ROWS'] ?? '1000000');
+const LIST_RUNS = 3;
+/** `application_name` of the backend case 6 measures. */
+const BENCH_BACKEND = 'cellhive-t904-bench';
 const ROUNDS = 10;
 const VIEWERS = 20;
 const SOCKETS = 50;
@@ -71,6 +92,8 @@ describe.skipIf(process.env['S7_BENCH'] !== '1')('S7 bench (T818)', () => {
   let wsUrl: string;
   let owner: Browser;
   let tableId: Id<'tbl'>;
+  let baseId: Id<'bse'>;
+  let organizationId: Id<'org'>;
   let dashboardId: string;
   let recordIds: string[] = [];
   let amountField = '';
@@ -106,6 +129,52 @@ describe.skipIf(process.env['S7_BENCH'] !== '1')('S7 bench (T818)', () => {
         records: [{ id, fields: { [amountField]: 1_000 + writes } }],
       }),
     );
+  }
+
+  /**
+   * `work` while the private resident memory (`RssAnon` of
+   * `/proc/<pid>/status`, read by the container's superuser) of the
+   * `BENCH_BACKEND` backend and its parallel workers is sampled every 20 ms:
+   * the peak of their sum.
+   */
+  async function peakMemory<T>(work: () => Promise<T>): Promise<{ result: T; peakKb: number }> {
+    const client = new pg.Client({ connectionString: database.url });
+    await client.connect();
+    let peakKb = 0;
+    const stop = new AbortController();
+    const sampling = (async () => {
+      while (!stop.signal.aborted) {
+        const { rows } = await client.query<{ status: string | null }>(
+          `SELECT pg_read_file('/proc/' || pid || '/status', true) AS status
+             FROM pg_stat_activity
+            WHERE application_name = $1
+               OR leader_pid IN (SELECT pid FROM pg_stat_activity WHERE application_name = $1)`,
+          [BENCH_BACKEND],
+        );
+        const kb = rows.reduce(
+          (sum, row) => sum + Number(/RssAnon:\s+(\d+)/u.exec(row.status ?? '')?.[1] ?? 0),
+          0,
+        );
+        peakKb = Math.max(peakKb, kb);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    })();
+    let result: T;
+    try {
+      result = await work();
+    } finally {
+      stop.abort();
+      await sampling;
+      await client.end();
+    }
+    return { result, peakKb };
+  }
+
+  async function tempBytes(): Promise<number> {
+    const { rows } = await sql<{ bytes: string }>`
+      SELECT temp_bytes AS bytes FROM pg_stat_database WHERE datname = current_database()
+    `.execute(db.kysely);
+    return Number(rows[0]?.bytes ?? 0);
   }
 
   /** The 5 widgets in parallel, like the page: per-widget and round times. */
@@ -152,6 +221,8 @@ describe.skipIf(process.env['S7_BENCH'] !== '1')('S7 bench (T818)', () => {
     ).json<{ records: { id: string }[] }>();
     recordIds = page.records.map((record) => record.id);
 
+    baseId = seeded.baseId;
+    organizationId = seeded.organizationId;
     const dashboard = ok(
       await call('POST', `/bases/${seeded.baseId}/dashboards`, { name: 'S7 bench' }),
       201,
@@ -316,4 +387,182 @@ describe.skipIf(process.env['S7_BENCH'] !== '1')('S7 bench (T818)', () => {
     // One hint per 5 s window at most: 10 s of writes → ≤ 4 with the edges.
     expect(Math.max(...counts)).toBeLessThanOrEqual(4);
   }, 600_000);
+
+  it('6. count_distinct of list fields on 1 000 000 records × 3 values (T904)', async () => {
+    const groups = Array.from({ length: 10 }, (_, i) => ({
+      id: newId('opt'),
+      name: `G${String(i)}`,
+    }));
+    const tags = Array.from({ length: 1_000 }, (_, i) => ({
+      id: newId('opt'),
+      name: `T${String(i)}`,
+    }));
+    const list = ok(
+      await call('POST', `/bases/${baseId}/tables`, {
+        name: 'T904 lists',
+        primary_field_name: 'Tên',
+      }),
+      201,
+    ).json<{ id: Id<'tbl'> }>().id;
+    const { rows: targets } = await sql<{ id: string; name: string }>`
+      SELECT id, db_table_name AS name FROM meta.tables
+       WHERE base_id = ${baseId} AND name = ${BENCH_CUSTOMERS_TABLE_NAME}
+    `.execute(db.kysely);
+    const customers = targets[0] as { id: string; name: string };
+    const addField = async (body: Record<string, unknown>) =>
+      ok(await call('POST', `/tables/${list}/fields`, body), 201).json<{ id: string }>().id;
+    const groupField = await addField({
+      name: 'Nhóm',
+      type: 'select',
+      options: { options: groups },
+    });
+    const tagsField = await addField({
+      name: 'Nhãn',
+      type: 'select',
+      options: { multiple: true, options: tags },
+    });
+    const linkField = await addField({
+      name: 'Khách hàng',
+      type: 'link',
+      options: { link_table: customers.id },
+    });
+    const { rows: meta } = await sql<{
+      id: string;
+      column_name: string;
+      junction: string;
+      side: string;
+      is_primary: boolean;
+      table_name: string;
+    }>`
+      SELECT f.id, f.db_column_name AS column_name, f.link_junction AS junction,
+             f.link_side AS side, f.is_primary, t.db_table_name AS table_name
+        FROM meta.fields AS f JOIN meta.tables AS t ON t.id = f.table_id
+       WHERE f.table_id = ${list} AND f.deleted_at IS NULL
+    `.execute(db.kysely);
+    const column = (id: string) => sql.id(meta.find((row) => row.id === id)?.column_name ?? '');
+    const primary = meta.find((row) => row.is_primary);
+    const link = meta.find((row) => row.id === linkField);
+    expect(link?.side).toBe('a');
+    const dataTable = sql.id(primary?.table_name ?? '');
+    // TEST FIXTURE: written directly (the services would take hours); 3 tags, 3 links per record.
+    const insertStarted = performance.now();
+    const writer = createDb({ url: database.url, poolMax: 1, statementTimeoutMs: 0 });
+    try {
+      const id = sql`'rec_' || substr(md5('t904-' || g), 1, 16)`;
+      for (let start = 0; start < LIST_ROWS; start += 200_000) {
+        const end = Math.min(LIST_ROWS, start + 200_000) - 1;
+        await sql`
+          INSERT INTO data.${dataTable} (__id, ${column(primary?.id ?? '')}, ${column(groupField)}, ${column(tagsField)})
+          SELECT ${id}, 'r' || g, ARRAY[o.gs[1 + g % 10]],
+                 ARRAY[o.ts[1 + g % 1000], o.ts[1 + (g + 333) % 1000], o.ts[1 + (g + 666) % 1000]]
+            FROM generate_series(${start}::int, ${end}::int) AS g,
+                 (SELECT ${sql.val(groups.map((o) => o.id))}::text[] AS gs,
+                         ${sql.val(tags.map((o) => o.id))}::text[] AS ts) AS o
+        `.execute(writer.kysely);
+        await sql`
+          INSERT INTO data.${sql.id(link?.junction ?? '')} (a_id, b_id, position)
+          SELECT ${id}, c.ids[1 + (3 * g + k) % cardinality(c.ids)], k
+            FROM generate_series(${start}::int, ${end}::int) AS g, generate_series(0, 2) AS k,
+                 (SELECT array_agg(__id) AS ids FROM data.${sql.id(customers.name)}) AS c
+        `.execute(writer.kysely);
+      }
+      await sql`VACUUM (ANALYZE) data.${dataTable}`.execute(writer.kysely);
+      await sql`VACUUM (ANALYZE) data.${sql.id(link?.junction ?? '')}`.execute(writer.kysely);
+    } finally {
+      await writer.destroy();
+    }
+    report.push(
+      `6. ${String(LIST_ROWS)} records × 3 tags × 3 links written in ${ms(performance.now() - insertStarted)}`,
+    );
+
+    const { rows: owners } = await sql<{ id: Id<'usr'> }>`
+      SELECT id FROM meta.users WHERE email = ${BENCH_EMAIL}
+    `.execute(db.kysely);
+    const scope = orgScope(organizationId);
+    const access = await ownerAccessContext(db, scope, baseId, owners[0]?.id as Id<'usr'>, {
+      timeZone: 'UTC',
+      locale: 'vi',
+    });
+    const metric = (field: string) => ({
+      id: 'm1',
+      aggregation: 'count_distinct' as const,
+      field: field as Id<'fld'>,
+    });
+    const cases: { title: string; query: WidgetQuery }[] = [
+      {
+        title: 'kpi cd multi-select',
+        query: {
+          kind: 'kpi',
+          tableId: list,
+          filter: null,
+          metric: metric(tagsField),
+          compare: null,
+        },
+      },
+      {
+        title: 'kpi cd link',
+        query: {
+          kind: 'kpi',
+          tableId: list,
+          filter: null,
+          metric: metric(linkField),
+          compare: null,
+        },
+      },
+      {
+        title: 'bar select × cd multi-select + Other',
+        query: {
+          kind: 'grouped',
+          tableId: list,
+          filter: null,
+          dimension: { field: groupField as Id<'fld'>, dateBucket: null, bucketWidth: null },
+          series: null,
+          metrics: [metric(tagsField), { id: 'm2', aggregation: 'count', field: null }],
+          sort: 'metric_desc',
+          limit: 5,
+          groupOthers: true,
+        },
+      },
+    ];
+    const outcomes: string[] = [];
+    for (const { title, query } of cases) {
+      const samples: { ms: number; peakKb: number; temp: number }[] = [];
+      let answer: WidgetAggregateResult | string = '';
+      for (let run = 0; run < LIST_RUNS; run += 1) {
+        // A fresh backend per run (no widget cache on this path): its memory
+        // and temp files are this statement's alone.
+        const fresh = createDb({ url: database.url, poolMax: 1, applicationName: BENCH_BACKEND });
+        try {
+          const before = await tempBytes();
+          const started = performance.now();
+          const measured = await peakMemory(() =>
+            new RecordQueryService(fresh, { defaultTimeZone: 'UTC' })
+              .widgetData(scope, access, query, { timeZone: 'UTC' })
+              // Reported, not thrown: a `QUERY_TIMEOUT` (10 s) is a number of the bench too.
+              .catch((error: unknown) => (error instanceof AppError ? error.code : String(error))),
+          );
+          const elapsed = performance.now() - started;
+          // Flushed when the backend goes idle after this call (temp files of the run).
+          await sql`SELECT pg_stat_force_next_flush()`.execute(fresh.kysely);
+          samples.push({
+            ms: elapsed,
+            peakKb: measured.peakKb,
+            temp: (await tempBytes()) - before,
+          });
+          answer = measured.result;
+          outcomes.push(typeof answer === 'string' ? answer : answer.status);
+        } finally {
+          await fresh.destroy();
+        }
+      }
+      const value =
+        typeof answer === 'string' ? answer : (answer.total ?? answer.rows[0]?.[0] ?? null);
+      const peak = Math.max(...samples.map((sample) => sample.peakKb));
+      const temp = Math.max(...samples.map((sample) => sample.temp));
+      report.push(
+        `6. ${title.padEnd(38)} (= ${JSON.stringify(value)}) ${p50p95(samples.map((sample) => sample.ms))}, peak RssAnon ${(peak / 1024).toFixed(0)} MB, temp ${(temp / 1024 / 1024).toFixed(0)} MB`,
+      );
+    }
+    expect(outcomes.every((outcome) => outcome === 'ok')).toBe(true);
+  }, 3_600_000);
 });
