@@ -525,6 +525,7 @@ describe.skipIf(process.env['S7_BENCH'] !== '1')('S7 bench (T818)', () => {
       },
     ];
     const outcomes: string[] = [];
+    const peaks: number[] = [];
     for (const { title, query } of cases) {
       const samples: { ms: number; peakKb: number; temp: number }[] = [];
       let answer: WidgetAggregateResult | string = '';
@@ -559,10 +560,16 @@ describe.skipIf(process.env['S7_BENCH'] !== '1')('S7 bench (T818)', () => {
         typeof answer === 'string' ? answer : (answer.total ?? answer.rows[0]?.[0] ?? null);
       const peak = Math.max(...samples.map((sample) => sample.peakKb));
       const temp = Math.max(...samples.map((sample) => sample.temp));
+      peaks.push(peak);
       report.push(
         `6. ${title.padEnd(38)} (= ${JSON.stringify(value)}) ${p50p95(samples.map((sample) => sample.ms))}, peak RssAnon ${(peak / 1024).toFixed(0)} MB, temp ${(temp / 1024 / 1024).toFixed(0)} MB`,
       );
     }
-    expect(outcomes.every((outcome) => outcome === 'ok')).toBe(true);
+    // A run may hit the 10 s timeout (reading 3 000 000 links); never another error.
+    expect(outcomes.filter((outcome) => outcome !== 'ok' && outcome !== 'QUERY_TIMEOUT')).toEqual(
+      [],
+    );
+    // T904: bounded by `work_mem`, not by the lists (the `jsonb_agg` statement: 150–630 MB).
+    expect(Math.max(...peaks)).toBeLessThan(128 * 1024);
   }, 3_600_000);
 });

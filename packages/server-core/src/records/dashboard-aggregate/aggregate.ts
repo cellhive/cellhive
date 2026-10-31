@@ -63,6 +63,11 @@ import type { ResolveContext } from '@cellhive/filter-dsl';
  * SELECT … top `limit` groups, "Other", the total …
  * ```
  *
+ * A `count_distinct` of a list (T904) counts `count(DISTINCT element)` over
+ * rows spread once more per element (`unnest … WITH ORDINALITY`, in `e`,
+ * `tot` and the KPI); the other aggregates keep one row per record
+ * (`FILTER (WHERE o = 1)`).
+ *
  * Group keys and metric values come from columns of fields the viewer
  * reads (`sql.id` from meta), formula/lookup values are their expression for
  * the viewer (`ComputedField.value`); every literal is a parameter.
@@ -351,40 +356,73 @@ function metricOf(spec: WidgetMetricSpec, input: WidgetAggregateInput): Metric |
 const vCol = (index: number) => `v${String(index)}`;
 const aCol = (index: number) => `a${String(index)}`;
 
-/** `FILTER (WHERE …)` of an aggregate, or nothing. */
-function filterOf(condition: RawBuilder<SqlBool> | null): RawBuilder<unknown> {
-  return condition === null ? sql`` : sql` FILTER (WHERE ${condition})`;
+/** `FILTER (WHERE …)` of an aggregate over the conditions given, or nothing. */
+function filterOf(...conditions: (RawBuilder<SqlBool> | null)[]): RawBuilder<unknown> {
+  const kept = conditions.filter((condition) => condition !== null);
+  return kept.length === 0 ? sql`` : sql` FILTER (WHERE ${sql.join(kept, sql` AND `)})`;
 }
 
-/** The aggregate of `metric` over rows whose value column is `v`, optionally filtered. */
+/**
+ * The aggregate of `metric` over rows whose value column is `v`, optionally
+ * filtered. Rows spread by {@link spreadLists} hold one element of each list
+ * metric (its `v`); `first` keeps one row per record for the other metrics.
+ */
 function aggregateOf(
   metric: Metric,
   v: RawBuilder<unknown>,
   condition: RawBuilder<SqlBool> | null = null,
+  first: RawBuilder<SqlBool> | null = null,
 ): RawBuilder<unknown> {
+  const filter = metric.list ? filterOf(condition) : filterOf(first, condition);
   switch (metric.spec.aggregation) {
     case 'count':
-      return sql`count(*)${filterOf(condition)}`;
-    case 'count_distinct': {
-      if (!metric.list) return sql`count(DISTINCT ${v})${filterOf(condition)}`;
-      // Distinct elements of the lists of the group (an outer-level aggregate).
-      const keep =
-        condition === null
-          ? sql<SqlBool>`${v} IS NOT NULL`
-          : sql<SqlBool>`${v} IS NOT NULL AND ${condition}`;
-      return sql`(SELECT count(DISTINCT x.item)
-        FROM jsonb_array_elements(COALESCE(jsonb_agg(to_jsonb(${v})) FILTER (WHERE ${keep}), '[]'::jsonb)) AS a(arr)
-        CROSS JOIN LATERAL jsonb_array_elements_text(a.arr) AS x(item))`;
-    }
+      return sql`count(*)${filter}`;
+    case 'count_distinct':
+      // List elements are ids in the default (deterministic) collation, whose
+      // equality is byte equality: "C" counts the same and sorts faster.
+      return metric.list
+        ? sql`count(DISTINCT ${v} COLLATE "C")${filter}`
+        : sql`count(DISTINCT ${v})${filter}`;
     case 'sum':
-      return sql`sum(${v})${filterOf(condition)}`;
+      return sql`sum(${v})${filter}`;
     case 'avg':
-      return sql`avg(${v})${filterOf(condition)}`;
+      return sql`avg(${v})${filter}`;
     case 'min':
-      return sql`min(${v})${filterOf(condition)}`;
+      return sql`min(${v})${filter}`;
     case 'max':
-      return sql`max(${v})${filterOf(condition)}`;
+      return sql`max(${v})${filter}`;
   }
+}
+
+/**
+ * The rows of `rows` spread to one row per element of the list metrics
+ * (T904): `count(DISTINCT element)` sorts within `work_mem` and spills to
+ * disk, where gathering a group's lists (`jsonb_agg`) grew without bound.
+ * Lists are zipped, an empty one is one `NULL` (as {@link splitKey}); `mx.o
+ * = 1` on one row per row of `rows`. `value(i)`: the element of a list
+ * metric, the column of `rows` otherwise.
+ */
+function spreadLists(
+  metrics: readonly Metric[],
+  rows: string,
+): {
+  readonly join: RawBuilder<unknown>;
+  readonly first: RawBuilder<SqlBool> | null;
+  readonly value: (index: number) => RawBuilder<unknown>;
+} {
+  const lists = metrics.flatMap((metric, index) => (metric.list ? [index] : []));
+  const value = (index: number) => sql.id(metrics[index]?.list ? 'mx' : rows, vCol(index));
+  if (lists.length === 0) return { join: sql``, first: null, value };
+  const arrays = lists.map(
+    (index) =>
+      sql`COALESCE(NULLIF(${sql.id(rows, vCol(index))}, '{}'::text[]), ARRAY[NULL]::text[])`,
+  );
+  const columns = [...lists.map((index) => sql.id(vCol(index))), sql.id('o')];
+  return {
+    join: sql`CROSS JOIN LATERAL unnest(${sql.join(arrays)}) WITH ORDINALITY AS mx(${sql.join(columns)})`,
+    first: sql<SqlBool>`mx.o = 1`,
+    value,
+  };
 }
 
 /** A metric value as returned: a number, `null` when there was nothing to aggregate. */
@@ -574,18 +612,27 @@ async function grouped(
 
   const dSplit = splitKey(dimension, 'd');
   const sSplit = series === null ? null : splitKey(series, 's');
+  const mSpread = spreadLists(metrics, 'm');
   const e = sql`SELECT ${sql.join([
     sql`${dSplit.value} AS d`,
     sSplit === null ? sql`NULL::text AS s` : sql`${sSplit.value} AS s`,
-    ...valued.map((index) => sql`m.${sql.id(vCol(index))}`),
-  ])} FROM m ${dSplit.join} ${sSplit?.join ?? sql``}`;
+    ...valued.map((index) => sql`${mSpread.value(index)} AS ${sql.id(vCol(index))}`),
+    ...(mSpread.first === null ? [] : [sql`mx.o`]),
+  ])} FROM m ${dSplit.join} ${sSplit?.join ?? sql``} ${mSpread.join}`;
+  const eFirst = mSpread.first === null ? null : sql<SqlBool>`e.o = 1`;
+  const eValue = (index: number) => sql.id('e', vCol(index));
 
-  const aggregates = (rows: string, condition: RawBuilder<SqlBool> | null = null) =>
-    metrics.map(
+  const aggregates = (
+    value: (index: number) => RawBuilder<unknown>,
+    first: RawBuilder<SqlBool> | null,
+  ) => [
+    sql`count(*)${filterOf(first)} AS n`,
+    ...metrics.map(
       (metric, index) =>
-        sql`${aggregateOf(metric, sql.id(rows, vCol(index)), condition)} AS ${sql.id(aCol(index))}`,
-    );
-  const g = sql`SELECT ${sql.join([sql`e.d`, sql`e.s`, sql`count(*) AS n`, ...aggregates('e')])}
+        sql`${aggregateOf(metric, value(index), null, first)} AS ${sql.id(aCol(index))}`,
+    ),
+  ];
+  const g = sql`SELECT ${sql.join([sql`e.d`, sql`e.s`, ...aggregates(eValue, eFirst)])}
     FROM e GROUP BY e.d, e.s`;
 
   // Ranking of the dimension groups: by the first metric over every series
@@ -595,7 +642,7 @@ async function grouped(
   const rankSource =
     series === null
       ? sql`SELECT g.d, g.${sql.id(aCol(0))} FROM g`
-      : sql`SELECT e.d, ${aggregateOf(first, sql.id('e', vCol(0)))} AS k FROM e GROUP BY e.d`;
+      : sql`SELECT e.d, ${aggregateOf(first, eValue(0), null, eFirst)} AS k FROM e GROUP BY e.d`;
   const natural = naturalOrder(dimension, sql`r0.d`, orgId);
   const byDimension = (direction: RawBuilder<unknown>) =>
     sql`(r0.d IS NULL) ASC, ${natural} ${direction} NULLS LAST, r0.d ${direction}`;
@@ -613,9 +660,9 @@ async function grouped(
 
   const limit = query.limit;
   const outside = sql<SqlBool>`NOT EXISTS (SELECT 1 FROM r WHERE r.rk <= ${limit} AND r.d IS NOT DISTINCT FROM e.d)`;
-  const o = sql`SELECT ${sql.join([sql`e.s`, sql`count(*) AS n`, ...aggregates('e')])}
+  const o = sql`SELECT ${sql.join([sql`e.s`, ...aggregates(eValue, eFirst)])}
     FROM e WHERE ${outside} GROUP BY e.s`;
-  const tot = sql`SELECT ${sql.join([sql`count(*) AS n`, ...aggregates('m')])} FROM m`;
+  const tot = sql`SELECT ${sql.join(aggregates(mSpread.value, mSpread.first))} FROM m ${mSpread.join}`;
 
   const metricColumns = (rows: string) =>
     metrics.map((_, index) => sql`${sql.id(rows, aCol(index))} AS ${sql.id(aCol(index))}`);
@@ -715,13 +762,15 @@ async function kpi(
   if (metric === null) return BROKEN;
   const columns = [metricColumn(metric)];
   const values = metric.value === null ? [] : [sql`${metric.value} AS ${sql.id(vCol(0))}`];
-  const v = sql.id('m', vCol(0));
+  const spread = spreadLists([metric], 'm');
+  const v = spread.value(0);
 
   if (query.compare === null) {
     const m = sql`SELECT ${sql.join([sql`1 AS one`, ...values])} FROM ${input.from} WHERE ${input.where}`;
     const { rows } = await sql<{ n: bigint; a0: unknown }>`
       WITH m AS (${m})
-      SELECT count(*) AS n, ${aggregateOf(metric, v)} AS a0 FROM m
+      SELECT count(*)${filterOf(spread.first)} AS n, ${aggregateOf(metric, v, null, spread.first)} AS a0
+        FROM m ${spread.join}
     `.execute(input.tx);
     const row = rows[0];
     if (Number(row?.n ?? 0) === 0) return { status: 'empty', columns, rows: [] };
@@ -760,12 +809,12 @@ async function kpi(
     ps: unknown;
   }>`
     WITH b AS (${bounds}), m AS (${m})
-    SELECT count(*) FILTER (WHERE ${current}) AS n,
-           count(*) FILTER (WHERE ${previous}) AS pn,
-           ${aggregateOf(metric, v, current)} AS a0,
-           ${aggregateOf(metric, v, previous)} AS p0,
+    SELECT count(*)${filterOf(spread.first, current)} AS n,
+           count(*)${filterOf(spread.first, previous)} AS pn,
+           ${aggregateOf(metric, v, current, spread.first)} AS a0,
+           ${aggregateOf(metric, v, previous, spread.first)} AS p0,
            (SELECT b.cs FROM b) AS cs, (SELECT b.ce FROM b) AS ce, (SELECT b.ps FROM b) AS ps
-      FROM m
+      FROM m ${spread.join}
   `.execute(input.tx);
   const row = rows[0];
   if (row === undefined || Number(row.n) + Number(row.pn) === 0) {
