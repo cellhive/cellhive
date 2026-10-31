@@ -60,6 +60,19 @@ export {
   type AiRequestedEntry,
 } from './audit/ai-requested.js';
 export {
+  aiFormulaAnswerSchema,
+  FORMULA_DIGEST_MAX_DESCRIPTION,
+  FORMULA_DIGEST_MAX_FIELDS,
+  FORMULA_DIGEST_MAX_OPTIONS,
+  FORMULA_DIGEST_MAX_TABLES,
+  formulaCatalogueText,
+  formulaDigest,
+  formulaMessages,
+  formulaRepairProblems,
+  type AiFormulaAnswer,
+  type FormulaDigest,
+} from './features/formula/formula.js';
+export {
   aiQuotaExhaustedCount,
   aiRequestCounts,
   aiRetryCounts,
