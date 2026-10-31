@@ -35,6 +35,7 @@ export * from './imports.js';
 export * from './jobs.js';
 export * from './links.js';
 export * from './mcp.js';
+export * from './mcp-policy.js';
 export * from './member-access.js';
 export * from './notifications.js';
 export * from './oidc.js';

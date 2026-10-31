@@ -18,7 +18,7 @@ import {
 } from './auth.js';
 import { booleanQueryParam, isoDateTimeSchema } from './common.js';
 import { idOf } from './ids.js';
-import { DEFAULT_MCP_POLICY, mcpPolicySchema, updateMcpPolicySchema } from './mcp.js';
+import { DEFAULT_MCP_POLICY, mcpPolicySchema, updateMcpPolicySchema } from './mcp-policy.js';
 import { offsetListSchema, offsetQuerySchema } from './pagination.js';
 import { publicSharingPolicySchema } from './share-links.js';
 
