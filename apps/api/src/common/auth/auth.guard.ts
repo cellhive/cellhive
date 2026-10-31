@@ -5,7 +5,7 @@ import { Reflector } from '@nestjs/core';
 import { ApiRateLimits } from '../rate-limit/api-rate-limits.js';
 
 import { ApiTokenAuthService, BEARER_CHALLENGE, bearerTokenOf } from './api-token-auth.service.js';
-import { PUBLIC_ACCESS, type PublicAccess } from './principal.js';
+import { BEARER_ONLY, PUBLIC_ACCESS, type PublicAccess } from './principal.js';
 import { requestMetaOf } from './request-meta.js';
 import { CSRF_SAFE_METHODS, SessionService } from './session.service.js';
 
@@ -27,7 +27,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
  *    (`403 CSRF_INVALID`), on public routes too;
  * 3. requires a principal unless the route is `@Public()`
  *    (`401 UNAUTHENTICATED`).
- * `@Public()` routes ignore `Authorization` altogether. An invalid or
+ * `@Public()` routes ignore `Authorization` altogether; `@BearerOnly()` routes
+ * take the first path even without the header (`401`). An invalid or
  * expired cookie is cleared and treated as absent. What a token may do on
  * the route is `ScopeGuard`'s check, right after this one.
  */
@@ -53,8 +54,13 @@ export class AuthGuard implements CanActivate {
     const reply = http.getResponse<FastifyReply>();
 
     const authorization = request.headers.authorization;
-    if (access === undefined && authorization !== undefined) {
-      await this.authenticateBearer(request, reply, authorization);
+    const bearerOnly =
+      this.reflector.getAllAndOverride<boolean | undefined>(BEARER_ONLY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true;
+    if (bearerOnly || (access === undefined && authorization !== undefined)) {
+      await this.authenticateBearer(request, reply, authorization ?? '');
       return true;
     }
 

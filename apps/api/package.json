@@ -41,6 +41,7 @@
     "@cellhive/permissions": "workspace:*",
     "@cellhive/server-core": "workspace:*",
     "@cellhive/worker": "workspace:*",
+    "@modelcontextprotocol/server": "2.4.0",
     "busboy": "^1.6.0",
     "fastify": "^5.12.5",
     "ioredis": "^6.0.0",
@@ -55,6 +56,8 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@testcontainers/postgresql": "^12.1.0",
     "@types/busboy": "^1.5.4",
     "@types/node": "^24.13.6",

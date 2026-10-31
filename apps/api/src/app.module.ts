@@ -29,6 +29,7 @@ import { ImportModule } from './modules/import/import.module.js';
 import { IncomingWebhookModule } from './modules/incoming-webhook/incoming-webhook.module.js';
 import { InvitationModule } from './modules/invitation/invitation.module.js';
 import { JobModule } from './modules/job/job.module.js';
+import { McpModule } from './modules/mcp/mcp.module.js';
 import { MetricsModule } from './modules/metrics/metrics.module.js';
 import { NotificationModule } from './modules/notification/notification.module.js';
 import { OpenApiModule } from './modules/openapi/openapi.module.js';
@@ -101,6 +102,7 @@ export class AppModule {
         AuditModule,
         JobModule,
         ImportModule,
+        McpModule,
         RealtimeModule,
         ...(options.imports ?? []),
       ],

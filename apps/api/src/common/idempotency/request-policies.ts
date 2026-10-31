@@ -71,6 +71,9 @@ export const IDEMPOTENCY_EXCLUDED_ROUTES: Readonly<Record<string, string>> = {
     'Called by Telegram only (CONTRACTS §22.7, T609): no principal owns a key; a redelivered ' +
     'update is handled again harmlessly (a used link token from the same chat answers like a ' +
     'success, `/stop` of an unlinked chat is ignored).',
+  '/mcp':
+    'JSON-RPC of the MCP server (CONTRACTS §30.1): no organization in the route, and a ' +
+    'message is not a resource write; the tools that write check their inputs like REST.',
   '/bases/:baseId/imports/uploads':
     'A streamed multipart file body cannot be fingerprinted; a repeated upload only leaves an ' +
     'unused temporary upload that expires after 24 hours (CONTRACTS §1.1, §19).',

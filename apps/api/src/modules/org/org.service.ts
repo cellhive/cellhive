@@ -21,6 +21,7 @@ import { diffOf, mutationContextOf, recordChange } from '../../common/access/cha
 import { publicSharingPolicyOf } from '../../common/access/public-sharing.js';
 import { iso } from '../../common/dto.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
+import { mcpPolicyOf } from '../mcp/mcp-policy.js';
 import { OrganizationProvisioner, organizationDefaults } from '../setup/org-provisioning.js';
 
 import type { Principal } from '../../common/auth/principal.js';
@@ -73,6 +74,7 @@ export class OrgService {
       public_sharing: publicSharingPolicyOf(settings),
       automation_max_depth: automationMaxDepthOf(settings),
       api_tokens: apiTokenPolicyOf(settings),
+      mcp: mcpPolicyOf(settings),
     };
   }
 
@@ -172,6 +174,12 @@ export class OrgService {
                       ...policyBefore,
                       ...definedOf(input.settings.api_tokens),
                     },
+                  }),
+              // Same for `mcp` (CONTRACTS §30.1).
+              ...(input.settings.mcp === undefined
+                ? {}
+                : {
+                    mcp: { ...mcpPolicyOf(currentSettings), ...definedOf(input.settings.mcp) },
                   }),
             };
       const before: JsonObject = { name: current.name, settings: currentSettings };

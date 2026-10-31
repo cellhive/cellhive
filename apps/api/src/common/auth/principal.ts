@@ -96,6 +96,16 @@ export const Public = (options: PublicOptions = {}): MethodDecorator & ClassDeco
     options.ignoreSession === true ? 'ignore' : 'optional',
   );
 
+/** Metadata key of `@BearerOnly()`. */
+export const BEARER_ONLY = 'app:bearerOnly';
+
+/**
+ * The route accepts API tokens only (the MCP endpoint, CONTRACTS §30.1):
+ * `AuthGuard` never reads the session cookie there, and a request without
+ * `Authorization: Bearer` is `401` with `WWW-Authenticate`, like a bad token.
+ */
+export const BearerOnly = (): MethodDecorator & ClassDecorator => SetMetadata(BEARER_ONLY, true);
+
 /** The principal of a request that passed `AuthGuard`; throws 401 if absent. */
 export function principalOf(request: FastifyRequest): Principal {
   const principal = request.principal;
