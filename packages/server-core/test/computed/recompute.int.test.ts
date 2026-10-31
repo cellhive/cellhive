@@ -848,4 +848,20 @@ describe('incremental recompute of computed fields (T458)', () => {
     });
     await queue.clear(a, f.total.id);
   });
+
+  it('takes one batch of a long queue whose statistics say it is empty', async () => {
+    const queue = new ComputedRecomputeQueueRepository(db);
+    const a = orgScope(ORG_A);
+    // A queue is usually drained: analysed nearly empty, the planner expects
+    // ~1 row of a field. An import then queues 10 000 records (CI: the job
+    // marked the field TIMEOUT after taking its batch twice past 30 s).
+    await sql`ANALYZE meta.computed_recompute_queue`.execute(db.kysely);
+    // Digits only: the same order in JS and in the database's collation.
+    const ids = Array.from({ length: 10_000 }, (_, i) => `rec_Queue${String(i).padStart(11, '0')}`);
+    await queue.add(a, f.total.id, ids);
+    const batch = await db.withTx((tx) => queue.take(orgScope(ORG_A, tx), f.total.id, 5000));
+    expect(batch.kind === 'records' ? batch.recordIds : batch).toEqual(ids.slice(0, 5000));
+    expect(await queue.count(a, f.total.id)).toBe(5000);
+    await queue.clear(a, f.total.id);
+  }, 60_000);
 });

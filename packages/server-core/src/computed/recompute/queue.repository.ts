@@ -149,6 +149,23 @@ export class ComputedRecomputeQueueRepository
         ...(causation === undefined ? {} : { causation }),
       };
     }
+    // Lock, then delete by id: as one `DELETE … IN (SELECT … LIMIT … FOR
+    // UPDATE SKIP LOCKED)`, a queue whose statistics say it is empty (it is
+    // usually drained) is planned as a nested loop re-running the locking
+    // subquery for every queued row — O(queued × limit), past the job's
+    // statement timeout once an import queues 10 000 records.
+    const locked = await executor
+      .selectFrom('meta.computed_recompute_queue')
+      .select('record_id')
+      .where('organization_id', '=', scope.organizationId)
+      .where('field_id', '=', fieldId)
+      .where('record_id', '<>', EVERY_RECORD)
+      .orderBy('record_id')
+      .limit(limit)
+      .forUpdate()
+      .skipLocked()
+      .execute();
+    if (locked.length === 0) return { kind: 'empty' };
     const { rows } = await sql<{
       record_id: Id<'rec'>;
       causation: JsonValue | null;
@@ -157,18 +174,9 @@ export class ComputedRecomputeQueueRepository
       DELETE FROM meta.computed_recompute_queue AS q
        WHERE q.organization_id = ${scope.organizationId}
          AND q.field_id = ${fieldId}
-         AND q.record_id IN (
-           SELECT p.record_id FROM meta.computed_recompute_queue AS p
-            WHERE p.organization_id = ${scope.organizationId}
-              AND p.field_id = ${fieldId}
-              AND p.record_id <> ${EVERY_RECORD}
-            ORDER BY p.record_id
-            LIMIT ${limit}
-              FOR UPDATE SKIP LOCKED
-         )
+         AND q.record_id = ANY(${sql.val(locked.map((row) => row.record_id))}::text[])
       RETURNING q.record_id, q.causation, q.created
     `.execute(executor);
-    if (rows.length === 0) return { kind: 'empty' };
     // "Root of the first row": the first record in id order.
     const sorted = [...rows].sort((a, b) => (a.record_id < b.record_id ? -1 : 1));
     let causation: Causation | undefined;
