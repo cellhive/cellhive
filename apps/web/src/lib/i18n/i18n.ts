@@ -47,6 +47,7 @@ export const NAMESPACES = [
   'incomingWebhooks',
   'automationHttp',
   'orgIntegrations',
+  'orgAi',
   'baseSettings',
   'orgAdmin',
   'account',

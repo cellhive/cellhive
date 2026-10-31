@@ -8,6 +8,7 @@ import {
   Mail,
   Plug,
   Settings,
+  Sparkles,
   Users,
   UsersRound,
   type LucideIcon,
@@ -27,12 +28,19 @@ interface NavItem {
 
 /**
  * The pages of "Organization settings" (T830, grouped like the base settings
- * nav): General, then people, email, automation and data. The personal
+ * nav): General and AI, then people, email, automation and data. The personal
  * pages (notification settings, API tokens) are for every member and live
  * outside this layout, reached from the account menu.
  */
 const GROUPS: readonly { readonly key: string | null; readonly items: readonly NavItem[] }[] = [
-  { key: null, items: [{ path: '', key: 'general', icon: Settings, testId: 'nav-general' }] },
+  {
+    key: null,
+    items: [
+      { path: '', key: 'general', icon: Settings, testId: 'nav-general' },
+      // T912: the AI provider, quota and usage (research §5.1: Sparkles + "AI").
+      { path: 'ai', key: 'ai', icon: Sparkles, testId: 'nav-ai' },
+    ],
+  },
   {
     key: 'people',
     items: [

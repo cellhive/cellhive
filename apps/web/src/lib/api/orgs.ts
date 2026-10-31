@@ -4,7 +4,7 @@ import {
   groupListSchema,
   MAX_LIST_LIMIT,
   orgMemberListSchema,
-  organizationSchema,
+  organizationDetailSchema,
   workspaceListSchema,
 } from '@cellhive/contracts';
 
@@ -19,11 +19,16 @@ const DEV = import.meta.env.DEV;
  * page of the maximum size holds the members of an MVP organization.
  */
 export const orgsApi = {
-  /** An organization with its defaults (locale, timezone, currency: SPEC §20). */
+  /**
+   * An organization with its defaults (locale, timezone, currency: SPEC §20)
+   * and `ai` (T912: whether AI entry points render, CONTRACTS §29.1).
+   */
   get: (orgId: string, signal?: AbortSignal) =>
-    apiRequest(`/orgs/${encodeURIComponent(orgId)}`, DEV ? organizationSchema : UNCHECKED_SCHEMA, {
-      signal,
-    }),
+    apiRequest(
+      `/orgs/${encodeURIComponent(orgId)}`,
+      DEV ? organizationDetailSchema : UNCHECKED_SCHEMA,
+      { signal },
+    ),
   members: (orgId: string, signal?: AbortSignal) =>
     apiRequest(
       `/orgs/${encodeURIComponent(orgId)}/members`,
