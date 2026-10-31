@@ -10,11 +10,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, ImageDown, Info, ListTree, MoreHorizontal } from 'lucide-react';
 import {
-  lazy,
-  Suspense,
   useEffect,
   useId,
-  useMemo,
   useState,
   type FocusEventHandler,
   type KeyboardEventHandler,
@@ -29,8 +26,6 @@ import { type WidgetDataContext } from '../api';
 import { isDataWidget, type NotApplied, type WidgetLiveFilters } from '../filters/filter-state';
 import { FilterControlWidget } from '../filters/FilterControlWidget';
 import { useDashboardFilters, useWidgetLiveFilters } from '../filters/use-dashboard-filters';
-import { buildChartModel, type MetricConfig } from '../model/chart-model';
-import { modelTable } from '../model/table';
 import { TEST_IDS } from '../test-ids';
 import { useDashboardDataSource } from '../view/data-source';
 import {
@@ -40,48 +35,12 @@ import {
   type WidgetActions,
 } from '../view/widget-actions';
 
-import { ChartWidget, type ChartWidgetConfig } from './ChartWidget';
-import { DataTable } from './DataTable';
-import { KpiWidget, type KpiWidgetDisplay } from './KpiWidget';
-import { useWidgetPresentation } from './presentation';
 import { TextWidget } from './TextWidget';
 import { WidgetBoundary } from './WidgetBoundary';
 import { WidgetMessage } from './WidgetMessage';
+import { useWidgetShape, WidgetResult, type WidgetViewConfig as ViewConfig } from './WidgetResult';
 
-import type { WidgetNumberFormat } from '../model/format';
-import type {
-  FieldDto,
-  WidgetDataDto,
-  WidgetDimension,
-  WidgetDto,
-  WidgetLiveFilterInput,
-} from '@cellhive/contracts';
-
-const RecordsTable = lazy(() => import('./RecordsTable'));
-
-/** The config keys the view reads (the API filled the defaults, CONTRACTS §28.2). */
-interface ViewConfig {
-  readonly table_id?: string;
-  readonly filter?: unknown;
-  readonly description?: string | null;
-  readonly metrics?: readonly MetricConfig[];
-  readonly dimension?: WidgetDimension;
-  readonly series_dimension?: WidgetDimension | null;
-  readonly table?:
-    | {
-        readonly mode: 'pivot';
-        readonly dimension: WidgetDimension;
-        readonly metrics: readonly MetricConfig[];
-      }
-    | { readonly mode: 'records' };
-  readonly markdown?: string;
-  readonly display?: Record<string, unknown> & {
-    readonly number_format?: WidgetNumberFormat | null;
-    readonly empty_text?: string | null;
-  };
-}
-
-const NO_METRICS: readonly MetricConfig[] = [];
+import type { WidgetDto, WidgetLiveFilterInput } from '@cellhive/contracts';
 
 /** (T812) What the editor adds to a card: its actions, keyboard moves. */
 export interface WidgetCardFrame {
@@ -300,19 +259,7 @@ function DataWidgetContent({
   }, [gone, queryClient, source, widget.dashboard_id]);
   const tableId = config.table_id ?? '';
   const fields = useQuery({ ...source.fields(tableId), enabled: data?.status === 'ok' });
-  const metrics =
-    (config.table?.mode === 'pivot' ? config.table.metrics : config.metrics) ?? NO_METRICS;
-  const dimension = config.table?.mode === 'pivot' ? config.table.dimension : config.dimension;
-  const optionFields = useMemo(
-    () => [dimension?.field, config.series_dimension?.field],
-    [dimension?.field, config.series_dimension?.field],
-  );
-  const presentation = useWidgetPresentation(
-    metrics,
-    config.display?.number_format,
-    fields.data?.items,
-    optionFields,
-  );
+  const shape = useWidgetShape(config, fields.data?.items);
 
   if (query.isPending) {
     return <Skeleton className="size-full" aria-hidden="true" data-testid="widget-skeleton" />;
@@ -376,105 +323,17 @@ function DataWidgetContent({
       return null;
     case 'ok':
       return (
-        <OkWidget
+        <WidgetResult
+          {...shape}
+          type={widget.type}
           widget={widget}
           config={config}
           title={title}
           data={data}
-          metrics={metrics}
-          dimension={dimension}
-          presentation={presentation}
           fields={fields.data?.items}
           filters={live.filters}
         />
       );
-  }
-}
-
-function OkWidget({
-  widget,
-  config,
-  title,
-  data,
-  metrics,
-  dimension,
-  presentation,
-  fields,
-  filters,
-}: {
-  readonly widget: WidgetDto;
-  readonly config: ViewConfig;
-  readonly title: string;
-  readonly data: WidgetDataDto;
-  readonly metrics: readonly MetricConfig[];
-  readonly dimension: WidgetDimension | undefined;
-  readonly presentation: ReturnType<typeof useWidgetPresentation>;
-  readonly fields: readonly FieldDto[] | undefined;
-  readonly filters: readonly WidgetLiveFilterInput[];
-}): ReactNode {
-  const { t } = useTranslation('dashboard');
-  switch (widget.type) {
-    case 'kpi':
-      return (
-        <KpiWidget
-          metricId={metrics[0]?.id ?? ''}
-          data={data}
-          display={(config.display ?? {}) as KpiWidgetDisplay}
-          presentation={presentation}
-        />
-      );
-    case 'bar':
-    case 'line':
-    case 'combo':
-    case 'pie':
-      if (dimension === undefined) return null;
-      return (
-        <ChartWidget
-          type={widget.type}
-          title={title}
-          config={{ ...(config as ChartWidgetConfig), metrics, dimension }}
-          data={data}
-          presentation={presentation}
-          widget={widget}
-          filters={filters}
-        />
-      );
-    case 'table': {
-      if (config.table?.mode === 'records') {
-        if (fields === undefined) {
-          return <Skeleton className="size-full" aria-hidden="true" />;
-        }
-        return (
-          <Suspense fallback={<Skeleton className="size-full" aria-hidden="true" />}>
-            <RecordsTable caption={title} data={data} fields={fields} />
-          </Suspense>
-        );
-      }
-      const model = buildChartModel({
-        type: 'bar',
-        metrics,
-        data,
-        colors: { palette: [], other: '' },
-        label: presentation.label,
-        otherLabel: presentation.otherLabel,
-        metricName: presentation.metricName,
-      });
-      const table = modelTable(
-        model,
-        presentation.fieldName(dimension?.field) ?? t('chart.dimension'),
-        presentation.format,
-      );
-      return (
-        <DataTable
-          caption={title}
-          columns={table.columns}
-          rows={table.rows}
-          testId={TEST_IDS.widgetPivot}
-        />
-      );
-    }
-    default:
-      return null;
   }
 }
 
