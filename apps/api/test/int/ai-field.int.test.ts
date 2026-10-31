@@ -617,8 +617,8 @@ describe('AI fields (T910)', () => {
           ),
         ),
       });
-      // Every call takes 2 s: the AI runner (AI_CONCURRENCY 2) is busy for minutes.
-      fake.capabilities.delayMs = 2_000;
+      // Every call takes 5 s: the AI runner (AI_CONCURRENCY 2) is busy for minutes.
+      fake.capabilities.delayMs = 5_000;
       const created = await fx.call('u_admin', 'POST', `/tables/${fx.orders.id}/records`, {
         records: Array.from({ length: 500 }, (_, index) => ({
           fields: { title: `Import ${String(index)}`, cost: index },
@@ -642,7 +642,9 @@ describe('AI fields (T910)', () => {
         latency = rows[0].ms;
         return true;
       }, 'events.dispatch');
-      expect(latency).toBeLessThan(1_000);
+      // About the poll interval when the machine is idle (< 1 s); a full parallel test run adds
+      // its own load. Waiting for an AI slot would take a whole call (5 s).
+      expect(latency).toBeLessThan(2_500);
       // Faster answers: the AI runner drains the queue on its own.
       fake.capabilities.delayMs = 0;
       await waitFor(
