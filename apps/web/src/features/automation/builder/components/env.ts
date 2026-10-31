@@ -4,7 +4,7 @@ import type { AutomationConditionEditorProps } from '../../../../lib/automation/
 import type { WebhookKit } from '../../../../lib/automation/webhook-kit';
 import type { BuilderIssue } from '../model/issues';
 import type { ScopeNames } from '../model/scope';
-import type { BaseDetail, FieldDto, TableDto, ViewDto } from '@cellhive/contracts';
+import type { BaseDetail, FieldDto, OrganizationAi, TableDto, ViewDto } from '@cellhive/contracts';
 
 /**
  * What every part of the builder reads (T521): the base and its schema as
@@ -37,6 +37,13 @@ export interface BuilderEnv extends ScopeNames {
   readonly emailUnavailable: boolean;
   /** (T522) The organization's email settings page, for its owners/admins (`null` otherwise). */
   readonly emailSettingsPath: string | null;
+  /**
+   * (T915) AI of the organization (`useAiAvailability`): the AI steps render
+   * only when `available`; without `record_data` they are disabled with the reason.
+   */
+  readonly ai?: OrganizationAi | undefined;
+  /** (T915) The organization's AI settings page, for its owners/admins (`null` otherwise). */
+  readonly aiSettingsPath?: string | null | undefined;
   readonly ConditionEditor: ComponentType<AutomationConditionEditorProps>;
   /** (T612) "New webhook", secrets shown once, the URL field — from `features/integrations`. */
   readonly webhookKit: WebhookKit;

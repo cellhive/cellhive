@@ -1,4 +1,5 @@
 import {
+  AI_FIELD_DEFAULT_OUTPUT_TOKENS,
   AUTOMATION_TRIGGER_TYPES,
   DEFAULT_FIND_RECORDS,
   DEFAULT_UPDATE_RECORDS_LIMIT,
@@ -71,7 +72,9 @@ export type AddableActionType =
   | 'send_notification'
   | 'send_telegram'
   | 'http_request'
-  | 'run_n8n_workflow';
+  | 'run_n8n_workflow'
+  | 'ai_generate_text'
+  | 'ai_classify';
 
 /** Every action type shown in the "add step" menu, in its order (board "S5 · Automation builder"). */
 export const ACTION_MENU = [
@@ -87,21 +90,21 @@ export const ACTION_MENU = [
   'send_telegram',
   'http_request',
   'run_n8n_workflow',
+  // (T915) Rendered only with AI available; disabled with the reason without record values.
+  'ai_generate_text',
+  'ai_classify',
 ] as const;
 export type MenuActionType = (typeof ACTION_MENU)[number];
 
+/** (T915) The AI steps of the menu: an AI entry renders only when AI is available. */
+export const AI_ACTION_TYPES: ReadonlySet<string> = new Set(['ai_generate_text', 'ai_classify']);
+
 /**
  * Types whose step cannot be edited yet, and the task that brings their
- * editor: the AI steps (T911) until T915 — kept, shown and removable when a
- * draft or a saved automation has them, never offered in the menu (an AI
- * entry point only renders with AI available). The menu types all have
- * editors (`send_email`/`send_notification` T522, `send_telegram` T516,
- * `http_request`/`run_n8n_workflow` T613).
+ * editor: none since the AI steps' panels (T915). Kept for a type a later
+ * contract adds before its editor: shown and removable, never offered.
  */
-export const COMING_SOON: Readonly<Partial<Record<AutomationAction['type'], string>>> = {
-  ai_generate_text: 'T915',
-  ai_classify: 'T915',
-};
+export const COMING_SOON: Readonly<Partial<Record<AutomationAction['type'], string>>> = {};
 
 export function isAddable(type: MenuActionType): type is AddableActionType {
   return COMING_SOON[type] === undefined;
@@ -390,6 +393,20 @@ export function newAction(
           skip_actor: false,
         },
       };
+    // (T915) Prompt and target still to fill (the save check names them).
+    case 'ai_generate_text':
+      return {
+        id,
+        type,
+        config: {
+          prompt: '',
+          instructions: null,
+          max_output_tokens: AI_FIELD_DEFAULT_OUTPUT_TOKENS,
+          target_field_id: null,
+        },
+      };
+    case 'ai_classify':
+      return { id, type, config: { input: '', instructions: null, target_field_id: NO_FIELD } };
   }
 }
 

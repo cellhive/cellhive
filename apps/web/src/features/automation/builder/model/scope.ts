@@ -1,5 +1,6 @@
 import {
   TEMPLATE_STEP_ACTION_TYPES,
+  TEMPLATE_TEXT_STEP_ACTION_TYPES,
   type AutomationDefinition,
   type AutomationTriggerType,
   type FieldDto,
@@ -101,6 +102,18 @@ export function templateSteps(scope: ValueScope): { id: string; table_id: TableI
   );
 }
 
+const TEXT_STEP_TYPES: ReadonlySet<string> = new Set(TEMPLATE_TEXT_STEP_ACTION_TYPES);
+
+/** (T915) A step a later template places as text: `[act_…]` (`ai_generate_text`). */
+export function isTextStep(step: Pick<ScopeStep, 'type'>): boolean {
+  return TEXT_STEP_TYPES.has(step.type);
+}
+
+/** Earlier text steps, for `validate-template` (`text_steps`, CONTRACTS §29.6). */
+export function templateTextSteps(scope: ValueScope): string[] {
+  return scope.steps.filter(isTextStep).map((step) => step.id);
+}
+
 /** Color family of a chip (board: field = jade, trigger data = indigo, step output = amber). */
 export type ChipTone = 'field' | 'trigger' | 'step' | 'expression' | 'error';
 
@@ -181,6 +194,15 @@ export function chipNameOf(
     }
     case 'step': {
       const step = scope.steps.find((item) => item.id === reference.step);
+      // (T915) `[act_…]` of an earlier `ai_generate_text` is its text (CONTRACTS §29.6).
+      if (
+        step !== undefined &&
+        isTextStep(step) &&
+        reference.fieldId === null &&
+        reference.ref === null
+      ) {
+        return { tone: 'step', number: step.number, part: 'text' };
+      }
       if (step === undefined || step.tableId === null)
         return { tone: 'error', ref: reference.step };
       if (reference.fieldId === null) {

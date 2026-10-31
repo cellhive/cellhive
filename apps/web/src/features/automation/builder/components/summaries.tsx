@@ -300,6 +300,7 @@ export function useActionSummary(
 ): { title: string; body: ReactNode } {
   const { t, i18n } = useTranslation('automationBuilder');
   const env = useBuilderEnv();
+  const fieldName = useFieldName();
   const title = t(`actionType.${action.type}` as 'actionType.if');
   switch (action.type) {
     case 'create_record':
@@ -504,6 +505,37 @@ export function useActionSummary(
           </span>
         ),
       };
+    // (T915) The AI steps: what they write, then the prompt (fields of the trigger record).
+    case 'ai_generate_text':
+    case 'ai_classify': {
+      const target = action.config.target_field_id;
+      const field =
+        target === null || isUnset(target) ? null : fieldName(scope.triggerTableId, target);
+      const prompt =
+        action.type === 'ai_generate_text' ? action.config.prompt : action.config.input;
+      return {
+        title,
+        body: (
+          <>
+            {action.type === 'ai_generate_text' && target === null ? (
+              t('summary.aiOutputOnly')
+            ) : field === null || field === undefined ? (
+              <em>{t('summary.aiChooseField')}</em>
+            ) : (
+              t(action.type === 'ai_classify' ? 'summary.aiClassifyInto' : 'summary.aiWriteTo', {
+                field,
+              })
+            )}
+            <br />
+            {prompt.trim() === '' ? (
+              <em>{t('summary.empty')}</em>
+            ) : (
+              <ValueSummary value={{ template: prompt }} scope={{ ...scope, steps: [] }} />
+            )}
+          </>
+        ),
+      };
+    }
     default:
       return { title, body: t('summary.comingSoon') };
   }

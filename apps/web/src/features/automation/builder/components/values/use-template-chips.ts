@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { automationsApi } from '../../../../../lib/api/automations';
 import { keys } from '../../../../../lib/query/keys';
 import { canonicalJson } from '../../model/draft';
-import { chipNameOf, templateSteps, type ValueScope } from '../../model/scope';
+import { chipNameOf, templateSteps, templateTextSteps, type ValueScope } from '../../model/scope';
 import { hasExpressions } from '../../model/values';
 import { useBuilderEnv } from '../env';
 
@@ -51,6 +51,7 @@ export function useTemplateDisplays(
     form: 'stored' as const,
     trigger_type: scope.triggerType,
     steps: templateSteps(scope),
+    text_steps: templateTextSteps(scope),
   };
   const display = useQuery({
     queryKey: keys.automationTemplate(env.base.id, canonicalJson(request)),

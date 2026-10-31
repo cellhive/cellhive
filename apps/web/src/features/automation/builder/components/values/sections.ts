@@ -1,3 +1,4 @@
+import { isTextStep, type ScopeNames, type ValueScope } from '../../model/scope';
 import {
   referenceExpression,
   stepPathsOf,
@@ -12,7 +13,6 @@ import {
 } from '../../triggers/webhook/model';
 
 import type { PickerItem, PickerSection } from './ValuePicker';
-import type { ScopeNames, ValueScope } from '../../model/scope';
 import type { AutomationValue, FieldDto } from '@cellhive/contracts';
 import type { TFunction } from 'i18next';
 
@@ -164,6 +164,17 @@ export function pickerSections({
         tone: 'step' as const,
         pick: value({ step: step.id, path }),
       }));
+    }
+    // (T915) An earlier `ai_generate_text`: its text as one chip.
+    if (isTextStep(step)) {
+      return [
+        {
+          key: `step:${step.id}`,
+          label: label(t('chip.part.text')),
+          tone: 'step' as const,
+          pick: ref(`[${step.id}]`),
+        },
+      ];
     }
     if (step.tableId === null) return [];
     const tableId = step.tableId;

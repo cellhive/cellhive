@@ -50,6 +50,7 @@ import { Link } from 'react-router';
 import { TRIGGER_ICONS } from '../../../trigger-icons';
 import {
   ACTION_MENU,
+  AI_ACTION_TYPES,
   canAddAction,
   COMING_SOON,
   hasTriggerRecord,
@@ -161,17 +162,39 @@ function AddStepMenu({
       <DropdownMenuContent align="center" className="w-64" data-testid="add-step-menu">
         <DropdownMenuLabel>{t('flow.addTitle')}</DropdownMenuLabel>
         {ACTION_MENU.map((type, position) => {
+          const aiStep = AI_ACTION_TYPES.has(type);
+          // (T915) No AI entry renders without AI (never hidden with CSS, research S8 §5.1).
+          if (aiStep && env.ai?.available !== true) return null;
           const Icon = ACTION_ICONS[type] ?? Plus;
           const soon = COMING_SOON[type] !== undefined;
           // (T522) No SMTP and no sender identity: nothing could be sent.
           const noEmail = type === 'send_email' && env.emailUnavailable;
+          // (T915) AI steps send values of the trigger record: record values must be allowed.
+          const noRecordData = aiStep && env.ai?.record_data !== true;
+          const noRecord = !hasTriggerRecord(context.definition.trigger);
           const blocked =
             noEmail ||
+            noRecordData ||
             (type === 'if' && list.kind === 'branch') ||
-            (type === 'delete_record' && !hasTriggerRecord(context.definition.trigger));
+            ((type === 'delete_record' || aiStep) && noRecord);
+          const reason = noEmail
+            ? t('flow.noEmail')
+            : noRecordData
+              ? t('flow.aiNoRecordData')
+              : aiStep && noRecord
+                ? t('flow.aiNoRecord')
+                : soon
+                  ? t('flow.soon')
+                  : null;
           return (
             <Fragment key={type}>
               {position === 5 ? <DropdownMenuSeparator /> : null}
+              {type === 'ai_generate_text' ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>{t('flow.aiGroup')}</DropdownMenuLabel>
+                </>
+              ) : null}
               <DropdownMenuItem
                 disabled={soon || blocked}
                 data-testid={`add-${type}`}
@@ -180,12 +203,14 @@ function AddStepMenu({
                 }}
               >
                 <Icon aria-hidden="true" />
-                <span className="min-w-0 flex-1">{t(`actionType.${type}`)}</span>
-                {soon ? (
-                  <span className="text-label font-normal text-fg-muted">{t('flow.soon')}</span>
-                ) : null}
-                {noEmail ? (
-                  <span className="text-label font-normal text-fg-muted">{t('flow.noEmail')}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span>{t(`actionType.${type}`)}</span>
+                  {reason !== null && aiStep ? (
+                    <span className="text-label font-normal text-fg-muted">{reason}</span>
+                  ) : null}
+                </span>
+                {reason !== null && !aiStep ? (
+                  <span className="text-label font-normal text-fg-muted">{reason}</span>
                 ) : null}
               </DropdownMenuItem>
               {noEmail && env.emailSettingsPath !== null ? (
@@ -193,6 +218,14 @@ function AddStepMenu({
                   <Link to={env.emailSettingsPath} data-testid="add-email-settings">
                     <Settings aria-hidden="true" />
                     {t('flow.openEmailSettings')}
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
+              {type === 'ai_classify' && noRecordData && env.aiSettingsPath != null ? (
+                <DropdownMenuItem asChild>
+                  <Link to={env.aiSettingsPath} data-testid="add-ai-settings">
+                    <Settings aria-hidden="true" />
+                    {t('flow.openAiSettings')}
                   </Link>
                 </DropdownMenuItem>
               ) : null}

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { automationsApi } from '../../../../../lib/api/automations';
 import { ErrorAlert } from '../../../../../lib/errors/ErrorAlert';
 import { translateDetail } from '../../../../../lib/errors/translate';
-import { templateSteps, type ValueScope } from '../../model/scope';
+import { templateSteps, templateTextSteps, type ValueScope } from '../../model/scope';
 
 export interface ExpressionDialogProps {
   readonly baseId: string;
@@ -35,6 +35,7 @@ export function ExpressionDialog({ baseId, scope, onCancel, onInsert }: Expressi
         form: 'display',
         trigger_type: scope.triggerType,
         steps: templateSteps(scope),
+        text_steps: templateTextSteps(scope),
       }),
     onSuccess: (result) => {
       const placeholder = result.placeholders[0];

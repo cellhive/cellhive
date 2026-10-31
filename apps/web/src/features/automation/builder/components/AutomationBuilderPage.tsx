@@ -38,6 +38,7 @@ import {
 } from 'react-router';
 
 import { useDocumentTitle } from '../../../../lib/a11y/use-document-title';
+import { useAiAvailability } from '../../../../lib/ai/use-ai-availability';
 import { automationsApi } from '../../../../lib/api/automations';
 import { isApiError } from '../../../../lib/api/client';
 import { ErrorAlert } from '../../../../lib/errors/ErrorAlert';
@@ -346,6 +347,8 @@ function Builder({
   const emailUnavailable =
     emailSettings.data?.smtp.configured === false && baseIdentities.data?.items.length === 0;
   const orgSlug = me.data?.orgs.find((item) => item.id === base.organization_id)?.slug ?? null;
+  // (T915) The AI steps of the menu: only with AI on, disabled without record values.
+  const ai = useAiAvailability(base.organization_id);
   const viewLists = useQueries({ queries: managedTables.map((table) => viewsQuery(table.id)) });
 
   const [saved, setSaved] = useState<AutomationDto | null>(automation);
@@ -430,6 +433,8 @@ function Builder({
       readOnly: narrow,
       emailUnavailable,
       emailSettingsPath: orgAdmin && orgSlug !== null ? `/o/${orgSlug}/settings/email` : null,
+      ai,
+      aiSettingsPath: orgAdmin && orgSlug !== null ? `/o/${orgSlug}/settings/ai` : null,
       ConditionEditor,
       webhookKit,
       setConditionState: (slot, state) => {
@@ -460,6 +465,7 @@ function Builder({
       emailUnavailable,
       orgAdmin,
       orgSlug,
+      ai,
       ConditionEditor,
       webhookKit,
       resetKey,

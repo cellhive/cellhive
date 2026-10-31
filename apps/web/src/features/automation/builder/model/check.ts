@@ -6,7 +6,7 @@ import {
   HTTP_CLIENT_ISSUE_CODES,
 } from '../actions/http-request/model';
 
-import { isUnset, placedActions } from './draft';
+import { hasTriggerRecord, isUnset, placedActions } from './draft';
 import { locateIssue, type BuilderIssue, type StepKey } from './issues';
 import { parseCron, nextRuns, tooFrequent } from './schedule';
 import { isEmptyValue } from './values';
@@ -32,6 +32,7 @@ export const CLIENT_ISSUE_CODES = [
   'CRON_TOO_FREQUENT',
   'COMING_SOON',
   'INVALID_DEFINITION',
+  'NO_TRIGGER_RECORD',
   ...HTTP_CLIENT_ISSUE_CODES,
 ] as const;
 export type ClientIssueCode = (typeof CLIENT_ISSUE_CODES)[number];
@@ -228,6 +229,18 @@ export function checkDraft(
         break;
       case 'run_n8n_workflow':
         issues.push(...checkRunN8nWorkflow(step, action.config));
+        break;
+      // (T915) The AI steps: a trigger record, a prompt, and (classify) the select to set.
+      case 'ai_generate_text':
+        if (!hasTriggerRecord(trigger)) push(issue(step, '', 'NO_TRIGGER_RECORD'));
+        if (action.config.prompt.trim() === '') push(issue(step, 'config.prompt', 'REQUIRED'));
+        break;
+      case 'ai_classify':
+        if (!hasTriggerRecord(trigger)) push(issue(step, '', 'NO_TRIGGER_RECORD'));
+        if (action.config.input.trim() === '') push(issue(step, 'config.input', 'REQUIRED'));
+        if (isUnset(action.config.target_field_id)) {
+          push(issue(step, 'config.target_field_id', 'REQUIRED'));
+        }
         break;
       default:
         break;

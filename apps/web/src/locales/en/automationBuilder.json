@@ -46,7 +46,8 @@
     "HEADER_NAME_INVALID": "This is not a valid header name.",
     "INVALID_JSON": "The JSON body does not parse.",
     "GET_NO_BODY": "A GET request has no body: remove it or choose another method.",
-    "SECRET_NOT_USABLE_HTTP": "This secret cannot be used by automations of this base."
+    "SECRET_NOT_USABLE_HTTP": "This secret cannot be used by automations of this base.",
+    "NO_TRIGGER_RECORD": "AI steps read the trigger record: choose a trigger with a record (not a schedule or a webhook)."
   },
   "flow": {
     "when": "When",
@@ -74,7 +75,11 @@
     "stops": "Stops the run",
     "noActions": "Add a step: an automation needs at least one to be turned on.",
     "noEmail": "email not set up",
-    "openEmailSettings": "Open email settings"
+    "openEmailSettings": "Open email settings",
+    "aiGroup": "AI",
+    "aiNoRecordData": "AI may not read record values",
+    "aiNoRecord": "Needs a trigger with a record",
+    "openAiSettings": "Open AI settings"
   },
   "panel": {
     "trigger": "Trigger",
@@ -341,7 +346,11 @@
       "signature": "With signature"
     },
     "urlChoose": "Enter a URL",
-    "notifyChannels": "Sent through each recipient's channels — Telegram when linked."
+    "notifyChannels": "Sent through each recipient's channels — Telegram when linked.",
+    "aiOutputOnly": "Output only: later steps place the text",
+    "aiWriteTo": "Writes to {{field}}",
+    "aiClassifyInto": "Sets {{field}}",
+    "aiChooseField": "Choose a field"
   },
   "values": {
     "insert": "Insert a value",
@@ -386,7 +395,8 @@
       "count": "records found",
       "record": "record",
       "url": "record link",
-      "output": "output"
+      "output": "output",
+      "text": "AI text"
     },
     "ref": "#REF",
     "refHint": "This field or step no longer exists or you can no longer read it.",
@@ -521,5 +531,30 @@
       "unsupported_trigger": "Trigger not supported:",
       "ambiguous": "Guessed:"
     }
+  },
+  "aiStep": {
+    "generateIntro": "Writes a text from fields of the trigger record. Write it to a text field, or place it in later steps.",
+    "classifyIntro": "Picks one option of a single select field from fields of the trigger record, and sets it.",
+    "noRecord": "This trigger has no record: AI steps read the trigger record.",
+    "prompt": "Prompt",
+    "input": "What to classify",
+    "promptHint": "Press + or type {{ to insert a field of the trigger record. Values reach the AI as data, never as instructions.",
+    "promptPlaceholder": "Say what the AI should do, and insert the fields it reads.",
+    "instructions": "Instructions (optional)",
+    "instructionsHint": "Tone, language, length… For example: “Answer in Vietnamese.”",
+    "maxTokens": "Longest answer (tokens)",
+    "maxTokensHint": "From 16 to 2,000; about 3 characters per token.",
+    "writeTo": "Write the text to",
+    "writeToHint": "A text field of the trigger record. The person the automation runs as needs edit rights on it.",
+    "outputOnly": "No field: later steps use the text",
+    "outputOnlyHint": "Later steps place it with “+” › Step · AI text.",
+    "unknownField": "A field that no longer exists or that you cannot read",
+    "classifyInto": "Set the field",
+    "classifyIntoHint": "A single select field of the trigger record: the AI answers one of its options.",
+    "classifyOptions": "The AI answers one of: {{options}}.",
+    "noRecordData": "AI may not read record values in this organization: this step cannot be saved or run.",
+    "noRecordDataMember": "Ask an organization owner or admin to allow it.",
+    "quotaTitle": "When the AI quota runs out",
+    "quota": "If the organization’s daily AI quota runs out, this step fails and is not retried. The run history shows it."
   }
 }

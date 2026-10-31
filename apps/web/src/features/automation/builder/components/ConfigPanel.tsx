@@ -33,6 +33,15 @@ import type {
 // (T613) The HTTP editors and their strings load with the first HTTP step opened.
 const HttpRequestEditor = lazy(() => import('../actions/http-request/HttpRequestEditor'));
 const RunN8nWorkflowEditor = lazy(() => import('../actions/run-n8n-workflow/RunN8nWorkflowEditor'));
+// (T915) The AI steps' panels load with the first AI step opened.
+const AiGenerateTextPanel = lazy(() =>
+  import('../actions/ai/AiActionPanels').then((module) => ({
+    default: module.AiGenerateTextPanel,
+  })),
+);
+const AiClassifyPanel = lazy(() =>
+  import('../actions/ai/AiActionPanels').then((module) => ({ default: module.AiClassifyPanel })),
+);
 
 export interface ConfigPanelProps {
   readonly step: StepKey;
@@ -141,6 +150,21 @@ export function ConfigPanel({
         body = (
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
             <RunN8nWorkflowEditor action={action} {...props} />
+          </Suspense>
+        );
+        break;
+      // (T915) The AI steps (CONTRACTS §29.6).
+      case 'ai_generate_text':
+        body = (
+          <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+            <AiGenerateTextPanel action={action} {...props} />
+          </Suspense>
+        );
+        break;
+      case 'ai_classify':
+        body = (
+          <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+            <AiClassifyPanel action={action} {...props} />
           </Suspense>
         );
         break;

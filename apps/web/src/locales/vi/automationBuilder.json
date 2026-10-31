@@ -44,7 +44,8 @@
     "HEADER_NAME_INVALID": "Tên header không hợp lệ.",
     "INVALID_JSON": "Body JSON không hợp lệ.",
     "GET_NO_BODY": "Request GET không có body: hãy bỏ body hoặc chọn phương thức khác.",
-    "SECRET_NOT_USABLE_HTTP": "Automation của base này không dùng được secret này."
+    "SECRET_NOT_USABLE_HTTP": "Automation của base này không dùng được secret này.",
+    "NO_TRIGGER_RECORD": "Bước AI đọc bản ghi kích hoạt: hãy chọn trigger có bản ghi (không phải lịch hay webhook)."
   },
   "flow": {
     "when": "Khi",
@@ -71,7 +72,11 @@
     "stops": "Dừng lần chạy",
     "noActions": "Thêm bước: automation cần ít nhất một bước mới bật được.",
     "noEmail": "chưa cấu hình email",
-    "openEmailSettings": "Mở Cài đặt email"
+    "openEmailSettings": "Mở Cài đặt email",
+    "aiGroup": "AI",
+    "aiNoRecordData": "AI chưa được đọc giá trị bản ghi",
+    "aiNoRecord": "Cần trigger có bản ghi",
+    "openAiSettings": "Mở cài đặt AI"
   },
   "panel": {
     "trigger": "Trigger",
@@ -327,7 +332,11 @@
       "signature": "Kèm chữ ký"
     },
     "urlChoose": "Nhập URL",
-    "notifyChannels": "Gửi qua kênh của từng người nhận — Telegram nếu đã liên kết."
+    "notifyChannels": "Gửi qua kênh của từng người nhận — Telegram nếu đã liên kết.",
+    "aiOutputOnly": "Chỉ trả kết quả: bước sau chèn văn bản",
+    "aiWriteTo": "Ghi vào {{field}}",
+    "aiClassifyInto": "Đặt {{field}}",
+    "aiChooseField": "Chọn một trường"
   },
   "values": {
     "insert": "Chèn giá trị",
@@ -372,7 +381,8 @@
       "count": "Số bản ghi tìm thấy",
       "record": "Bản ghi",
       "url": "Link bản ghi",
-      "output": "Kết quả"
+      "output": "Kết quả",
+      "text": "văn bản AI"
     },
     "ref": "#REF",
     "refHint": "Trường hoặc bước này không còn, hoặc bạn không còn đọc được.",
@@ -502,5 +512,30 @@
       "unsupported_trigger": "Không hỗ trợ trigger:",
       "ambiguous": "AI đã đoán:"
     }
+  },
+  "aiStep": {
+    "generateIntro": "Viết một đoạn văn bản từ các trường của bản ghi kích hoạt. Ghi vào một trường văn bản, hoặc chèn ở các bước sau.",
+    "classifyIntro": "Chọn một lựa chọn của trường một lựa chọn từ các trường của bản ghi kích hoạt, rồi đặt giá trị đó.",
+    "noRecord": "Trigger này không có bản ghi: bước AI đọc bản ghi kích hoạt.",
+    "prompt": "Prompt",
+    "input": "Nội dung cần phân loại",
+    "promptHint": "Bấm + hoặc gõ {{ để chèn một trường của bản ghi kích hoạt. Giá trị tới AI dưới dạng dữ liệu, không bao giờ là lệnh.",
+    "promptPlaceholder": "Nói AI cần làm gì, và chèn các trường nó cần đọc.",
+    "instructions": "Hướng dẫn (không bắt buộc)",
+    "instructionsHint": "Giọng văn, ngôn ngữ, độ dài… Ví dụ: “Trả lời bằng tiếng Việt.”",
+    "maxTokens": "Câu trả lời dài nhất (token)",
+    "maxTokensHint": "Từ 16 tới 2.000; khoảng 3 ký tự mỗi token.",
+    "writeTo": "Ghi văn bản vào",
+    "writeToHint": "Một trường văn bản của bản ghi kích hoạt. Người mà automation chạy bằng quyền cần quyền sửa trường đó.",
+    "outputOnly": "Không ghi trường nào: bước sau dùng văn bản",
+    "outputOnlyHint": "Bước sau chèn bằng “+” › Bước · văn bản AI.",
+    "unknownField": "Một trường không còn hoặc bạn không xem được",
+    "classifyInto": "Đặt trường",
+    "classifyIntoHint": "Một trường một lựa chọn của bản ghi kích hoạt: AI trả lời một trong các lựa chọn của nó.",
+    "classifyOptions": "AI trả lời một trong: {{options}}.",
+    "noRecordData": "AI chưa được đọc giá trị bản ghi trong tổ chức này: bước này không lưu hay chạy được.",
+    "noRecordDataMember": "Hãy nhờ chủ sở hữu hoặc quản trị viên tổ chức bật.",
+    "quotaTitle": "Khi hết quota AI",
+    "quota": "Nếu tổ chức dùng hết quota AI của ngày, bước này báo lỗi và không thử lại. Lịch sử chạy ghi lại lỗi đó."
   }
 }
