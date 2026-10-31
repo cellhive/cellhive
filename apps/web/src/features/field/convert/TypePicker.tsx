@@ -1,8 +1,10 @@
 import { Button, FormField, Select } from '@cellhive/ui';
-import { ArrowRight, Snowflake } from 'lucide-react';
+import { ArrowRight, Snowflake, Sparkles } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
+import { isAiField } from '../../../lib/ai/ai-field';
 import { typeIconOf } from '../../../lib/schema/field-icons';
 import { CREATABLE_TYPES, type DraftFieldType } from '../draft';
 
@@ -18,11 +20,28 @@ import { LockedValue } from './parts';
 
 import type { FieldDto } from '@cellhive/contracts';
 
+/** (T915) The "AI" group of a new field's types (`useAiAvailability`). */
+export interface TypePickerAi {
+  /** Render the group at all (AI on with a provider; never hidden with CSS). */
+  readonly available: boolean;
+  /** AI may read record values: else the entry is disabled with the reason. */
+  readonly recordData: boolean;
+  /** "Organization settings › AI" for owners/admins, `null` for others. */
+  readonly settingsPath: string | null;
+}
+
+/** Value of the "AI" entry of the type list (an AI field is `text` or `select` + `options.ai`). */
+export const AI_TYPE = 'ai';
+
 export interface TypePickerProps {
   /** The saved field; absent: a new field (every type, no conversion). */
   readonly field?: FieldDto | undefined;
   readonly value: DraftFieldType;
-  readonly onChange: (type: DraftFieldType) => void;
+  readonly onChange: (type: DraftFieldType | typeof AI_TYPE) => void;
+  /** (T915) The "AI" group for a new field; absent: not offered. */
+  readonly ai?: TypePickerAi | undefined;
+  /** (T915) The draft is an AI field (`value` is its output type). */
+  readonly aiSelected?: boolean | undefined;
   /** A conversion runs: the type cannot change meanwhile. */
   readonly disabled?: boolean;
   /** Types a new field may take (default: every creatable type). */
@@ -42,6 +61,8 @@ export function TypePicker({
   onChange,
   disabled = false,
   creatable = CREATABLE_TYPES,
+  ai,
+  aiSelected = false,
 }: TypePickerProps) {
   const { t } = useTranslation('field');
   const labelId = useId();
@@ -49,29 +70,88 @@ export function TypePicker({
   const choices = useMemo(() => (field === undefined ? [] : targetChoices(field)), [field]);
 
   if (field === undefined) {
+    // (T915) AI fields need record values: the entry stays, disabled, with the reason below.
+    const aiBlocked = ai?.available === true && !ai.recordData;
     return (
-      <FormField label={t('type')}>
-        {(control) => (
-          <Select
-            {...control}
-            value={value}
-            onChange={(event) => {
-              onChange(event.target.value as DraftFieldType);
-            }}
+      <div className="flex flex-col gap-1">
+        <FormField label={t('type')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={aiSelected ? AI_TYPE : value}
+              aria-describedby={
+                aiBlocked
+                  ? `${control['aria-describedby'] ?? ''} ${hintId}`.trim()
+                  : control['aria-describedby']
+              }
+              onChange={(event) => {
+                onChange(event.target.value as DraftFieldType | typeof AI_TYPE);
+              }}
+            >
+              {creatable.map((type) => (
+                <option key={type} value={type}>
+                  {t(`types.${type}`)}
+                </option>
+              ))}
+              {ai?.available === true ? (
+                <optgroup label={t('ai.group')}>
+                  <option value={AI_TYPE} disabled={aiBlocked}>
+                    {aiBlocked ? t('ai.typeBlocked') : t('ai.type')}
+                  </option>
+                </optgroup>
+              ) : null}
+            </Select>
+          )}
+        </FormField>
+        {aiBlocked ? (
+          <p
+            id={hintId}
+            className="flex items-start gap-1.5 text-label font-normal text-fg-muted"
+            data-testid="ai-type-blocked"
           >
-            {creatable.map((type) => (
-              <option key={type} value={type}>
-                {t(`types.${type}`)}
-              </option>
-            ))}
-          </Select>
-        )}
-      </FormField>
+            <Sparkles aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              {t('ai.recordDataOff')}{' '}
+              {ai.settingsPath === null ? (
+                t('ai.recordDataOffMember')
+              ) : (
+                <Link
+                  to={ai.settingsPath}
+                  className="font-medium text-accent underline-offset-2 hover:underline"
+                >
+                  {t('ai.openSettings')}
+                </Link>
+              )}
+            </span>
+          </p>
+        ) : null}
+      </div>
     );
   }
 
   const CurrentIcon = typeIconOf(field.type);
   const currentName = t(`types.${field.type}`, { defaultValue: field.type });
+  // (T915) An AI field keeps its type: AI is removed first (then a conversion is possible).
+  if (isAiField(field)) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span id={labelId} className="text-label text-fg">
+          {t('type')}
+        </span>
+        <LockedValue
+          icon={Sparkles}
+          labelledBy={labelId}
+          describedBy={hintId}
+          data-testid="type-locked"
+        >
+          {t('ai.lockedType', { type: currentName })}
+        </LockedValue>
+        <p id={hintId} className="text-label font-normal text-fg-muted">
+          {t('ai.lockedTypeHint')}
+        </p>
+      </div>
+    );
+  }
   if (!canChangeType(field)) {
     return (
       <div className="flex flex-col gap-1">

@@ -199,6 +199,8 @@ export interface SelectOptionsEditorProps {
   readonly value: SelectDraft;
   readonly onChange: (value: SelectDraft) => void;
   readonly issues: readonly DraftIssue[];
+  /** (T915) The options an AI field picks from: single, no default value. */
+  readonly ai?: boolean | undefined;
 }
 
 /**
@@ -207,7 +209,12 @@ export interface SelectOptionsEditorProps {
  * marks it: on save the server removes its values from every record in a
  * background job (CONTRACTS §13).
  */
-export function SelectOptionsEditor({ value, onChange, issues }: SelectOptionsEditorProps) {
+export function SelectOptionsEditor({
+  value,
+  onChange,
+  issues,
+  ai = false,
+}: SelectOptionsEditorProps) {
   const { t } = useTranslation('field');
   const issueText = useIssueText();
   const headingId = useId();
@@ -255,15 +262,17 @@ export function SelectOptionsEditor({ value, onChange, issues }: SelectOptionsEd
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
-      <Checkbox
-        label={t('select.multiple')}
-        checked={value.multiple}
-        onChange={(event) => {
-          onChange({ ...value, multiple: event.target.checked });
-        }}
-      />
+      {ai ? null : (
+        <Checkbox
+          label={t('select.multiple')}
+          checked={value.multiple}
+          onChange={(event) => {
+            onChange({ ...value, multiple: event.target.checked });
+          }}
+        />
+      )}
       <h3 id={headingId} className="text-label text-fg">
-        {t('select.options')}
+        {ai ? t('ai.choices') : t('select.options')}
       </h3>
       {options.length === 0 ? (
         <p className="text-label font-normal text-fg-muted">{t('select.empty')}</p>
@@ -329,7 +338,7 @@ export function SelectOptionsEditor({ value, onChange, issues }: SelectOptionsEd
           <p>{t('select.deleteWarning', { count: deleted.length })}</p>
         </Alert>
       ) : null}
-      {value.multiple ? null : (
+      {value.multiple || ai ? null : (
         <FormField label={t('defaultValue')} hint={t('select.defaultHint')}>
           {(control) => (
             <Select

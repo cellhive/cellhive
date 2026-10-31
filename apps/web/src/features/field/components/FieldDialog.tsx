@@ -5,17 +5,29 @@ import { History } from 'lucide-react';
 import { Suspense, useMemo, useState, type SyntheticEvent, ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useAiAvailability } from '../../../lib/ai/use-ai-availability';
 import { api } from '../../../lib/api';
 import { isApiError } from '../../../lib/api/client';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
 import { canManageSchema, canPickLinks } from '../../../lib/permissions/access';
+import { isOrgAdmin } from '../../../lib/permissions/org';
 import { keys } from '../../../lib/query/keys';
 import { baseQuery, fieldsQuery, orgQuery, tablesQuery } from '../../../lib/query/queries';
 import { trackJob } from '../../../lib/realtime/jobs';
 import { isFieldConverting } from '../../../lib/schema/conversion';
 import { meQuery } from '../../../lib/session/session';
 import { showToast } from '../../../lib/toast/toast';
+import { AiFieldSection } from '../ai/AiFieldSection';
+import {
+  aiChangedValues,
+  newAiDraft,
+  serverAiIssue,
+  sourceFieldOf,
+  templateOf,
+  templatePrompt,
+  tokensPerRow,
+} from '../ai/model';
 import { AutomationCard } from '../button/AutomationCard';
 import { ButtonOptionsForm } from '../button/ButtonOptionsForm';
 import { ComputedConversionDialog } from '../convert/ComputedConversionDialog';
@@ -35,7 +47,7 @@ import {
   styleCheckOf,
   type ConversionSettingsDraft,
 } from '../convert/model';
-import { TypePicker } from '../convert/TypePicker';
+import { AI_TYPE, TypePicker } from '../convert/TypePicker';
 import { useConversionPreview } from '../convert/use-conversion-preview';
 import {
   onlyReminderErrors,
@@ -70,6 +82,7 @@ import { TextOptionsForm } from './options/TextOptionsForm';
 import { UserOptionsForm } from './options/UserOptionsForm';
 import { issueAt, useIssueText } from './shared';
 
+import type { AiPromptEditorComponent } from '../../../lib/schema/ai-tools';
 import type { RecordFilterEditorProps } from '../../../lib/schema/field-tools';
 import type {
   FormulaDraft,
@@ -77,7 +90,13 @@ import type {
   FormulaSaveOutcome,
 } from '../../../lib/schema/formula-tools';
 import type { LookupFieldEditor } from '../../../lib/schema/lookup-tools';
-import type { FieldDto, TableDto, UpdateFieldRequest } from '@cellhive/contracts';
+import type {
+  AiFieldPreview,
+  AiFieldTask,
+  FieldDto,
+  TableDto,
+  UpdateFieldRequest,
+} from '@cellhive/contracts';
 
 export interface FieldDialogProps {
   readonly tableId: string;
@@ -96,6 +115,14 @@ export interface FieldDialogProps {
   readonly Formula?: FormulaFieldComponent | undefined;
   /** Configuration of lookup fields (T467, `features/lookup` given by the route). */
   readonly LookupEditor?: LookupFieldEditor | undefined;
+  /** (T915) The prompt editor of AI fields (the automation template editor, from the route). */
+  readonly AiPromptEditor?: AiPromptEditorComponent | undefined;
+  /**
+   * (T915) An AI field was created, or its prompt changed: the caller asks
+   * "Generate for N existing rows?" (`perRow`: tokens per row of the last
+   * preview). Absent: the dialog just closes.
+   */
+  readonly onAiSaved?: ((field: FieldDto, perRow: number | undefined) => void) | undefined;
 }
 
 /** `errors[].params.limit` of a `FIELD_LIMIT_EXCEEDED` problem. */
@@ -201,6 +228,8 @@ export function FieldDialog({
   RecordFilterEditor,
   Formula,
   LookupEditor,
+  AiPromptEditor,
+  onAiSaved,
 }: FieldDialogProps) {
   const { t } = useTranslation(['field', 'common']);
   const issueText = useIssueText();
@@ -223,6 +252,13 @@ export function FieldDialog({
   const queryClient = useQueryClient();
   const editing = field !== undefined;
   const converting = field !== undefined && isFieldConverting(field);
+  // (T915) AI fields: the "AI" group of the types, its templates and the last preview.
+  const aiAvailability = useAiAvailability(orgId);
+  const orgOfMe = me.data?.orgs.find((item) => item.id === orgId);
+  const aiSettingsPath =
+    orgOfMe !== undefined && isOrgAdmin(orgOfMe.role) ? `/o/${orgOfMe.slug}/settings/ai` : null;
+  const tableFields = useQuery(fieldsQuery(tableId));
+  const [aiEstimate, setAiEstimate] = useState<AiFieldPreview['estimate'] | undefined>();
 
   const convertRequest = useMemo(
     () => (field === undefined ? null : conversionRequestOf(field, draft, settings)),
@@ -269,6 +305,7 @@ export function FieldDialog({
   const now = useMemo(() => new Date(), []);
 
   const error = mutation.error;
+  const aiServerIssue = isApiError(error) ? serverAiIssue(error.errors) : undefined;
   const descriptionIssue = issueAt(shownIssues, 'description');
   const reverseIssue = linkChange === 'to_two_way' ? reverseNameIssue(convert.error) : undefined;
   const nameIssue =
@@ -281,6 +318,7 @@ export function FieldDialog({
     error !== null &&
     nameIssue === undefined &&
     reverseIssue === undefined &&
+    aiServerIssue === undefined &&
     !locked &&
     !reminderOnly
       ? error
@@ -296,6 +334,29 @@ export function FieldDialog({
   const change = (next: Partial<FieldDraft>) => {
     setDraft((current) => ({ ...current, ...next }));
     if (error !== null) mutation.reset();
+  };
+
+  /**
+   * (T915) A template of the AI group: its prompt (lead + the first text
+   * field that is not the primary one) and its output. A prompt the user
+   * wrote stays: only the default prompt of the previous template is replaced.
+   */
+  const aiTemplate = (task: AiFieldTask) => {
+    const source = sourceFieldOf(tableFields.data?.items ?? []);
+    const promptOf = (of: AiFieldTask) =>
+      of === 'custom' ? '' : templatePrompt(of, t(`field:ai.templates.${of}.lead`), source);
+    const current = draft.ai;
+    const untouched =
+      current === null || current.prompt.trim() === '' || current.prompt === promptOf(current.task);
+    const template = templateOf(task);
+    change({
+      type: task === 'custom' && current !== null ? draft.type : template.output,
+      ai:
+        current === null
+          ? newAiDraft(task, promptOf(task))
+          : { ...current, task, prompt: untouched ? promptOf(task) : current.prompt },
+    });
+    setAiEstimate(undefined);
   };
 
   // Two-way needs schema rights on both tables (ADR-28 §1, CONTRACTS §4.4).
@@ -376,6 +437,11 @@ export function FieldDialog({
         {
           onSuccess: (created) => {
             announceBackfill(created);
+            // (T915) A new AI field fills no existing row by itself: ask (CONTRACTS §29.5).
+            if (draft.ai !== null && onAiSaved !== undefined) {
+              onAiSaved(created, tokensPerRow(aiEstimate));
+              return;
+            }
             onClose();
           },
           onError: (failure) => {
@@ -409,6 +475,11 @@ export function FieldDialog({
       {
         onSuccess: (updated) => {
           announceBackfill(updated);
+          // (T915) A changed prompt applies to new runs: offer to generate the rows again.
+          if (aiChangedValues(draftOf(field).ai, draft.ai) && onAiSaved !== undefined) {
+            onAiSaved(updated, tokensPerRow(aiEstimate));
+            return;
+          }
           if (updated.job_id !== null) {
             // Progress from `job.progress` (T204), `GET /jobs/:id` as a fallback.
             trackJob(updated.job_id, {
@@ -606,7 +677,8 @@ export function FieldDialog({
             field={field}
             value={draft.type}
             onChange={(type) => {
-              change({ type });
+              // No "AI" group here (`ai` not given): every choice is a type.
+              if (type !== AI_TYPE) change({ type });
             }}
           />
         }
@@ -642,7 +714,27 @@ export function FieldDialog({
       ? null
       : settingsKindOf(sourceTypeOf(field, draft.type), draft.type);
 
+  // (T915) An AI field (or a saved one whose AI is being removed): the AI part first.
+  const savedAi = field !== undefined && field.options['ai'] != null;
+  const aiSection =
+    draft.ai !== null || savedAi ? (
+      <AiFieldSection
+        tableId={tableId}
+        field={field}
+        draft={draft}
+        onChange={change}
+        issues={aiServerIssue === undefined ? shownIssues : [...shownIssues, aiServerIssue]}
+        PromptEditor={AiPromptEditor}
+        onTemplate={aiTemplate}
+        onEstimate={setAiEstimate}
+        recordData={aiAvailability.record_data}
+        settingsPath={aiSettingsPath}
+      />
+    ) : null;
+
   const optionsForm = (() => {
+    // The AI section edits the output (text, or the options of a single select) itself.
+    if (draft.ai !== null && (draft.type === 'text' || draft.type === 'select')) return aiSection;
     switch (draft.type) {
       case 'text':
         return (
@@ -850,13 +942,26 @@ export function FieldDialog({
       field={field}
       value={draft.type}
       disabled={converting}
+      ai={{
+        available: aiAvailability.available,
+        recordData: aiAvailability.record_data,
+        settingsPath: aiSettingsPath,
+      }}
+      aiSelected={draft.ai !== null}
       onChange={(type) => {
-        change({ type });
+        if (type === AI_TYPE) {
+          aiTemplate(draft.ai?.task ?? 'summarize');
+          return;
+        }
+        change({ type, ai: null });
+        setAiEstimate(undefined);
       }}
     />
   );
   const flags =
-    !typeConversion && (REQUIRABLE_TYPES.has(draft.type) || UNIQUE_TYPES.has(draft.type)) ? (
+    !typeConversion &&
+    draft.ai === null &&
+    (REQUIRABLE_TYPES.has(draft.type) || UNIQUE_TYPES.has(draft.type)) ? (
       <div className="flex flex-col gap-3 border-t border-line pt-4">
         {REQUIRABLE_TYPES.has(draft.type) ? (
           <Checkbox
@@ -946,7 +1051,7 @@ export function FieldDialog({
           <div
             className={cn(
               'grid gap-6',
-              draft.type !== 'formula' && 'md:grid-cols-[minmax(0,1fr)_15rem]',
+              draft.type !== 'formula' && draft.ai === null && 'md:grid-cols-[minmax(0,1fr)_15rem]',
             )}
           >
             <div className="flex min-w-0 flex-col gap-4">
@@ -954,12 +1059,14 @@ export function FieldDialog({
               {typePicker}
               <fieldset className="flex min-w-0 flex-col gap-4 border-t border-line pt-4">
                 <legend className="sr-only">{t('field:optionsLegend')}</legend>
+                {/* (T915) "Remove AI" of a saved field: its note, then the plain options. */}
+                {draft.ai === null ? aiSection : null}
                 {optionsForm}
               </fieldset>
               {flags}
               {descriptionInput}
             </div>
-            {draft.type === 'formula' ? null : (
+            {draft.type === 'formula' || draft.ai !== null ? null : (
               <FieldPreview
                 config={config}
                 type={draft.type}

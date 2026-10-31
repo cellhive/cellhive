@@ -23,7 +23,8 @@
   "fixErrors": "Một số thiết lập cần bạn xem lại.",
   "validation": {
     "DUPLICATE_OPTION": "Đã có lựa chọn khác trùng tên này.",
-    "NAME_CONFLICT": "Bảng đã có trường khác trùng tên này."
+    "NAME_CONFLICT": "Bảng đã có trường khác trùng tên này.",
+    "AI_CHOICES_REQUIRED": "Thêm ít nhất một lựa chọn để AI chọn."
   },
   "types": {
     "text": "Văn bản",
@@ -601,6 +602,118 @@
       "UNKNOWN_FIELD": "Trường này không còn trong bảng. Hãy chọn trường khác.",
       "INVALID_FIELD_TYPE": "Trường này không còn là trường người. Hãy chọn trường Người dùng hoặc Người tạo.",
       "USER_NOT_FOUND": "{{name}} không phải thành viên của tổ chức này."
+    }
+  },
+  "ai": {
+    "group": "AI",
+    "type": "Trường AI",
+    "typeBlocked": "Trường AI (cần dữ liệu bản ghi)",
+    "recordDataOff": "Trường AI gửi giá trị bản ghi tới nhà cung cấp AI, và tổ chức này chưa cho phép.",
+    "recordDataOffMember": "Hãy nhờ chủ sở hữu hoặc quản trị viên tổ chức bật.",
+    "openSettings": "Mở Cài đặt tổ chức › AI",
+    "recordDataOffSaved": "AI chưa được đọc giá trị bản ghi trong tổ chức này: chưa sinh gì cho tới khi chủ sở hữu hoặc quản trị viên cho phép.",
+    "lockedType": "AI · {{type}}",
+    "lockedTypeHint": "Bỏ AI để đổi kiểu.",
+    "section": "Điền bằng AI",
+    "remove": "Bỏ AI",
+    "removed": "Khi lưu, AI thôi điền trường này. Giá trị giữ nguyên và bạn sửa tay được.",
+    "undoRemove": "Giữ AI",
+    "template": "Mẫu",
+    "templates": {
+      "summarize": {
+        "name": "Tóm tắt",
+        "description": "Tóm tắt ngắn các trường bạn chọn",
+        "lead": "Tóm tắt trong một câu:"
+      },
+      "classify": {
+        "name": "Phân loại",
+        "description": "Chọn một lựa chọn trong danh sách",
+        "lead": "Chọn lựa chọn phù hợp nhất:"
+      },
+      "extract": {
+        "name": "Trích xuất",
+        "description": "Lấy ra tên, ngày, số tiền",
+        "lead": "Trích các thông tin chính (ai, việc gì, khi nào) từ:"
+      },
+      "translate": {
+        "name": "Dịch",
+        "description": "Sang ngôn ngữ khác",
+        "lead": "Dịch sang tiếng Anh:"
+      },
+      "custom": {
+        "name": "Tuỳ chỉnh",
+        "description": "Tự viết prompt"
+      }
+    },
+    "output": "Kết quả",
+    "outputFixed": "Kiểu kết quả của trường AI đã lưu không đổi được.",
+    "outputText": "Văn bản",
+    "outputSelect": "Một lựa chọn",
+    "choices": "Các lựa chọn AI chọn trong đó",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Nói AI cần viết gì, và chèn các trường nó cần đọc.",
+    "promptHint": "Bấm + hoặc gõ {{ để chèn một trường của cùng bản ghi. Giá trị tới AI dưới dạng dữ liệu, không bao giờ là lệnh.",
+    "autoUpdate": "Tự cập nhật khi các trường trong prompt thay đổi",
+    "autoUpdateHint": "Bản ghi mới và bản ghi khôi phục cũng được điền. Tắt: chỉ khi bạn bấm sinh.",
+    "advanced": "Cài đặt thêm",
+    "instructions": "Hướng dẫn (không bắt buộc)",
+    "instructionsHint": "Giọng văn, ngôn ngữ, độ dài… Ví dụ: “Trả lời bằng tiếng Việt, tối đa 20 từ.”",
+    "maxTokens": "Câu trả lời dài nhất (token)",
+    "maxTokensHint": "Từ 16 tới 2.000; khoảng 3 ký tự mỗi token.",
+    "preview": {
+      "button": "Xem trước 5 dòng",
+      "again": "Xem trước lại",
+      "hint": "Thử prompt trên 5 bản ghi đầu. Không ghi gì; có dùng token AI.",
+      "estimate": "Mọi dòng ({{rows, number}}): khoảng {{tokens, number}} token.",
+      "ready_other": "Đã có bản xem trước: {{count, number}} dòng.",
+      "waiting": "Đang sinh 5 dòng…",
+      "waitingLater": "Vẫn đang làm: AI trả lời lần lượt từng dòng…",
+      "waitingHint": "AI có thể cần tới 90 giây để trả lời.",
+      "empty": "(trống)",
+      "input": "Đầu vào",
+      "output": "Kết quả",
+      "title": "Xem trước 5 dòng",
+      "none": "Bảng này chưa có bản ghi nào để thử prompt.",
+      "stale": "Cài đặt đã đổi sau lần xem trước này: xem trước lại để thấy kết quả mới.",
+      "errors": {
+        "AI_INVALID_OUTPUT": "Không có câu trả lời hợp lệ",
+        "AI_PROVIDER_ERROR": "Nhà cung cấp AI từ chối",
+        "AI_TIMEOUT": "AI trả lời quá lâu"
+      }
+    },
+    "errors": {
+      "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết quota AI của hôm nay.",
+      "AI_TIMEOUT": "AI trả lời quá lâu. Hãy thử lại sau ít phút.",
+      "AI_NOT_CONFIGURED": "Tổ chức chưa cài đặt AI. Hãy nhờ chủ sở hữu hoặc quản trị viên (Cài đặt tổ chức › AI).",
+      "AI_RECORD_DATA_DISABLED": "AI chưa được đọc giá trị bản ghi trong tổ chức này. Hãy nhờ chủ sở hữu hoặc quản trị viên (Cài đặt tổ chức › AI).",
+      "AI_INVALID_OUTPUT": "AI không đưa ra câu trả lời hợp lệ, kể cả sau khi được yêu cầu sửa."
+    },
+    "generate": {
+      "titleSave": "Sinh giá trị cho các dòng hiện có?",
+      "titleSaveCount_other": "Sinh giá trị cho {{count, number}} dòng hiện có?",
+      "title": {
+        "empty": "Sinh các ô trống của “{{name}}”?",
+        "failed": "Sinh lại các ô lỗi của “{{name}}”?",
+        "all": "Sinh lại mọi ô của “{{name}}”?"
+      },
+      "description": "Trường đã được lưu. Bản ghi mới và bản ghi thay đổi được điền tự động; các dòng hiện có chờ bạn chọn.",
+      "descriptionManual": "Trường đã được lưu. Trường chỉ được điền khi bạn bấm sinh.",
+      "which": "Ô cần sinh",
+      "empty": "Chỉ ô trống",
+      "all": "Tất cả (ghi đè)",
+      "counting": "Đang đếm số dòng…",
+      "rows_other": "{{count, number}} dòng",
+      "rowsTokens_other": "{{count, number}} dòng · khoảng {{tokens, number}} token",
+      "overwriteNote": "Giá trị hiện tại bị thay. Giá trị cũ vẫn còn trong lịch sử của từng bản ghi.",
+      "quotaNote": "Việc sinh chạy nền và tính vào quota AI hằng ngày của tổ chức. Hết quota thì tạm dừng, sang ngày mới chạy tiếp.",
+      "later": "Để sau",
+      "confirm": "Sinh",
+      "confirmOverwrite": "Ghi đè và sinh",
+      "confirmRegenerate": "Sinh lại",
+      "nothing": "Không có ô nào cần sinh.",
+      "running_other": "Đang sinh “{{name}}” cho {{count, number}} dòng…",
+      "succeeded": "Đã sinh xong “{{name}}”. Ô AI không sinh được có dấu cảnh báo.",
+      "failed": "Việc sinh “{{name}}” đã dừng. Các ô lỗi có thể sinh lại từ menu của cột."
     }
   }
 }

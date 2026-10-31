@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Suspense, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../../lib/api/client';
@@ -20,6 +20,9 @@ import type {
   FormulaSaveOutcome,
 } from '../../../lib/schema/formula-tools';
 import type { FieldDto } from '@cellhive/contracts';
+
+// (T915) "Generate for N existing rows?" after saving an AI field: loaded when asked.
+const AiGenerateDialog = lazy(() => import('../../../lib/ai/AiGenerateDialog'));
 
 /**
  * (T468) "Edit formula" of the column header: the formula popover saves
@@ -81,11 +84,34 @@ export function FieldTools({
   Formula,
   FormulaPopover,
   LookupEditor,
+  AiPromptEditor,
 }: FieldToolsProps) {
   const [limit, setLimit] = useState<{ value: number | undefined } | null>(null);
+  const [generate, setGenerate] = useState<{
+    readonly field: FieldDto;
+    readonly perRow: number | undefined;
+    readonly created: boolean;
+  } | null>(null);
   const table = useQuery(tableQuery(tableId));
   if (limit !== null) {
     return <FieldLimitDialog limit={limit.value} onClose={onClose} />;
+  }
+  if (generate !== null) {
+    return (
+      <Suspense fallback={null}>
+        <AiGenerateDialog
+          tableId={tableId}
+          field={generate.field}
+          mode="save"
+          perRow={generate.perRow}
+          created={generate.created}
+          onClose={() => {
+            setGenerate(null);
+            onClose();
+          }}
+        />
+      </Suspense>
+    );
   }
   if (request === null) return null;
   if (request.kind === 'create') {
@@ -97,6 +123,10 @@ export function FieldTools({
         RecordFilterEditor={RecordFilterEditor}
         Formula={Formula}
         LookupEditor={LookupEditor}
+        AiPromptEditor={AiPromptEditor}
+        onAiSaved={(field, perRow) => {
+          setGenerate({ field, perRow, created: true });
+        }}
         onClose={onClose}
         onLimitExceeded={(value) => {
           setLimit({ value });
@@ -130,6 +160,10 @@ export function FieldTools({
           RecordFilterEditor={RecordFilterEditor}
           Formula={Formula}
           LookupEditor={LookupEditor}
+          AiPromptEditor={AiPromptEditor}
+          onAiSaved={(saved, perRow) => {
+            setGenerate({ field: saved, perRow, created: false });
+          }}
           onClose={onClose}
           onLimitExceeded={(value) => {
             setLimit({ value });
@@ -146,6 +180,10 @@ export function FieldTools({
           RecordFilterEditor={RecordFilterEditor}
           Formula={Formula}
           LookupEditor={LookupEditor}
+          AiPromptEditor={AiPromptEditor}
+          onAiSaved={(saved, perRow) => {
+            setGenerate({ field: saved, perRow, created: false });
+          }}
           onClose={onClose}
           onLimitExceeded={(value) => {
             setLimit({ value });

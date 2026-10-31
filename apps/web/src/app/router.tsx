@@ -56,6 +56,13 @@ const FormulaField = lazy(() => import('../features/formula/components/FormulaFi
 const FormulaPopover = lazy(() => import('../features/formula/components/FormulaPopover'));
 
 /**
+ * (T915) The prompt editor of AI fields: the automation template editor
+ * (`features/automation/template-editor`, field chips), a chunk loaded when
+ * an AI field is configured.
+ */
+const AiPromptEditor = lazy(() => import('../features/automation/template-editor/AiPromptEditor'));
+
+/**
  * "Ask AI" of a table (T914, FRONTEND §20): the panel (`features/ai-ask`) is
  * a chunk loaded when it first opens; it draws answers with the dashboard's
  * widget renderer (`features/dashboard`), another lazy chunk — ECharts only
@@ -129,6 +136,7 @@ const loadTableViewRoute = async () => {
       Formula={FormulaField}
       FormulaPopover={FormulaPopover}
       LookupEditor={LookupEditor}
+      AiPromptEditor={AiPromptEditor}
     />
   );
   return {

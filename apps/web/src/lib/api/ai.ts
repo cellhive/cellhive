@@ -1,9 +1,13 @@
 import {
   aiAskSchema,
   aiAutomationDraftSchema,
+  aiFieldGenerateSchema,
+  aiFieldPreviewSchema,
   aiFormulaSchema,
   type AiAskRequest,
   type AiAutomationDraftRequest,
+  type AiFieldGenerateRequest,
+  type AiFieldPreviewRequest,
   type AiFormulaRequest,
 } from '@cellhive/contracts';
 
@@ -13,7 +17,8 @@ const id = encodeURIComponent;
 
 /**
  * The AI routes behind the formula editor and the automation list (CONTRACTS
- * §29.2–§29.3, T913) and the table's "Ask AI" panel (§29.4, T914). They store nothing and answer within the 90 s budget of
+ * §29.2–§29.3, T913), the table's "Ask AI" panel (§29.4, T914) and the AI
+ * field's preview and generation (§29.5, T915). They answer within the 90 s budget of
  * the server; the caller aborts with `signal` ("Cancel"). No `Idempotency-Key`:
  * a `429` (rate limit, quota) goes straight to the screen, never retried.
  * Imported by those lazy screens only, not through `api` (the app shell).
@@ -38,5 +43,19 @@ export const aiApi = {
       `/tables/${id(tableId)}/ai/ask`,
       import.meta.env.DEV ? aiAskSchema : UNCHECKED_SCHEMA,
       { method: 'POST', body, signal },
+    ),
+  /** (T915) Up to 5 records generated with an AI field's settings, nothing written. */
+  fieldPreview: (tableId: string, body: AiFieldPreviewRequest, signal?: AbortSignal) =>
+    apiRequest(
+      `/tables/${id(tableId)}/ai/field-preview`,
+      import.meta.env.DEV ? aiFieldPreviewSchema : UNCHECKED_SCHEMA,
+      { method: 'POST', body, signal },
+    ),
+  /** (T915) Queues cells of an AI field (`202`, a job followed with `job.progress`). */
+  generateField: (fieldId: string, body: AiFieldGenerateRequest) =>
+    apiRequest(
+      `/fields/${id(fieldId)}/ai/generate`,
+      import.meta.env.DEV ? aiFieldGenerateSchema : UNCHECKED_SCHEMA,
+      { method: 'POST', body },
     ),
 };

@@ -23,7 +23,8 @@
   "fixErrors": "Some settings need your attention.",
   "validation": {
     "DUPLICATE_OPTION": "Another option already has this name.",
-    "NAME_CONFLICT": "Another field of this table already has this name."
+    "NAME_CONFLICT": "Another field of this table already has this name.",
+    "AI_CHOICES_REQUIRED": "Add at least one option for the AI to pick from."
   },
   "types": {
     "text": "Text",
@@ -660,6 +661,123 @@
       "UNKNOWN_FIELD": "This field no longer exists in the table. Choose another one.",
       "INVALID_FIELD_TYPE": "This field is no longer a person field. Choose a User or Created by field.",
       "USER_NOT_FOUND": "{{name}} is not a member of this organization."
+    }
+  },
+  "ai": {
+    "group": "AI",
+    "type": "AI field",
+    "typeBlocked": "AI field (needs record values)",
+    "recordDataOff": "AI fields send record values to the AI provider, and this organization does not allow it.",
+    "recordDataOffMember": "Ask an organization owner or admin to allow it.",
+    "openSettings": "Open Organization settings › AI",
+    "recordDataOffSaved": "The AI may not read record values in this organization: nothing is generated until an owner or admin allows it.",
+    "lockedType": "AI · {{type}}",
+    "lockedTypeHint": "Remove AI to change the type.",
+    "section": "Fill with AI",
+    "remove": "Remove AI",
+    "removed": "AI stops filling this field when you save. Its values stay, and you can edit them by hand.",
+    "undoRemove": "Keep AI",
+    "template": "Template",
+    "templates": {
+      "summarize": {
+        "name": "Summarize",
+        "description": "A short summary of the fields you pick",
+        "lead": "Summarize in one sentence:"
+      },
+      "classify": {
+        "name": "Classify",
+        "description": "Picks one option of a list",
+        "lead": "Choose the option that fits best:"
+      },
+      "extract": {
+        "name": "Extract",
+        "description": "Pulls out names, dates, amounts",
+        "lead": "Extract the key facts (who, what, when) from:"
+      },
+      "translate": {
+        "name": "Translate",
+        "description": "Into another language",
+        "lead": "Translate into English:"
+      },
+      "custom": {
+        "name": "Custom",
+        "description": "Write your own prompt"
+      }
+    },
+    "output": "Output",
+    "outputFixed": "The output of a saved AI field does not change.",
+    "outputText": "Text",
+    "outputSelect": "Single select",
+    "choices": "Options the AI picks from",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Say what the AI should write, and insert the fields it reads.",
+    "promptHint": "Press + or type {{ to insert a field of the same record. Values reach the AI as data, never as instructions.",
+    "autoUpdate": "Update automatically when the fields in the prompt change",
+    "autoUpdateHint": "New and restored records are filled too. Off: only when you generate.",
+    "advanced": "More settings",
+    "instructions": "Instructions (optional)",
+    "instructionsHint": "Tone, language, length… For example: “Answer in Vietnamese, at most 20 words.”",
+    "maxTokens": "Longest answer (tokens)",
+    "maxTokensHint": "From 16 to 2,000; about 3 characters per token.",
+    "preview": {
+      "button": "Preview 5 rows",
+      "again": "Preview again",
+      "hint": "Tries the prompt on the first 5 records. Nothing is written; it uses AI tokens.",
+      "estimate": "Every row ({{rows, number}}): about {{tokens, number}} tokens.",
+      "ready_one": "Preview ready: {{count, number}} row.",
+      "ready_other": "Preview ready: {{count, number}} rows.",
+      "waiting": "Generating 5 rows…",
+      "waitingLater": "Still working: the AI answers each row in turn…",
+      "waitingHint": "The AI can take up to 90 seconds to answer.",
+      "empty": "(empty)",
+      "input": "Input",
+      "output": "Result",
+      "title": "Preview of 5 rows",
+      "none": "This table has no records to try the prompt on yet.",
+      "stale": "The settings changed since this preview: preview again to see their result.",
+      "errors": {
+        "AI_INVALID_OUTPUT": "No valid answer",
+        "AI_PROVIDER_ERROR": "The AI provider refused",
+        "AI_TIMEOUT": "The AI took too long"
+      }
+    },
+    "errors": {
+      "AI_QUOTA_EXCEEDED": "The organization’s AI quota for today is used up.",
+      "AI_TIMEOUT": "The AI took too long to answer. Try again in a moment.",
+      "AI_NOT_CONFIGURED": "AI is not set up for this organization. Ask an owner or admin (Organization settings › AI).",
+      "AI_RECORD_DATA_DISABLED": "The AI may not read record values in this organization. Ask an owner or admin (Organization settings › AI).",
+      "AI_INVALID_OUTPUT": "The AI gave no valid answer, even after being asked to fix it."
+    },
+    "generate": {
+      "titleSave": "Generate values for the existing rows?",
+      "titleSaveCount_one": "Generate a value for {{count, number}} existing row?",
+      "titleSaveCount_other": "Generate values for {{count, number}} existing rows?",
+      "title": {
+        "empty": "Generate the empty cells of “{{name}}”?",
+        "failed": "Generate the failed cells of “{{name}}” again?",
+        "all": "Generate every cell of “{{name}}” again?"
+      },
+      "description": "The field is saved. New and changed records are filled automatically; existing rows wait for your choice.",
+      "descriptionManual": "The field is saved. It is filled only when you generate it.",
+      "which": "Cells to generate",
+      "empty": "Only empty cells",
+      "all": "All cells (overwrite)",
+      "counting": "Counting rows…",
+      "rows_one": "{{count, number}} row",
+      "rows_other": "{{count, number}} rows",
+      "rowsTokens_one": "{{count, number}} row · about {{tokens, number}} tokens",
+      "rowsTokens_other": "{{count, number}} rows · about {{tokens, number}} tokens",
+      "overwriteNote": "Current values are replaced. Earlier values stay in each record’s history.",
+      "quotaNote": "Generation runs in the background and counts against the organization’s daily AI quota. If the quota runs out it pauses, and goes on after the daily reset.",
+      "later": "Later",
+      "confirm": "Generate",
+      "confirmOverwrite": "Overwrite and generate",
+      "confirmRegenerate": "Generate again",
+      "nothing": "No cell to generate.",
+      "running_one": "Generating “{{name}}” for {{count, number}} row…",
+      "running_other": "Generating “{{name}}” for {{count, number}} rows…",
+      "succeeded": "Generating “{{name}}” is done. A cell the AI could not generate shows a warning.",
+      "failed": "Generating “{{name}}” stopped. Failed cells can be generated again from the column menu."
     }
   }
 }

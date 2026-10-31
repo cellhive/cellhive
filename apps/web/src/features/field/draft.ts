@@ -33,6 +33,7 @@ import { z } from 'zod';
 
 import { issueToDetail, type Detail } from '../../lib/forms/zod-form';
 
+import { aiDraftOf, aiIssues, aiOptionsBody, type AiDraft } from './ai/model';
 import {
   reminderDraftOf,
   reminderIssues,
@@ -157,6 +158,11 @@ export interface FieldDraft {
   readonly formula: FormulaDraft;
   /** (T525) Label, color and confirmation of a button. */
   readonly button: ButtonDraft;
+  /**
+   * (T915) An AI field: `text` or a single `select` filled by AI
+   * (`options.ai`, CONTRACTS §29.5); `null` for any other field.
+   */
+  readonly ai: AiDraft | null;
 }
 
 /** Extensions typed into the "blocked" box, as `blocked_extensions` (lower case, no dot, no repeats). */
@@ -355,6 +361,7 @@ export function draftOf(field?: FieldDto): FieldDraft {
     attachment: attachmentDraftOf(parseOr(attachmentOptionsSchema, own('attachment'))),
     formula: formulaDraftOf(own('formula')),
     button: buttonDraftOf(own('button'), field?.type === 'button'),
+    ai: aiDraftOf(field),
   };
 }
 
@@ -370,7 +377,11 @@ export function optionsOf(
   switch (draft.type) {
     case 'text': {
       const fallback = draft.text.default_value ?? '';
-      return { style: draft.text.style, default_value: fallback === '' ? null : fallback };
+      return {
+        style: draft.text.style,
+        default_value: fallback === '' ? null : fallback,
+        ...(draft.ai === null ? {} : { ai: aiOptionsBody(draft.ai) }),
+      };
     }
     case 'number':
       return { style: draft.number.style, default_value: draft.number.default_value ?? null };
@@ -383,15 +394,19 @@ export function optionsOf(
           : { id, name: option.name.trim(), color: option.color };
       });
       const fallback = draft.select.defaultOptionId;
+      // (T915) An AI select is single, without a default (AI fills it).
+      const multiple = draft.ai === null && draft.select.multiple;
       const keepDefault =
-        !draft.select.multiple &&
+        draft.ai === null &&
+        !multiple &&
         fallback !== null &&
         live.some((option) => option.id === fallback);
       return {
-        multiple: draft.select.multiple,
+        multiple,
         options,
         // A multiple select keeps its current default (not edited here).
-        ...(draft.select.multiple ? {} : { default_value: keepDefault ? fallback : null }),
+        ...(multiple ? {} : { default_value: keepDefault ? fallback : null }),
+        ...(draft.ai === null ? {} : { ai: aiOptionsBody(draft.ai) }),
       };
     }
     case 'datetime': {
@@ -517,6 +532,11 @@ export function validateDraft(draft: FieldDraft): {
   const options = optionsOf(draft, true);
   // (T554) The reminder's own checks first: clearer messages than the schema's at the same paths.
   if (draft.type === 'datetime') issues.push(...reminderIssues(draft.reminder));
+  // (T915) The AI part: the contract's schema (`options.ai.*`), and options for a select.
+  if (draft.ai !== null && (draft.type === 'text' || draft.type === 'select')) {
+    const aiProblems = aiIssues(draft.ai, draft.type, liveOptions.length);
+    if (aiProblems.length > 0) return { issues: [...issues, ...aiProblems], config: null };
+  }
   if (draft.type === 'link') {
     // Link options (T413): a linked table must be chosen; the server checks the filter.
     if (draft.link.linkTable === '') {
@@ -585,8 +605,13 @@ export function createBody(draft: FieldDraft): CreateFieldRequest {
     type: draft.type,
     ...(options === undefined ? {} : { options }),
     ...(description === '' ? {} : { description }),
-    ...(REQUIRABLE_TYPES.has(draft.type) && draft.required ? { required: true } : {}),
-    ...(UNIQUE_TYPES.has(draft.type) && draft.unique ? { unique_values: true } : {}),
+    // (T915) AI fills an AI field: never required nor unique.
+    ...(draft.ai === null && REQUIRABLE_TYPES.has(draft.type) && draft.required
+      ? { required: true }
+      : {}),
+    ...(draft.ai === null && UNIQUE_TYPES.has(draft.type) && draft.unique
+      ? { unique_values: true }
+      : {}),
   };
 }
 
@@ -640,7 +665,8 @@ export function updateBody(field: FieldDto, draft: FieldDraft): UpdateFieldReque
   }
   const options = optionsOf(draft);
   if (options !== undefined && !sameJson(options, optionsOf({ ...before, type: draft.type }))) {
-    body['options'] = options;
+    // (T915) "Remove AI": `options.ai = null` (a PATCH keeps the keys it does not get).
+    body['options'] = before.ai !== null && draft.ai === null ? { ...options, ai: null } : options;
   }
   return Object.keys(body).length === 0 ? null : body;
 }

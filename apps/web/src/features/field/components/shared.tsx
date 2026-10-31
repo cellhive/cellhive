@@ -8,7 +8,7 @@ import type { DraftIssue } from '../draft';
 export { TYPE_ICONS } from '../../../lib/schema/field-icons';
 
 /** Detail codes the field form produces itself (translated in the `field` namespace). */
-const LOCAL_CODES = new Set(['DUPLICATE_OPTION', 'NAME_CONFLICT']);
+const LOCAL_CODES = new Set(['DUPLICATE_OPTION', 'NAME_CONFLICT', 'AI_CHOICES_REQUIRED']);
 
 /** Translates a {@link DraftIssue} (or a server detail placed on a form control). */
 export function useIssueText(): (issue: DraftIssue | undefined) => string | undefined {

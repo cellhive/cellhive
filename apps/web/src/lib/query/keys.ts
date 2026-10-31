@@ -152,6 +152,10 @@ export const keys = {
   computedPreview: (tableId: string, requestHash: string) =>
     ['table', tableId, 'computed-preview', requestHash] as const,
 
+  /** (T915) Empty cells of an AI field (`records/query` with `is_empty`, `limit: 1`): its `total`. */
+  aiEmptyCount: (tableId: string, fieldId: string) =>
+    ['table', tableId, 'ai-empty', fieldId] as const,
+
   widgetData: (widgetId: string, effectiveHash: string) =>
     ['widget', widgetId, effectiveHash] as const,
   job: (jobId: string) => ['job', jobId] as const,

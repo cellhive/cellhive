@@ -1,3 +1,4 @@
+import type { AiPromptEditorComponent } from './ai-tools';
 import type { FormulaFieldComponent, FormulaPopoverComponent } from './formula-tools';
 import type { LookupFieldEditor } from './lookup-tools';
 import type { FieldDto } from '@cellhive/contracts';
@@ -68,6 +69,8 @@ export interface FieldToolsProps {
   readonly FormulaPopover?: FormulaPopoverComponent | undefined;
   /** Configuration of lookup fields (T467, `features/lookup`); absent: lookups are not offered. */
   readonly LookupEditor?: LookupFieldEditor | undefined;
+  /** (T915) The prompt editor of AI fields (automation template editor); absent: a text box. */
+  readonly AiPromptEditor?: AiPromptEditorComponent | undefined;
 }
 
 /**
