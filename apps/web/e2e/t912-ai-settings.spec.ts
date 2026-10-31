@@ -354,6 +354,18 @@ test('ai.available = true: the AI entries render on the screens that carry one',
   const { demo, baseId, ticketsId } = await demoBase(page);
   expect(await aiOf(page, demo.id)).toEqual({ available: true, record_data: false });
 
+  // Grid toolbar: "Ask AI" (T914) opens its panel.
+  await page.goto(`/b/${baseId}/t/${ticketsId}`);
+  const askAi = page.getByTestId('ask-ai-button');
+  await expect(askAi).toHaveAccessibleName('Ask AI');
+  await expect(askAi.locator(SPARKLES)).toHaveCount(1);
+  await askAi.click();
+  const askPanel = page.getByRole('dialog', { name: 'Ask AI' });
+  await expect(askPanel.getByRole('textbox', { name: 'Your question' })).toBeFocused();
+  await expectNoSeriousA11yViolations(page, 'Ask AI panel, AI on');
+  await page.keyboard.press('Escape');
+  await expect(askPanel).toHaveCount(0);
+
   // Formula editor: "Describe the formula" (T913).
   await openFormulaEditor(page, baseId, ticketsId, 'T912 AI on');
   const formulaAi = page.getByTestId('formula-editor').getByTestId('formula-ai');
@@ -362,8 +374,8 @@ test('ai.available = true: the AI entries render on the screens that carry one',
   await expectNoSeriousA11yViolations(page, 'formula editor, AI on');
   await page.keyboard.press('Escape');
 
-  // Automation list: "Create with AI" (T913). Grid toolbar (T914), field types and the
-  // step picker (T915) add theirs.
+  // Automation list: "Create with AI" (T913). Field types and the step picker (T915) add
+  // theirs.
   await page.goto(`/b/${baseId}/automations`);
   const create = page.getByTestId('create-automation-ai');
   await expect(create).toHaveText('Create with AI');
