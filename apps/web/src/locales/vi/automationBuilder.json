@@ -325,7 +325,7 @@
       "signature": "Kèm chữ ký"
     },
     "urlChoose": "Nhập URL",
-    "notifyChannels": "Gửi qua kênh thông báo của từng người nhận (Telegram nếu đã liên kết)."
+    "notifyChannels": "Gửi qua kênh của từng người nhận — Telegram nếu đã liên kết."
   },
   "values": {
     "insert": "Chèn giá trị",

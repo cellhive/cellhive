@@ -339,7 +339,7 @@
       "signature": "With signature"
     },
     "urlChoose": "Enter a URL",
-    "notifyChannels": "Sent through each recipient's notification channels (Telegram when linked)."
+    "notifyChannels": "Sent through each recipient's channels — Telegram when linked."
   },
   "values": {
     "insert": "Insert a value",

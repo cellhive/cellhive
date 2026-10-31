@@ -629,7 +629,7 @@ describe('Create with AI (T913)', () => {
     expect(step).toHaveTextContent('Send notification');
     expect(step).toHaveTextContent('Owner');
     expect(within(step).getByTestId('notify-channels-hint')).toHaveTextContent(
-      "Sent through each recipient's notification channels (Telegram when linked).",
+      "Sent through each recipient's channels — Telegram when linked.",
     );
     const enabled = screen.getByTestId('builder-enabled');
     expect(enabled).not.toBeChecked();

@@ -315,7 +315,7 @@ test('automation: the milestone sentence opens the builder unsaved and off; save
   await expect(step).toContainText('Send notification');
   await expect(step).toContainText('Phụ trách');
   await expect(step.getByTestId('notify-channels-hint')).toHaveText(
-    "Sent through each recipient's notification channels (Telegram when linked).",
+    "Sent through each recipient's channels — Telegram when linked.",
   );
   const enabled = page.getByTestId('builder-enabled');
   await expect(enabled).not.toBeChecked();
