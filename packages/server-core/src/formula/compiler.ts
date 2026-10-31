@@ -1,3 +1,4 @@
+import { canonicalTimeZone } from '@cellhive/contracts';
 import {
   formatType,
   listOf,
@@ -65,9 +66,15 @@ function selectOptions(field: FieldModel): { ids: string[]; names: string[] } {
   return { ids, names };
 }
 
+/**
+ * `fx.*` take the zone as SQL text: the IANA primary name PostgreSQL knows
+ * (`Asia/Saigon` → `Asia/Ho_Chi_Minh`, QA S7 H1), whatever meta stored.
+ */
+const sqlZone = (zone: string): string => canonicalTimeZone(zone) ?? zone;
+
 function fieldZone(field: FieldModel): string | undefined {
   const zone = isRecord(field.options) ? field.options['timezone'] : undefined;
-  return typeof zone === 'string' && zone !== '' ? zone : undefined;
+  return typeof zone === 'string' && zone !== '' ? sqlZone(zone) : undefined;
 }
 
 /**
@@ -91,6 +98,8 @@ export class FormulaCompiler {
   private readonly fields = new Map<string, FieldModel>();
   private variables = new Map<string, Compiled>();
   private current: Compiled | null = null;
+  /** `ctx.timeZone` as {@link sqlZone}, once. */
+  private zone: string | undefined;
 
   constructor(readonly ctx: FormulaSqlContext) {
     for (const field of ctx.fields) this.fields.set(field.id, field);
@@ -183,7 +192,7 @@ export class FormulaCompiler {
 
   /** The zone of `value` (its field's own zone) or of the formula, as a parameter. */
   tz(value?: Compiled): Sql {
-    return textParam(value?.zone ?? this.ctx.timeZone);
+    return textParam(value?.zone ?? (this.zone ??= sqlZone(this.ctx.timeZone)));
   }
 
   /** `NOW()`: the fixed instant of the context, else the statement's `now()`. */

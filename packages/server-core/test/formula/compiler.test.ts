@@ -119,6 +119,21 @@ describe('compileFormula: SQL shape', () => {
     expect(parameters).toEqual(['Europe/Paris', 'Asia/Ho_Chi_Minh']);
   });
 
+  it('passes zones stored before T819 by their IANA primary name (QA S7 H1, L9)', () => {
+    // `postgres:18` has no `Asia/Saigon`/`US/Eastern`: `fx.*` would fail on them.
+    const zoned = unitTable([
+      {
+        name: 'Zoned',
+        type: 'datetime',
+        options: { style: { format: 'yyyy-MM-dd HH:mm' }, timezone: 'Asia/Saigon' },
+      },
+    ]);
+    const { parameters } = render(
+      compileUnit(zoned, 'HOUR([Zoned]) + HOUR([At])', { timeZone: 'US/Eastern' }),
+    );
+    expect(parameters).toEqual(['Asia/Ho_Chi_Minh', 'America/New_York']);
+  });
+
   it('maps select option ids to names with bound arrays', () => {
     const { parameters } = render(compileUnit(table, '[Status] = "Xong"'));
     expect(parameters).toContainEqual([
