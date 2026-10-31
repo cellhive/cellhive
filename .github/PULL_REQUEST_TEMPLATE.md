@@ -14,7 +14,7 @@
 
 ### 5. Tests (added / run, results)
 
-<!-- pnpm lint && pnpm typecheck && pnpm test && pnpm test:int -->
+<!-- pnpm verify:push: paste its plan and the result -->
 
 ### 6. Security / permission impact
 

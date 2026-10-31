@@ -73,7 +73,7 @@ pnpm dev
 
 - Dừng và xoá hạ tầng local **cùng toàn bộ dữ liệu** bằng `pnpm dev:infra:down`.
 
-Trước khi mở pull request, chạy `pnpm lint && pnpm typecheck && pnpm test && pnpm test:int` (xem [CONTRIBUTING.md](CONTRIBUTING.md)).
+Trước khi mở pull request, commit rồi chạy `pnpm verify:push` (xem [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ### Xử lý sự cố
 

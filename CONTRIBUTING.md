@@ -59,6 +59,7 @@ pnpm dev                # API on :3000 (+ worker), other apps, with reload
 | `pnpm format` / `pnpm format:check`      | Prettier                                                                                                                                                                                                                                          |
 | `pnpm gen:openapi`                       | Regenerate `openapi.json` from the zod schemas (CI checks it has no diff)                                                                                                                                                                         |
 | `pnpm licenses:check`                    | Check dependency licenses against the allowlist                                                                                                                                                                                                   |
+| `pnpm verify:push [upstream]`            | Pre-push gate: plans the checks the files changed since `origin/main` (or `upstream`) need, runs them and stops at the first failure; `--dry-run` only prints the plan                                                                            |
 
 Working in several checkouts or worktrees at once? Give each its own `COMPOSE_PROJECT_NAME` and `DEV_*_PORT` values in its `.env` so the stacks neither collide nor delete each other's volumes (see `.env.example` and the [README troubleshooting](README.md#troubleshooting)).
 
@@ -67,7 +68,7 @@ Working in several checkouts or worktrees at once? Give each its own `COMPOSE_PR
 - Keep the change inside the task's scope; do not refactor unrelated code.
 - Tests: table-driven unit tests for pure packages, integration tests (real PostgreSQL through Testcontainers) for services, covering the main flow, permissions and tenant isolation.
 - Tenant tables and repositories (`docs/SPEC.md` §5.10): every new `meta.*` tenant table has `organization_id`; a foreign key to another tenant table must include `organization_id` (composite, to the parent's `UNIQUE (organization_id, id)`), never a single-column key to its `id` — `packages/server-core/test/db/tenant-fks.int.test.ts` fails otherwise; every new repository takes `organizationId` and has a tenant isolation test.
-- `pnpm lint && pnpm typecheck && pnpm test && pnpm test:int` must pass.
+- Before you push, commit and run `pnpm verify:push` (from a fork: `pnpm verify:push upstream/main`): it runs lint, format, typecheck and unit tests, plus the bundle budgets, integration tests and the full E2E suite when the changed files need them (`AGENTS.md` "Workflow"). It must pass.
 - New dependencies must use a license from the allowlist in `docs/SPEC.md` §1A. Explain why you need them in the pull request.
 - UI strings go through i18n with both `en` and `vi`.
 - Fill in the pull request template, including security and permission impact.

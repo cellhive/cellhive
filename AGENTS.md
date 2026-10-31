@@ -41,6 +41,7 @@ pnpm build && pnpm size # bundle budgets (FRONTEND §11.1)
 pnpm test:e2e           # Playwright, 2 workers
 pnpm gen:openapi        # regenerates openapi.json from zod; CI fails on drift
 pnpm test:e2e:perf      # @perf, 200,000 rows; nightly in CI (perf.yml), not a PR gate
+pnpm verify:push        # pre-push gate: the checks above that the changed files need (Workflow)
 ```
 
 ## Layout
@@ -79,8 +80,15 @@ packages/<pkg>/src/**, packages/<pkg>/test/**
 
 1. Keep each change to one task or issue; don't widen the scope.
 2. Pure packages: write the tests first (table-driven). Services: integration tests for the main flow, permissions and tenant isolation.
-3. Run `pnpm lint && pnpm typecheck && pnpm test && pnpm test:int` — all green. When you change shared UI (`packages/ui`, layout, `Dialog`, app shell) run the full `pnpm test:e2e`. When you change web, ui or contracts code run `pnpm build && pnpm size`. When you change auth, session or WebSocket semantics run the full `pnpm test:e2e`.
-4. Commits follow Conventional Commits and carry a DCO sign-off: `git commit -s -m "feat(records): add bulk update"`.
+3. While you work, run the tests related to your change. When the change is done and before you push (to `main` or to a pull request branch), commit and run `pnpm verify:push` — all green. It diffs `origin/main...HEAD` (pass another upstream as an argument: `pnpm verify:push upstream/main`), prints its plan (`--dry-run` stops there) and stops at the first red step:
+   - always `lint`, `format:check`, `typecheck`, `test`;
+   - `build` + `size` when the web app or a package it bundles changes (`apps/web`, `packages/ui`, `packages/contracts`, …);
+   - `test:int` when the API, the worker or a package they import changes;
+   - the **full** `test:e2e`, not only the related specs, when shared semantics change: auth/session, realtime/WebSocket, share links, API tokens, permissions, secret rules, causation, rate limits, shared UI (`packages/ui`, `Dialog`), layout and app shell, the demo seed or the E2E harness. The globs are in `tools/verify-push.mjs`.
+4. Pushing to `main`:
+   - Push a batch of commits once, after `pnpm verify:push` is green for the whole batch, not commit by commit: each push cancels the CI run of the previous one and hides which commit broke `main`.
+   - `main` is red → nobody pushes anything but the fix until CI is green again.
+5. Commits follow Conventional Commits and carry a DCO sign-off: `git commit -s -m "feat(records): add bulk update"`.
 
 ## Definition of done
 

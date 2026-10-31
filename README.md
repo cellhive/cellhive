@@ -75,7 +75,7 @@ pnpm dev
 
 - Stop and delete the local infrastructure **and its data** with `pnpm dev:infra:down`.
 
-Before a pull request, run `pnpm lint && pnpm typecheck && pnpm test && pnpm test:int` (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+Before a pull request, commit and run `pnpm verify:push` (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ### Troubleshooting
 
