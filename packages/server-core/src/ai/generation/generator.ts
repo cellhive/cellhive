@@ -414,6 +414,9 @@ export class AiFieldGenerator {
         calls += result.attempts - 1;
         values.push({ recordId: row.recordId, version: record.version, value: result.value });
       } catch (error) {
+        // `AI_INVALID_OUTPUT` after repair rounds: every call counts.
+        const attempts = error instanceof AppError ? error.params?.['attempts'] : undefined;
+        if (typeof attempts === 'number' && attempts > 1) calls += attempts - 1;
         const temporary = isTemporaryAiError(error);
         const delay = AI_FIELD_RETRY_DELAYS_MS[row.attempts - 1];
         if (temporary && delay !== undefined) push(retry, delay, row);

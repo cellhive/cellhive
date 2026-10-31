@@ -187,7 +187,8 @@ describe('migration 0055_canonical_time_zones (T901)', () => {
     expect(backfill.status).toBe('done');
     await schema.finishComputedBackfill(scope, f.hours.id, { status: 'ready' });
 
-    expect(await migrateToLatest(db.kysely)).toEqual(['0055_canonical_time_zones']);
+    // 0055 runs first; later migrations (0056 of T910…) follow it.
+    expect((await migrateToLatest(db.kysely))[0]).toBe('0055_canonical_time_zones');
   });
 
   afterAll(async () => {
