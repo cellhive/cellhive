@@ -1,4 +1,5 @@
 import {
+  AI_USAGE_RETENTION_DAYS,
   API_TOKEN_RETENTION_DAYS,
   DASHBOARD_TRASH_RETENTION_DAYS,
   INCOMING_WEBHOOK_REQUEST_RETENTION_DAYS,
@@ -233,6 +234,8 @@ export interface MaintenanceCleanupResult {
   readonly apiTokens: number;
   /** `meta.dashboards` in the trash for more than 30 days, widgets included (T805, CONTRACTS §28.1). */
   readonly dashboards: number;
+  /** `meta.ai_usage_daily` rows of days more than 400 days ago (T906, CONTRACTS §29.1). */
+  readonly aiUsageDays: number;
 }
 
 /** Runs `deleteBatch` until it deletes fewer than `batchSize` rows. */
@@ -256,8 +259,9 @@ async function deleteInBatches(
  * a run reading a purged request fails with `trigger_data_expired`) and
  * "send a test" HTTP deliveries older than 24 hours (T605; action
  * deliveries follow their run), API tokens revoked or expired more than
- * 90 days ago (T703) and dashboards in the trash for more than 30 days
- * (T805; their widgets go by cascade), in every organization.
+ * 90 days ago (T703), dashboards in the trash for more than 30 days
+ * (T805; their widgets go by cascade) and AI usage days older than 400 days
+ * (T906), in every organization.
  *
  * Why: retention is the same for every tenant and runs from the worker's
  * `maintenance.cleanup` cron, never from a request; it deletes by age only
@@ -364,6 +368,21 @@ export async function purgeExpiredOperationalRows(
     return Number(numAffectedRows ?? 0n);
   }, batchSize);
 
+  // T906: the AI usage ledger keeps 400 days (a day of the organization's zone; UTC is close enough).
+  const usageCutoff = new Date(options.now.getTime() - AI_USAGE_RETENTION_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const aiUsageDays = await deleteInBatches(async () => {
+    const { numAffectedRows } = await sql`
+      DELETE FROM meta.ai_usage_daily
+       WHERE (organization_id, day, feature) IN (
+         SELECT organization_id, day, feature FROM meta.ai_usage_daily
+          WHERE day < ${usageCutoff}::date
+          LIMIT ${batchSize})
+    `.execute(db.kysely);
+    return Number(numAffectedRows ?? 0n);
+  }, batchSize);
+
   return {
     idempotencyKeys,
     jobs,
@@ -372,6 +391,7 @@ export async function purgeExpiredOperationalRows(
     httpTestDeliveries,
     apiTokens,
     dashboards,
+    aiUsageDays,
   };
 }
 

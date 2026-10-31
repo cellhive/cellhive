@@ -1,3 +1,9 @@
+import {
+  BASE_SECRET_KINDS,
+  type BaseSecretKind,
+  type Id,
+  type SecretKind,
+} from '@cellhive/contracts';
 import { sql } from 'kysely';
 
 import {
@@ -8,7 +14,6 @@ import {
 
 import type { Db } from '../db/create-db.js';
 import type { SecretRow, SecretsTable } from '../db/schema.js';
-import type { Id, SecretKind } from '@cellhive/contracts';
 import type { Insertable, Updateable } from 'kysely';
 
 export type NewSecret = Omit<
@@ -179,16 +184,20 @@ export class SecretsRepository
     return new Set(rows.map((row) => row.id));
   }
 
-  /** Secrets an automation of `baseId` may use (scope `all`, or the base selected), by name. */
+  /**
+   * Secrets an automation of `baseId` may use (scope `all`, or the base
+   * selected), by name — never the AI key (T906: the AI settings only).
+   */
   async listUsableInBase(
     scope: OrgScope,
     baseId: Id<'bse'>,
-    kind?: SecretKind,
-  ): Promise<{ id: Id<'sec'>; kind: SecretKind; name: string }[]> {
+    kind?: BaseSecretKind,
+  ): Promise<{ id: Id<'sec'>; kind: BaseSecretKind; name: string }[]> {
     let query = this.executor(scope)
       .selectFrom('meta.secrets as s')
       .select(['s.id', 's.kind', 's.name'])
       .where('s.organization_id', '=', scope.organizationId)
+      .where('s.kind', 'in', [...BASE_SECRET_KINDS])
       .where((eb) =>
         eb.or([
           eb('s.base_scope', '=', 'all'),
@@ -203,10 +212,11 @@ export class SecretsRepository
         ]),
       );
     if (kind !== undefined) query = query.where('s.kind', '=', kind);
-    return query
+    const rows = await query
       .orderBy(sql`lower(s.name)`)
       .orderBy('s.id')
       .execute();
+    return rows as { id: Id<'sec'>; kind: BaseSecretKind; name: string }[];
   }
 
   /** The secret (with its sealed value) when an automation of `baseId` may use it as `kind`. */

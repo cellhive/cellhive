@@ -1,7 +1,8 @@
 /**
  * The AI core (CONTRACTS §29.7, ADR-39): the Chat Completions client over the
  * SSRF core, the structured-output ladder, repair rounds, the request
- * deadline and untrusted data blocks. The fake provider for tests is in
+ * deadline and untrusted data blocks; the AI settings, quota ledger, audit
+ * and metrics shared by the API and the worker (T906). The fake provider for tests is in
  * `@cellhive/server-core/testing`, never loaded at runtime.
  */
 export {
@@ -52,3 +53,41 @@ export {
   type AiValidation,
 } from './repair.js';
 export { DATA_MARK, UNTRUSTED_DATA_INSTRUCTIONS, untrustedBlock } from './untrusted.js';
+export {
+  aiRequestedAfter,
+  truncateUtf8,
+  writeAiRequestedAudit,
+  type AiRequestedEntry,
+} from './audit/ai-requested.js';
+export {
+  aiQuotaExhaustedCount,
+  aiRequestCounts,
+  aiRetryCounts,
+  aiTokenCounts,
+  observeAiDurations,
+  recordAiQuotaExhausted,
+  recordAiRequest,
+  type AiRequestOutcome,
+  type AiRequestStatus,
+} from './metrics.js';
+export { AiSettingsRepository, type AiSettingsValues } from './settings/ai-settings.repository.js';
+export { createAiKeySource, transientAiKeySource } from './settings/key-source.js';
+export {
+  aiNotConfigured,
+  DEFAULT_AI_SETTINGS,
+  defaultTokenParam,
+  isAiAvailable,
+  keyHostPatternOf,
+  organizationAiOf,
+  providerSettingsOf,
+  requireAi,
+  type AiSettingsState,
+} from './settings/settings.js';
+export { AiUsageRepository, type AiUsageDay } from './usage/ai-usage.repository.js';
+export {
+  aiQuotaExceeded,
+  AiUsageLedger,
+  quotaDayOf,
+  type AiQuotaContext,
+  type QuotaDay,
+} from './usage/quota.js';

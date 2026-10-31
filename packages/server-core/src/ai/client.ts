@@ -148,6 +148,11 @@ const chatResponseSchema = z.object({
     .catch(null),
 });
 
+/** `GET /models` of OpenAI-compatible servers (OpenAI, Ollama, vLLM, llama.cpp, LiteLLM). */
+const modelsResponseSchema = z.object({
+  data: z.array(z.object({ id: z.string().min(1).max(500) })),
+});
+
 const schemaCache = new WeakMap<z.ZodType, LlmJsonSchema>();
 
 function llmJsonSchemaOf(schema: z.ZodType): LlmJsonSchema {
@@ -219,15 +224,118 @@ export class LlmClient {
    * (`params.reason`) or `AI_TIMEOUT`.
    */
   async complete(request: AiCompleteRequest): Promise<AiCompletion> {
-    const { settings, organizationId } = request;
+    const { settings } = request;
+    const { target, headers, host } = await this.connect(
+      request.organizationId,
+      settings,
+      '/chat/completions',
+      request.deadline,
+    );
+
+    const output = request.output;
+    const schema = output.kind === 'json' ? llmJsonSchemaOf(output.schema) : null;
+    let mode: AiOutputMode | null = output.kind === 'json' ? settings.outputMode : null;
+    for (;;) {
+      let messages = request.messages;
+      let responseFormat: Record<string, unknown> | undefined;
+      if (mode !== null && schema !== null && output.kind === 'json') {
+        const instruction = schemaInstruction(mode, schema);
+        if (instruction !== null) messages = withInstruction(messages, instruction);
+        responseFormat = responseFormatOf(mode, output.name, schema);
+      }
+      const body = JSON.stringify({
+        model: settings.model,
+        messages,
+        stream: false,
+        [settings.tokenParam]: request.maxOutputTokens,
+        ...(responseFormat === undefined ? {} : { response_format: responseFormat }),
+      });
+      let response: GuardedResponse;
+      try {
+        response = await guardedRequest(target, {
+          method: 'POST',
+          headers: { ...headers, 'content-type': 'application/json' },
+          body,
+          timeoutMs: Math.min(
+            settings.requestTimeoutSeconds * 1000,
+            remainingOrTimeout(request.deadline, host),
+          ),
+        });
+      } catch (error) {
+        throw providerFailure(error, host);
+      }
+      const lower = mode === null ? null : lowerOutputMode(mode);
+      if (response.status === 400 && responseFormat !== undefined && lower !== null) {
+        // `response_format` not supported: one rung down, same deadline.
+        mode = lower;
+        continue;
+      }
+      return this.read(response, request, messages, mode, host);
+    }
+  }
+
+  /**
+   * The model ids of `GET {base}/models` ("Test connection", T906), at most
+   * `max`, in the provider's order — through the same door as `complete`
+   * (allowlist, key host check, no redirect, 1 MiB). Throws
+   * `AI_PROVIDER_ERROR` (`http_status` for a provider without the route)
+   * or `AI_TIMEOUT`.
+   */
+  async listModels(request: {
+    readonly organizationId: Id<'org'>;
+    readonly settings: AiProviderSettings;
+    readonly deadline: AiDeadline;
+    readonly max: number;
+  }): Promise<string[]> {
+    const { target, headers, host } = await this.connect(
+      request.organizationId,
+      request.settings,
+      '/models',
+      request.deadline,
+    );
+    let response: GuardedResponse;
+    try {
+      response = await guardedRequest(target, {
+        method: 'GET',
+        headers,
+        timeoutMs: Math.min(
+          request.settings.requestTimeoutSeconds * 1000,
+          remainingOrTimeout(request.deadline, host),
+        ),
+      });
+    } catch (error) {
+      throw providerFailure(error, host);
+    }
+    if (response.status < 200 || response.status > 299) {
+      throw aiProviderError('http_status', { host, status: response.status });
+    }
+    try {
+      const parsed = modelsResponseSchema.parse(JSON.parse(response.body.toString('utf8')));
+      return parsed.data.slice(0, request.max).map((model) => model.id);
+    } catch {
+      throw aiProviderError('invalid_response', { host });
+    }
+  }
+
+  /**
+   * `{base}{path}` vetted for `organizationId`: the URL parsed, the key's
+   * allowed hosts checked **before** it is unsealed, the address resolved
+   * and pinned by the SSRF core, then the headers (with the key).
+   */
+  private async connect(
+    organizationId: Id<'org'>,
+    settings: AiProviderSettings,
+    path: string,
+    deadline: AiDeadline,
+  ): Promise<{ target: OutboundTarget; headers: Record<string, string>; host: string }> {
     let url: OutboundUrl;
     try {
-      url = parseOutboundUrl(`${settings.baseUrl.replace(/\/+$/u, '')}/chat/completions`);
+      url = parseOutboundUrl(`${settings.baseUrl.replace(/\/+$/u, '')}${path}`);
     } catch (error) {
       throw providerFailure(error, '');
     }
     const host = hostOf(url);
-    remainingOrTimeout(request.deadline, host);
+    remainingOrTimeout(deadline, host);
 
     if (settings.apiKeySecretId !== null) {
       const policy = await this.options.keys.hosts(organizationId, settings.apiKeySecretId);
@@ -252,7 +360,6 @@ export class LlmClient {
       throw providerFailure(error, host);
     }
     const headers: Record<string, string> = {
-      'content-type': 'application/json',
       accept: 'application/json',
       'user-agent': AI_USER_AGENT,
     };
@@ -261,47 +368,7 @@ export class LlmClient {
       if (key === null) throw aiProviderError('secret_unavailable', { host });
       headers['authorization'] = `Bearer ${key}`;
     }
-
-    const output = request.output;
-    const schema = output.kind === 'json' ? llmJsonSchemaOf(output.schema) : null;
-    let mode: AiOutputMode | null = output.kind === 'json' ? settings.outputMode : null;
-    for (;;) {
-      let messages = request.messages;
-      let responseFormat: Record<string, unknown> | undefined;
-      if (mode !== null && schema !== null && output.kind === 'json') {
-        const instruction = schemaInstruction(mode, schema);
-        if (instruction !== null) messages = withInstruction(messages, instruction);
-        responseFormat = responseFormatOf(mode, output.name, schema);
-      }
-      const body = JSON.stringify({
-        model: settings.model,
-        messages,
-        stream: false,
-        [settings.tokenParam]: request.maxOutputTokens,
-        ...(responseFormat === undefined ? {} : { response_format: responseFormat }),
-      });
-      let response: GuardedResponse;
-      try {
-        response = await guardedRequest(target, {
-          method: 'POST',
-          headers,
-          body,
-          timeoutMs: Math.min(
-            settings.requestTimeoutSeconds * 1000,
-            remainingOrTimeout(request.deadline, host),
-          ),
-        });
-      } catch (error) {
-        throw providerFailure(error, host);
-      }
-      const lower = mode === null ? null : lowerOutputMode(mode);
-      if (response.status === 400 && responseFormat !== undefined && lower !== null) {
-        // `response_format` not supported: one rung down, same deadline.
-        mode = lower;
-        continue;
-      }
-      return this.read(response, request, messages, mode, host);
-    }
+    return { target, headers, host };
   }
 
   /**

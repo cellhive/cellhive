@@ -78,6 +78,8 @@ const TENANT_TABLE_SET = {
   user_channel_link_tokens: true,
   telegram_webhooks: true,
   api_tokens: true,
+  ai_settings: true,
+  ai_usage_daily: true,
 } as const satisfies Record<TenantTableName, true>;
 
 export const TENANT_TABLES = Object.keys(TENANT_TABLE_SET) as readonly TenantTableName[];

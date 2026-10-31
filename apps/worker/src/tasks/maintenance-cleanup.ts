@@ -15,8 +15,9 @@ export interface MaintenanceCleanupDeps {
  * finished more than 30 days ago, automation fan-out counters older than
  * 24 hours (ADR-26 §4), raw incoming webhook requests older than 7 days
  * (ADR-35 §1), API tokens revoked or expired more than 90 days ago (T703),
- * dashboards in the trash for more than 30 days (T805) and expired
- * sessions (they no longer authenticate; SPEC §14.2).
+ * dashboards in the trash for more than 30 days (T805), AI usage days
+ * older than 400 days (T906) and expired sessions (they no longer
+ * authenticate; SPEC §14.2).
  * Idempotent; logs counts only.
  */
 export function createMaintenanceCleanupTask(
@@ -37,6 +38,7 @@ export function createMaintenanceCleanupTask(
         http_test_deliveries: result.httpTestDeliveries,
         api_tokens: result.apiTokens,
         dashboards: result.dashboards,
+        ai_usage_days: result.aiUsageDays,
         sessions: expiredSessions,
         duration_ms: Date.now() - started,
       },

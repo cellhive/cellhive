@@ -104,6 +104,7 @@ describe('meta migrations on an empty PostgreSQL 18 database', () => {
       '0051_secrets_allowed_hosts',
       '0052_audit_logs_actor_action_idx',
       '0053_dashboards',
+      '0054_ai_settings',
     ]);
     expect(await migrateToLatest(db.kysely)).toEqual([]);
 
@@ -164,6 +165,7 @@ describe('meta migrations on an empty PostgreSQL 18 database', () => {
       '0051_secrets_allowed_hosts',
       '0052_audit_logs_actor_action_idx',
       '0053_dashboards',
+      '0054_ai_settings',
     ]);
   });
 

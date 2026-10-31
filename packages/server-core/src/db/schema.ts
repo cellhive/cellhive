@@ -1,4 +1,8 @@
 import type {
+  AiFeature,
+  AiOutputRung,
+  AiStructuredOutput,
+  AiTokenParam,
   ApiTokenScope,
   EmailAssetKind,
   EmailIdentityBaseScope,
@@ -1351,6 +1355,61 @@ export interface ApiTokensTable {
   updated_at: UpdatedAt;
 }
 
+/**
+ * `meta.ai_settings` (migration 0054, BACKLOG T906, CONTRACTS §29.1): the AI
+ * provider of an organization, one row per organization. The key is a
+ * secret of kind `ai_api_key` (`api_key_secret_id`), never a column.
+ */
+export interface AiSettingsTable {
+  organization_id: ColumnType<Id<'org'>, Id<'org'>, never>;
+  enabled: ColumnType<boolean, boolean | undefined, boolean>;
+  provider_base_url: ColumnType<string | null, string | null | undefined, string | null>;
+  model: ColumnType<string | null, string | null | undefined, string | null>;
+  api_key_secret_id: NullableRef<'sec'>;
+  allow_record_data: ColumnType<boolean, boolean | undefined, boolean>;
+  log_prompts: ColumnType<boolean, boolean | undefined, boolean>;
+  /** `NULL`: no limit. */
+  daily_token_limit: ColumnType<
+    bigint | null,
+    bigint | number | null | undefined,
+    bigint | number | null
+  >;
+  structured_output: ColumnType<
+    AiStructuredOutput,
+    AiStructuredOutput | undefined,
+    AiStructuredOutput
+  >;
+  detected_output: ColumnType<
+    AiOutputRung | null,
+    AiOutputRung | null | undefined,
+    AiOutputRung | null
+  >;
+  /** `NULL`: the default for the host of `provider_base_url`. */
+  token_param: ColumnType<
+    AiTokenParam | null,
+    AiTokenParam | null | undefined,
+    AiTokenParam | null
+  >;
+  request_timeout_seconds: ColumnType<number, number | undefined, number>;
+  created_at: CreatedAt;
+  updated_at: UpdatedAt;
+}
+
+/**
+ * `meta.ai_usage_daily` (migration 0054, T906): tokens per organization,
+ * day of the organization time zone and feature (the quota ledger).
+ */
+export interface AiUsageDailyTable {
+  organization_id: OrganizationRef;
+  /** `YYYY-MM-DD` in the organization time zone. */
+  day: ColumnType<string, string, never>;
+  feature: ColumnType<AiFeature, AiFeature, never>;
+  requests: ColumnType<number, number | undefined, number>;
+  prompt_tokens: Int8WithDefault;
+  completion_tokens: Int8WithDefault;
+  estimated_requests: ColumnType<number, number | undefined, number>;
+}
+
 /** Every table of the `meta` schema, keyed as Kysely expects (`schema.table`). */
 export interface Database {
   'meta.organizations': OrganizationsTable;
@@ -1412,6 +1471,8 @@ export interface Database {
   'meta.user_channel_link_tokens': UserChannelLinkTokensTable;
   'meta.telegram_webhooks': TelegramWebhooksTable;
   'meta.api_tokens': ApiTokensTable;
+  'meta.ai_settings': AiSettingsTable;
+  'meta.ai_usage_daily': AiUsageDailyTable;
 }
 
 /** Unqualified name of a `meta` table, e.g. `bases`. */
@@ -1448,6 +1509,8 @@ export type UserChannelRow = Selectable<UserChannelsTable>;
 export type UserChannelLinkTokenRow = Selectable<UserChannelLinkTokensTable>;
 export type TelegramWebhookRow = Selectable<TelegramWebhooksTable>;
 export type ApiTokenRow = Selectable<ApiTokensTable>;
+export type AiSettingsRow = Selectable<AiSettingsTable>;
+export type AiUsageDailyRow = Selectable<AiUsageDailyTable>;
 export type AutomationRow = Selectable<AutomationsTable>;
 export type AutomationRunRow = Selectable<AutomationRunsTable>;
 export type AutomationRunStepRow = Selectable<AutomationRunStepsTable>;
