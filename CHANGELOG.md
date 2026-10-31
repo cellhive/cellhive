@@ -18,6 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Upgrade notes
 
+#### Migration 0055 (`canonical_time_zones`): stored time zones become IANA primary names
+
+Migration 0055 (T901) rewrites time zones stored before T819 by an old or alias name (`Asia/Saigon`, `US/Eastern`, …) to the IANA primary name the `postgres:18` image knows (`Asia/Ho_Chi_Minh`, `America/New_York`) in users, organization and base settings, date field options and `schedule` triggers; cell values do not change and nothing is recomputed, and names it does not know stay as they are, counted (never listed) in a `WARNING` of the PostgreSQL log. Forward-only: no down migration.
+
 #### Migration 0052 (`audit_logs_actor_action_idx`): audit writes wait while two indexes build
 
 Migration 0052 (T709) builds `audit_logs_actor_idx (organization_id, actor_id, created_at DESC, id DESC)` and `audit_logs_action_idx (organization_id, action, created_at DESC, id DESC)` on the partitioned `meta.audit_logs`, so on **every monthly partition** (and on partitions created later). They serve the audit log viewer's "who" and "what" filters (CONTRACTS §11.4).

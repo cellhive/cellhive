@@ -54,6 +54,7 @@
     "0051_secrets_allowed_hosts": "83e527b249f1d38b693bcddf0fc90e615ff8763ff7823021406b406c53abe3be",
     "0052_audit_logs_actor_action_idx": "67dab503826b78206422d72d86a4025e0966b29ac8c614e98fa3b3fffc575c73",
     "0053_dashboards": "63466c2b6949bee54b6442d6a4a4dbd986742bd34fcc6284c98ef8213636b9c2",
-    "0054_ai_settings": "e369712dea0f1e22dc6b254f9b726e2a91d6163a0c43d92dde10fda790ee2e42"
+    "0054_ai_settings": "e369712dea0f1e22dc6b254f9b726e2a91d6163a0c43d92dde10fda790ee2e42",
+    "0055_canonical_time_zones": "a8fa2314434ae192a0fa6bd3ec1353826bb13b8b2fa04912c374f5a903020c14"
   }
 }
