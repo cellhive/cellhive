@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { aiAutomationDraftRequestSchema, aiAutomationDraftSchema } from '../../ai-automation.js';
 import { aiFormulaRequestSchema, aiFormulaSchema } from '../../ai-formula.js';
 import {
   aiSettingsSchema,
@@ -16,6 +17,7 @@ import { register, type RouteSpec } from './route-spec.js';
 
 const orgParams = z.object({ orgId: idOf('org') });
 const tableParams = z.object({ tableId: idOf('tbl') });
+const baseParams = z.object({ baseId: idOf('bse') });
 
 const ADMIN_ONLY =
   '`PERMISSION_DENIED`: the caller is a member but not an owner/admin of the organization ' +
@@ -145,6 +147,40 @@ export const registerAiRoutes: RouteRegistrar = (registry, components) => {
       422:
         '`VALIDATION_FAILED`; `AI_NOT_CONFIGURED`: AI is off or has no provider; ' +
         '`AI_INVALID_OUTPUT` (`errors[0].params.attempts`): still no valid formula after 2 ' +
+        'repair rounds',
+      429: AI_LIMITED,
+      502: '`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed',
+      504: '`AI_TIMEOUT`: no valid answer within the 90 s budget of the request',
+    },
+  });
+  add({
+    method: 'post',
+    path: '/api/v1/bases/{baseId}/ai/automation-draft',
+    operationId: 'generateAiAutomationDraft',
+    tag: 'ai',
+    summary: 'Draft an automation from a sentence',
+    description:
+      'Needs the right to create automations in the base (base admin, or `manage` on a ' +
+      'table — ADR-25): a reader of the base without it gets `403`, anyone else `404`; a ' +
+      '`table_id` the caller cannot read is `404`, one they read but cannot manage `403` — ' +
+      'all before anything about AI. The model sees only the tables the caller manages, their ' +
+      'fields the caller reads, the Telegram bots usable in the base and whether email can be ' +
+      'sent (names, never values or ids), and answers a flat draft by name from a subset of ' +
+      'triggers and actions (never `http_request`, `run_n8n_workflow`, `update_records`, ' +
+      '`delete_record`, `find_records`, `if`). The server builds the definition with ids and ' +
+      'checks it exactly like `POST /bases/{baseId}/automations` for the caller; errors go ' +
+      'back to the model, at most 2 repair rounds. Nothing is stored or turned on: open the ' +
+      'draft in the builder and create it with `enabled: false`. Counts towards the quota ' +
+      '(feature `automation_draft`) and the AI rate limit; audited as `ai.requested` ' +
+      '(CONTRACTS §29.3).',
+    params: baseParams,
+    body: aiAutomationDraftRequestSchema,
+    status: 200,
+    response: aiAutomationDraftSchema,
+    errors: {
+      422:
+        '`VALIDATION_FAILED`; `AI_NOT_CONFIGURED`: AI is off or has no provider; ' +
+        '`AI_INVALID_OUTPUT` (`errors[0].params.attempts`): still no valid draft after 2 ' +
         'repair rounds',
       429: AI_LIMITED,
       502: '`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed',

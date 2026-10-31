@@ -218,6 +218,121 @@
         ],
         "description": "`{ value }` stores the key as an `ai_api_key` secret (replacing the value of the current one) with `allowed_hosts` = the host (and port) of the provider URL; `{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key"
       },
+      "AiAutomationDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "definition": {
+            "additionalProperties": false,
+            "description": "Checked like `POST /bases/{baseId}/automations` would check it for the caller (filters as DSL with ids, templates in stored form); not saved — create it with `enabled: false` after review",
+            "properties": {
+              "actions": {
+                "default": [],
+                "description": "At most 20 actions, `if` branches included",
+                "items": {
+                  "$ref": "#/components/schemas/AutomationAction"
+                },
+                "type": "array"
+              },
+              "condition": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AutomationFilter"
+                  },
+                  {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                ]
+              },
+              "trigger": {
+                "$ref": "#/components/schemas/AutomationTrigger"
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "type": "object"
+          },
+          "description": {
+            "description": "The sentence, as sent",
+            "type": "string"
+          },
+          "explanation": {
+            "description": "What the draft does, written by the model",
+            "type": "string"
+          },
+          "name": {
+            "description": "Written by the model",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "warnings": {
+            "description": "Parts of the sentence the draft leaves out or had to guess",
+            "items": {
+              "$ref": "#/components/schemas/AiAutomationWarning"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "definition",
+          "explanation",
+          "warnings"
+        ],
+        "type": "object"
+      },
+      "AiAutomationDraftRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "prompt": {
+            "description": "What the automation should do, in any language",
+            "example": "Khi ticket chuyển DONE thì gửi Telegram cho người phụ trách",
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "table_id": {
+            "default": null,
+            "description": "The table the builder was opened from: preferred as the trigger table when the sentence names none. A table the caller reads but cannot manage is `403`",
+            "example": "tbl_A1b2C3d4E5f6G7h8",
+            "pattern": "^tbl_[0-9A-Za-z]{16}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "type": "object"
+      },
+      "AiAutomationWarning": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "unsupported_action",
+              "unsupported_trigger",
+              "ambiguous"
+            ],
+            "type": "string"
+          },
+          "message": {
+            "description": "Written by the model: plain text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
       "AiFormula": {
         "additionalProperties": false,
         "properties": {
@@ -24092,6 +24207,156 @@
           "bases"
         ],
         "x-api-token-scope": "session"
+      }
+    },
+    "/api/v1/bases/{baseId}/ai/automation-draft": {
+      "post": {
+        "description": "Needs the right to create automations in the base (base admin, or `manage` on a table — ADR-25): a reader of the base without it gets `403`, anyone else `404`; a `table_id` the caller cannot read is `404`, one they read but cannot manage `403` — all before anything about AI. The model sees only the tables the caller manages, their fields the caller reads, the Telegram bots usable in the base and whether email can be sent (names, never values or ids), and answers a flat draft by name from a subset of triggers and actions (never `http_request`, `run_n8n_workflow`, `update_records`, `delete_record`, `find_records`, `if`). The server builds the definition with ids and checks it exactly like `POST /bases/{baseId}/automations` for the caller; errors go back to the model, at most 2 repair rounds. Nothing is stored or turned on: open the draft in the builder and create it with `enabled: false`. Counts towards the quota (feature `automation_draft`) and the AI rate limit; audited as `ai.requested` (CONTRACTS §29.3). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "operationId": "generateAiAutomationDraft",
+        "parameters": [
+          {
+            "description": "bse ID",
+            "in": "path",
+            "name": "baseId",
+            "required": true,
+            "schema": {
+              "description": "bse ID",
+              "example": "bse_A1b2C3d4E5f6G7h8",
+              "pattern": "^bse_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[\\x21-\\x7e]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAutomationDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAutomationDraft"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PERMISSION_DENIED` (visible but not allowed) or `CSRF_INVALID`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`IDEMPOTENCY_KEY_REUSED`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`; `AI_NOT_CONFIGURED`: AI is off or has no provider; `AI_INVALID_OUTPUT` (`errors[0].params.attempts`): still no valid draft after 2 repair rounds"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute, or 2 at once, by the user (8 at once on the instance); `AI_QUOTA_EXCEEDED` with `Retry-After` and `errors[0].params.reset_at`: the daily token quota is used up"
+          },
+          "502": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed"
+          },
+          "504": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AI_TIMEOUT`: no valid answer within the 90 s budget of the request"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiToken": [
+              "automations:read"
+            ]
+          }
+        ],
+        "summary": "Draft an automation from a sentence",
+        "tags": [
+          "ai"
+        ],
+        "x-api-token-scope": "automations:read"
       }
     },
     "/api/v1/bases/{baseId}/audit-logs": {

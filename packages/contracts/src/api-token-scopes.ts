@@ -36,7 +36,13 @@ export interface ApiTokenRouteEntry {
 
 export const API_TOKEN_ROUTE_SCOPES = {
   // ai (S8): settings and usage are organization administration, session only
-  // (the formula reads the schema and stores nothing: `schema:read`)
+  // (the formula reads the schema and stores nothing: `schema:read`; the automation
+  // draft stores nothing either: `automations:read`)
+  generateAiAutomationDraft: {
+    method: 'POST',
+    path: '/api/v1/bases/{baseId}/ai/automation-draft',
+    scope: 'automations:read',
+  },
   generateAiFormula: {
     method: 'POST',
     path: '/api/v1/tables/{tableId}/ai/formula',
