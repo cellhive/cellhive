@@ -1,6 +1,9 @@
-import { test as base } from '@playwright/test';
+import { test as base, type Browser } from '@playwright/test';
 
+import { FAKE_LLM_MODEL, fakeLlmBaseUrl, fakeLlmHost } from './fake-llm';
+import { E2E_WEB_URL } from './ports';
 import { DEMO_PASSWORD, runSeed } from './seed';
+import { apiSignIn, ok } from './support';
 
 export { expect } from '@playwright/test';
 
@@ -89,13 +92,56 @@ export function workerSlot(): number {
 export const WORKER_ORG: WorkerOrg = workerOrgFor(workerSlot());
 
 /**
+ * Points the worker's organization at the fake AI provider of the stack
+ * (T912, `fake-llm.ts`): the allowlist entry `localhost:<port>` (once) and
+ * AI on with `fake-model`, no key — so AI entry points render
+ * (`ai.available`). Record values stay off (the default); a spec that needs
+ * them turns them on and back off. Runs at every worker start: a worker
+ * started again after a failure keeps the slot and gets the settings back.
+ */
+async function useFakeLlm(browser: Browser): Promise<void> {
+  // A worker fixture: no test options apply, so the context gets them here.
+  const context = await browser.newContext({
+    baseURL: E2E_WEB_URL,
+    extraHTTPHeaders: { 'X-Forwarded-For': WORKER_ORG.clientIp },
+  });
+  try {
+    const page = await context.newPage();
+    await apiSignIn(page, WORKER_ORG.email('admin'), WORKER_ORG.password);
+    const me = await ok<{ orgs: { id: string; name: string }[] }>(page, 'GET', '/me');
+    const orgId = me.orgs.find((item) => item.name === WORKER_ORG.orgName)?.id ?? '';
+    if (orgId === '') throw new Error(`The organization ${WORKER_ORG.orgName} is missing.`);
+    const host = fakeLlmHost();
+    const allowlist = await ok<{ items: { pattern: string }[] }>(
+      page,
+      'GET',
+      `/orgs/${orgId}/http-allowlist`,
+    );
+    if (!allowlist.items.some((entry) => entry.pattern === host)) {
+      await ok(page, 'POST', `/orgs/${orgId}/http-allowlist`, {
+        pattern: host,
+        note: 'E2E fake AI provider',
+      });
+    }
+    await ok(page, 'PUT', `/orgs/${orgId}/ai-settings`, {
+      enabled: true,
+      provider_base_url: fakeLlmBaseUrl(),
+      model: FAKE_LLM_MODEL,
+      api_key: null,
+    });
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * `test` of every spec on the shared stack: the worker fixture `workerOrg`
  * seeds the worker's organization once (`seed:demo` with the worker's org
- * and tag; a second run finds it complete and changes nothing) before the
- * first hook or test of the worker. Specs read users, org and base names
- * from it (or {@link WORKER_ORG}), never from the demo constants of
- * `seed.ts`, which stay the documented ones of the specs with a stack of
- * their own.
+ * and tag; a second run finds it complete and changes nothing) and points
+ * it at the fake AI provider before the first hook or test of the worker.
+ * Specs read users, org and base names from it (or {@link WORKER_ORG}),
+ * never from the demo constants of `seed.ts`, which stay the documented
+ * ones of the specs with a stack of their own.
  */
 export const test = base.extend<object, { workerOrg: WorkerOrg }>({
   // Every context of the worker, `browser.newContext()` in hooks included.
@@ -103,9 +149,9 @@ export const test = base.extend<object, { workerOrg: WorkerOrg }>({
     await use({ ...extraHTTPHeaders, 'X-Forwarded-For': WORKER_ORG.clientIp });
   },
   workerOrg: [
-    // eslint-disable-next-line no-empty-pattern -- Playwright reads the fixture's dependencies from this pattern.
-    async ({}, use) => {
+    async ({ browser }, use) => {
       await runSeed('seed.js', ['--org', WORKER_ORG.orgName, '--email-tag', WORKER_ORG.tag]);
+      await useFakeLlm(browser);
       await use(WORKER_ORG);
     },
     { scope: 'worker', auto: true, timeout: 300_000 },
