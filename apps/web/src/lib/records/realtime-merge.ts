@@ -52,7 +52,9 @@ export function mergeRecordPatch(
     // (T816) The echo of the user's own write (same version, already applied by
     // the write's answer) still brings the colors computed after it.
     if (!withMeta || patch.meta === undefined || patch.version < record.version) return null;
-    return sameMeta(record.meta, patch.meta) ? null : { ...record, meta: patch.meta };
+    return sameMeta(record.meta, patch.meta)
+      ? null
+      : { ...record, meta: { ...record.meta, ...patch.meta } };
   }
   const fields: Record<string, unknown> = { ...record.fields };
   let skipped = false;
@@ -68,7 +70,14 @@ export function mergeRecordPatch(
     changed = true;
   }
   const version = skipped ? record.version : Math.max(record.version, patch.version);
-  const meta = withMeta && patch.meta !== undefined ? patch.meta : record.meta;
+  // (T816) Colors of the subscribed view replace the cached ones; (T915) AI states stay.
+  const colored =
+    withMeta && patch.meta !== undefined ? { ...record.meta, ...patch.meta } : record.meta;
+  const meta = withoutWrittenAiStates(
+    colored,
+    patch.fields,
+    (fieldId) => isPending?.(record.id, fieldId) === true,
+  );
   const metaChanged = !sameMeta(meta, record.meta);
   if (!changed && !metaChanged && version === record.version) return null;
   const merged: RecordDto = { ...record, version, fields };
@@ -76,10 +85,28 @@ export function mergeRecordPatch(
   return merged;
 }
 
-/** Whether two record `meta` (T816 colors) say the same. */
+/**
+ * (T915) A value written for an AI cell — by the AI worker, the only writer
+ * of AI fields — is current: its waiting state (`meta.ai`) goes. The server
+ * never sends `meta.ai` in realtime (states come with reads: CONTRACTS §1.4).
+ */
+function withoutWrittenAiStates(
+  meta: RecordMetaDto | undefined,
+  written: Readonly<Record<string, unknown>>,
+  skipped: (fieldId: string) => boolean,
+): RecordMetaDto | undefined {
+  const ai = meta?.ai;
+  if (meta === undefined || ai === undefined) return meta;
+  const left = Object.entries(ai).filter(([fieldId]) => !(fieldId in written) || skipped(fieldId));
+  if (left.length === Object.keys(ai).length) return meta;
+  return { ...meta, ai: Object.fromEntries(left) };
+}
+
+/** Whether two record `meta` (T816 colors, T915 AI states) say the same. */
 function sameMeta(a: RecordMetaDto | undefined, b: RecordMetaDto | undefined): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
+  if (!sameAiStates(a.ai, b.ai)) return false;
   const left = a.color;
   const right = b.color;
   if (left === right) return true;
@@ -91,6 +118,16 @@ function sameMeta(a: RecordMetaDto | undefined, b: RecordMetaDto | undefined): b
   return keys.every(
     (key) =>
       leftCells[key as keyof typeof leftCells] === rightCells[key as keyof typeof rightCells],
+  );
+}
+
+function sameAiStates(a: RecordMetaDto['ai'], b: RecordMetaDto['ai']): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  const left = Object.entries(a);
+  const right: Readonly<Record<string, string>> = b;
+  return (
+    left.length === Object.keys(b).length && left.every(([key, value]) => right[key] === value)
   );
 }
 

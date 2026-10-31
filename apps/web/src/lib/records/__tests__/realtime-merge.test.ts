@@ -7,6 +7,7 @@ import {
   applyRecordPatch,
   isCellPending,
   keepPendingCells,
+  mergeRecordPatch,
   registerPendingCells,
 } from '../realtime-merge';
 
@@ -206,5 +207,54 @@ describe('applyRecordPatch: colors of the color rules (T816)', () => {
       metaViewId: VIEW,
     });
     expect(first(viewBlock)?.meta).toEqual(RED);
+  });
+});
+
+describe('mergeRecordPatch: states of AI cells (T915)', () => {
+  const SUMMARY = 'fld_Summary000000001';
+  const queued = (fields: Record<string, unknown>, version = 2): RecordDto => ({
+    ...record(version, fields),
+    meta: { ai: { [SUMMARY]: 'queued', [AMOUNT]: 'failed' } },
+  });
+
+  it.each<[string, Record<string, unknown>, Record<string, string>]>([
+    ['the AI value written: its state goes', { [SUMMARY]: 'A summary' }, { [AMOUNT]: 'failed' }],
+    [
+      'another field written: every state stays',
+      { [TITLE]: 'b' },
+      { [SUMMARY]: 'queued', [AMOUNT]: 'failed' },
+    ],
+  ])('%s', (_case, fields, expected) => {
+    const merged = mergeRecordPatch(queued({ [SUMMARY]: null }), {
+      fields,
+      version: 3,
+      recomputed: false,
+    });
+    expect(merged?.meta?.ai).toEqual(expected);
+  });
+
+  it('keeps the state of a cell skipped as pending, and the AI states under new colors', () => {
+    const pending = mergeRecordPatch(
+      queued({}),
+      { fields: { [SUMMARY]: 'x' }, version: 3, recomputed: false },
+      (_record, fieldId) => fieldId === SUMMARY,
+    );
+    // Nothing to apply: the user's own write of that cell is in flight.
+    expect(pending).toBeNull();
+    const colored = mergeRecordPatch(
+      queued({}),
+      {
+        fields: {},
+        version: 3,
+        recomputed: false,
+        meta: { color: { row: 'clr_Red0000000000001' } },
+      },
+      null,
+      true,
+    );
+    expect(colored?.meta).toEqual({
+      color: { row: 'clr_Red0000000000001' },
+      ai: { [SUMMARY]: 'queued', [AMOUNT]: 'failed' },
+    });
   });
 });

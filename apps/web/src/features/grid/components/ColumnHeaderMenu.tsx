@@ -2,6 +2,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@cellhive/ui';
@@ -11,8 +12,11 @@ import {
   ArrowRightToLine,
   ArrowUpNarrowWide,
   EyeOff,
+  CircleAlert,
   LoaderCircle,
+  RefreshCw,
   Sigma,
+  Sparkles,
   TriangleAlert,
   Pencil,
   Pin,
@@ -45,7 +49,11 @@ export type ColumnMenuAction =
   /** T468: the formula popover under the header ("Edit formula"). */
   | 'formula'
   /** T468: the details of a field-level error (the header badge, from the keyboard). */
-  | 'computedError';
+  | 'computedError'
+  /** T915: generate the empty / failed / every cell of an AI field again. */
+  | 'aiEmpty'
+  | 'aiFailed'
+  | 'aiAll';
 
 /** What the menu of a formula/lookup column adds (T468). */
 export interface ColumnComputedMenu {
@@ -82,6 +90,11 @@ export interface ColumnHeaderMenuProps {
   readonly revertDays?: number | null;
   /** T468: a formula/lookup column (`columnComputed`). */
   readonly computed?: ColumnComputedMenu | undefined;
+  /**
+   * T915: an AI column the user may generate (schema rights, not locked):
+   * "Regenerate" empty / failed (`failed` cells, disabled at 0) / every cell.
+   */
+  readonly ai?: { readonly failed: number } | undefined;
   readonly onAction: (action: ColumnMenuAction) => void;
   readonly onClose: () => void;
 }
@@ -98,6 +111,7 @@ export function ColumnHeaderMenu({
   converting = false,
   revertDays = null,
   computed,
+  ai,
   onAction,
   onClose,
 }: ColumnHeaderMenuProps) {
@@ -161,6 +175,31 @@ export function ColumnHeaderMenu({
                 {t('columnMenu.revert', { count: revertDays })}
               </DropdownMenuItem>
             ) : null}
+            {ai === undefined ? null : (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="flex items-center gap-1.5">
+                  <Sparkles aria-hidden="true" className="size-3.5 text-accent" />
+                  {t('columnMenu.aiRegenerate')}
+                </DropdownMenuLabel>
+                <DropdownMenuItem onSelect={item('aiEmpty')} data-testid="ai-regenerate-empty">
+                  <RefreshCw aria-hidden="true" />
+                  {t('columnMenu.aiEmpty')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={ai.failed === 0}
+                  onSelect={item('aiFailed')}
+                  data-testid="ai-regenerate-failed"
+                >
+                  <CircleAlert aria-hidden="true" />
+                  {t('columnMenu.aiFailed', { count: ai.failed })}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={item('aiAll')} data-testid="ai-regenerate-all">
+                  <Sparkles aria-hidden="true" />
+                  {t('columnMenu.aiAll')}
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             {primary ? null : (
               <DropdownMenuItem onSelect={item('insertLeft')}>

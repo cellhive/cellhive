@@ -75,5 +75,12 @@
       "created": "Bạn theo dõi bản ghi này vì bạn đã tạo nó. Chọn để bỏ theo dõi.",
       "assigned": "Bạn theo dõi bản ghi này vì bạn được giao bản ghi này. Chọn để bỏ theo dõi."
     }
+  },
+  "ai": {
+    "generated": "Do AI tạo",
+    "queued": "Đang chờ AI…",
+    "running": "AI đang sinh…",
+    "failed": "AI không sinh được giá trị này",
+    "paused": "AI tạm dừng: xem thông báo phía trên lưới"
   }
 }

@@ -119,6 +119,19 @@ export function CellValue({
       />
     );
   }
+  // (T915) An AI field the reader cannot read every prompt field of: the lock of a formula.
+  if (field.ai?.locked === true) {
+    return (
+      <span
+        className={cn(wrap, 'inline-flex items-center gap-1 text-fg-muted')}
+        data-testid="ai-locked"
+      >
+        <Lock aria-hidden="true" className="size-3.5 shrink-0" />
+        <span>{t('computed.lockedShort')}</span>
+        <span className="sr-only">{`: ${t('ai.locked')}`}</span>
+      </span>
+    );
+  }
   // Formula / lookup (T468): locks, error tokens and values by result type.
   if (field.computed !== undefined) {
     return (

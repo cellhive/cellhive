@@ -2,6 +2,7 @@ import { Button, DropdownMenuItem, Tooltip } from '@cellhive/ui';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Info, Keyboard, Plus, Redo2, RefreshCw, Undo2, X } from 'lucide-react';
 import {
+  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -35,6 +36,7 @@ import {
 } from '../../../grid';
 import { isTextTarget, pageShortcut } from '../../../grid/undo/keys';
 import { tableUndo, useGridUndo } from '../../../grid/undo/table-undo';
+import { aiConfigOf, aiPausedOf, isAiField } from '../../../lib/ai/ai-field';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
 import { prefetchLinkCandidates } from '../../../lib/links/candidates';
@@ -51,6 +53,7 @@ import {
   canPickLinks,
   canSaveViewConfig,
 } from '../../../lib/permissions/access';
+import { isOrgAdmin } from '../../../lib/permissions/org';
 import { recordQueryHash, type EffectiveRecordQuery } from '../../../lib/query/keys';
 import {
   baseQuery,
@@ -115,11 +118,17 @@ import { RecordCardList } from './RecordCardList';
 import { ShortcutsDialog } from './ShortcutsDialog';
 import { UndoRedoButtons } from './UndoRedoButtons';
 
+import type { AiGenerateMode } from '../../../lib/ai/AiGenerateDialog';
 import type { LinkComponents } from '../../../lib/links/picker';
 import type { ChannelMessage } from '../../../lib/realtime/socket';
 import type { SummaryBarLayout } from '../../../lib/views/summary/types';
 import type { ViewToolbarComponents } from '../../../lib/views/toolbar';
 import type { ViewDto } from '@cellhive/contracts';
+
+/** (T915) "Regenerate" of an AI column: confirmed in a dialog loaded when asked. */
+const AiGenerateDialog = lazy(() => import('../../../lib/ai/AiGenerateDialog'));
+/** (T915) Paused AI fields: the banner loads only when one is paused. */
+const AiPausedBanner = lazy(() => import('../ai/AiPausedBanner'));
 
 /** Skeleton rows shown until the first block answers. */
 const LOADING_ROWS = 12;
@@ -250,6 +259,10 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
   );
 
   const [menu, setMenu] = useState<{ fieldId: string; anchor: HeaderMenuAnchor } | null>(null);
+  const [aiGenerate, setAiGenerate] = useState<{
+    readonly fieldId: string;
+    readonly mode: Exclude<AiGenerateMode, 'save'>;
+  } | null>(null);
   const [toolRequest, setToolRequest] = useState<FieldToolRequest | null>(null);
   const { resize, move } = layoutActions;
   // Formula / lookup columns (T468): header badges, error popover and its actions.
@@ -321,6 +334,15 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
         // The column's conversion banner (T414) takes the focus: its progress is announced.
         document.getElementById(conversionBannerId(fieldId))?.focus();
         return;
+      case 'aiEmpty':
+      case 'aiFailed':
+      case 'aiAll':
+        // (T915) Regenerate cells of an AI field, after the dialog's count and tokens.
+        setAiGenerate({
+          fieldId,
+          mode: action === 'aiEmpty' ? 'empty' : action === 'aiFailed' ? 'failed' : 'all',
+        });
+        return;
     }
   };
   const menuField =
@@ -341,6 +363,10 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
     [effectiveConfig.group, readable, treeShown],
   );
   const { data: me } = useQuery(meQuery());
+  // (T915) "Organization settings › AI" for owners/admins (paused AI fields link there).
+  const meOrg = me?.orgs.find((item) => item.id === base.organization_id);
+  const aiSettingsPath =
+    meOrg !== undefined && isOrgAdmin(meOrg.role) ? `/o/${meOrg.slug}/settings/ai` : null;
   const treeRows = useTreeRows({
     active: treeShown,
     tableId,
@@ -415,6 +441,15 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
     () => new Set<string>(fieldList.items.filter(locksFieldValues).map((field) => field.id)),
     [fieldList],
   );
+  // (T915) AI fills an AI field: no editor opens; schema managers may remove AI.
+  const aiFieldHint = useCallback(
+    (fieldId: string) => {
+      const target = fieldList.items.find((item) => item.id === fieldId);
+      if (target === undefined || !isAiField(target)) return undefined;
+      return t(canManage && FieldTools !== undefined ? 'ai.readOnlyManage' : 'ai.readOnly');
+    },
+    [fieldList, canManage, FieldTools, t],
+  );
   const editing = useGridEditing({
     base,
     tableId,
@@ -426,6 +461,7 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
     attachments: RecordDetail?.Attachments,
     lockedFields: convertingIds,
     lockedFieldHint: t('conversion.lockedHint'),
+    fieldHint: aiFieldHint,
   });
 
   const narrow = useSyncExternalStore(subscribeNarrow, isNarrow);
@@ -1251,6 +1287,16 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
           source.showNewRows();
         }}
       />
+      {fieldList.items.some((item) => aiPausedOf(item) !== null) ? (
+        <Suspense fallback={null}>
+          <AiPausedBanner
+            tableId={tableId}
+            fields={fieldList.items}
+            canManage={canManage}
+            settingsPath={aiSettingsPath}
+          />
+        </Suspense>
+      ) : null}
       {editing.schemaLocked ? <SchemaLockedBanner onRetry={editing.unlock} /> : null}
       {failure !== null ? (
         <div className="flex flex-col items-start gap-3 p-4">
@@ -1394,6 +1440,14 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
           canManageSchema={canManage && FieldTools !== undefined}
           converting={isFieldConverting(menuField)}
           computed={columnComputed(menuField)}
+          ai={
+            canManage &&
+            FieldTools !== undefined &&
+            aiConfigOf(menuField) !== null &&
+            menuField.locked !== true
+              ? { failed: menuField.ai_state?.failed ?? 0 }
+              : undefined
+          }
           revertDays={(() => {
             const revertible = revertibleConversion(menuField);
             return revertible === null ? null : daysLeft(revertible.revertible_until);
@@ -1406,6 +1460,24 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
           }}
         />
       ) : null}
+      {(() => {
+        const target =
+          aiGenerate === null
+            ? undefined
+            : fieldList.items.find((item) => item.id === aiGenerate.fieldId);
+        return aiGenerate === null || target === undefined ? null : (
+          <Suspense fallback={null}>
+            <AiGenerateDialog
+              tableId={tableId}
+              field={target}
+              mode={aiGenerate.mode}
+              onClose={() => {
+                setAiGenerate(null);
+              }}
+            />
+          </Suspense>
+        );
+      })()}
       {computed.errorOpen === null ||
       computed.openField === undefined ||
       computed.details === null ? null : (

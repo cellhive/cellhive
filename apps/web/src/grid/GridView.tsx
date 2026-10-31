@@ -39,15 +39,18 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { aiCellStateOf } from '../lib/ai/ai-field';
 import { buttonKey, buttonViewOf } from '../lib/buttons/model';
 
 import { columnHeaderLabel, useColumnHeaderLabels, type HeaderHint } from './a11y';
 import { CellCache, KeyedCache, ObjectCache } from './cell-cache';
+import { renderAiCell } from './cellRenderers/ai';
 import { renderButton } from './cellRenderers/button';
 import { loadingCell } from './cellRenderers/common';
 import { renderCell } from './cellRenderers/index';
 import { convertingColumnTheme, HEADER_ICONS, toGridColumns } from './columns';
 import { drawHeaderBadge, hitsHeaderBadge, type HeaderBadge } from './computed-header';
+import { aiStateRenderer } from './customCells/ai';
 import { attachmentsCellRenderer } from './customCells/attachments';
 import { buttonCellRenderer, buttonPillRect, measureButtonText } from './customCells/button';
 import { chipsCellRenderer } from './customCells/chips';
@@ -124,6 +127,7 @@ const CUSTOM_RENDERERS = [
   attachmentsCellRenderer,
   computedMarkRenderer,
   buttonCellRenderer,
+  aiStateRenderer,
 ];
 
 /** Glide's cell renderers but the row marker (the gutter of the group cards, T320a). */
@@ -713,6 +717,13 @@ export function GridView({
           disabled: t('button.disabledState'),
           running: t('button.running'),
         },
+        ai: {
+          queued: t('ai.queued'),
+          running: t('ai.running'),
+          failed: t('ai.failed'),
+          paused: t('ai.paused'),
+          locked: t('ai.locked'),
+        },
       },
       files: fileAccess,
     }),
@@ -954,7 +965,11 @@ export function GridView({
         return renderButton(loaded.fields[field.field.id], field.button, ctx, true);
       }
       return cellCache.get(loaded, col, () => {
-        const cell = renderCell(field, loaded.fields[field.field.id], ctx);
+        // (T915) AI fields: their state (`record.meta.ai`) over the value, or a lock.
+        const cell =
+          field.ai === undefined
+            ? renderCell(field, loaded.fields[field.field.id], ctx)
+            : renderAiCell(field, loaded, ctx);
         // Link cells open the link picker of the page (T413), never a glide overlay.
         const shown =
           canEditCell(field, loaded, edit) && !editsWithPicker(field) ? editableCell(cell) : cell;
@@ -1653,6 +1668,17 @@ export function GridView({
     [fields, getRecord, buttonHooks, shareButtonHint],
   );
 
+  /** (T915) What hovering an AI cell in each state says (longer than its accessible state). */
+  const aiTips = useMemo(
+    () => ({
+      queued: t('ai.queuedTip'),
+      running: t('ai.runningTip'),
+      failed: t('ai.failedTip'),
+      paused: t('ai.pausedTip'),
+    }),
+    [t],
+  );
+
   /** Shows the error of a refused cell under it (hover or keyboard selection). */
   const tipFor = useCallback(
     (col: number, row: number, bounds: Rectangle | undefined, source: Tip['source']) => {
@@ -1669,6 +1695,25 @@ export function GridView({
         } satisfies Tip;
       }
       if (state?.status !== 'error') {
+        // (T915) An AI cell says what it waits for, why it failed, or that it is locked.
+        const aiField = fields[col];
+        if (aiField?.ai !== undefined) {
+          const record = getRecord(row);
+          const aiState = aiCellStateOf(record, aiField.field.id);
+          const text = aiField.ai.locked
+            ? ctx.labels.ai?.locked
+            : aiState === undefined
+              ? undefined
+              : aiTips[aiState];
+          if (record === undefined || text === undefined) return null;
+          return {
+            text,
+            tone: aiState === 'failed' ? 'error' : 'info',
+            x: bounds.x,
+            y: bounds.y + bounds.height + 4,
+            source,
+          } satisfies Tip;
+        }
         // A locked cell or a field-level error (T468) says why it shows no value.
         const computed = fields[col]?.computed;
         if (computed === undefined || (!computed.locked && computed.error === null)) return null;
@@ -1692,8 +1737,18 @@ export function GridView({
         source,
       } satisfies Tip;
     },
-    [cellStateAt, fields, getRecord, ctx, buttonTipAt],
+    [cellStateAt, fields, getRecord, ctx, buttonTipAt, aiTips],
   );
+
+  // (T915) The tip of the selected cell follows its record: an AI cell's state changes under it.
+  useEffect(() => {
+    const cell = selectionNow.current.current?.cell;
+    setTip((current) =>
+      current?.source !== 'selection' || cell === undefined
+        ? current
+        : tipFor(cell[0], cell[1], editorRef.current?.getBounds(cell[0], cell[1]), 'selection'),
+    );
+  }, [dataVersion, tipFor]);
 
   const onSelectionChange = hooks?.selection?.onSelectionChange;
   /**

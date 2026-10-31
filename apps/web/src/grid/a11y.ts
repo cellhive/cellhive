@@ -49,6 +49,10 @@ export function columnHeaderLabel(
   const label = field.field.is_primary
     ? t('header.primaryLabel', { name: field.field.name, type })
     : t('header.label', { name: field.field.name, type });
+  // (T915) An AI field says so, and when the reader cannot read its prompt's fields.
+  if (field.ai !== undefined) {
+    return t(field.ai.locked ? 'header.aiLocked' : 'header.ai', { label });
+  }
   const computed = field.computed;
   if (computed === undefined) return label;
   if (computed.error !== null) {

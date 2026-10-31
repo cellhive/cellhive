@@ -67,6 +67,7 @@ import {
 } from '../tree';
 import { usePanelEditing } from '../use-panel-editing';
 
+import { AiMarker } from './AiMarker';
 import { ButtonFieldRow } from './ButtonFieldRow';
 import { ComputedExpression } from './ComputedExpression';
 import { FieldRow, type OpenLinkPicker } from './FieldRow';
@@ -537,9 +538,11 @@ export function RecordPanel({
         onHistory={(fieldId, anchor) => {
           setCellHistory({ fieldId, anchor });
         }}
-        // A formula shows its expression to schema managers (T468).
+        // A formula shows its expression to schema managers (T468); an AI value says so (T915).
         below={
-          field.computed?.expression == null ? undefined : (
+          field.ai !== undefined ? (
+            <AiMarker field={field} record={record} />
+          ) : field.computed?.expression == null ? undefined : (
             <ComputedExpression expression={field.computed.expression} />
           )
         }

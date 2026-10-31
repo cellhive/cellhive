@@ -8,6 +8,7 @@ import {
   isS1FieldType,
 } from '@cellhive/field-types';
 
+import { isAiField } from '../lib/ai/ai-field';
 import { buttonColumnOf, type ButtonColumn } from '../lib/buttons/model';
 
 import { computedColumnOf, type ComputedColumn } from './display/computed';
@@ -53,6 +54,13 @@ export interface GridField {
    * never edited. `config` stays `null`.
    */
   readonly button?: ButtonColumn | undefined;
+  /**
+   * (T915) AI fields (`options.ai` on a text / single select): always
+   * read-only; cells show their state (`record.meta.ai`) over the value of
+   * `config`, or a lock when the reader cannot read every field of the
+   * prompt (`locked`, like a locked formula).
+   */
+  readonly ai?: { readonly locked: boolean } | undefined;
 }
 
 /** Options of a link field, or `undefined` for other types (or options the client cannot read). */
@@ -82,6 +90,7 @@ export function toGridField(field: FieldDto): GridField {
     ...(link === undefined ? {} : { link }),
     ...(computed === undefined ? {} : { computed }),
     ...(button === undefined ? {} : { button }),
+    ...(isAiField(field) ? { ai: { locked: field.locked === true } } : {}),
   };
   parsed.set(field, gridField);
   return gridField;
@@ -152,6 +161,18 @@ export interface CellLabels {
     readonly disabled: string;
     readonly running: string;
   };
+  /** (T915) AI cells: their states (tooltips, screen readers) and the lock. */
+  readonly ai?: AiCellLabels;
+}
+
+/** Translated states of AI cells (T915). */
+export interface AiCellLabels {
+  readonly queued: string;
+  readonly running: string;
+  readonly failed: string;
+  readonly paused: string;
+  /** The reader cannot read every field of the prompt. */
+  readonly locked: string;
 }
 
 /** Translated tooltips of computed cells (T468). */

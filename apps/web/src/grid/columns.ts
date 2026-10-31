@@ -68,6 +68,10 @@ const GLYPHS = {
   alarmOff:
     '<path d="M6.87 6.87a8 8 0 1 0 11.26 11.26"/><path d="M19.9 14.25a8 8 0 0 0-9.15-9.15"/>' +
     '<path d="m22 6-3-3"/><path d="M6.26 18.67 4 21"/><path d="m2 2 20 20"/><path d="M4 4 2 6"/>',
+  /** (T915) An AI field: lucide `sparkles`, the one sign of AI (research S8 §5.2). */
+  sparkles:
+    '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>' +
+    '<path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
   /** A field being converted (T414): its structure and values are locked. */
   lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
 } as const;
@@ -100,6 +104,7 @@ export function headerIconOf(field: GridField): string {
 }
 
 function headerGlyphOf(field: GridField): HeaderGlyph {
+  if (field.ai !== undefined) return 'sparkles';
   const config = field.config;
   if (config === null) {
     switch (field.field.type) {

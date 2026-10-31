@@ -5,6 +5,8 @@ import {
   type FieldConfig,
 } from '@cellhive/field-types';
 
+import { isAiField } from '../../../lib/ai/ai-field';
+
 import type { FormRendererField } from '../../../lib/forms/renderer';
 import type { StoredFormField, StoredFormSettings, SubmissionLimit } from '@cellhive/contracts';
 
@@ -74,6 +76,8 @@ export function fieldConfigOf(field: FormRendererField): QuestionConfig | null {
  * CONTRACTS §15).
  */
 export function canAsk(field: FormRendererField): boolean {
+  // (T915) AI fills an AI field: a form never asks for it (`FIELD_READ_ONLY`).
+  if (isAiField(field)) return false;
   const config = fieldConfigOf(field);
   if (config === null) return false;
   return config.type === 'link' || !FIELD_TYPE_REGISTRY[config.type].readOnly;

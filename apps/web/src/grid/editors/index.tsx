@@ -20,6 +20,8 @@ export * from './types';
  * checked separately (`lib/permissions`, FRONTEND §7).
  */
 export function isEditableField(field: GridField): boolean {
+  // (T915) AI fills an AI field: never edited by hand (`403 FIELD_READ_ONLY`, CONTRACTS §29.5).
+  if (field.ai !== undefined) return false;
   // Link (T413): written through the link picker, not an overlay editor.
   if (field.link !== undefined) return true;
   const config = field.config;

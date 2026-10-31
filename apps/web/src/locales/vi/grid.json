@@ -48,7 +48,9 @@
     "computedLocked": "{{label}}, không có quyền xem dữ liệu nguồn",
     "computing": "{{label}}, đang tính lại {{percent}}%",
     "computedFilling": "{{label}}, đang tính {{percent}}%",
-    "withHint": "{{label}}, {{hint}}"
+    "withHint": "{{label}}, {{hint}}",
+    "ai": "{{label}}, AI điền",
+    "aiLocked": "{{label}}, AI điền, không có quyền xem các trường AI đọc"
   },
   "types": {
     "text": "văn bản",
@@ -204,7 +206,11 @@
     "revert_other": "Hoàn tác đổi kiểu (còn {{count, number}} ngày)",
     "progress": "Xem tiến độ",
     "computedError": "Chi tiết lỗi",
-    "editFormula": "Sửa công thức"
+    "editFormula": "Sửa công thức",
+    "aiRegenerate": "Sinh bằng AI",
+    "aiEmpty": "Ô trống",
+    "aiFailed_other": "Ô lỗi ({{count, number}})",
+    "aiAll": "Tất cả (ghi đè)…"
   },
   "hiddenFields": {
     "none": "Ẩn trường",
@@ -481,5 +487,29 @@
     "toAField": "gửi người trong một trường",
     "toMembers_other": "gửi {{count, number}} thành viên",
     "headerBroken": "Nhắc hạn không được gửi: trường người nhận đã bị xoá hoặc đổi kiểu. Sửa trường để chọn trường khác."
+  },
+  "ai": {
+    "queued": "đang chờ AI",
+    "running": "AI đang sinh",
+    "failed": "AI không sinh được",
+    "paused": "AI tạm dừng",
+    "locked": "Bạn không đọc được mọi trường mà AI đọc để tạo giá trị này",
+    "queuedTip": "Đang chờ AI sinh giá trị này.",
+    "runningTip": "AI đang sinh giá trị này…",
+    "failedTip": "AI không sinh được giá trị này. Sinh lại các ô lỗi từ menu của cột.",
+    "pausedTip": "Việc sinh đang tạm dừng: xem thông báo phía trên lưới.",
+    "readOnly": "AI điền trường này: không sửa tay được.",
+    "readOnlyManage": "AI điền trường này. Muốn sửa tay, hãy bỏ AI trong cài đặt của trường.",
+    "banner": {
+      "title_other": "“{{name}}”: {{count, number}} ô đang chờ.",
+      "reason": {
+        "quota": "Tổ chức đã dùng hết quota AI của hôm nay; việc sinh chạy tiếp sau khi quota đặt lại.",
+        "ai_disabled": "AI đang tắt trong tổ chức.",
+        "record_data_disabled": "AI không còn được đọc giá trị bản ghi trong tổ chức này."
+      },
+      "resume": "Tiếp tục",
+      "resumed": "Đang sinh tiếp “{{name}}”.",
+      "settings": "Cài đặt AI"
+    }
   }
 }

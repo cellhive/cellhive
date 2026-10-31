@@ -152,13 +152,17 @@ export function useKanbanEditing({
       : state.schemaLocked
         ? 'locked'
         : // Select and user fields are writable types; `config: null` is a type the client cannot edit.
-          groupField.config === null || !canEditField(access, tableId, groupFieldId)
+          // (T915) An AI field is filled by AI only.
+          groupField.config === null ||
+            groupField.ai !== undefined ||
+            !canEditField(access, tableId, groupFieldId)
           ? 'readOnly'
           : null;
   const canMove = moveBlocked === null;
   const canAdd =
     !readOnly &&
     online &&
+    groupField.ai === undefined &&
     canAddRecord(access, tableId) &&
     canEditField(access, tableId, groupFieldId, 'create');
 

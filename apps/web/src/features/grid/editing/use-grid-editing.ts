@@ -67,6 +67,8 @@ export interface GridEditingOptions {
   readonly lockedFields?: ReadonlySet<string> | undefined;
   /** T414: why such a field is read-only (shown on Enter, F2, typing). */
   readonly lockedFieldHint?: string | undefined;
+  /** (T915) Why another field is read-only (an AI field: "Remove AI to edit by hand"). */
+  readonly fieldHint?: ((fieldId: string) => string | undefined) | undefined;
 }
 
 export interface GridEditing {
@@ -156,6 +158,7 @@ export function useGridEditing({
   attachments,
   lockedFields,
   lockedFieldHint,
+  fieldHint,
 }: GridEditingOptions): GridEditing {
   const { t, i18n } = useTranslation('grid');
   const queryClient = useQueryClient();
@@ -301,11 +304,15 @@ export function useGridEditing({
       readOnlyHint: t(
         locked ? (online ? 'edit.lockedHint' : 'edit.offlineHint') : 'edit.readOnlyHint',
       ),
-      ...(lockedFields === undefined || lockedFields.size === 0 || lockedFieldHint === undefined
+      ...((lockedFields === undefined ||
+        lockedFields.size === 0 ||
+        lockedFieldHint === undefined) &&
+      fieldHint === undefined
         ? {}
         : {
             fieldReadOnlyHint: (fieldId: string) =>
-              lockedFields.has(fieldId) ? lockedFieldHint : undefined,
+              (lockedFields?.has(fieldId) === true ? lockedFieldHint : undefined) ??
+              fieldHint?.(fieldId),
           }),
     };
   }, [
@@ -326,6 +333,7 @@ export function useGridEditing({
     files,
     lockedFields,
     lockedFieldHint,
+    fieldHint,
   ]);
 
   const addRecord = useCallback(async () => {

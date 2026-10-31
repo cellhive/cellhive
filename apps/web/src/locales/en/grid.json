@@ -53,7 +53,9 @@
     "computedLocked": "{{label}}, no access to the source data",
     "computing": "{{label}}, recomputing {{percent}}%",
     "computedFilling": "{{label}}, computing {{percent}}%",
-    "withHint": "{{label}}, {{hint}}"
+    "withHint": "{{label}}, {{hint}}",
+    "ai": "{{label}}, filled by AI",
+    "aiLocked": "{{label}}, filled by AI, no access to the fields it reads"
   },
   "types": {
     "text": "text",
@@ -220,7 +222,12 @@
     "revert_other": "Undo type change ({{count, number}} days left)",
     "progress": "Show progress",
     "computedError": "Error details",
-    "editFormula": "Edit formula"
+    "editFormula": "Edit formula",
+    "aiRegenerate": "Generate with AI",
+    "aiEmpty": "Empty cells",
+    "aiFailed_one": "Failed cells ({{count, number}})",
+    "aiFailed_other": "Failed cells ({{count, number}})",
+    "aiAll": "All cells (overwrite)…"
   },
   "hiddenFields": {
     "none": "Hide fields",
@@ -513,5 +520,30 @@
     "toMembers_one": "to {{count, number}} member",
     "toMembers_other": "to {{count, number}} members",
     "headerBroken": "Reminder not sent: its recipient field was deleted or changed type. Edit the field to choose another one."
+  },
+  "ai": {
+    "queued": "waiting for AI",
+    "running": "AI is generating",
+    "failed": "AI could not generate it",
+    "paused": "AI paused",
+    "locked": "You cannot read every field the AI reads for this value",
+    "queuedTip": "Waiting for AI to generate this value.",
+    "runningTip": "AI is generating this value…",
+    "failedTip": "AI could not generate this value. Generate the failed cells again from the column menu.",
+    "pausedTip": "Generating is paused: see the note above the grid.",
+    "readOnly": "AI fills this field: it cannot be edited by hand.",
+    "readOnlyManage": "AI fills this field. To edit it by hand, remove AI in the field’s settings.",
+    "banner": {
+      "title_one": "“{{name}}”: {{count, number}} cell waits.",
+      "title_other": "“{{name}}”: {{count, number}} cells wait.",
+      "reason": {
+        "quota": "The organization’s AI quota for today is used up; generating goes on after the daily reset.",
+        "ai_disabled": "AI is turned off for the organization.",
+        "record_data_disabled": "The AI may no longer read record values in this organization."
+      },
+      "resume": "Resume",
+      "resumed": "Generating “{{name}}” again.",
+      "settings": "AI settings"
+    }
   }
 }
