@@ -63,6 +63,8 @@ export {
   listTelegramWebhooksToCheck,
   listTimeTriggerAutomations,
   lockUserMemberships,
+  listAiGenerationRescueOrganizations,
+  measureAiGenerationQueue,
   measureHttpDeliveryBacklog,
   purgeExpiredNotifications,
   type ApiTokenHashMatch,

@@ -1,4 +1,4 @@
-import type { Id, SummaryFunction } from '@cellhive/contracts';
+import type { AiCellState, Id, SummaryFunction } from '@cellhive/contracts';
 import type { ResolvedBaseAccess } from '@cellhive/permissions';
 
 /** How `fields`, `sort` and tuple filters name fields, and how records are keyed (CONTRACTS §1.3). */
@@ -203,7 +203,11 @@ export interface RecordOutput {
    * Read through a view whose color rules apply to the reader (T816,
    * CONTRACTS §1.4): the rules that won the row and its cells.
    */
-  readonly meta?: { readonly color: RecordColorOutput };
+  readonly meta?: {
+    readonly color?: RecordColorOutput;
+    /** AI field id → state of its cell when not simply its value (T910). */
+    readonly ai?: Readonly<Record<string, AiCellState>>;
+  };
 }
 
 /** `meta.color` of a record (T816): rule ids, cells keyed by field id. */

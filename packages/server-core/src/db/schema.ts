@@ -1,4 +1,5 @@
 import type {
+  AiCellState,
   AiFeature,
   AiOutputRung,
   AiStructuredOutput,
@@ -1410,6 +1411,26 @@ export interface AiUsageDailyTable {
   estimated_requests: ColumnType<number, number | undefined, number>;
 }
 
+/**
+ * `meta.ai_generation_queue` (migration 0056, BACKLOG T910): (AI field,
+ * record) pairs whose value must be generated. Written only by
+ * `AiGenerationQueueRepository`.
+ */
+export interface AiGenerationQueueTable {
+  organization_id: OrganizationRef;
+  field_id: ColumnType<Id<'fld'>, Id<'fld'>, never>;
+  record_id: ColumnType<Id<'rec'>, Id<'rec'>, never>;
+  status: ColumnType<AiCellState, AiCellState | undefined, AiCellState>;
+  /** `failed`: an error code; `paused`: why. */
+  reason: ColumnType<string | null, string | null | undefined, string | null>;
+  attempts: ColumnType<number, number | undefined, number>;
+  enqueued_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  /** `running`: end of the lease; `queued`: not before (retry). */
+  lease_until: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
+  job_id: ColumnType<Id<'job'> | null, Id<'job'> | null | undefined, Id<'job'> | null>;
+  causation: ColumnType<JsonValue | null, JsonbInput | null | undefined, JsonbInput | null>;
+}
+
 /** Every table of the `meta` schema, keyed as Kysely expects (`schema.table`). */
 export interface Database {
   'meta.organizations': OrganizationsTable;
@@ -1473,6 +1494,7 @@ export interface Database {
   'meta.api_tokens': ApiTokensTable;
   'meta.ai_settings': AiSettingsTable;
   'meta.ai_usage_daily': AiUsageDailyTable;
+  'meta.ai_generation_queue': AiGenerationQueueTable;
 }
 
 /** Unqualified name of a `meta` table, e.g. `bases`. */
@@ -1511,6 +1533,7 @@ export type TelegramWebhookRow = Selectable<TelegramWebhooksTable>;
 export type ApiTokenRow = Selectable<ApiTokensTable>;
 export type AiSettingsRow = Selectable<AiSettingsTable>;
 export type AiUsageDailyRow = Selectable<AiUsageDailyTable>;
+export type AiGenerationQueueRow = Selectable<AiGenerationQueueTable>;
 export type AutomationRow = Selectable<AutomationsTable>;
 export type AutomationRunRow = Selectable<AutomationRunsTable>;
 export type AutomationRunStepRow = Selectable<AutomationRunStepsTable>;

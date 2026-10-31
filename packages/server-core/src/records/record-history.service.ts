@@ -10,6 +10,7 @@ import { isViewVisible, type TableAccess } from '@cellhive/permissions';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
+import { aiFieldLocked } from '../ai/generation/options.js';
 import { apiTokenViaPresenter, type AuditViewer } from '../audit/api-token-via.js';
 import { AuditLogsRepository, type AuditLogRow } from '../audit/audit-logs.repository.js';
 import { decodeCursor } from '../db/cursor.js';
@@ -465,16 +466,24 @@ export class RecordHistoryService {
     const tableAccess: TableAccess | undefined = access.resolved.access.tables[tableId];
     if (tableAccess === undefined) throw recordNotFound();
     const rows: FieldRow[] = await this.fields.listByTable(scope, tableId);
-    return rows
-      .flatMap((row): HistoryField[] => {
-        const column = toFieldModel(row);
-        if (column !== null) return [{ kind: 'column', field: column }];
-        const link = toLinkFieldModel(row);
-        if (link !== null) return [{ kind: 'link', field: link }];
-        const parent = toParentFieldModel(row);
-        return parent === null ? [] : [{ kind: 'parent', field: parent }];
-      })
-      .filter((entry) => readable(tableAccess, entry.field.id));
+    return (
+      rows
+        .flatMap((row): HistoryField[] => {
+          const column = toFieldModel(row);
+          if (column !== null) return [{ kind: 'column', field: column }];
+          const link = toLinkFieldModel(row);
+          if (link !== null) return [{ kind: 'link', field: link }];
+          const parent = toParentFieldModel(row);
+          return parent === null ? [] : [{ kind: 'parent', field: parent }];
+        })
+        .filter((entry) => readable(tableAccess, entry.field.id))
+        // AI fields (T910) are always strict: not shown to a reader missing a field of the prompt.
+        .filter(
+          (entry) =>
+            entry.kind !== 'column' ||
+            !aiFieldLocked(entry.field.row, (id) => readable(tableAccess, id)),
+        )
+    );
   }
 
   /**

@@ -43,6 +43,8 @@ export const ENV_DEFAULTS = {
   // BACKLOG T518: automation runs older than this are deleted (cron `automation.runs_cleanup`).
   AUTOMATION_RUN_RETENTION_DAYS: '90',
   WORKER_CONCURRENCY: '5',
+  // T910: `ai.*` jobs (AI field generation) on their own runner of each worker.
+  AI_CONCURRENCY: '2',
   // Email (T513, BACKLOG "Quyết định S5" #8): every limit can be overridden.
   SMTP_ALLOW_INSECURE: 'false',
   EMAIL_MAX_PER_HOUR_PER_ORG: '500',
@@ -367,6 +369,7 @@ export const envSchema = z.object({
   AUTOMATION_MAX_RUNS_PER_BATCH: integer(1, 50_000),
   AUTOMATION_RUN_RETENTION_DAYS: integer(1, 3650),
   WORKER_CONCURRENCY: integer(1, 1000),
+  AI_CONCURRENCY: integer(1, 100),
   // Outbound HTTP of automations (T600, ADR-35 §3, SPEC §14.3): `org` — an
   // organization's allowlist entry lets its host reach private addresses
   // (an internal n8n); `off` — entries never open private addresses, only

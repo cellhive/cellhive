@@ -106,6 +106,7 @@ describe('meta migrations on an empty PostgreSQL 18 database', () => {
       '0053_dashboards',
       '0054_ai_settings',
       '0055_canonical_time_zones',
+      '0056_ai_generation_queue',
     ]);
     expect(await migrateToLatest(db.kysely)).toEqual([]);
 
@@ -168,6 +169,7 @@ describe('meta migrations on an empty PostgreSQL 18 database', () => {
       '0053_dashboards',
       '0054_ai_settings',
       '0055_canonical_time_zones',
+      '0056_ai_generation_queue',
     ]);
   });
 

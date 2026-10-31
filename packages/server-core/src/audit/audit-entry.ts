@@ -23,6 +23,8 @@ export interface AuditVia {
   readonly incoming_webhook_id?: Id<'hok'>;
   /** With `{ api_token_id }`: through the MCP server (T921, CONTRACTS §30.3). */
   readonly mcp?: true;
+  /** A value written by the AI worker for this AI field (T910). */
+  readonly ai_field_id?: Id<'fld'>;
 }
 
 /**
@@ -103,6 +105,7 @@ export const auditViaSchema = z
     reverted_from: idOf('aud').optional(),
     incoming_webhook_id: idOf('hok').optional(),
     mcp: z.literal(true).optional(),
+    ai_field_id: idOf('fld').optional(),
   })
   .strict()
   .refine((via) => Object.keys(via).length > 0, 'via must name at least one source');

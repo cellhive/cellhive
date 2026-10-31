@@ -135,3 +135,44 @@ export {
   type AiQuotaContext,
   type QuotaDay,
 } from './usage/quota.js';
+export {
+  aiOptionsForReader,
+  prepareAiOptions,
+  type AiFieldContext,
+} from './generation/definition.js';
+export { AiGenerationEnqueuer } from './generation/enqueue-changes.js';
+export {
+  aiFailureReason,
+  AiFieldGenerator,
+  aiSystemAccess,
+  aiTargetOf,
+  generateAiValue,
+  type AiBatchOutcome,
+  type AiFieldGeneratorOptions,
+  type AiFieldStateChange,
+  type AiValueCall,
+} from './generation/generator.js';
+export {
+  AI_GENERATE_DEBOUNCE_MS,
+  aiGenerateJobKey,
+  enqueueAiGeneration,
+} from './generation/jobs.js';
+export {
+  AI_FIELD_TYPES,
+  aiFieldLocked,
+  aiOptionsOf,
+  aiSourceFieldIds,
+  aiSourcesOf,
+  isAiField,
+} from './generation/options.js';
+export {
+  aiFieldMessages,
+  AiRenderError,
+  aiSelectAnswerSchema,
+  aiTextValue,
+  renderAiInput,
+  type AiFieldTarget,
+  type RenderContext,
+  type RenderedAiInput,
+} from './generation/prompt.js';
+export { AiGenerationQueueRepository, type TakenAiRow } from './generation/queue.repository.js';

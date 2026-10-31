@@ -32,6 +32,8 @@ export interface CreateJobInput {
   readonly type: string;
   /** `null` = started by the system. */
   readonly createdBy: Id<'usr'> | null;
+  /** Details known at the start (e.g. the rows of an AI generate request, T910). */
+  readonly result?: JsonObject | null;
 }
 
 function assertProgress(progress: number): void {
@@ -67,6 +69,7 @@ export class JobsRepository
         organization_id: scope.organizationId,
         type: input.type,
         created_by: input.createdBy,
+        ...(input.result === undefined ? {} : { result: input.result }),
       })
       .returningAll()
       .executeTakeFirstOrThrow();

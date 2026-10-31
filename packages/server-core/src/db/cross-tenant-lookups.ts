@@ -14,7 +14,7 @@ import { IDEMPOTENCY_KEY_TTL_HOURS } from './repositories/idempotency-keys.repos
 import type { Db, DbExecutor, Tx } from './create-db.js';
 import type { PartitionedTable } from './partitions.js';
 import type { JsonValue, OrgRole } from './schema.js';
-import type { Id, NotificationBufferKind } from '@cellhive/contracts';
+import type { AiCellState, Id, NotificationBufferKind } from '@cellhive/contracts';
 
 /**
  * Every intentional cross-tenant query of the server (AGENTS.md rule 5,
@@ -1241,4 +1241,48 @@ export async function listStuckHttpDeliveries(
       .limit(options.limit)
       .execute()
   );
+}
+
+/**
+ * Rows of the AI field generation queue by status, every organization
+ * together (T910, research S8 §4.9: gauge `ai_generation_queue{status}`).
+ *
+ * Why: an instance-wide gauge of the API's `/metrics`, read when scraped.
+ * Returns four counts, no data.
+ */
+export async function measureAiGenerationQueue(db: Db): Promise<Record<AiCellState, number>> {
+  const { rows } = await sql<{ status: AiCellState; n: string }>`
+    SELECT status, count(*)::text AS n FROM meta.ai_generation_queue GROUP BY status
+  `.execute(db.kysely);
+  const out: Record<AiCellState, number> = { queued: 0, running: 0, failed: 0, paused: 0 };
+  for (const row of rows) out[row.status] = Number(row.n);
+  return out;
+}
+
+/**
+ * Organizations whose AI field queue the per-minute cron
+ * `ai.generation_rescue` must look at (T910, the "watchdog" of research S8
+ * §4.5): a `running` row past its lease (its worker died), `paused` rows
+ * (quota reset or AI turned back on), or `queued` rows of a field with no
+ * `ai.generate` job (the job was lost). At most `limit`, by id.
+ *
+ * Why: lost jobs and expired leases are not a tenant's write, so which
+ * organizations have one is only known by looking at all of them. Called by
+ * that cron only, never a request; returns organization ids only — each is
+ * then handled in its own scope (`AiFieldGenerator.rescue`).
+ */
+export async function listAiGenerationRescueOrganizations(
+  executor: DbExecutor | Tx,
+  options: { readonly now: Date; readonly limit: number },
+): Promise<Id<'org'>[]> {
+  const { rows } = await sql<{ organization_id: Id<'org'> }>`
+    SELECT DISTINCT q.organization_id FROM meta.ai_generation_queue AS q
+     WHERE (q.status = 'running' AND q.lease_until < ${options.now})
+        OR q.status = 'paused'
+        OR (q.status = 'queued' AND NOT EXISTS (
+              SELECT 1 FROM graphile_worker.jobs j WHERE j.key = ${'ai.generate:'} || q.field_id))
+     ORDER BY q.organization_id
+     LIMIT ${options.limit}
+  `.execute(executor);
+  return rows.map((row) => row.organization_id);
 }

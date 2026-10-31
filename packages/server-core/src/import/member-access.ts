@@ -8,6 +8,7 @@ import {
   type SchemaMeta,
 } from '@cellhive/permissions';
 
+import { isAiField } from '../ai/generation/options.js';
 import {
   BaseRoleMembersRepository,
   BaseRolesRepository,
@@ -92,7 +93,8 @@ export async function loadMemberAccessBase(
     byTable.get(field.table_id)?.push({
       id: field.id,
       type: field.type,
-      ...(field.compute_mode === null ? {} : { computed: true }),
+      // AI fields (T910) are written by the AI worker only: read at most, like formulas.
+      ...(field.compute_mode === null && !isAiField(field) ? {} : { computed: true }),
     });
   }
   const schema: SchemaMeta = {

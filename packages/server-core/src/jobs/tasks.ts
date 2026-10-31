@@ -293,12 +293,29 @@ export interface HttpDeliveriesRescuePayload {
   readonly _cron?: { readonly ts: string; readonly backfilled?: boolean };
 }
 
+/**
+ * Payload of `ai.generate` (T910, ADR-39 §7): batches of the queued rows of
+ * one AI field. Job key `ai.generate:<field_id>`; runs on the AI runner of
+ * the worker only (`AI_CONCURRENCY`).
+ */
+export interface AiGeneratePayload {
+  readonly organization_id: Id<'org'>;
+  readonly field_id: Id<'fld'>;
+}
+
+/** `ai.generation_rescue` (T910, every minute) takes no input; cron adds its own `_cron` key. */
+export interface AiGenerationRescuePayload {
+  readonly _cron?: { readonly ts: string; readonly backfilled?: boolean };
+}
+
 declare global {
   // Registry of task identifiers and their payloads. `enqueue` and the
   // worker's task list are typed from it; a new task adds its entry here.
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace GraphileWorker {
     interface Tasks {
+      'ai.generate': AiGeneratePayload;
+      'ai.generation_rescue': AiGenerationRescuePayload;
       'attachments.cleanup': AttachmentsCleanupPayload;
       'audit.export': AuditExportPayload;
       'automation.date_scan': AutomationDateScanPayload;

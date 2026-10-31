@@ -33,6 +33,9 @@ import {
 import { joinPath, validateFilter, type FilterIssue } from '@cellhive/filter-dsl';
 import { sql, type RawBuilder } from 'kysely';
 
+import { prepareAiOptions, type AiFieldContext } from '../ai/generation/definition.js';
+import { aiOptionsOf, isAiField } from '../ai/generation/options.js';
+import { AiGenerationQueueRepository } from '../ai/generation/queue.repository.js';
 import { AuditLogsRepository } from '../audit/audit-logs.repository.js';
 import { AuditWriter } from '../audit/audit-writer.js';
 import {
@@ -286,6 +289,8 @@ export interface AddFieldInput {
   readonly link?: LinkFieldContext;
   /** `formula`/`lookup` fields: what the saver may reference (T456). */
   readonly computed?: ComputedFieldContext;
+  /** AI fields (`options.ai` on text/select, T910): what the saver may reference. */
+  readonly ai?: AiFieldContext;
 }
 
 /**
@@ -348,6 +353,8 @@ export interface FieldPatch {
   readonly link?: LinkFieldContext;
   /** `formula`/`lookup` fields: what the saver may reference (T456). */
   readonly computed?: ComputedFieldContext;
+  /** AI fields (`options.ai` on text/select, T910): what the saver may reference. */
+  readonly ai?: AiFieldContext;
 }
 
 export interface UpdateFieldOptionsInput {
@@ -1457,8 +1464,9 @@ export class SchemaService {
     if (input.type === 'button') return this.addButtonField(scope, tableId, input, context);
     const name = normalizeSchemaName(input.name);
     const { type, definition } = s1Definition(input.type);
-    const options = parseOptions(definition, input.options);
+    let options = parseOptions(definition, input.options);
     const uniqueValues = input.uniqueValues ?? false;
+    const fieldId = newId('fld');
     if (uniqueValues && !UNIQUE_CAPABLE_TYPES.has(type)) {
       throw validationFailed([
         {
@@ -1476,6 +1484,20 @@ export class SchemaService {
         if (await this.fields.nameTaken(txScope, tableId, name)) throw nameConflict('field', name);
         // T547: the references of a date reminder, then its cursor below.
         if (type === 'datetime') await validateDateReminder(this.db, txScope, tableId, options);
+        // T910: the prompt of an AI field, stored with ids, and its `same_row` edges.
+        let aiEdges: FieldDependencyEdge[] | null = null;
+        if (aiOptionsOf({ type, options }) !== null) {
+          await this.lockComputedGraph(tx, table.base_id);
+          const rows = await loadBaseSchemaRows(this.db, txScope, table.base_id);
+          const prepared = prepareAiOptions(
+            (options as Record<string, unknown>)['ai'],
+            rows,
+            { id: fieldId, tableId, isPrimary: false },
+            input.ai,
+          );
+          options = { ...(options as object), ai: prepared.ai };
+          aiEdges = prepared.edges;
+        }
 
         const plan = planColumn(
           { type, options, column: fieldColumnName(), isPrimary: false, uniqueValues },
@@ -1487,7 +1509,7 @@ export class SchemaService {
           await this.execute(tx, columnDdl(table.db_table_name, plan));
         }
         const field = await this.fields.insert(txScope, {
-          id: newId('fld'),
+          id: fieldId,
           tableId,
           name,
           type,
@@ -1500,6 +1522,13 @@ export class SchemaService {
           position: await this.fields.nextPosition(txScope, tableId),
         });
         if (type === 'auto_number') await this.enqueueAutoNumberRecompute(tx, field);
+        if (aiEdges !== null) {
+          await this.dependencies.replaceForField(txScope, {
+            baseId: table.base_id,
+            fieldId,
+            edges: aiEdges,
+          });
+        }
         await syncDateReminder(this.db, txScope, field.id, null, field);
         await this.record(tx, context, {
           type: 'field.created',
@@ -1658,7 +1687,7 @@ export class SchemaService {
           : patch.optionsPatch === undefined
             ? patch.options
             : mergeFieldOptions(field.type, field.options, patch.optionsPatch, patch.optionsBase);
-        const options =
+        const parsedOptions =
           requested === undefined
             ? undefined
             : field.type === 'link'
@@ -1668,6 +1697,47 @@ export class SchemaService {
                 : field.type === 'button'
                   ? (parseOptions({ optionsSchema: buttonOptionsSchema }, requested) as JsonObject)
                   : (parseOptions(s1Definition(field.type).definition, requested) as JsonObject);
+        // T910: `options.ai` given (checked, stored with ids; cycles through
+        // formulas refused like a formula's) or removed (a plain field again:
+        // values kept, edges and queue dropped).
+        let options = parsedOptions;
+        let aiEdges: FieldDependencyEdge[] | null = null;
+        if (options !== undefined && (field.type === 'text' || field.type === 'select')) {
+          const next = options['ai'] ?? null;
+          const touched =
+            patch.optionsPatch === undefined
+              ? !sameJson(next, aiOptionsOf(field) ?? null)
+              : Object.hasOwn(patch.optionsPatch, 'ai');
+          if (touched && next !== null) {
+            await this.lockComputedGraph(tx, table.base_id);
+            const rows = await loadBaseSchemaRows(this.db, txScope, table.base_id);
+            const prepared = prepareAiOptions(
+              next,
+              rows,
+              { id: field.id, tableId: table.id, isPrimary: field.is_primary },
+              patch.ai,
+            );
+            options = { ...options, ai: prepared.ai };
+            aiEdges = prepared.edges;
+            const edges = [
+              ...(await this.dependencies.listByBase(txScope, table.base_id)).filter(
+                (edge) => edge.fieldId !== field.id,
+              ),
+              ...prepared.edges,
+            ];
+            const active = new Set<string>(
+              rows.fields
+                .filter((row) => isComputedRow(row) || isAiField(row))
+                .map((row) => row.id),
+            );
+            active.add(field.id);
+            const cycle = findCycle(field.id, edges, active);
+            if (cycle !== null) throw formulaCycleProblem(cycle, rows, patch.ai?.readable);
+          } else if (touched && isAiField(field)) {
+            aiEdges = [];
+            await new AiGenerationQueueRepository(this.db).clear(txScope, field.id);
+          }
+        }
         if (!metaOnly && !computed) {
           if (field.type === 'parent') {
             assertParentConstraints(patch.uniqueValues, patch.required);
@@ -1697,6 +1767,15 @@ export class SchemaService {
           const updated = await this.fields.update(txScope, fieldId, changes);
           if (updated === undefined) throw notFound('field');
           current = updated;
+        }
+        if (aiEdges !== null) {
+          await this.dependencies.replaceForField(txScope, {
+            baseId: table.base_id,
+            fieldId,
+            edges: aiEdges,
+          });
+          // An AI field is read-only to every role (T910): access changes with it.
+          await this.bases.bumpPermissionVersion(txScope, { baseIds: [table.base_id] });
         }
         // Positions are compared as indexes below, not as stored sort keys.
         const snapshotBefore = fieldSnapshot(field);
@@ -2918,7 +2997,9 @@ export class SchemaService {
         ),
         ...newEdges,
       ];
-      const active = new Set<string>(rows.fields.filter(isComputedRow).map((row) => row.id));
+      const active = new Set<string>(
+        rows.fields.filter((row) => isComputedRow(row) || isAiField(row)).map((row) => row.id),
+      );
       active.add(field.id);
       const cycle = findCycle(field.id, edges, active);
       if (cycle !== null) throw formulaCycleProblem(cycle, rows, input.computed?.readable);
@@ -4871,7 +4952,9 @@ export class SchemaService {
       ),
       ...newEdges,
     ];
-    const active = new Set<string>(rows.fields.filter(isComputedRow).map((row) => row.id));
+    const active = new Set<string>(
+      rows.fields.filter((row) => isComputedRow(row) || isAiField(row)).map((row) => row.id),
+    );
     const cycle = findCycle(field.id, edges, active);
     if (cycle !== null) throw formulaCycleProblem(cycle, rows, computed?.readable);
 

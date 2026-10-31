@@ -176,6 +176,8 @@ export interface AppConfig {
     /** `AUTOMATION_RUN_RETENTION_DAYS`: age at which automation runs are deleted (T518). */
     readonly automationRunRetentionDays: number;
     readonly workerConcurrency: number;
+    /** `AI_CONCURRENCY`: `ai.*` jobs of the AI runner of a worker process (T910). */
+    readonly aiConcurrency: number;
   };
   readonly logLevel: LogLevel;
   readonly metrics: { readonly token: string | null; readonly port: number | null };
@@ -384,6 +386,7 @@ function toConfig(env: ParsedEnv, oidcProviders: readonly OidcProviderConfig[]):
       automationMaxRunsPerBatch: env.AUTOMATION_MAX_RUNS_PER_BATCH,
       automationRunRetentionDays: env.AUTOMATION_RUN_RETENTION_DAYS,
       workerConcurrency: env.WORKER_CONCURRENCY,
+      aiConcurrency: env.AI_CONCURRENCY,
     },
     logLevel: env.LOG_LEVEL,
     metrics: { token: env.METRICS_TOKEN ?? null, port: env.METRICS_PORT ?? null },

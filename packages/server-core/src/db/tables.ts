@@ -80,6 +80,7 @@ const TENANT_TABLE_SET = {
   api_tokens: true,
   ai_settings: true,
   ai_usage_daily: true,
+  ai_generation_queue: true,
 } as const satisfies Record<TenantTableName, true>;
 
 export const TENANT_TABLES = Object.keys(TENANT_TABLE_SET) as readonly TenantTableName[];

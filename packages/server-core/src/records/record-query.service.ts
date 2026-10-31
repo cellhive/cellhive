@@ -12,6 +12,7 @@ import {
   MAX_LIST_LIMIT,
   MAX_QUERY_IDS,
   MAX_RECORD_GROUP_LEVELS,
+  type AiCellState,
   type FilterControlKind,
   type Id,
   type ProblemErrorItem,
@@ -39,6 +40,8 @@ import { permissionFingerprintMaterial, type TableAccess } from '@cellhive/permi
 import { sql, type RawBuilder, type SqlBool } from 'kysely';
 import { z } from 'zod';
 
+import { aiFieldLocked, isAiField } from '../ai/generation/options.js';
+import { AiGenerationQueueRepository } from '../ai/generation/queue.repository.js';
 import { ComputeModel } from '../computed/definition/compute-model.js';
 import { loadBaseSchemaRows } from '../computed/definition/schema-rows.js';
 import { runComputedPreview, type ComputedPreviewRow } from '../computed/preview/preview.js';
@@ -493,7 +496,7 @@ function withColors<R extends RecordOutput>(
   if (colors === null) return records;
   return records.map((record, index) => ({
     ...record,
-    meta: { color: colorOfRow(colors, rows[index] ?? {}) },
+    meta: { ...record.meta, color: colorOfRow(colors, rows[index] ?? {}) },
   }));
 }
 
@@ -576,6 +579,14 @@ interface ReadPlan {
    */
   readonly visibleButtons: readonly ButtonFieldModel[];
   readonly selectedButtons: readonly ButtonFieldModel[];
+  /**
+   * AI fields (T910, always strict): those the reader sees but is locked out
+   * of (a field of the prompt they cannot read) — out of `model.visible`, so
+   * never filtered/sorted/grouped by, their cells `null` — to read as such;
+   * and those they read, whose cells carry `record.meta.ai`.
+   */
+  readonly selectedLockedAi: readonly FieldModel[];
+  readonly readableAi: readonly FieldModel[];
   readonly fieldKeyType: FieldKeyType;
   readonly cellFormat: CellFormat;
   /** `__deleted_at IS NULL` AND the record read rule. */
@@ -2933,12 +2944,32 @@ export class RecordQueryService implements ButtonRecordMatcher {
             : model.visibleParent,
       };
     }
+    // AI fields (T910, Quyết định S8 #9) are always strict: a source the reader
+    // cannot read (hidden by a share link's view too, or a locked formula) locks them.
+    const hiddenInView =
+      view !== null && through.viewScope === 'share_link'
+        ? new Set<string>(view.config.hidden_fields)
+        : new Set<string>();
+    const lockedComputed = new Set<string>(
+      computed.filter((field) => field.locked).map((field) => field.id),
+    );
+    const lockedAi = model.visible.filter((field) =>
+      aiFieldLocked(
+        field.row,
+        (id) => fieldReadable(tableAccess, id) && !hiddenInView.has(id) && !lockedComputed.has(id),
+      ),
+    );
+    if (lockedAi.length > 0) {
+      const ids = new Set<string>(lockedAi.map((field) => field.id));
+      model = { ...model, visible: model.visible.filter((field) => !ids.has(field.id)) };
+    }
     const selection = this.selectedFields(
       model,
       visibleComputed,
       visibleButtons,
       input.fields ?? null,
       input.field_key_type,
+      lockedAi,
     );
     return {
       view,
@@ -2952,6 +2983,8 @@ export class RecordQueryService implements ButtonRecordMatcher {
       selectedComputed: selection.computed,
       visibleButtons,
       selectedButtons: selection.buttons,
+      selectedLockedAi: selection.lockedAi,
+      readableAi: selection.fields.filter((field) => isAiField(field.row)),
       fieldKeyType: input.field_key_type,
       cellFormat: input.cell_format,
       baseConditions:
@@ -2991,12 +3024,14 @@ export class RecordQueryService implements ButtonRecordMatcher {
     visibleButtons: readonly ButtonFieldModel[],
     requested: readonly string[] | null,
     keyType: FieldKeyType,
+    lockedAi: readonly FieldModel[] = [],
   ): {
     fields: FieldModel[];
     links: LinkFieldModel[];
     parent: ParentFieldModel | null;
     computed: ComputedField[];
     buttons: ButtonFieldModel[];
+    lockedAi: FieldModel[];
   } {
     if (requested === null) {
       return {
@@ -3005,8 +3040,13 @@ export class RecordQueryService implements ButtonRecordMatcher {
         parent: model.visibleParent,
         computed: [...visibleComputed],
         buttons: [...visibleButtons],
+        lockedAi: [...lockedAi],
       };
     }
+    const lockedByKey = new Map(
+      lockedAi.map((field) => [keyType === 'id' ? field.id : field.name, field]),
+    );
+    const locked = new Map<Id<'fld'>, FieldModel>();
     const buttonByKey = new Map(
       visibleButtons.map((field) => [keyType === 'id' ? field.id : field.name, field]),
     );
@@ -3041,7 +3081,10 @@ export class RecordQueryService implements ButtonRecordMatcher {
       else if (parentKey !== null && key === parentKey) parent = model.visibleParent;
       else if (formula !== undefined) computed.set(formula.id, formula);
       else if (button !== undefined) buttons.set(button.id, button);
-      else errors.push(unknownField(formatIssuePath(['fields', index])));
+      else if (lockedByKey.has(key)) {
+        const field = lockedByKey.get(key) as FieldModel;
+        locked.set(field.id, field);
+      } else errors.push(unknownField(formatIssuePath(['fields', index])));
     });
     if (errors.length > 0) {
       throw new AppError('VALIDATION_FAILED', {
@@ -3055,6 +3098,7 @@ export class RecordQueryService implements ButtonRecordMatcher {
       parent,
       computed: [...computed.values()],
       buttons: [...buttons.values()],
+      lockedAi: [...locked.values()],
     };
   }
 
@@ -3363,7 +3407,37 @@ export class RecordQueryService implements ButtonRecordMatcher {
     applyRelatedCells(plan, rows, records, related, access);
     await this.applyComputedCells(scope, plan, rows, records, access);
     await this.applyButtonCells(scope, plan, records, access);
-    return records;
+    return this.applyAiCells(scope, plan, records);
+  }
+
+  /**
+   * AI fields (T910): `null` for the ones the reader is locked out of, and
+   * `meta.ai` (state of each cell still waiting, failed or paused) for the
+   * ones they read.
+   */
+  private async applyAiCells(
+    scope: OrgScope,
+    plan: ReadPlan,
+    records: RecordOutput[],
+  ): Promise<RecordOutput[]> {
+    for (const field of plan.selectedLockedAi) {
+      const key = plan.fieldKeyType === 'id' ? field.id : field.name;
+      for (const record of records) defineCell(record, key, null);
+    }
+    if (plan.readableAi.length === 0) return records;
+    const rows = await new AiGenerationQueueRepository(this.db).cellStates(
+      scope,
+      plan.readableAi.map((field) => field.id),
+      records.map((record) => record.id),
+    );
+    const byRecord = new Map<string, Record<string, AiCellState>>();
+    for (const row of rows) {
+      byRecord.set(row.record_id, { ...byRecord.get(row.record_id), [row.field_id]: row.status });
+    }
+    return records.map((record) => ({
+      ...record,
+      meta: { ...record.meta, ai: byRecord.get(record.id) ?? {} },
+    }));
   }
 
   /**
@@ -3435,6 +3509,34 @@ export class RecordQueryService implements ButtonRecordMatcher {
         SELECT ${col('__id')} AS id FROM ${this.from(plan.model.table)} WHERE ${and(conditions)}
       `.execute(tx);
       return new Set(rows.map((row) => row.id));
+    });
+  }
+
+  /**
+   * Ids of the live records the reader reads that match `filter` (Filter DSL
+   * with field ids, `null` = every one), in `__auto` order, at most `limit`
+   * (T910: the rows `POST /fields/:id/ai/generate` queues).
+   */
+  async allMatchingIds(
+    scope: OrgScope,
+    tableId: Id<'tbl'>,
+    access: RecordAccessContext,
+    filter: unknown,
+    limit: number,
+  ): Promise<Id<'rec'>[]> {
+    this.assertScope(scope);
+    const tableAccess = this.tableAccess(tableId, access);
+    const input = parseRequest(readOptionsSchema, { field_key_type: 'id' });
+    return this.read(scope, tableId, async (txScope, tx) => {
+      const plan = await this.plan(txScope, tableId, access, tableAccess, input);
+      const conditions = [...plan.baseConditions, ...this.filterConditions(plan, filter)];
+      const { rows } = await sql<{ id: Id<'rec'> }>`
+        SELECT ${col('__id')} AS id FROM ${this.from(plan.model.table)}
+         WHERE ${and(conditions)}
+         ORDER BY ${col('__auto')}
+         LIMIT ${limit}
+      `.execute(tx);
+      return rows.map((row) => row.id);
     });
   }
 

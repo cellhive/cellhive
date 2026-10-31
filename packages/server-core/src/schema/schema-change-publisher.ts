@@ -1,4 +1,4 @@
-import type { Id } from '@cellhive/contracts';
+import type { AiFieldStateDto, Id } from '@cellhive/contracts';
 
 /** What a schema change did (`action` of the WS `schema.changed` message, CONTRACTS §7). */
 export type SchemaChangeAction = 'created' | 'updated' | 'deleted' | 'restored' | 'converted';
@@ -18,6 +18,8 @@ export interface SchemaChange {
   readonly entity: 'table' | 'field';
   readonly entity_id: Id<'tbl'> | Id<'fld'>;
   readonly action: SchemaChangeAction;
+  /** An AI field whose queue was paused or resumed as a whole (T910): its counts. */
+  readonly ai_state?: AiFieldStateDto;
 }
 
 /**

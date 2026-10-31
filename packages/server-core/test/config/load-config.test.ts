@@ -277,6 +277,7 @@ describe('loadConfig: defaults and parsing', () => {
         attachmentMaxFileBytes: 104_857_600,
         automationMaxRunningPerOrg: 5,
         workerConcurrency: 5,
+        aiConcurrency: 2,
       },
       logLevel: 'info',
       metrics: { token: null, port: null },

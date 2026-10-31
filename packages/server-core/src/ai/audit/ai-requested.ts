@@ -35,6 +35,8 @@ export interface AiRequestedEntry {
   /** What the person typed (never record values) and the answer: kept only with `log_prompts`. */
   readonly input?: string;
   readonly output?: string;
+  /** Records of a background batch (AI field, T910). */
+  readonly records?: number;
   readonly context: AuditContext;
 }
 
@@ -70,6 +72,7 @@ export function aiRequestedAfter(entry: AiRequestedEntry): JsonObject {
     estimated: entry.usage.estimated,
     duration_ms: Math.round(entry.durationMs),
     output_mode: entry.outputMode,
+    ...(entry.records === undefined ? {} : { records: entry.records }),
   };
   if (entry.logPrompts && !RECORD_DATA_FEATURES.has(entry.feature)) {
     if (entry.input !== undefined) after['input'] = truncateUtf8(entry.input);

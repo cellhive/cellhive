@@ -247,6 +247,27 @@ export class FieldsRepository
     return Number(row.count);
   }
 
+  /**
+   * Active fields of `tableIds` that may be AI fields (`text`/`select` with
+   * an `ai` key in `options`, T910); callers check `options.ai` itself.
+   */
+  async listAiCandidatesByTables(
+    scope: OrgScope,
+    tableIds: readonly Id<'tbl'>[],
+  ): Promise<FieldRow[]> {
+    if (tableIds.length === 0) return [];
+    return this.executor(scope)
+      .selectFrom('meta.fields')
+      .selectAll()
+      .where('organization_id', '=', scope.organizationId)
+      .where('table_id', 'in', [...tableIds])
+      .where('deleted_at', 'is', null)
+      .where('type', 'in', ['text', 'select'])
+      .where(sql<boolean>`jsonb_typeof(options -> 'ai') = 'object'`)
+      .orderBy('id')
+      .execute();
+  }
+
   /** Fields outside the trash (the `MAX_FIELDS_PER_TABLE` count). */
   async countActive(scope: OrgScope, tableId: Id<'tbl'>): Promise<number> {
     const row = await this.executor(scope)

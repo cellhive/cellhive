@@ -7,6 +7,7 @@ import {
 import { isValidTimeZone } from '@cellhive/field-types';
 import { sql } from 'kysely';
 
+import { AiGenerationEnqueuer } from '../../ai/generation/enqueue-changes.js';
 import { RecomputeEventHooks } from '../../automation/dispatch/recompute-events.js';
 import { OrganizationsRepository } from '../../db/repositories/organizations.repository.js';
 import { orgScope, type OrgScope } from '../../db/repository.js';
@@ -124,6 +125,8 @@ export class ComputedRecomputeService {
   private readonly lockTimeoutMs: number;
   private readonly debounceMs: number;
   private readonly hooks: ComputedRecomputeHooks;
+  /** AI fields of the changes (T910): queued instead of recomputed. */
+  private readonly ai: AiGenerationEnqueuer;
   private readonly contexts = new WeakMap<Tx, Map<string, Promise<RecomputeContext | null>>>();
   private readonly lockedTables = new WeakMap<Tx, Set<string>>();
 
@@ -135,6 +138,7 @@ export class ComputedRecomputeService {
     this.fields = new FieldsRepository(db);
     this.tables = new TablesRepository(db);
     this.organizations = new OrganizationsRepository(db);
+    this.ai = new AiGenerationEnqueuer(db);
     this.defaultTimeZone = options.defaultTimeZone ?? 'UTC';
     this.syncRowLimit = options.syncRowLimit ?? COMPUTED_SYNC_ROW_LIMIT;
     this.lockTimeoutMs = options.lockTimeoutMs ?? DDL_LOCK_TIMEOUT_MS;
@@ -230,6 +234,13 @@ export class ComputedRecomputeService {
         created,
       });
     }
+    await this.ai.enqueue(
+      tx,
+      changes.organizationId,
+      changes.changes,
+      result.recomputed,
+      changes.source,
+    );
     return result;
   }
 
@@ -394,6 +405,7 @@ export class ComputedRecomputeService {
         source,
         created,
       });
+      await this.ai.enqueue(tx, organizationId, [], result.recomputed, source);
     }
     return { status: 'more', rows: ids.length, remaining, tableId: table.id, result };
   }

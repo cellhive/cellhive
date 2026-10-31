@@ -1,4 +1,5 @@
 import {
+  aiFieldStateSchema,
   AUTOMATION_RUN_FINISHED_STATUSES,
   CHANNEL_CHANGED_STATUSES,
   idOf,
@@ -58,6 +59,8 @@ export const schemaChangedEnvelopeSchema = z.object({
    * `visible_views`). Absent for tables and fields.
    */
   owner_id: idOf('usr').nullable().optional(),
+  /** AI fields only (T910): queue counts after a pause or resume of the whole field. */
+  ai_state: aiFieldStateSchema.optional(),
 });
 
 /**
