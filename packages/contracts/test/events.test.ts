@@ -82,7 +82,7 @@ describe('event catalogue', () => {
 
   it('has the expected size and no duplicates', () => {
     expect(EVENT_TYPES).toHaveLength(83);
-    expect(AUDIT_ONLY_ACTIONS).toHaveLength(38);
+    expect(AUDIT_ONLY_ACTIONS).toHaveLength(39);
     expect(new Set(AUDIT_ACTIONS).size).toBe(EVENT_TYPES.length + AUDIT_ONLY_ACTIONS.length);
   });
 

@@ -1,5 +1,6 @@
 import type { ApiTokenPrincipal } from '../../common/auth/principal.js';
-import type { ApiTokenScope, McpPolicy } from '@cellhive/contracts';
+import type { RequestMeta } from '../../common/auth/request-meta.js';
+import type { ApiTokenScope, Id, McpPolicy } from '@cellhive/contracts';
 import type { ToolAnnotations } from '@modelcontextprotocol/server';
 import type { z } from 'zod';
 
@@ -7,6 +8,13 @@ import type { z } from 'zod';
 export interface McpCallContext {
   readonly principal: ApiTokenPrincipal;
   readonly policy: McpPolicy;
+  /** The HTTP request, for audit entries (`via = { api_token_id, mcp: true }`). */
+  readonly meta: RequestMeta;
+}
+
+/** What `run` gets: the call context and the base `resource` resolved to (none without one). */
+export interface McpRunContext extends McpCallContext {
+  readonly baseId: Id<'bse'> | undefined;
 }
 
 /**
@@ -35,7 +43,7 @@ export interface McpTool<Input extends z.ZodType = z.ZodType> {
    */
   resource?(input: z.output<Input>): Readonly<Record<string, string>>;
   /** The result, sent as `structuredContent` and as text in a data block (`envelope.ts`). */
-  run(input: z.output<Input>, context: McpCallContext): Promise<Record<string, unknown>>;
+  run(input: z.output<Input>, context: McpRunContext): Promise<Record<string, unknown>>;
 }
 
 /** Keeps the input type of `run` while registering the tool in a plain list. */

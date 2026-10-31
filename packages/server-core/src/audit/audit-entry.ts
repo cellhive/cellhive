@@ -9,8 +9,8 @@ import type { JsonObject, JsonValue } from '../db/schema.js';
 
 /**
  * Where a change came from besides the actor (ADR-23, CONTRACTS §11.1):
- * `{ automation_id, run_id }`, `{ api_token_id }`, `{ share_link_id }`,
- * `{ import_job_id }` or `{ reverted_from }`.
+ * `{ automation_id, run_id }`, `{ api_token_id }` (`mcp: true` through the MCP
+ * server), `{ share_link_id }`, `{ import_job_id }` or `{ reverted_from }`.
  */
 export interface AuditVia {
   readonly automation_id?: Id<'aut'>;
@@ -21,6 +21,8 @@ export interface AuditVia {
   readonly reverted_from?: Id<'aud'>;
   /** With `{ automation_id, run_id }`: the run was started by this incoming webhook (T604). */
   readonly incoming_webhook_id?: Id<'hok'>;
+  /** With `{ api_token_id }`: through the MCP server (T921, CONTRACTS §30.3). */
+  readonly mcp?: true;
 }
 
 /**
@@ -100,6 +102,7 @@ export const auditViaSchema = z
     import_job_id: idOf('job').optional(),
     reverted_from: idOf('aud').optional(),
     incoming_webhook_id: idOf('hok').optional(),
+    mcp: z.literal(true).optional(),
   })
   .strict()
   .refine((via) => Object.keys(via).length > 0, 'via must name at least one source');

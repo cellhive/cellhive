@@ -1,14 +1,19 @@
-import { AppError, isAppError, type AppConfig } from '@cellhive/server-core';
+import { AppError, isAppError, type AppConfig, type Db } from '@cellhive/server-core';
 import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { Counter, Histogram } from 'prom-client';
 
 import { AccessService } from '../../common/access/access.service.js';
 import { RouteScopeService } from '../../common/access/route-scope.service.js';
+import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { AppLogger } from '../../common/logging/app-logger.js';
 import { ApiRateLimits } from '../../common/rate-limit/api-rate-limits.js';
-import { APP_CONFIG } from '../../common/tokens.js';
+import { APP_CONFIG, DB } from '../../common/tokens.js';
 import { BaseService } from '../base/base.service.js';
+import { FieldService } from '../field/field.service.js';
 import { MetricsService } from '../metrics/metrics.service.js';
+import { RecordService } from '../record/record.service.js';
+import { TableService } from '../table/table.service.js';
+import { ViewService } from '../view/view.service.js';
 import { WorkspaceService } from '../workspace/workspace.service.js';
 
 import { mcpPolicyOf } from './mcp-policy.js';
@@ -66,8 +71,13 @@ export class McpService implements OnApplicationShutdown {
     @Inject(AccessService) private readonly access: AccessService,
     @Inject(RouteScopeService) scopes: RouteScopeService,
     @Inject(ApiRateLimits) limits: ApiRateLimits,
+    @Inject(DB) db: Db,
     @Inject(WorkspaceService) workspaces: WorkspaceService,
     @Inject(BaseService) bases: BaseService,
+    @Inject(TableService) tables: TableService,
+    @Inject(FieldService) fields: FieldService,
+    @Inject(ViewService) views: ViewService,
+    @Inject(RecordService) records: RecordService,
     @Inject(MetricsService) metrics: MetricsService,
     @Inject(AppLogger) logger: AppLogger,
   ) {
@@ -91,7 +101,8 @@ export class McpService implements OnApplicationShutdown {
       buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
       registers: [metrics.registry],
     });
-    this.endpoint = new McpEndpoint(mcpTools({ workspaces, bases }), {
+    const tools = mcpTools({ db, access, workspaces, bases, tables, fields, views, records });
+    this.endpoint = new McpEndpoint(tools, {
       resolve: (principal, params) => scopes.resolve(principal, params),
       hitBase: (principalKey, baseId) => limits.hitBase(principalKey, baseId),
       observe: (tool, status, seconds) => {
@@ -140,6 +151,7 @@ export class McpService implements OnApplicationShutdown {
     return this.endpoint.handle(webRequestOf(request, this.config.publicUrl), request.body, {
       principal,
       policy,
+      meta: requestMetaOf(request),
     });
   }
 

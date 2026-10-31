@@ -69,6 +69,10 @@ export const auditViaSchema = z
     incoming_webhook_id: idOf('hok')
       .optional()
       .meta({ description: 'Written by a run started by this incoming webhook (T604)' }),
+    mcp: z
+      .literal(true)
+      .optional()
+      .meta({ description: 'Through the MCP server, next to `api_token_id` (T921)' }),
   })
   .meta({ id: 'AuditVia' });
 export type AuditViaDto = z.infer<typeof auditViaSchema>;
@@ -231,6 +235,7 @@ export const AUDIT_ACTION_PREFIXES = [
   'http_allowlist.',
   'incoming_webhook.',
   'invitation.',
+  'mcp.',
   'org.',
   'org_member.',
   'permission.',

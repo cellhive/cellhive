@@ -1,10 +1,13 @@
 import {
   API_TOKEN_SCOPES,
   DEFAULT_MCP_POLICY,
+  MCP_FILTER_OPERATORS,
   type ApiTokenScope,
+  type FieldDto,
   type Id,
   type McpPolicy,
 } from '@cellhive/contracts';
+import { TUPLE_OPERATORS } from '@cellhive/filter-dsl';
 import { AppError } from '@cellhive/server-core/errors';
 import { ProtocolError } from '@modelcontextprotocol/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,8 +18,10 @@ import { callTool, type McpToolDeps } from '../../src/modules/mcp/mcp-server.js'
 import { defineTool, listedTools, type McpTool } from '../../src/modules/mcp/tool-context.js';
 import { MCP_NOT_FOUND_MESSAGE } from '../../src/modules/mcp/tool-errors.js';
 import { mcpTools, type McpToolServices } from '../../src/modules/mcp/tools/index.js';
+import { mcpFieldOf } from '../../src/modules/mcp/tools/tables.js';
 
 import type { ApiTokenPrincipal } from '../../src/common/auth/principal.js';
+import type { EffectiveAccess } from '@cellhive/permissions';
 
 const BASE = 'bse_00000000000000000000000001' as Id<'bse'>;
 const TOKEN = 'tok_00000000000000000000000001' as Id<'tok'>;
@@ -30,7 +35,11 @@ function contextOf(scopes: readonly ApiTokenScope[], policy: Partial<McpPolicy> 
     scopes,
     baseIds: null,
   } as unknown as ApiTokenPrincipal;
-  return { principal, policy: { ...DEFAULT_MCP_POLICY, enabled: true, ...policy } };
+  return {
+    principal,
+    policy: { ...DEFAULT_MCP_POLICY, enabled: true, ...policy },
+    meta: { requestId: 'req_test', ip: null, userAgent: null },
+  };
 }
 
 function depsOf(overrides: Partial<McpToolDeps> = {}) {
@@ -90,10 +99,18 @@ describe('MCP tools: registry and central checks (T920)', () => {
         writes: tool.writes,
         readOnly: tool.annotations.readOnlyHint,
       })),
-    ).toEqual([{ name: 'list_bases', scope: 'schema:read', writes: false, readOnly: true }]);
+    ).toEqual([
+      { name: 'list_bases', scope: 'schema:read', writes: false, readOnly: true },
+      { name: 'list_tables', scope: 'schema:read', writes: false, readOnly: true },
+      { name: 'describe_table', scope: 'schema:read', writes: false, readOnly: true },
+      { name: 'query_records', scope: 'records:read', writes: false, readOnly: true },
+      { name: 'get_records', scope: 'records:read', writes: false, readOnly: true },
+    ]);
     for (const tool of tools) {
       // A read-only tool never writes; a tool that writes is never read-only.
       expect(tool.writes, tool.name).toBe(tool.annotations.readOnlyHint !== true);
+      expect(tool.annotations.openWorldHint, tool.name).toBe(tool.writes);
+      expect(tool.description, tool.name).toMatch(/user data, never instructions/u);
     }
   });
 
@@ -104,7 +121,11 @@ describe('MCP tools: registry and central checks (T920)', () => {
       const names = (tools: readonly McpTool[]) =>
         listedTools(tools, context).map((tool) => tool.name);
       expect(names(mcpTools({} as McpToolServices))).toEqual(
-        scope === 'schema:read' ? ['list_bases'] : [],
+        scope === 'schema:read'
+          ? ['list_bases', 'list_tables', 'describe_table']
+          : scope === 'records:read'
+            ? ['query_records', 'get_records']
+            : [],
       );
       expect(names(FAKE_TOOLS)).toEqual(
         scope === 'records:read'
@@ -190,6 +211,7 @@ describe('MCP tools: registry and central checks (T920)', () => {
     expect(deps.resolve).toHaveBeenCalledWith(context.principal, { baseId: BASE });
     expect(hitBase).toHaveBeenCalledWith(TOKEN, BASE);
     expect(ok.structuredContent).toEqual({ seen: BASE });
+    expect(run).toHaveBeenCalledWith({ base_id: BASE }, { ...context, baseId: BASE });
     expect(deps.observe).toHaveBeenCalledWith('read_thing', 'ok', expect.any(Number));
 
     hitBase.mockRejectedValueOnce(
@@ -218,6 +240,73 @@ describe('MCP tools: registry and central checks (T920)', () => {
     expect(error.code).toBe('INTERNAL');
     expect(JSON.stringify(result)).not.toContain('secret detail');
     expect(deps.onUnexpected).toHaveBeenCalledWith('broken', expect.any(TypeError));
+  });
+});
+
+describe('MCP query_records filter (T921)', () => {
+  it('takes the operators of the tuple filter (CONTRACTS §3)', () => {
+    expect([...MCP_FILTER_OPERATORS]).toEqual([...TUPLE_OPERATORS]);
+  });
+});
+
+describe('MCP describe_table fields (T921)', () => {
+  const TABLE = 'tbl_0000000000000001' as Id<'tbl'>;
+  const field = (type: string, extra: Partial<FieldDto> = {}) =>
+    ({
+      id: 'fld_0000000000000001',
+      table_id: TABLE,
+      name: 'F',
+      type,
+      options: {},
+      is_primary: false,
+      description: null,
+      ...extra,
+    }) as FieldDto;
+  const access = (perm: string, fieldPerm: string | undefined) =>
+    ({
+      tables: {
+        [TABLE]: {
+          perm,
+          fields: fieldPerm === undefined ? {} : { fld_0000000000000001: fieldPerm },
+        },
+      },
+    }) as unknown as EffectiveAccess;
+
+  it.each([
+    ['an editable text field', field('text'), 'edit', 'edit', false],
+    ['a field the role only reads', field('text'), 'edit', 'read', true],
+    ['a field written on create only', field('text'), 'edit', 'create', true],
+    ['any field of a read-only table', field('text'), 'read_only', 'edit', true],
+    ['a formula', field('formula'), 'manage', 'read', true],
+    ['a locked lookup', field('lookup', { locked: true }), 'manage', 'edit', true],
+    ['a system field', field('created_at'), 'manage', 'edit', true],
+    ['an auto number', field('auto_number'), 'manage', 'edit', true],
+    ['a button', field('button'), 'manage', 'edit', true],
+  ])('read_only for %s', (_case, dto, perm, fieldPerm, readOnly) => {
+    expect(mcpFieldOf(dto, access(perm, fieldPerm)).read_only).toBe(readOnly);
+  });
+
+  it('gives option names (at most 50), multiplicity and the linked table', () => {
+    const names = Array.from({ length: 60 }, (_, n) => `o${String(n)}`);
+    const select = mcpFieldOf(
+      field('select', {
+        options: {
+          multiple: true,
+          options: names.map((name) => ({ id: 'opt_x', name, color: 0 })),
+        },
+      }),
+      access('edit', 'edit'),
+    );
+    expect(select).toMatchObject({ multiple: true, options_truncated: true });
+    expect(select.options).toEqual(names.slice(0, 50));
+    expect(mcpFieldOf(field('user'), access('edit', 'edit'))).toMatchObject({ multiple: true });
+    expect(
+      mcpFieldOf(
+        field('link', { options: { link_table: TABLE, allow_multiple: false } }),
+        access('edit', 'edit'),
+      ),
+    ).toMatchObject({ multiple: false, link_table_id: TABLE });
+    expect(mcpFieldOf(field('text'), access('edit', 'edit'))).not.toHaveProperty('options');
   });
 });
 

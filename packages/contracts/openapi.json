@@ -1221,6 +1221,7 @@
           "http_allowlist.",
           "incoming_webhook.",
           "invitation.",
+          "mcp.",
           "org.",
           "org_member.",
           "permission.",
@@ -1666,6 +1667,13 @@
             "example": "hok_A1b2C3d4E5f6G7h8",
             "pattern": "^hok_[0-9A-Za-z]{16}$",
             "type": "string"
+          },
+          "mcp": {
+            "description": "Through the MCP server, next to `api_token_id` (T921)",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
           },
           "reverted_from": {
             "description": "aud ID",

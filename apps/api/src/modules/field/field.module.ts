@@ -9,5 +9,6 @@ import { LinkConversionService } from './link-conversion.service.js';
 @Module({
   controllers: [FieldController],
   providers: [FieldService, FieldConversionService, LinkConversionService, ComputedPreviewService],
+  exports: [FieldService],
 })
 export class FieldModule {}

@@ -133,6 +133,8 @@ export const AUDIT_ONLY_ACTIONS = [
   'auth.password_reset',
   'auth.session_revoked',
   'export.created',
+  // A tool of the MCP server read records (T921, CONTRACTS §30.3): tool and row count, never values.
+  'mcp.records_read',
   'audit.viewed',
   'audit.exported',
   'audit.redacted',

@@ -51,6 +51,7 @@ export const ACTION_CATEGORIES = [
       'auth.',
       'user.',
       'export.',
+      'mcp.',
       'audit.',
       'secret.',
       'http_allowlist.',

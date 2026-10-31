@@ -72,12 +72,13 @@ export async function callTool(
         errors: zodIssuesToProblemErrors(parsed.error.issues),
       });
     }
+    let baseId: Id<'bse'> | undefined;
     if (tool.resource !== undefined) {
-      const scope = await deps.resolve(context.principal, tool.resource(parsed.data));
-      if (scope?.baseId === undefined) throw new AppError('NOT_FOUND');
-      await deps.hitBase(context.principal.tokenId, scope.baseId);
+      baseId = (await deps.resolve(context.principal, tool.resource(parsed.data)))?.baseId;
+      if (baseId === undefined) throw new AppError('NOT_FOUND');
+      await deps.hitBase(context.principal.tokenId, baseId);
     }
-    const result = dataResult(await tool.run(parsed.data, context));
+    const result = dataResult(await tool.run(parsed.data, { ...context, baseId }));
     deps.observe(tool.name, 'ok', seconds());
     return result;
   } catch (error) {
