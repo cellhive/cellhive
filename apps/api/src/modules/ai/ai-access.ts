@@ -69,6 +69,8 @@ export interface AiCallReport {
 export interface AiCall {
   readonly organizationId: Id<'org'>;
   readonly settings: AiProviderSettings;
+  /** `allow_record_data`: a feature may also send record values (the Q&A narrative). */
+  readonly allowRecordData: boolean;
   readonly deadline: AiDeadline;
   readonly llm: LlmClient;
   /** Pass to every `LlmClient` call: each answer read is added to the usage ledger. */
@@ -177,6 +179,7 @@ export class AiAccess {
         return await work({
           organizationId: org.organizationId,
           settings: provider,
+          allowRecordData: state.allow_record_data,
           deadline: createDeadline(this.budgetMs),
           llm,
           onUsage: async (call) => {

@@ -38,6 +38,8 @@ export const IDEMPOTENCY_EXCLUDED_ROUTES: Readonly<Record<string, string>> = {
   '/widgets/:widgetId/data': 'A read, not a write (CONTRACTS §1.1, §28.3, T806).',
   '/widgets/:widgetId/options': 'A read, not a write (CONTRACTS §1.1, §28.4, T808).',
   '/widgets/:widgetId/records': 'A read, not a write (CONTRACTS §1.1, §28.4, T808).',
+  '/tables/:tableId/ai/ask':
+    'A read, not a write; its answers are never kept (CONTRACTS §1.1, §29.4, T909).',
   '/shares/:token/records/query':
     'Public share link, a read: no principal owns a key (CONTRACTS §1.1, §16A).',
   '/shares/:token/records/group-counts':

@@ -31,6 +31,7 @@ import { WidgetQueryLimiter } from './widget-query-limiter.js';
     WidgetQueryLimiter,
     ValkeyWidgetCacheStore,
   ],
-  exports: [DashboardService, DashboardDataService, DashboardExportService],
+  // `WidgetQueryLimiter`: one line for every widget query of the instance (AI Q&A, MCP).
+  exports: [DashboardService, DashboardDataService, DashboardExportService, WidgetQueryLimiter],
 })
 export class DashboardModule {}

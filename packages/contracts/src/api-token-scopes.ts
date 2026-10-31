@@ -48,6 +48,8 @@ export const API_TOKEN_ROUTE_SCOPES = {
     path: '/api/v1/tables/{tableId}/ai/formula',
     scope: 'schema:read',
   },
+  // Q&A: the numbers are record values, as `POST /widgets/{widgetId}/data`
+  askAiQuestion: { method: 'POST', path: '/api/v1/tables/{tableId}/ai/ask', scope: 'records:read' },
   getAiSettings: { method: 'GET', path: '/api/v1/orgs/{orgId}/ai-settings', scope: 'session' },
   getAiUsage: { method: 'GET', path: '/api/v1/orgs/{orgId}/ai-usage', scope: 'session' },
   testAiSettings: {

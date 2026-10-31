@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { aiAskRequestSchema, aiAskSchema } from '../../ai-ask.js';
 import { aiAutomationDraftRequestSchema, aiAutomationDraftSchema } from '../../ai-automation.js';
 import { aiFormulaRequestSchema, aiFormulaSchema } from '../../ai-formula.js';
 import {
@@ -122,6 +123,40 @@ export const registerAiRoutes: RouteRegistrar = (registry, components) => {
       422:
         '`VALIDATION_FAILED`: a malformed date, or `OUT_OF_RANGE` (path `from`): `from` after ' +
         '`to`, or more than 90 days',
+    },
+  });
+  add({
+    method: 'post',
+    path: '/api/v1/tables/{tableId}/ai/ask',
+    operationId: 'askAiQuestion',
+    tag: 'ai',
+    summary: 'Answer a question about the records of a table',
+    description:
+      'Needs read access to the table (anyone else gets `404`, before anything about AI). The ' +
+      'model sees only the fields the caller reads (names, types, option names — never values ' +
+      'or ids) and answers with a plan by name; the server turns it into a temporary widget ' +
+      'checked like a saved one (errors go back to the model, at most 2 repair rounds) and ' +
+      "computes it like `POST /widgets/{widgetId}/data` with the caller's permissions. " +
+      '`unanswerable` when the question needs a field the caller cannot read or that does not ' +
+      'exist (never says which). A narrative only when the organization lets AI see record ' +
+      'data (a second call with the aggregated rows). Nothing is stored or cached. Counts ' +
+      'towards the quota (feature `ask`) and the AI rate limit; audited as `ai.requested` ' +
+      '(CONTRACTS §29.4).',
+    params: tableParams,
+    body: aiAskRequestSchema,
+    status: 200,
+    response: aiAskSchema,
+    read: true,
+    errors: {
+      422:
+        '`VALIDATION_FAILED` (`WIDGET_TOO_LARGE`: more than 1,000 groups); ' +
+        '`AI_NOT_CONFIGURED`: AI is off or has no provider; `AI_INVALID_OUTPUT` ' +
+        '(`errors[0].params.attempts`): still no valid plan after 2 repair rounds',
+      429: AI_LIMITED,
+      502: '`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed',
+      504:
+        '`AI_TIMEOUT`: no valid plan within the 90 s budget of the request; `QUERY_TIMEOUT` ' +
+        'with `Retry-After`: the numbers took too long',
     },
   });
   add({

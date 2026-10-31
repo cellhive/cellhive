@@ -90,6 +90,20 @@ export {
   type FormulaDigest,
 } from './features/formula/formula.js';
 export {
+  aggregatePlanOfAsk,
+  askDigest,
+  askDigestJson,
+  askInterpretation,
+  askMessages,
+  askPlanSchema,
+  askProblems,
+  askResultJson,
+  narrativeMessages,
+  type AskDigest,
+  type AskDigestField,
+  type AskPlan,
+} from './features/ask/ask.js';
+export {
   aiQuotaExhaustedCount,
   aiRequestCounts,
   aiRetryCounts,

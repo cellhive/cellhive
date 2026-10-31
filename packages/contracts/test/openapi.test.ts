@@ -19,6 +19,8 @@ const READ_POSTS = new Set([
   '/api/v1/widgets/{widgetId}/data',
   '/api/v1/widgets/{widgetId}/options',
   '/api/v1/widgets/{widgetId}/records',
+  // AI Q&A: a read whose answers are never kept (CONTRACTS §29.4).
+  '/api/v1/tables/{tableId}/ai/ask',
   // Streamed multipart upload: `Idempotency-Key` is ignored (CONTRACTS §1.1, §19).
   '/api/v1/bases/{baseId}/imports/uploads',
   // Not bound to an organization; a retry only starts a new link attempt (CONTRACTS §1.1, §27.3).
