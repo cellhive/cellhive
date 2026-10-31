@@ -218,6 +218,290 @@
         ],
         "description": "`{ value }` stores the key as an `ai_api_key` secret (replacing the value of the current one) with `allowed_hosts` = the host (and port) of the provider URL; `{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key"
       },
+      "AiAsk": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/WidgetData"
+              },
+              "interpretation": {
+                "$ref": "#/components/schemas/AiAskInterpretation"
+              },
+              "narrative": {
+                "description": "Plain text written by the model from the aggregated numbers; `null` unless the organization lets AI see record data (or the call failed, or nothing matched)",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "ok"
+                ],
+                "type": "string"
+              },
+              "widget": {
+                "additionalProperties": false,
+                "properties": {
+                  "config": {
+                    "additionalProperties": {},
+                    "description": "Widget config with ids (CONTRACTS §28.2), as a dashboard widget would store it",
+                    "type": "object"
+                  },
+                  "title": {
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "type": {
+                    "enum": [
+                      "kpi",
+                      "bar",
+                      "line",
+                      "pie",
+                      "table"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "config"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "status",
+              "interpretation",
+              "widget",
+              "data",
+              "narrative"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "description": "The question cannot be answered from the fields the asker reads (never says which)",
+                "enum": [
+                  "unanswerable"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "AiAskField": {
+        "additionalProperties": false,
+        "description": "A field of the table the asker reads",
+        "properties": {
+          "id": {
+            "description": "fld ID",
+            "example": "fld_A1b2C3d4E5f6G7h8",
+            "pattern": "^fld_[0-9A-Za-z]{16}$",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "AiAskInterpretation": {
+        "additionalProperties": false,
+        "description": "How the question was understood, built from the plan without the model: what the numbers are, whatever the narrative says",
+        "properties": {
+          "bucket": {
+            "description": "Date bucket of the dimension",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "compare": {
+            "description": "KPI compared with the previous period of this length",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dimension": {
+            "additionalProperties": false,
+            "description": "Grouped by; `null` for a KPI",
+            "properties": {
+              "id": {
+                "description": "fld ID",
+                "example": "fld_A1b2C3d4E5f6G7h8",
+                "pattern": "^fld_[0-9A-Za-z]{16}$",
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "field": {
+            "additionalProperties": false,
+            "description": "Field of the metric; `null` for `count`",
+            "properties": {
+              "id": {
+                "description": "fld ID",
+                "example": "fld_A1b2C3d4E5f6G7h8",
+                "pattern": "^fld_[0-9A-Za-z]{16}$",
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "filter_logic": {
+            "enum": [
+              "and",
+              "or"
+            ],
+            "type": "string"
+          },
+          "filters": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "$ref": "#/components/schemas/AiAskField"
+                },
+                "operator": {
+                  "description": "Tuple operator of CONTRACTS §3: `==`, `!=`, `>`, `>=`, `<`, `<=`, `intersects`, `disjoint`, `empty`, `non_empty`",
+                  "type": "string"
+                },
+                "value": {
+                  "description": "As planned: option names, numbers, text, `ExactDate(…)`, `Today`, `CurrentUser`…; `null` for `empty`/`non_empty`"
+                }
+              },
+              "required": [
+                "field",
+                "operator"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "metric": {
+            "enum": [
+              "count",
+              "count_distinct",
+              "sum",
+              "avg",
+              "min",
+              "max"
+            ],
+            "type": "string"
+          },
+          "series": {
+            "$ref": "#/components/schemas/AiAskField"
+          },
+          "series_bucket": {
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "metric",
+          "field",
+          "dimension",
+          "bucket",
+          "series",
+          "series_bucket",
+          "filter_logic",
+          "filters",
+          "compare"
+        ],
+        "type": "object"
+      },
+      "AiAskRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "description": "A question about the records of the table, in any language",
+            "example": "Doanh thu theo tháng",
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "timezone": {
+            "default": null,
+            "description": "IANA zone of date buckets, relative dates and periods; default the zone of the user, then of the organization",
+            "example": "Asia/Ho_Chi_Minh",
+            "maxLength": 64,
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "type": "object"
+      },
       "AiAutomationDraft": {
         "additionalProperties": false,
         "properties": {
@@ -45910,6 +46194,133 @@
           "tables"
         ],
         "x-api-token-scope": "schema:write"
+      }
+    },
+    "/api/v1/tables/{tableId}/ai/ask": {
+      "post": {
+        "description": "Needs read access to the table (anyone else gets `404`, before anything about AI). The model sees only the fields the caller reads (names, types, option names — never values or ids) and answers with a plan by name; the server turns it into a temporary widget checked like a saved one (errors go back to the model, at most 2 repair rounds) and computes it like `POST /widgets/{widgetId}/data` with the caller's permissions. `unanswerable` when the question needs a field the caller cannot read or that does not exist (never says which). A narrative only when the organization lets AI see record data (a second call with the aggregated rows). Nothing is stored or cached. Counts towards the quota (feature `ask`) and the AI rate limit; audited as `ai.requested` (CONTRACTS §29.4). Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "operationId": "askAiQuestion",
+        "parameters": [
+          {
+            "description": "tbl ID",
+            "in": "path",
+            "name": "tableId",
+            "required": true,
+            "schema": {
+              "description": "tbl ID",
+              "example": "tbl_A1b2C3d4E5f6G7h8",
+              "pattern": "^tbl_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAsk"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PERMISSION_DENIED` (visible but not allowed) or `CSRF_INVALID`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED` (`WIDGET_TOO_LARGE`: more than 1,000 groups); `AI_NOT_CONFIGURED`: AI is off or has no provider; `AI_INVALID_OUTPUT` (`errors[0].params.attempts`): still no valid plan after 2 repair rounds"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute, or 2 at once, by the user (8 at once on the instance); `AI_QUOTA_EXCEEDED` with `Retry-After` and `errors[0].params.reset_at`: the daily token quota is used up"
+          },
+          "502": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AI_PROVIDER_ERROR` (`errors[0].params.reason`): the provider failed"
+          },
+          "504": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AI_TIMEOUT`: no valid plan within the 90 s budget of the request; `QUERY_TIMEOUT` with `Retry-After`: the numbers took too long"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiToken": [
+              "records:read"
+            ]
+          }
+        ],
+        "summary": "Answer a question about the records of a table",
+        "tags": [
+          "ai"
+        ],
+        "x-api-token-scope": "records:read"
       }
     },
     "/api/v1/tables/{tableId}/ai/formula": {
