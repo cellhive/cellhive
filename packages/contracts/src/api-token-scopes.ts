@@ -14,6 +14,7 @@ import type { ApiTokenScope } from './api-tokens.js';
  *   with `errors[0].params.required = ["session"]` (token management, roles,
  *   members, groups, workspace administration, invitations, secrets,
  *   allowlist, share link management, audit, organization/base settings,
+ *   AI settings and usage,
  *   email identities, notification channels, the caller's notifications);
  * - `public`: the route needs no sign-in (`@Public()`) and ignores the
  *   `Authorization` header (shares, incoming webhooks, sign-in, OIDC, setup,
@@ -34,6 +35,15 @@ export interface ApiTokenRouteEntry {
 }
 
 export const API_TOKEN_ROUTE_SCOPES = {
+  // ai (S8): settings and usage are organization administration, session only
+  getAiSettings: { method: 'GET', path: '/api/v1/orgs/{orgId}/ai-settings', scope: 'session' },
+  getAiUsage: { method: 'GET', path: '/api/v1/orgs/{orgId}/ai-usage', scope: 'session' },
+  testAiSettings: {
+    method: 'POST',
+    path: '/api/v1/orgs/{orgId}/ai-settings/test',
+    scope: 'session',
+  },
+  updateAiSettings: { method: 'PUT', path: '/api/v1/orgs/{orgId}/ai-settings', scope: 'session' },
   // api-tokens
   createApiToken: { method: 'POST', path: '/api/v1/orgs/{orgId}/me/api-tokens', scope: 'session' },
   listMyApiTokens: { method: 'GET', path: '/api/v1/orgs/{orgId}/me/api-tokens', scope: 'session' },

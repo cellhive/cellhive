@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { effectiveAccessSchema } from './access.js';
+import { organizationAiSchema } from './ai-settings.js';
 import {
   apiTokenPolicySchema,
   DEFAULT_API_TOKEN_POLICY,
@@ -83,6 +84,12 @@ export const organizationSchema = z
   })
   .meta({ id: 'Organization' });
 export type OrganizationDto = z.infer<typeof organizationSchema>;
+
+/** `GET /orgs/:id`: the organization and whether AI is available to members (T906, C§29.1). */
+export const organizationDetailSchema = organizationSchema
+  .extend({ ai: organizationAiSchema })
+  .meta({ id: 'OrganizationDetail' });
+export type OrganizationDetailDto = z.infer<typeof organizationDetailSchema>;
 
 export const organizationListSchema = offsetListSchema(organizationSchema).meta({
   id: 'OrganizationList',

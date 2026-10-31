@@ -59,7 +59,10 @@
     "WEBHOOK_IN_USE": "Vẫn còn automation chạy từ webhook này. Hãy đổi hoặc xoá các automation đó trước.",
     "AI_INVALID_OUTPUT": "AI không đưa ra được câu trả lời dùng được. Hãy thử diễn đạt lại yêu cầu.",
     "AI_PROVIDER_ERROR": "Không gọi được nhà cung cấp AI hoặc nhà cung cấp trả lỗi.",
-    "AI_TIMEOUT": "AI trả lời quá lâu. Hãy thử lại."
+    "AI_TIMEOUT": "AI trả lời quá lâu. Hãy thử lại.",
+    "AI_NOT_CONFIGURED": "AI chưa được cài đặt hoặc đang tắt cho tổ chức này.",
+    "AI_RECORD_DATA_DISABLED": "Tổ chức này không cho AI xem giá trị bản ghi.",
+    "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay."
   },
   "client": {
     "NETWORK_ERROR": "Không kết nối được tới máy chủ. Hãy kiểm tra mạng rồi thử lại.",
@@ -343,7 +346,9 @@
     "AI_PROVIDER_ERROR_response_too_large": "Câu trả lời của nhà cung cấp AI quá lớn.",
     "AI_PROVIDER_ERROR_refused": "Model từ chối trả lời.",
     "AI_PROVIDER_ERROR_truncated": "Câu trả lời của model bị cắt vì chạm giới hạn độ dài.",
-    "AI_INVALID_OUTPUT": "Câu trả lời vẫn không hợp lệ sau {{attempts}} lần thử."
+    "AI_INVALID_OUTPUT": "Câu trả lời vẫn không hợp lệ sau {{attempts}} lần thử.",
+    "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay. Hạn mức đặt lại lúc nửa đêm theo múi giờ của tổ chức.",
+    "RECORD_DATA_NOT_CONFIRMED": "Hãy xác nhận cho phép gửi giá trị bản ghi tới nhà cung cấp AI."
   },
   "retryAfter_other": "Hãy thử lại sau {{count, number}} giây.",
   "retryAfterMinutes_other": "Hãy thử lại sau {{count, number}} phút.",

@@ -201,8 +201,8 @@ describe('http_request config (CONTRACTS §21, BACKLOG T606)', () => {
 });
 
 describe('HTTP secrets (CONTRACTS §24, BACKLOG T606)', () => {
-  it('has the three kinds', () => {
-    expect(SECRET_KINDS).toEqual(['telegram_bot', 'http_header', 'webhook_signing']);
+  it('has the four kinds (T906 adds ai_api_key)', () => {
+    expect(SECRET_KINDS).toEqual(['telegram_bot', 'http_header', 'webhook_signing', 'ai_api_key']);
   });
 
   const key = (bytes: number) => Buffer.alloc(bytes, 7).toString('base64');
@@ -211,6 +211,8 @@ describe('HTTP secrets (CONTRACTS §24, BACKLOG T606)', () => {
     ['http_header', 'x'.repeat(4096), true],
     ['http_header', 'x'.repeat(4097), false],
     ['http_header', 'line\r\nX-Evil: 1', false],
+    ['ai_api_key', 'sk-test-not-a-real-key', true],
+    ['ai_api_key', 'sk-test\nX-Evil: 1', false],
     ['http_header', 'tab\there', false],
     ['http_header', 'không ASCII', false],
     ['http_header', '', false],

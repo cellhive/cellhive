@@ -1,4 +1,5 @@
 export * from './access.js';
+export * from './ai-settings.js';
 export * from './api-token-scopes.js';
 export * from './api-tokens.js';
 export * from './attachments.js';

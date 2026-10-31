@@ -24,6 +24,7 @@ import {
   invitationListSchema,
   invitationPreviewSchema,
   invitationSchema,
+  organizationDetailSchema,
   organizationListSchema,
   organizationSchema,
   orgMemberListSchema,
@@ -103,9 +104,12 @@ export const registerOrgRoutes: RouteRegistrar = (registry, components) => {
     operationId: 'getOrganization',
     tag: 'orgs',
     summary: 'An organization the caller belongs to',
+    description:
+      '`ai` (T906, CONTRACTS §29.1): whether AI entry points are available to members and ' +
+      'may see record values — never the provider URL, model or key.',
     params: orgParams,
     status: 200,
-    response: organizationSchema,
+    response: organizationDetailSchema,
   });
   add({
     method: 'patch',

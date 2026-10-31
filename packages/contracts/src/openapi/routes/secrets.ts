@@ -26,11 +26,12 @@ const ADMIN_ONLY =
 const SAVE_ERRORS =
   '`VALIDATION_FAILED`: malformed body or `errors[].code` `SECRET_NAME_TAKEN`, ' +
   '`INVALID_BOT_TOKEN` (not a Telegram bot token), `INVALID_SECRET_VALUE` (an `http_header` ' +
-  'value that is not printable ASCII ≤ 4,096, a `webhook_signing` value that is not ' +
+  'or `ai_api_key` value that is not printable ASCII ≤ 4,096, a `webhook_signing` value that is not ' +
   '`whsec_` + 24–64 bytes, or `generate` for another kind), `UNKNOWN_BASE`, ' +
-  '`SECRET_LIMIT_REACHED`, `SECRET_HOSTS_REQUIRED` (an HTTP secret without `allowed_hosts`, ' +
-  'or `[]`), `TOO_MANY_ALLOWED_HOSTS` (> 20), `INVALID_ALLOWLIST_PATTERN` ' +
-  '(`allowed_hosts[i]`), `UNRECOGNIZED_KEY` (`allowed_hosts` of a `telegram_bot`)';
+  '`SECRET_LIMIT_REACHED`, `SECRET_HOSTS_REQUIRED` (an HTTP or `ai_api_key` secret without ' +
+  '`allowed_hosts`, or `[]`), `TOO_MANY_ALLOWED_HOSTS` (> 20), `INVALID_ALLOWLIST_PATTERN` ' +
+  '(`allowed_hosts[i]`), `UNRECOGNIZED_KEY` (`allowed_hosts` of a `telegram_bot`), ' +
+  '`NOT_ALLOWED` (path `base_scope`: an `ai_api_key` is for every base)';
 
 /** Organization secrets (CONTRACTS §24; BACKLOG T516, T606). */
 export const registerSecretRoutes: RouteRegistrar = (registry, components) => {
@@ -56,12 +57,14 @@ export const registerSecretRoutes: RouteRegistrar = (registry, components) => {
     path: '/api/v1/orgs/{orgId}/secrets',
     operationId: 'createSecret',
     tag: 'secrets',
-    summary: 'Store a secret (a Telegram bot token, an HTTP header value, a signing secret)',
+    summary:
+      'Store a secret (a Telegram bot token, an HTTP header value, a signing secret, an AI key)',
     description:
       'Organization owner/admin only. The value is sealed with AES-256-GCM and never returned, ' +
       'logged or audited — except a `webhook_signing` value the server generated ' +
-      '(`generate: true`), returned once in `value`. `http_header` / `webhook_signing` need ' +
-      '`allowed_hosts`: automations send them only to those hosts (T701). Audited as ' +
+      '(`generate: true`), returned once in `value`. `http_header` / `webhook_signing` / ' +
+      '`ai_api_key` need `allowed_hosts`: automations (the AI provider for `ai_api_key`, ' +
+      'T906) send them only to those hosts (T701). Audited as ' +
       '`secret.created` (name, kind, scope, allowed hosts).',
     params: orgParams,
     body: createSecretRequestSchema,
@@ -113,9 +116,10 @@ export const registerSecretRoutes: RouteRegistrar = (registry, components) => {
     errors: {
       409:
         '`SECRET_IN_USE`: automations (deleted ones excepted) use it, or it is the ' +
-        "organization's notification bot (T549); `errors[0].params` = " +
-        '`{ usages: [{ kind: "notification_channel" } | { kind: "automation", automation_id, ' +
-        'base_id, name | null }], total }`',
+        "organization's notification bot (T549) or the key of its AI settings (T906); " +
+        '`errors[0].params` = `{ usages: [{ kind: "notification_channel" } | ' +
+        '{ kind: "ai_settings" } | { kind: "automation", automation_id, base_id, name | null }], ' +
+        'total }`',
     },
   });
   add({
@@ -126,8 +130,9 @@ export const registerSecretRoutes: RouteRegistrar = (registry, components) => {
     summary: 'What uses a secret (automations, notification bot)',
     description:
       'Organization owner/admin only. `{ kind: "notification_channel" }` first when the secret ' +
-      "is the organization's notification bot (T549); then the automations — the name is " +
-      '`null` when the caller cannot see it.',
+      'is the organization\'s notification bot (T549), `{ kind: "ai_settings" }` when it is ' +
+      'the key of the AI settings (T906); then the automations — the name is `null` when the ' +
+      'caller cannot see it.',
     params: secretParams,
     status: 200,
     response: secretUsagesSchema,
@@ -141,7 +146,7 @@ export const registerSecretRoutes: RouteRegistrar = (registry, components) => {
     summary: 'Secrets an automation of the base may use',
     description:
       'Automation managers of the base (base admin or `manage` on a table). Only secrets whose ' +
-      'scope includes the base; only `id`, `kind`, `name`.',
+      'scope includes the base, never an `ai_api_key`; only `id`, `kind`, `name`.',
     params: baseParams,
     query: baseSecretListQuerySchema,
     status: 200,

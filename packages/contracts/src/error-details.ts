@@ -614,9 +614,36 @@ export const REQUEST_DETAIL_CODES = [
  * The AI core (CONTRACTS §29.7, ADR-39; T905): `errors[0]` of
  * `502 AI_PROVIDER_ERROR` (`params.reason` ∈ {@link AI_PROVIDER_ERROR_REASONS},
  * plus `status` for `http_status`) and of `422 AI_INVALID_OUTPUT`
- * (`params.attempts`), both with path `""`.
+ * (`params.attempts`), both with path `""`; T906 adds `errors[0]` of
+ * `429 AI_QUOTA_EXCEEDED` (`params.reset_at`, `params.daily_token_limit`).
  */
-export const AI_DETAIL_CODES = ['AI_PROVIDER_ERROR', 'AI_INVALID_OUTPUT'] as const;
+export const AI_DETAIL_CODES = [
+  'AI_PROVIDER_ERROR',
+  'AI_INVALID_OUTPUT',
+  'AI_QUOTA_EXCEEDED',
+] as const;
+
+/**
+ * AI settings of an organization (CONTRACTS §29.1, T906), under
+ * `VALIDATION_FAILED`: turning `allow_record_data` on without `confirm: true`
+ * (`RECORD_DATA_NOT_CONFIRMED`, path `confirm`); a provider URL the SSRF
+ * core never calls (`INVALID_URL`, path `provider_base_url`); a key without
+ * a provider URL (`REQUIRED`, path `provider_base_url`), of a shape that
+ * cannot go in a header (`INVALID_SECRET_VALUE`, path `api_key.value`) or
+ * for an IP address (`SECRET_HOST_NOT_ALLOWED`, path `api_key`); a
+ * `secret_id` that is not an `ai_api_key` secret of the organization
+ * (`UNKNOWN_SECRET`, path `api_key.secret_id`); a usage range that is
+ * reversed or longer than 90 days (`OUT_OF_RANGE`, path `from`).
+ */
+export const AI_SETTINGS_DETAIL_CODES = [
+  'RECORD_DATA_NOT_CONFIRMED',
+  'INVALID_URL',
+  'REQUIRED',
+  'INVALID_SECRET_VALUE',
+  'SECRET_HOST_NOT_ALLOWED',
+  'UNKNOWN_SECRET',
+  'OUT_OF_RANGE',
+] as const;
 
 /**
  * Why a call to the AI provider failed (`params.reason` of
@@ -679,6 +706,7 @@ export const ERROR_DETAIL_CODES = [
     ...HEALTH_DETAIL_CODES,
     ...REQUEST_DETAIL_CODES,
     ...AI_DETAIL_CODES,
+    ...AI_SETTINGS_DETAIL_CODES,
   ]),
 ] as readonly ErrorDetailCode[];
 
@@ -716,4 +744,5 @@ export type ErrorDetailCode =
   | (typeof OIDC_LINK_DETAIL_CODES)[number]
   | (typeof HEALTH_DETAIL_CODES)[number]
   | (typeof REQUEST_DETAIL_CODES)[number]
-  | (typeof AI_DETAIL_CODES)[number];
+  | (typeof AI_DETAIL_CODES)[number]
+  | (typeof AI_SETTINGS_DETAIL_CODES)[number];

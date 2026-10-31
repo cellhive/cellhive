@@ -22,10 +22,25 @@ import { idOf } from './ids.js';
  * notification bot), `http_header` (the value of the auth header of
  * `http_request` — the header name is in the action), `webhook_signing`
  * (`whsec_…`, signs `http_request`; replacing it keeps the previous value
- * 24 hours so receivers can switch — T606).
+ * 24 hours so receivers can switch — T606), `ai_api_key` (the API key of
+ * the organization's AI provider, read by the AI settings only — T906,
+ * CONTRACTS §29.1).
  */
-export const SECRET_KINDS = ['telegram_bot', 'http_header', 'webhook_signing'] as const;
+export const SECRET_KINDS = [
+  'telegram_bot',
+  'http_header',
+  'webhook_signing',
+  'ai_api_key',
+] as const;
 export type SecretKind = (typeof SECRET_KINDS)[number];
+
+/** Kinds an automation step may use (`GET /bases/:id/secrets`): every kind but `ai_api_key`. */
+export const BASE_SECRET_KINDS = [
+  'telegram_bot',
+  'http_header',
+  'webhook_signing',
+] as const satisfies readonly SecretKind[];
+export type BaseSecretKind = (typeof BASE_SECRET_KINDS)[number];
 
 /**
  * Kinds an outbound HTTP call sends (ADR-36 §4, T701): they carry the hosts
@@ -39,6 +54,20 @@ export type HttpSecretKind = (typeof HTTP_SECRET_KINDS)[number];
 
 export function isHttpSecretKind(kind: SecretKind): kind is HttpSecretKind {
   return (HTTP_SECRET_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Kinds bound to the hosts they may be sent to (`allowed_hosts`, 1–20
+ * entries): the HTTP kinds and `ai_api_key` (T906: the hosts of the
+ * provider URL, so a new URL never takes the key along).
+ */
+export const HOST_BOUND_SECRET_KINDS = [
+  ...HTTP_SECRET_KINDS,
+  'ai_api_key',
+] as const satisfies readonly SecretKind[];
+
+export function isHostBoundSecretKind(kind: SecretKind): boolean {
+  return (HOST_BOUND_SECRET_KINDS as readonly string[]).includes(kind);
 }
 
 /** Most entries of `allowed_hosts` (CONTRACTS §24). */
@@ -87,6 +116,8 @@ export function isValidSecretValue(kind: SecretKind, value: string): boolean {
     case 'telegram_bot':
       return TELEGRAM_BOT_TOKEN_PATTERN.test(value);
     case 'http_header':
+    case 'ai_api_key':
+      // An API key goes in `Authorization: Bearer …` like a header value.
       return HTTP_HEADER_SECRET_PATTERN.test(value);
     case 'webhook_signing': {
       if (!value.startsWith(WEBHOOK_SIGNING_SECRET_PREFIX)) return false;
@@ -161,7 +192,7 @@ const allowedHostsSchema = z
   .array(z.string().trim().min(1).max(MAX_ALLOWLIST_PATTERN_LENGTH))
   .meta({
     description:
-      '`http_header` / `webhook_signing` only: hosts the secret may be sent to — exact ' +
+      '`http_header` / `webhook_signing` / `ai_api_key` only: hosts the secret may be sent to — exact ' +
       '(`api.crm.example`) or `*.suffix` (subdomains only, at least two labels), with an ' +
       'optional `:port` (without one: ports 80/443 over `https` only — a plain `http` URL ' +
       'needs an entry naming its port, e.g. `n8n:5678`). Like the HTTP allowlist (CONTRACTS ' +
@@ -231,20 +262,28 @@ export const createSecretRequestSchema = z
     }),
     allowed_hosts: allowedHostsSchema.optional().meta({
       description:
-        'Required for `http_header` / `webhook_signing` (`SECRET_HOSTS_REQUIRED`); not ' +
-        'accepted for `telegram_bot`',
+        'Required for `http_header` / `webhook_signing` / `ai_api_key` ' +
+        '(`SECRET_HOSTS_REQUIRED`); not accepted for `telegram_bot`',
     }),
   })
   .superRefine((body, ctx) => {
     valueOrGenerate(body, body.kind, ctx, true);
-    if (isHttpSecretKind(body.kind)) {
+    if (isHostBoundSecretKind(body.kind)) {
       checkAllowedHosts(body.allowed_hosts ?? [], ctx);
     } else if (body.allowed_hosts !== undefined) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Only http_header and webhook_signing secrets have allowed hosts',
+        message: 'Only http_header, webhook_signing and ai_api_key secrets have allowed hosts',
         path: ['allowed_hosts'],
         params: { code: 'UNRECOGNIZED_KEY' },
+      });
+    }
+    if (body.kind === 'ai_api_key' && body.base_scope !== 'all') {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'An AI API key belongs to the whole organization (base_scope all)',
+        path: ['base_scope'],
+        params: { code: 'NOT_ALLOWED' },
       });
     }
   })
@@ -261,7 +300,8 @@ export const updateSecretRequestSchema = z
     base_ids: z.array(idOf('bse')).max(SECRET_MAX_BASES).optional(),
     allowed_hosts: allowedHostsSchema.optional().meta({
       description:
-        '`http_header` / `webhook_signing` only (another kind: `UNRECOGNIZED_KEY`): replaces ' +
+        '`http_header` / `webhook_signing` / `ai_api_key` only (another kind: ' +
+        '`UNRECOGNIZED_KEY`): replaces ' +
         'the list and ends the transition period of a secret stored before the list existed ' +
         '(`legacy_hosts_until` becomes `null`)',
     }),
@@ -301,9 +341,10 @@ export const secretSchema = z
     base_ids: z.array(idOf('bse')),
     allowed_hosts: z.array(z.string()).meta({
       description:
-        'Hosts an `http_request` / `run_n8n_workflow` step may send this secret to (canonical ' +
-        'patterns); always `[]` for `telegram_bot`. Empty for an HTTP secret stored before ' +
-        'the list existed: see `legacy_hosts_until`',
+        'Hosts an `http_request` / `run_n8n_workflow` step (or, for `ai_api_key`, the AI ' +
+        'provider) may send this secret to (canonical patterns); always `[]` for ' +
+        '`telegram_bot`. Empty for an HTTP secret stored before the list existed: see ' +
+        '`legacy_hosts_until`',
     }),
     legacy_hosts_until: isoDateTimeSchema.nullable().meta({
       description:
@@ -347,7 +388,7 @@ export type SecretList = z.infer<typeof secretListSchema>;
 
 /** What an automation manager of a base sees: the secrets usable there, by name only. */
 export const baseSecretSchema = z
-  .object({ id: secretIdSchema, kind: z.enum(SECRET_KINDS), name: z.string() })
+  .object({ id: secretIdSchema, kind: z.enum(BASE_SECRET_KINDS), name: z.string() })
   .meta({ id: 'BaseSecret' });
 export type BaseSecretDto = z.infer<typeof baseSecretSchema>;
 
@@ -357,7 +398,7 @@ export const baseSecretListSchema = z
 export type BaseSecretList = z.infer<typeof baseSecretListSchema>;
 
 export const baseSecretListQuerySchema = z.object({
-  kind: z.enum(SECRET_KINDS).optional().meta({ description: 'Only secrets of this kind' }),
+  kind: z.enum(BASE_SECRET_KINDS).optional().meta({ description: 'Only secrets of this kind' }),
 });
 export type BaseSecretListQuery = z.infer<typeof baseSecretListQuerySchema>;
 
@@ -382,9 +423,22 @@ export const secretNotificationChannelUsageSchema = z
   .meta({ id: 'SecretNotificationChannelUsage' });
 export type SecretNotificationChannelUsage = z.infer<typeof secretNotificationChannelUsageSchema>;
 
-/** Something that uses the secret: an automation step, or the notification channel (T549). */
+/** The secret is the API key of the organization's AI settings (CONTRACTS §29.1, T906). */
+export const secretAiSettingsUsageSchema = z
+  .object({ kind: z.literal('ai_settings') })
+  .meta({ id: 'SecretAiSettingsUsage' });
+export type SecretAiSettingsUsage = z.infer<typeof secretAiSettingsUsageSchema>;
+
+/**
+ * Something that uses the secret: an automation step, the notification
+ * channel (T549) or the AI settings (T906).
+ */
 export const secretUsageSchema = z
-  .discriminatedUnion('kind', [secretAutomationUsageSchema, secretNotificationChannelUsageSchema])
+  .discriminatedUnion('kind', [
+    secretAutomationUsageSchema,
+    secretNotificationChannelUsageSchema,
+    secretAiSettingsUsageSchema,
+  ])
   .meta({ id: 'SecretUsage' });
 export type SecretUsage = z.infer<typeof secretUsageSchema>;
 
@@ -405,7 +459,8 @@ export const SECRET_LIMIT_REACHED = 'SECRET_LIMIT_REACHED';
  * `409 SECRET_IN_USE` (delete): `errors[0].code = SECRET_IN_USE`,
  * `params = { usages: SecretUsage[], total }` — automations using it and,
  * first, `{ kind: "notification_channel" }` when it is the organization's
- * notification bot (T549).
+ * notification bot (T549) or `{ kind: "ai_settings" }` when it is the key
+ * of the AI settings (T906).
  */
 export const SECRET_IN_USE = 'SECRET_IN_USE';
 /** `VALIDATION_FAILED` detail (path `allowed_hosts`): an HTTP secret needs ≥ 1 host. */

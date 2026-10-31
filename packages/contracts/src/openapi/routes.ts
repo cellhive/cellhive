@@ -1,3 +1,4 @@
+import { registerAiRoutes } from './routes/ai.js';
 import { registerApiTokenRoutes } from './routes/api-tokens.js';
 import { registerAuditRoutes } from './routes/audit.js';
 import { registerAuthRoutes } from './routes/auth.js';
@@ -44,6 +45,7 @@ export const routeRegistrars: readonly RouteRegistrar[] = [
   registerEmailIdentityRoutes,
   registerSecretRoutes,
   registerHttpAllowlistRoutes,
+  registerAiRoutes,
   registerIncomingWebhookRoutes,
   registerApiTokenRoutes,
   registerEmailAssetRoutes,

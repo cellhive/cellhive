@@ -59,7 +59,10 @@
     "WEBHOOK_IN_USE": "Automations are triggered by this webhook. Change or delete them first.",
     "AI_INVALID_OUTPUT": "The AI did not give a usable answer. Try rephrasing your request.",
     "AI_PROVIDER_ERROR": "The AI provider could not be reached or answered with an error.",
-    "AI_TIMEOUT": "The AI took too long to answer. Try again."
+    "AI_TIMEOUT": "The AI took too long to answer. Try again.",
+    "AI_NOT_CONFIGURED": "AI is not set up or is turned off for this organization.",
+    "AI_RECORD_DATA_DISABLED": "This organization does not let AI see record values.",
+    "AI_QUOTA_EXCEEDED": "The AI quota of the organization for today is used up."
   },
   "client": {
     "NETWORK_ERROR": "The server could not be reached. Check your connection and try again.",
@@ -343,7 +346,9 @@
     "AI_PROVIDER_ERROR_response_too_large": "The answer of the AI provider is too large.",
     "AI_PROVIDER_ERROR_refused": "The model refused to answer.",
     "AI_PROVIDER_ERROR_truncated": "The answer of the model was cut off at its length limit.",
-    "AI_INVALID_OUTPUT": "The answer was still not valid after {{attempts}} tries."
+    "AI_INVALID_OUTPUT": "The answer was still not valid after {{attempts}} tries.",
+    "AI_QUOTA_EXCEEDED": "The AI quota of the organization for today is used up. It resets at midnight in the organization time zone.",
+    "RECORD_DATA_NOT_CONFIRMED": "Confirm that record values may be sent to the AI provider."
   },
   "retryAfter_one": "Try again in {{count, number}} second.",
   "retryAfter_other": "Try again in {{count, number}} seconds.",
