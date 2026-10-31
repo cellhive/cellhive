@@ -437,15 +437,19 @@ describe('export/import with formula and lookup fields (T462)', () => {
       // T474: the formula of the rows just imported is computed as well — the
       // recompute job running beside the import waits for its locks instead
       // of marking the field TIMEOUT.
-      const formula = await eventually(async () => {
-        const response = await fx.call('u_admin', 'GET', `/fields/${amountVnd.id}`);
-        expect(response.statusCode, response.body).toBe(200);
-        const dto = fieldSchema.parse(response.json());
-        return dto.compute_state === 'recomputing' || dto.compute_state === 'backfilling'
-          ? undefined
-          : dto;
-      }, 'amount_vnd recomputed');
-      expect(formula).toMatchObject({ compute_state: 'ready', compute_error: null });
+      // Which computed field the import leaves to the job depends on table order:
+      // both must end `ready` (a slow batch take marked either TIMEOUT).
+      for (const item of [amountVnd, customerPhone]) {
+        const settledField = await eventually(async () => {
+          const response = await fx.call('u_admin', 'GET', `/fields/${item.id}`);
+          expect(response.statusCode, response.body).toBe(200);
+          const dto = fieldSchema.parse(response.json());
+          return dto.compute_state === 'recomputing' || dto.compute_state === 'backfilling'
+            ? undefined
+            : dto;
+        }, `${item.name} recomputed`);
+        expect(settledField).toMatchObject({ compute_state: 'ready', compute_error: null });
+      }
       const empty = await fx.call(
         'u_admin',
         'POST',
