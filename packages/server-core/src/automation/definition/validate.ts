@@ -14,6 +14,7 @@ import {
   INVALID_URL,
   isAllowedHttpRequestHeader,
   INVALID_CONDITION,
+  isTemplateReferenceId,
   MAX_AUTOMATION_ACTIONS,
   NO_TRIGGER_RECORD,
   NOT_TRIGGER_TABLE,
@@ -22,6 +23,8 @@ import {
   UNKNOWN_WEBHOOK,
   UNSUPPORTED_VALUE_SOURCE,
   WEBHOOK_TRIGGER_PARTS,
+  type AiClassifyConfig,
+  type AiGenerateTextConfig,
   type AutomationAction,
   type AutomationBranchAction,
   type AutomationDefinition,
@@ -57,6 +60,8 @@ import {
 import { collectImages, IMAGE_SOURCES, imageSyntaxIssues, parseTemplate } from '@cellhive/markdown';
 import { isViewVisible } from '@cellhive/permissions';
 
+import { aiPromptSourceProblems } from '../../ai/generation/definition.js';
+import { isAiField } from '../../ai/generation/options.js';
 import { normalizeAddress } from '../../mail/address.js';
 import { isOutboundHttpError } from '../../net/errors.js';
 import { parseOutboundUrl } from '../../net/url-policy.js';
@@ -66,6 +71,7 @@ import { filterValueSlots, withFilterValues } from '../actions/update-records/fi
 import { minIntervalMinutes, parseCron } from '../time/cron.js';
 import { checkAutomationTemplate } from '../values/check.js';
 import {
+  isTextStep,
   previousSourceOf,
   stepRecordTable,
   TRIGGER_REFERENCES,
@@ -74,6 +80,7 @@ import {
 import { automationSnapshot, stepFieldsOf } from '../values/snapshot.js';
 
 import type { FieldType } from '@cellhive/field-types';
+import type { SchemaSnapshot } from '@cellhive/formula-engine';
 
 /** What a definition is checked against: the base and one person's access (ADR-25 §3). */
 export interface AutomationValidationContext {
@@ -99,6 +106,12 @@ export interface AutomationValidationContext {
    * `webhook.received` trigger may name (T604); absent = none.
    */
   readonly incomingWebhookIds?: ReadonlySet<string>;
+  /**
+   * Of `fieldIds`, the formulas/lookups that read another record or table
+   * at any depth (`aiCrossRecordSources`, T910): what an AI action's prompt
+   * may not read (T911). Absent: not checked (the save routes set it).
+   */
+  readonly aiCrossRecord?: (fieldIds: readonly string[]) => readonly string[];
 }
 
 export interface AutomationTableMeta {
@@ -227,6 +240,8 @@ class DefinitionChecker {
   private triggerType: AutomationTrigger['type'] = 'schedule';
   /** Record steps checked so far (readable table): what `[act_…]` in a template may name. */
   private readonly recordSteps = new Map<string, Id<'tbl'>>();
+  /** `ai_generate_text` steps checked so far: `[act_…]` is their text in later templates (T911). */
+  private readonly textSteps = new Set<string>();
   /** `find_records` steps checked so far (readable table): what a `digest` may list. */
   private readonly findSteps = new Map<
     string,
@@ -770,6 +785,12 @@ class DefinitionChecker {
       case 'run_n8n_workflow':
         checked = { ...action, config: this.checkRunN8nWorkflow(action.config, config, earlier) };
         break;
+      case 'ai_generate_text':
+        checked = { ...action, config: this.checkAiGenerateText(action.config, config) };
+        break;
+      case 'ai_classify':
+        checked = { ...action, config: this.checkAiClassify(action.config, config) };
+        break;
       case 'delay': {
         const recheck =
           action.config.recheck_condition === null
@@ -821,8 +842,9 @@ class DefinitionChecker {
     return checked as A;
   }
 
-  /** A step whose record later templates may reference (`[act_…]`, T505), when readable. */
+  /** A step whose record (T505) or text (T911) later templates may reference (`[act_…]`). */
   private rememberRecordStep(action: AutomationAction | AutomationBranchAction): void {
+    if (isTextStep(action)) this.textSteps.add(action.id);
     const tableId = stepRecordTable(action, this.triggerHasRecord ? this.triggerTableId : null);
     if (tableId !== null && this.readableTable(tableId) !== undefined) {
       this.recordSteps.set(action.id, tableId);
@@ -867,13 +889,90 @@ class DefinitionChecker {
       const perm = table.fields[field.id];
       const writable = perm === 'edit' || (mode === 'create' && perm === 'create');
       if (writable) continue;
-      if (isComputedType(field.type)) {
+      if (isComputedType(field.type) || isAiField(field)) {
         this.add(path, 'FIELD_READ_ONLY', 'This field is computed', { type: field.type });
       } else {
         this.add(path, AUTOMATION_PERMISSION_DENIED, 'You cannot write this field');
       }
     }
     return out;
+  }
+
+  // --- AI actions (T911) ---------------------------------------------------------
+
+  /** `ai_generate_text`: its prompt, and the plain `text` field it may write. */
+  private checkAiGenerateText(config: AiGenerateTextConfig, path: string): AiGenerateTextConfig {
+    const prompt = this.checkAiPrompt(config.prompt, join(path, 'prompt'));
+    if (config.target_field_id !== null) {
+      this.checkAiTarget(config.target_field_id, join(path, 'target_field_id'), 'text');
+    }
+    return { ...config, prompt };
+  }
+
+  /** `ai_classify`: its input, and the single select field it writes. */
+  private checkAiClassify(config: AiClassifyConfig, path: string): AiClassifyConfig {
+    const input = this.checkAiPrompt(config.input, join(path, 'input'));
+    this.checkAiTarget(config.target_field_id, join(path, 'target_field_id'), 'select');
+    return { ...config, input };
+  }
+
+  /**
+   * The prompt of an AI action (CONTRACTS §29.6): a template of the trigger
+   * record checked as the saver, then the AI field's rule
+   * (`aiPromptSourceProblems`): fields of the same record only — no link,
+   * lookup or formula reading another record, no attachment, button or AI
+   * field; `[@…]` and `[act_…]` are no fields here (`UNKNOWN_FIELD`).
+   */
+  private checkAiPrompt(source: string, path: string): string {
+    const tableId = this.triggerHasRecord ? this.triggerTableId : null;
+    if (tableId === null) {
+      this.add(path, NO_TRIGGER_RECORD, 'An AI action reads the record of the trigger');
+      return source;
+    }
+    const { check, errors } = checkAutomationTemplate(
+      source,
+      aiPromptSnapshot(this.context, tableId),
+      path,
+    );
+    this.errors.push(...errors);
+    const { problems } = aiPromptSourceProblems(check.placeholders, {
+      path,
+      sourceOf: (id) => this.fieldById.get(id),
+      crossRecord: (id) => (this.context.aiCrossRecord?.([id]).length ?? 0) > 0,
+    });
+    this.errors.push(...problems);
+    return check.stored ?? source;
+  }
+
+  /**
+   * The field an AI action writes: a field of the trigger table the saver
+   * reads (`UNKNOWN_FIELD`) of the right kind (`INVALID_FIELD_TYPE`: plain
+   * `text`, or a single select), not an AI or computed field
+   * (`FIELD_READ_ONLY`), that the saver may edit (`PERMISSION_DENIED`).
+   */
+  private checkAiTarget(fieldId: string, path: string, kind: 'text' | 'select'): void {
+    const tableId = this.triggerHasRecord ? this.triggerTableId : null;
+    if (tableId === null) return; // `NO_TRIGGER_RECORD` on the prompt.
+    const table = this.requireWritable(tableId, path, null);
+    const field = this.requireField(tableId, fieldId, path, true);
+    if (table === undefined || field === undefined) return;
+    if (isComputedType(field.type) || isAiField(field)) {
+      this.add(path, 'FIELD_READ_ONLY', 'An AI field or a computed field cannot be written', {
+        type: field.type,
+      });
+    } else if (field.type !== kind || (kind === 'select' && isMultipleSelect(field))) {
+      this.add(
+        path,
+        'INVALID_FIELD_TYPE',
+        `Expected a ${kind === 'text' ? 'text' : 'single select'} field`,
+        {
+          expected: kind,
+          type: field.type,
+        },
+      );
+    } else if (table.fields[field.id] !== 'edit') {
+      this.add(path, AUTOMATION_PERMISSION_DENIED, 'You cannot write this field');
+    }
   }
 
   // --- send_email (T514) ---------------------------------------------------------
@@ -902,6 +1001,7 @@ class DefinitionChecker {
     const sources = (digest: boolean): TemplateSources => ({
       trigger: TRIGGER_REFERENCES[this.triggerType],
       steps: new Map(this.recordSteps),
+      texts: new Set(this.textSteps),
       ...this.previousSource(),
       ...(digest ? { digest: true } : {}),
     });
@@ -1124,6 +1224,7 @@ class DefinitionChecker {
       {
         trigger: TRIGGER_REFERENCES[this.triggerType],
         steps: new Map(this.recordSteps),
+        texts: new Set(this.textSteps),
         ...this.previousSource(),
         ...(digest !== null ? { digest: true } : {}),
       },
@@ -1308,6 +1409,7 @@ class DefinitionChecker {
         automationSnapshot(this.context, this.triggerHasRecord ? this.triggerTableId : null, null, {
           trigger: TRIGGER_REFERENCES[this.triggerType],
           steps,
+          texts: new Set(this.textSteps),
         }),
         at,
       );
@@ -1394,6 +1496,7 @@ class DefinitionChecker {
         {
           trigger: TRIGGER_REFERENCES[this.triggerType],
           steps: new Map(this.recordSteps),
+          texts: new Set(this.textSteps),
           ...this.previousSource(),
         },
       );
@@ -1460,6 +1563,33 @@ const COMPUTED_TYPES: ReadonlySet<string> = new Set([
 
 /** Fields whose value is Cellhive users (recipients, Reply-To). */
 const USER_FIELD_TYPES: ReadonlySet<string> = new Set(['user', 'created_by', 'updated_by']);
+
+/** A select field taking several options (`options.multiple`). */
+export function isMultipleSelect(field: { readonly options: unknown }): boolean {
+  const options = field.options;
+  return typeof options === 'object' && options !== null && 'multiple' in options
+    ? options.multiple === true
+    : false;
+}
+
+/**
+ * The snapshot an AI action's prompt is checked and rendered against
+ * (T911): the trigger table as `context`'s person reads it, without the
+ * `[@id]`/`[@url]` references (record ids never reach a model).
+ */
+export function aiPromptSnapshot(
+  context: AutomationValidationContext,
+  tableId: string,
+): SchemaSnapshot {
+  const base = automationSnapshot(context, tableId);
+  return {
+    ...base,
+    tables: base.tables.map((table) => ({
+      ...table,
+      fields: table.fields.filter((field) => !isTemplateReferenceId(field.id)),
+    })),
+  };
+}
 
 /** A recipient field: users, or text with the `email` style. */
 function isRecipientField(field: AutomationFieldMeta): boolean {

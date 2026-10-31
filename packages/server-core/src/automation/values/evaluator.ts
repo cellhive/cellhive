@@ -38,6 +38,7 @@ import {
   RECORD_ID_REFERENCE,
   RECORD_URL_REFERENCE,
   stepRecordId,
+  stepText,
   TRIGGER_REFERENCE_DATA,
   type TemplateSources,
 } from './references.js';
@@ -471,6 +472,9 @@ export class AutomationValueEvaluator {
     }
     for (const actionId of this.sources.steps.keys()) {
       cells[actionId] = stepRecordId(this.steps.get(actionId));
+    }
+    for (const actionId of this.sources.texts ?? []) {
+      cells[actionId] = stepText(this.steps.get(actionId));
     }
     if (this.sources.previous !== undefined && recordId !== null) {
       cells[PREVIOUS_RECORD_ID] = PREVIOUS_RECORD_ID;

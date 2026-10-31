@@ -2,6 +2,7 @@ import {
   EMAIL_BODY_DIGEST_REFERENCE,
   TEMPLATE_PREVIOUS_REFERENCE,
   TEMPLATE_STEP_ACTION_TYPES,
+  TEMPLATE_TEXT_STEP_ACTION_TYPES,
   type AutomationAction,
   type AutomationBranchAction,
   type AutomationDefinition,
@@ -76,6 +77,8 @@ export interface TemplateSources {
   readonly trigger: readonly TemplateTriggerReference[];
   /** Earlier steps with a record, by action id → table of that record. */
   readonly steps: ReadonlyMap<string, Id<'tbl'>>;
+  /** Earlier steps whose output is a text (`ai_generate_text`, T911): `[act_…]` is that text. */
+  readonly texts?: ReadonlySet<string>;
   /**
    * The body of a `send_email` step with a `digest` (T514): `[@digest]`, a
    * text holding the digest lines.
@@ -118,6 +121,9 @@ export function sourceFields(sources: TemplateSources): SnapshotField[] {
   for (const [actionId, tableId] of sources.steps) {
     fields.push({ id: actionId, name: actionId, type: 'link', linkTableId: tableId, single: true });
   }
+  for (const actionId of sources.texts ?? []) {
+    fields.push({ id: actionId, name: actionId, type: 'text' });
+  }
   if (sources.previous !== undefined) {
     fields.push({
       id: TEMPLATE_PREVIOUS_REFERENCE,
@@ -154,22 +160,37 @@ export function stepRecordTable(
   }
 }
 
-/** Every record step of a definition (what the run-time snapshot offers). */
+/** Whether a step's output is a text later templates place as `[act_…]` (T911). */
+export function isTextStep(action: AutomationAction | AutomationBranchAction): boolean {
+  return (TEMPLATE_TEXT_STEP_ACTION_TYPES as readonly string[]).includes(action.type);
+}
+
+/** Every record and text step of a definition (what the run-time snapshot offers). */
 export function definitionSources(
   definition: AutomationDefinition,
   actions: readonly (AutomationAction | AutomationBranchAction)[],
   triggerTableId: Id<'tbl'> | null,
 ): TemplateSources {
   const steps = new Map<string, Id<'tbl'>>();
+  const texts = new Set<string>();
   for (const action of actions) {
     const tableId = stepRecordTable(action, triggerTableId);
     if (tableId !== null) steps.set(action.id, tableId);
+    if (isTextStep(action)) texts.add(action.id);
   }
   return {
     trigger: TRIGGER_REFERENCES[definition.trigger.type],
     steps,
+    texts,
     ...previousSourceOf(definition.trigger.type, triggerTableId),
   };
+}
+
+/** The text a text step's output stands for in templates (`text` of `ai_generate_text`). */
+export function stepText(output: unknown): string | null {
+  if (typeof output !== 'object' || output === null || Array.isArray(output)) return null;
+  const text = (output as Readonly<Record<string, unknown>>)['text'];
+  return typeof text === 'string' ? text : null;
 }
 
 /**

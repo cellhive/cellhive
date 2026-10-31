@@ -45,7 +45,11 @@ import {
   SUMMARY_GROUP_KEY_PREFIX,
 } from './message-quota.repository.js';
 import { permissionProfileKey } from './permission-profile.js';
-import { notificationReferences, type NotificationReferences } from './references.js';
+import {
+  notificationReferences,
+  withTextStepSources,
+  type NotificationReferences,
+} from './references.js';
 import { summaryBody, summaryTitle } from './summary-text.js';
 
 import type { Db } from '../../../db/create-db.js';
@@ -197,11 +201,19 @@ export function createSendNotificationAction(
       const link = await linkOf(config, definition, context, triggerTableId);
       const flat = flattenActions(definition.actions).map((item) => item.action);
       const sources = definitionSources(definition, flat, triggerTableId);
-      const references = notificationReferences(
-        [config.title.template, config.body.template],
-        context.schema,
+      const references = withTextStepSources(
+        notificationReferences(
+          [config.title.template, config.body.template],
+          context.schema,
+          triggerTableId,
+          {
+            trigger: TRIGGER_REFERENCES[definition.trigger.type],
+            steps: sources.steps,
+            ...(sources.texts === undefined ? {} : { texts: sources.texts }),
+          },
+        ),
+        flat,
         triggerTableId,
-        { trigger: TRIGGER_REFERENCES[definition.trigger.type], steps: sources.steps },
       );
       const required = await requiredRecords(context, link, references, sources.steps);
 

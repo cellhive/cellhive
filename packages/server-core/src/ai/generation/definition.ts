@@ -5,7 +5,12 @@ import {
   type Id,
   type ProblemErrorItem,
 } from '@cellhive/contracts';
-import { checkTemplate, renderTemplateNames } from '@cellhive/formula-engine';
+import {
+  checkTemplate,
+  renderTemplateNames,
+  type CheckedPlaceholder,
+  type FormulaDependency,
+} from '@cellhive/formula-engine';
 
 import {
   snapshotOfBase,
@@ -38,6 +43,66 @@ function failed(errors: ProblemErrorItem[]): AppError {
     detail: 'The AI settings of the field are not valid.',
     errors,
   });
+}
+
+/** What the prompt rule needs to know of a source field. */
+export interface AiPromptSource {
+  readonly id: string;
+  readonly type: string;
+  readonly options: unknown;
+}
+
+/**
+ * The sources of an AI prompt — one rule for AI fields (T910) and AI
+ * actions (T911): every placeholder reads fields of the same record only
+ * (`same_row`, and a formula/lookup only when it reads the same record
+ * alone, transitively — `crossRecord`; else `CROSS_TABLE_NOT_SUPPORTED`),
+ * never an attachment, a button, another AI field or `selfId`, nor anything
+ * that is not a field (`INVALID_FIELD_TYPE`). Problems at `path` with the
+ * placeholder's `params.position`; the dependencies that pass are returned.
+ */
+export function aiPromptSourceProblems(
+  placeholders: readonly CheckedPlaceholder[],
+  rule: {
+    readonly path: string;
+    readonly sourceOf: (fieldId: string) => AiPromptSource | undefined;
+    readonly crossRecord: (fieldId: string) => boolean;
+    readonly selfId?: string;
+  },
+): { readonly problems: ProblemErrorItem[]; readonly dependencies: FormulaDependency[] } {
+  const problems: ProblemErrorItem[] = [];
+  const dependencies = placeholders.flatMap((placeholder) => {
+    const at = { position: { start: placeholder.start, length: placeholder.length } };
+    return placeholder.dependencies.filter((dependency) => {
+      const source = rule.sourceOf(dependency.field_id);
+      // A formula/lookup reading another record or table, at any depth, is no same-record source.
+      if (dependency.kind !== 'same_row' || rule.crossRecord(dependency.field_id)) {
+        problems.push({
+          path: rule.path,
+          code: 'CROSS_TABLE_NOT_SUPPORTED',
+          message: 'A prompt can only read fields of the same record',
+          params: at,
+        });
+        return false;
+      }
+      if (
+        source === undefined ||
+        source.id === rule.selfId ||
+        NOT_A_SOURCE.has(source.type) ||
+        isAiField(source)
+      ) {
+        problems.push({
+          path: rule.path,
+          code: 'INVALID_FIELD_TYPE',
+          message: 'A prompt cannot read this field (attachment, button, AI field or itself)',
+          params: { ...at, ...(source === undefined ? {} : { type: source.type }) },
+        });
+        return false;
+      }
+      return true;
+    });
+  });
+  return { problems, dependencies };
 }
 
 /**
@@ -90,38 +155,13 @@ export function prepareAiOptions(
   }));
   const byId = new Map(rows.fields.map((row) => [row.id as string, row]));
   const analysisOf = aiAnalysisOf(rows);
-  const dependencies = check.placeholders.flatMap((placeholder) => {
-    const at = { position: { start: placeholder.start, length: placeholder.length } };
-    return placeholder.dependencies.filter((dependency) => {
-      const source = byId.get(dependency.field_id);
-      // A formula/lookup reading another record or table, at any depth, is no same-record source.
-      const crossRecord = aiCrossRecordSources([dependency.field_id], rows, analysisOf).length > 0;
-      if (dependency.kind !== 'same_row' || crossRecord) {
-        errors.push({
-          path: PATH,
-          code: 'CROSS_TABLE_NOT_SUPPORTED',
-          message: 'A prompt can only read fields of the same record',
-          params: at,
-        });
-        return false;
-      }
-      if (
-        source === undefined ||
-        source.id === field.id ||
-        NOT_A_SOURCE.has(source.type) ||
-        isAiField(source)
-      ) {
-        errors.push({
-          path: PATH,
-          code: 'INVALID_FIELD_TYPE',
-          message: 'A prompt cannot read this field (attachment, button, AI field or itself)',
-          params: { ...at, ...(source === undefined ? {} : { type: source.type }) },
-        });
-        return false;
-      }
-      return true;
-    });
+  const { problems, dependencies } = aiPromptSourceProblems(check.placeholders, {
+    path: PATH,
+    sourceOf: (id) => byId.get(id),
+    crossRecord: (id) => aiCrossRecordSources([id], rows, analysisOf).length > 0,
+    selfId: field.id,
   });
+  errors.push(...problems);
   // `stored` is `null` exactly when `check.errors` is not empty.
   if (errors.length > 0 || check.stored === null) throw failed(errors);
   return { ai: { ...parsed.data, prompt: check.stored }, edges: edgesOf(field.id, dependencies) };

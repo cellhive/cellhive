@@ -37,6 +37,7 @@ export { automationSnapshot, NO_RECORD_TABLE, stepFieldsOf } from './snapshot.js
 export { templateResultType } from '@cellhive/formula-engine';
 export {
   definitionSources,
+  isTextStep,
   PREVIOUS_RECORD_ID,
   previousSourceOf,
   NO_TEMPLATE_SOURCES,
@@ -44,6 +45,7 @@ export {
   RECORD_URL_REFERENCE,
   stepRecordId,
   stepRecordTable,
+  stepText,
   TRIGGER_REFERENCES,
   type TemplateSources,
 } from './references.js';

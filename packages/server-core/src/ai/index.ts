@@ -137,8 +137,10 @@ export {
 } from './usage/quota.js';
 export {
   aiOptionsForReader,
+  aiPromptSourceProblems,
   prepareAiOptions,
   type AiFieldContext,
+  type AiPromptSource,
 } from './generation/definition.js';
 export { AiGenerationEnqueuer } from './generation/enqueue-changes.js';
 export {

@@ -42,7 +42,7 @@ import { AiGenerationQueueRepository, type TakenAiRow } from './queue.repository
 import { aiCrossRecordSources } from './sources.js';
 
 import type { Db } from '../../db/create-db.js';
-import type { FieldRow, JsonValue } from '../../db/schema.js';
+import type { JsonValue } from '../../db/schema.js';
 import type { Causation } from '../../events/event.js';
 import type { RecordMutationService } from '../../records/record-mutation.service.js';
 import type { RecordQueryService } from '../../records/record-query.service.js';
@@ -52,7 +52,10 @@ import type { AiDeadline } from '../deadline.js';
 import type { FormulaRecord } from '@cellhive/formula-engine';
 
 /** The target of an AI field from its row: text, or the options of its single select. */
-export function aiTargetOf(field: Pick<FieldRow, 'type' | 'options'>): AiFieldTarget {
+export function aiTargetOf(field: {
+  readonly type: string;
+  readonly options: unknown;
+}): AiFieldTarget {
   if (field.type !== 'select') return { kind: 'text' };
   const parsed = selectOptionsSchema.safeParse(field.options);
   return {

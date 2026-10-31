@@ -183,6 +183,7 @@ export { compareIfValues, isEmptyValue, type IfValueOperator } from './actions/i
 export * from './actions/send-email/index.js';
 export * from './actions/http-request/index.js';
 export * from './actions/run-n8n-workflow/index.js';
+export * from './actions/ai/index.js';
 export { AutomationTimeCursorsRepository } from './repository/time-cursors.repository.js';
 export {
   fireTimesBetween,

@@ -1,5 +1,12 @@
-import { isTemplateReferenceId, type EffectiveAccess, type Id } from '@cellhive/contracts';
+import {
+  isTemplateReferenceId,
+  type AutomationAction,
+  type AutomationBranchAction,
+  type EffectiveAccess,
+  type Id,
+} from '@cellhive/contracts';
 
+import { aiSourceFieldIds } from '../../../ai/generation/options.js';
 import { checkAutomationTemplate } from '../../values/check.js';
 import { automationSnapshot } from '../../values/snapshot.js';
 
@@ -79,4 +86,26 @@ export function notificationReferences(
     }
   }
   return { fields, triggerRecord, steps };
+}
+
+/**
+ * The text of an `ai_generate_text` step (`[act_…]`, T911) was generated
+ * from fields of the trigger record: a recipient of a text that places it
+ * must read the trigger record and every field its prompt reads, like
+ * fields the text placed itself.
+ */
+export function withTextStepSources(
+  references: NotificationReferences,
+  actions: readonly (AutomationAction | AutomationBranchAction)[],
+  triggerTableId: Id<'tbl'> | null,
+): NotificationReferences {
+  const fields = new Map(references.fields);
+  let triggerRecord = references.triggerRecord;
+  for (const action of actions) {
+    if (action.type !== 'ai_generate_text' || !references.steps.has(action.id)) continue;
+    if (triggerTableId === null) continue;
+    triggerRecord = true;
+    for (const id of aiSourceFieldIds(action.config.prompt)) fields.set(id, triggerTableId);
+  }
+  return { ...references, fields, triggerRecord };
 }

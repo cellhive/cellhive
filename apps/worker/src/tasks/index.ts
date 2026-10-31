@@ -1,5 +1,6 @@
 import {
   AiFieldGenerator,
+  createAiActions,
   AutomationDispatcher,
   AutomationRunEngine,
   AutomationTimeTriggers,
@@ -205,8 +206,9 @@ export interface TaskDeps {
   /** Tests only: clock of the Telegram replies and of the webhook check (T609). */
   readonly telegramNow?: () => Date;
   /**
-   * AI fields (T910): DNS of the provider (tests resolve `localhost`), the clock
-   * of the quota day, the time of batches per `ai.generate` job.
+   * AI fields (T910) and AI actions (T911): DNS of the provider (tests resolve
+   * `localhost`), the clock of the quota day, the time of batches per
+   * `ai.generate` job.
    */
   readonly ai?: {
     readonly lookup?: HostLookup;
@@ -310,14 +312,16 @@ export function buildTaskList(deps: TaskDeps): TaskList {
             deps.logger.warn({ err }, 'ai state publish failed');
           },
         });
+  // One provider client per process: AI fields (T910) and AI actions (T911).
+  const llm = new LlmClient({
+    allowlist: httpAllowlistSource(deps.db),
+    privateAllowlist: deps.config.outboundHttp.privateAllowlist,
+    keys: createAiKeySource(deps.db, deps.config.security.appMasterKey),
+    ...(deps.ai?.lookup === undefined ? {} : { lookup: deps.ai.lookup }),
+    ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
+  });
   const aiGenerator = new AiFieldGenerator(deps.db, {
-    llm: new LlmClient({
-      allowlist: httpAllowlistSource(deps.db),
-      privateAllowlist: deps.config.outboundHttp.privateAllowlist,
-      keys: createAiKeySource(deps.db, deps.config.security.appMasterKey),
-      ...(deps.ai?.lookup === undefined ? {} : { lookup: deps.ai.lookup }),
-      ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
-    }),
+    llm,
     records: recordQuery,
     mutations: records,
     defaultTimeZone: deps.config.defaults.timezone,
@@ -407,6 +411,8 @@ export function buildTaskList(deps: TaskDeps): TaskList {
                 ...(deps.telegramClient === undefined ? {} : { client: deps.telegramClient }),
               }),
             ],
+            // `ai_generate_text`, `ai_classify` (T911).
+            ...createAiActions({ db: deps.db, llm, records, query: recordQuery }),
           ]),
           maxRunningPerOrg: deps.config.limits.automationMaxRunningPerOrg,
           publicUrl: deps.config.publicUrl,

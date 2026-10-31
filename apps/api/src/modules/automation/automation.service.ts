@@ -23,10 +23,13 @@ import {
   type ValidateAutomationTemplateResponse,
 } from '@cellhive/contracts';
 import {
+  aiCrossRecordSources,
+  AiSettingsRepository,
   automationSnapshot,
   AutomationRunsRepository,
   AutomationsRepository,
   cancelWaitingRuns,
+  checkAiActions,
   checkAutomationTemplate,
   checkSendEmailImages,
   checkSendEmailSenders,
@@ -279,6 +282,9 @@ export function expectedVersionOf(
  */
 @Injectable()
 export class AutomationService {
+  /** AI settings of the organization: AI actions need AI and record data (T911). */
+  private readonly aiSettings: AiSettingsRepository;
+
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
@@ -294,7 +300,9 @@ export class AutomationService {
     @Inject(AppLogger) private readonly logger: AppLogger,
     /** Incoming webhooks a `webhook.received` trigger names (T604). */
     @Inject(IncomingWebhooksRepository) private readonly hooks: IncomingWebhooksRepository,
-  ) {}
+  ) {
+    this.aiSettings = new AiSettingsRepository(db);
+  }
 
   async list(
     principal: Principal,
@@ -689,6 +697,8 @@ export class AutomationService {
           ),
           // `{{ [@digest] }}` of a `send_email` body with a digest (T514).
           ...(input.digest ? { digest: true } : {}),
+          // `{{ [act_…] }}`: the text of an earlier `ai_generate_text` step (T911).
+          texts: new Set(input.text_steps),
         };
     const snapshot = automationSnapshot(
       context,
@@ -809,7 +819,8 @@ export class AutomationService {
    * `422`. `send_email` steps also need a usable sender identity (or the
    * system sender) and a footer the policies allow (T514, ADR-33);
    * `send_notification` steps, known users and groups (T515); `send_telegram`
-   * and `http_request` steps, secrets usable in the base (T516, T606).
+   * and `http_request` steps, secrets usable in the base (T516, T606); AI
+   * steps, AI and record data on (T911).
    * Also the check of an AI draft (T908): what `create` would accept.
    */
   async validate(
@@ -868,6 +879,8 @@ export class AutomationService {
         definition: checked,
       })),
     );
+    // AI actions (T911): AI available and allowed to see record values.
+    errors.push(...(await checkAiActions(this.aiSettings, base.org.scope, checked)));
     if (!result.ok || errors.length > 0) throw automationInvalid(errors);
     return { definition: result.definition, triggerTableId: result.triggerTableId };
   }
@@ -938,6 +951,8 @@ export class AutomationService {
       fields: rows.fields,
       access: base.access,
       lockedFieldIds: locked,
+      // AI action prompts read the same record only, like AI fields (T911).
+      aiCrossRecord: (fieldIds) => aiCrossRecordSources(fieldIds, rows),
     };
   }
 
