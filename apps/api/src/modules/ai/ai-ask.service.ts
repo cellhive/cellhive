@@ -1,7 +1,6 @@
 import {
   AI_ASK_NARRATIVE_MAX_OUTPUT_TOKENS,
   AI_ASK_PLAN_MAX_OUTPUT_TOKENS,
-  WIDGET_RETRY_AFTER_SECONDS,
   type AiAsk,
   type AiAskRequest,
   type Id,
@@ -37,7 +36,7 @@ import { recordAccessContextOf } from '../../common/access/record-access-context
 import { firstTimeZone, settingOf } from '../../common/access/time-zone.js';
 import { SchemaAccess } from '../../common/schema/schema-access.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
-import { WidgetQueryLimiter } from '../dashboard/widget-query-limiter.js';
+import { WidgetQueryLimiter, withRetryAfter } from '../dashboard/widget-query-limiter.js';
 
 import { AiAccess, type AiCall } from './ai-access.js';
 
@@ -148,7 +147,7 @@ export class AiAskService {
         const answer = await this.limiter
           .run(principal.userId, () => this.records.widgetData(scope, access, query, { timeZone }))
           .catch((error: unknown) => {
-            throw retryable(error);
+            throw withRetryAfter(error);
           });
         // Impossible with a right digest; never tells which field.
         if (answer.status === 'no_permission' || answer.status === 'broken') return UNANSWERABLE;
@@ -197,15 +196,4 @@ async function narrative(call: AiCall, question: string, result: string): Promis
     }
     throw error;
   }
-}
-
-/** A widget query timeout with `Retry-After`, as on dashboards (CONTRACTS §28.3). */
-function retryable(error: unknown): unknown {
-  if (!(error instanceof AppError) || error.code !== 'QUERY_TIMEOUT') return error;
-  if (error.retryAfterSeconds !== undefined) return error;
-  return new AppError('QUERY_TIMEOUT', {
-    detail: error.detail ?? 'The query took too long and was cancelled.',
-    retryAfterSeconds: WIDGET_RETRY_AFTER_SECONDS,
-    cause: error,
-  });
 }

@@ -122,6 +122,7 @@ export {
   type WidgetQuery,
 } from './dashboard-aggregate/widget-query.js';
 export {
+  groupLabelOf,
   planFieldsOf,
   widgetConfigOfPlan,
   type PlanByNameResult,

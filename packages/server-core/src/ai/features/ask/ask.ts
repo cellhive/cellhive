@@ -25,7 +25,7 @@ import {
   type WidgetFieldKind,
   type WidgetFieldMeta,
 } from '../../../dashboards/widget-config.js';
-import { planFieldsOf } from '../../../records/dashboard-aggregate/plan-by-name.js';
+import { groupLabelOf, planFieldsOf } from '../../../records/dashboard-aggregate/plan-by-name.js';
 import { UNTRUSTED_DATA_INSTRUCTIONS, untrustedBlock } from '../../untrusted.js';
 import {
   FORMULA_DIGEST_MAX_DESCRIPTION,
@@ -325,17 +325,6 @@ export function askInterpretation(plan: AskPlan, digest: AskDigest): AiAskInterp
 
 // --- Narrative -------------------------------------------------------------------------
 
-/** An id the narrative must never carry (`rec_…`, `usr_…`, `opt_…`). */
-const ID = /^[a-z]{3}_[0-9A-Za-z]{16}$/u;
-
-/** A group cell (`{ value, label }`) as the narrative reads it: the label, never an id. */
-function groupText(cell: unknown): unknown {
-  if (!isRecord(cell)) return cell;
-  const { value, label } = cell;
-  if (label !== null && label !== undefined) return label;
-  return typeof value === 'string' && ID.test(value) ? null : (value ?? null);
-}
-
 /**
  * The aggregated result the narrative call reads (BACKLOG T909): column
  * names, at most {@link AI_ASK_MAX_GROUPS} rows of labels and numbers,
@@ -356,7 +345,9 @@ export function askResultJson(interpretation: AiAskInterpretation, data: WidgetD
     rows
       .slice(0, AI_ASK_MAX_GROUPS)
       .map((row) =>
-        row.map((cell, index) => (data.columns[index]?.role === 'metric' ? cell : groupText(cell))),
+        row.map((cell, index) =>
+          data.columns[index]?.role === 'metric' ? cell : groupLabelOf(cell),
+        ),
       );
   return JSON.stringify({
     understood_as: {

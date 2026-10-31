@@ -2,7 +2,6 @@ import {
   filterControlWidgetConfigSchema,
   MAX_CONTROL_OPTIONS,
   UNKNOWN_WIDGET,
-  WIDGET_RETRY_AFTER_SECONDS,
   type Id,
   type WidgetDataDto,
   type WidgetDataRequest,
@@ -45,7 +44,7 @@ import {
   type LiveFilterTarget,
 } from './live-filter-plan.js';
 import { ValkeyWidgetCacheStore } from './widget-cache-store.js';
-import { WidgetQueryLimiter } from './widget-query-limiter.js';
+import { WidgetQueryLimiter, withRetryAfter } from './widget-query-limiter.js';
 
 import type { BaseAccess } from '../../common/access/access.service.js';
 import type { Principal } from '../../common/auth/principal.js';
@@ -214,7 +213,7 @@ export class DashboardDataService {
     } catch (error) {
       if (error instanceof AppError && error.code === 'QUERY_TIMEOUT') {
         status = 'timeout';
-        throw retryable(error);
+        throw withRetryAfter(error);
       }
       if (error instanceof AppError && error.status < 500) status = 'rejected';
       throw error;
@@ -297,8 +296,7 @@ export class DashboardDataService {
         ignored_filters: plan.report(result.ignored),
       };
     } catch (error) {
-      if (error instanceof AppError && error.code === 'QUERY_TIMEOUT') throw retryable(error);
-      throw error;
+      throw withRetryAfter(error);
     }
   }
 
@@ -353,8 +351,7 @@ export class DashboardDataService {
         ignored_filters: plan.report(result.ignored),
       };
     } catch (error) {
-      if (error instanceof AppError && error.code === 'QUERY_TIMEOUT') throw retryable(error);
-      throw error;
+      throw withRetryAfter(error);
     }
   }
 
@@ -394,14 +391,4 @@ export class DashboardDataService {
       this.config.defaults.timezone,
     );
   }
-}
-
-/** A widget query timeout with `Retry-After` (CONTRACTS §28.3). */
-function retryable(error: AppError): AppError {
-  if (error.retryAfterSeconds !== undefined) return error;
-  return new AppError('QUERY_TIMEOUT', {
-    detail: error.detail ?? 'The widget query took too long and was cancelled.',
-    retryAfterSeconds: WIDGET_RETRY_AFTER_SECONDS,
-    cause: error,
-  });
 }

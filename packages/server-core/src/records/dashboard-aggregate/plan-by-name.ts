@@ -95,6 +95,23 @@ export function planFieldsOf(
   });
 }
 
+/** An id a result read by a model never carries (`rec_…`, `usr_…`, `opt_…`). */
+const ID = /^[a-z]{3}_[0-9A-Za-z]{16}$/u;
+
+/**
+ * A group cell of widget data (`{ value, label }`) as a model reads it (AI
+ * narrative, MCP `aggregate_records`): the label (option or member name,
+ * record title), else the value (text, number, bucket start, checkbox) —
+ * never an id: a linked record the reader cannot read is `null`, like the
+ * empty group.
+ */
+export function groupLabelOf(cell: unknown): unknown {
+  if (!isRecord(cell)) return cell;
+  const { value, label } = cell;
+  if (label !== null && label !== undefined) return label;
+  return typeof value === 'string' && ID.test(value) ? null : (value ?? null);
+}
+
 export type PlanByNameResult =
   | { readonly ok: true; readonly type: AggregatePlanType; readonly config: WidgetConfig }
   | { readonly ok: false; readonly problems: readonly ProblemErrorItem[] };

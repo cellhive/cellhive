@@ -13,6 +13,22 @@ interface Waiter {
 }
 
 /**
+ * A widget query that ran too long (`statement_timeout`) as `504
+ * QUERY_TIMEOUT` with `Retry-After`, like one that waited too long in the
+ * line (CONTRACTS §28.3) — for every caller of the line: dashboards, AI
+ * Q&A, MCP `aggregate_records`. Other errors pass unchanged.
+ */
+export function withRetryAfter(error: unknown): unknown {
+  if (!(error instanceof AppError) || error.code !== 'QUERY_TIMEOUT') return error;
+  if (error.retryAfterSeconds !== undefined) return error;
+  return new AppError('QUERY_TIMEOUT', {
+    detail: error.detail ?? 'The widget query took too long and was cancelled.',
+    retryAfterSeconds: WIDGET_RETRY_AFTER_SECONDS,
+    cause: error,
+  });
+}
+
+/**
  * In-process line of widget queries (BACKLOG T806, CONTRACTS §28.7): at
  * most `perUser` running at once per user and `total` per api instance;
  * the others wait in arrival order (a waiter whose user is at their limit
