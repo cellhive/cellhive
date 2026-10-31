@@ -1,7 +1,9 @@
 name: Perf
 
 # Performance budgets of FRONTEND §11.1 (`@perf` Playwright specs on 200 000 seeded
-# rows) on the reference machine, a GitHub `ubuntu-latest` runner (BACKLOG T801).
+# rows) on a GitHub `ubuntu-latest` runner (BACKLOG T801). It asserts the `ci-runner`
+# profile of `apps/web/e2e/perf-results.ts` (regression bounds calibrated on this
+# runner, T900); the summary shows the `product` budgets next to them.
 # Nightly and on demand only: never on pull requests, so it does not gate a merge.
 on:
   schedule:
@@ -74,6 +76,7 @@ jobs:
       # Inputs go through env, never interpolated into the script.
       - name: Run @perf specs
         env:
+          PERF_PROFILE: ci-runner
           PERF_GREP: ${{ inputs.grep }}
           PERF_REPEAT: ${{ inputs.repeat }}
         run: |

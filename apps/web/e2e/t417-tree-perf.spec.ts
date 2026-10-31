@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 import { settleAfterBulkWrites } from './perf-db';
-import { recordPerf } from './perf-results';
+import { budgeted, expectBudgets, recordPerf } from './perf-results';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
 
@@ -10,13 +10,12 @@ import { apiSignIn, ok } from './support';
  * 10 levels: the first 50 000 records are roots, the others hang in chains
  * (level n+1 under level n), about 16 700 records per level. With a cold
  * cache the roots' first data < 1.5 s (FRONTEND §11.1) and opening a branch
- * shows its children < 300 ms. Tagged @perf: `pnpm test:e2e:perf` runs it.
+ * shows its children < 300 ms (product budgets; `PERF_BUDGETS` holds both
+ * profiles). Tagged @perf: `pnpm test:e2e:perf` runs it.
  */
 
 const FIRST_DATA_MARK = 'app:grid:first-data';
 const BRANCH_ROWS_MARK = 'app:tree:branch-rows';
-const FIRST_DATA_BUDGET_MS = 1_500;
-const EXPAND_BUDGET_MS = 300;
 const ROOTS = 50_000;
 const LEVELS = 10;
 const PAGE = 1_000;
@@ -35,6 +34,44 @@ async function signedInPage(browser: Browser): Promise<Page> {
   return page;
 }
 
+/** Adds the parent field and hangs the records in chains; returns the first root's id. */
+async function buildTree(page: Page, table: string): Promise<string> {
+  await ok(page, 'POST', `/tables/${table}/fields`, { name: 'Parent', type: 'parent' });
+  // Every record id in `__auto` order.
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const answer = await ok<{ records: { id: string }[] }>(
+      page,
+      'POST',
+      `/tables/${table}/records/query`,
+      { fields: [], offset, limit: PAGE, include_total: false },
+    );
+    ids.push(...answer.records.map((record) => record.id));
+    if (answer.records.length < PAGE) break;
+  }
+  const perLevel = Math.ceil((ids.length - ROOTS) / (LEVELS - 1));
+  const started = Date.now();
+  for (let start = ROOTS; start < ids.length; start += PAGE) {
+    const records = ids.slice(start, start + PAGE).map((id, index) => {
+      const at = start + index;
+      const parent = at - ROOTS < perLevel ? at - ROOTS : at - perLevel;
+      return { id, fields: {}, parent_id: ids[parent] };
+    });
+    await ok(page, 'PATCH', `/tables/${table}/records`, { records });
+  }
+  process.stdout.write(
+    `[perf] tree built: ${String(ids.length)} records, ${String(perLevel)} per level below the roots, ${String(Date.now() - started)} ms\n`,
+  );
+  // Setup, not a budget change (BACKLOG T818): the 150 PATCH batches above
+  // queue ~150 000 events.dispatch jobs; measure once the worker is done
+  // with them and the table is analyzed, as S4-review did by hand.
+  const settled = await settleAfterBulkWrites();
+  process.stdout.write(
+    `[perf] settled after the tree build: ${String(settled.jobs)} dispatch jobs drained in ${String(settled.drainedMs)} ms, VACUUM (ANALYZE) ${String(settled.vacuumMs)} ms\n`,
+  );
+  return ids[0] ?? '';
+}
+
 test.describe('T417 sub-record tree performance @perf', () => {
   test.beforeAll(async ({ browser }) => {
     test.setTimeout(3_600_000);
@@ -45,39 +82,19 @@ test.describe('T417 sub-record tree performance @perf', () => {
       throw new Error(`Unexpected seed output:\n${out}`);
     }
     const page = await signedInPage(browser);
-    await ok(page, 'POST', `/tables/${table}/fields`, { name: 'Parent', type: 'parent' });
-    // Every record id in `__auto` order.
-    const ids: string[] = [];
-    for (let offset = 0; ; offset += PAGE) {
-      const answer = await ok<{ records: { id: string }[] }>(
-        page,
-        'POST',
-        `/tables/${table}/records/query`,
-        { fields: [], offset, limit: PAGE, include_total: false },
-      );
-      ids.push(...answer.records.map((record) => record.id));
-      if (answer.records.length < PAGE) break;
-    }
-    const perLevel = Math.ceil((ids.length - ROOTS) / (LEVELS - 1));
-    const started = Date.now();
-    for (let start = ROOTS; start < ids.length; start += PAGE) {
-      const records = ids.slice(start, start + PAGE).map((id, index) => {
-        const at = start + index;
-        const parent = at - ROOTS < perLevel ? at - ROOTS : at - perLevel;
-        return { id, fields: {}, parent_id: ids[parent] };
-      });
-      await ok(page, 'PATCH', `/tables/${table}/records`, { records });
-    }
-    process.stdout.write(
-      `[perf] tree built: ${String(ids.length)} records, ${String(perLevel)} per level below the roots, ${String(Date.now() - started)} ms\n`,
-    );
-    // Setup, not a budget change (BACKLOG T818): the 150 PATCH batches above
-    // queue ~150 000 events.dispatch jobs; measure once the worker is done
-    // with them and the table is analyzed, as S4-review did by hand.
-    const settled = await settleAfterBulkWrites();
-    process.stdout.write(
-      `[perf] settled after the tree build: ${String(settled.jobs)} dispatch jobs drained in ${String(settled.drainedMs)} ms, VACUUM (ANALYZE) ${String(settled.vacuumMs)} ms\n`,
-    );
+    const fields = await ok<{ items: { type: string }[] }>(page, 'GET', `/tables/${table}/fields`);
+    // A later run of `--repeat-each` (perf.yml `repeat`) finds the tree the first one built:
+    // a table has one parent field.
+    const firstRoot = fields.items.some((field) => field.type === 'parent')
+      ? ((
+          await ok<{ records: { id: string }[] }>(page, 'POST', `/tables/${table}/records/query`, {
+            fields: [],
+            offset: 0,
+            limit: 1,
+            include_total: false,
+          })
+        ).records[0]?.id ?? '')
+      : await buildTree(page, table);
     // Server time of the two requests the grid waits for (roots, then a branch).
     const timed = async (body: Record<string, unknown>) => {
       const start = Date.now();
@@ -86,7 +103,7 @@ test.describe('T417 sub-record tree performance @perf', () => {
     };
     const rootsMs = await timed({ offset: 0, limit: 200 });
     const rootsWarmMs = await timed({ offset: 0, limit: 200 });
-    const branchMs = await timed({ parent_id: ids[0], offset: 0, limit: 200 });
+    const branchMs = await timed({ parent_id: firstRoot, offset: 0, limit: 200 });
     process.stdout.write(
       `[perf] records/tree roots: ${String(rootsMs)} ms (again: ${String(rootsWarmMs)} ms), branch: ${String(branchMs)} ms\n`,
     );
@@ -156,16 +173,12 @@ test.describe('T417 sub-record tree performance @perf', () => {
       type: 'tree',
       description: JSON.stringify({ firstData: Math.round(firstData), expand: Math.round(expand) }),
     });
-    await recordPerf(browser, {
-      'roots first data': {
-        value: Math.round(firstData),
-        unit: 'ms',
-        budget: FIRST_DATA_BUDGET_MS,
-      },
-      'branch opens': { value: Math.round(expand), unit: 'ms', budget: EXPAND_BUDGET_MS },
-    });
-    expect(firstData).toBeLessThan(FIRST_DATA_BUDGET_MS);
-    expect(expand).toBeLessThan(EXPAND_BUDGET_MS);
+    const metrics = {
+      'roots first data': budgeted('t417 roots first data', firstData),
+      'branch opens': budgeted('t417 branch opens', expand),
+    };
+    await recordPerf(browser, metrics);
+    expectBudgets(metrics);
     await page.context().close();
   });
 });

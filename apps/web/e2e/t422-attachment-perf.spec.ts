@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 import { pngBytes, uploadFile } from './attachments';
-import { frameMetrics, frameStats, recordPerf } from './perf-results';
+import { budgeted, expectBudgets, frameMetrics, frameStats, recordPerf } from './perf-results';
 import { settle, settleMetric, watchNetwork } from './perf-settle';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
@@ -12,6 +12,8 @@ import { apiSignIn, ok } from './support';
  * first 3 000 records hold 3 images each (thumbnails drawn lazily on the
  * canvas, T418/T407). First data < 1.5 s and, while scrolling through the
  * rows with images, frames > 32 ms < 5 % (FRONTEND §11.1), like T202.
+ * Product budgets; `PERF_BUDGETS` holds both profiles (the runner records
+ * this steady scroll's frames only).
  *
  * Frames are sampled only once the page has settled after its first data,
  * the first thumbnails included (`perf-settle.ts`: network quiet 500 ms,
@@ -20,9 +22,6 @@ import { apiSignIn, ok } from './support';
  * before that. The wait is the metric `settle before steady`.
  */
 const FIRST_DATA_MARK = 'app:grid:first-data';
-const FIRST_DATA_BUDGET_MS = 1_500;
-const LONG_FRAME_MS = 32;
-const LONG_FRAME_BUDGET = 0.05;
 const WITH_FILES = 3_000;
 const PAGE = 1_000;
 const ROW_HEIGHT = 34;
@@ -157,7 +156,7 @@ test.describe('T422 grid with link and attachment columns @perf', () => {
         }),
       [ROW_HEIGHT * 5, ROW_HEIGHT * (WITH_FILES - 30)] as const,
     );
-    const report = frameStats(deltas, LONG_FRAME_MS);
+    const report = frameStats(deltas);
     process.stdout.write(
       `[perf] files grid first data: ${firstData.toFixed(0)} ms, frames: ${JSON.stringify(report)}\n`,
     );
@@ -165,17 +164,16 @@ test.describe('T422 grid with link and attachment columns @perf', () => {
       type: 'files grid',
       description: JSON.stringify({ firstData: Math.round(firstData), ...report }),
     });
+    const metrics = {
+      'first data': budgeted('t422 first data', firstData),
+      ...frameMetrics(report),
+    };
     await recordPerf(
       browser,
-      {
-        'first data': { value: Math.round(firstData), unit: 'ms', budget: FIRST_DATA_BUDGET_MS },
-        ...frameMetrics(report),
-        ...settleMetric(settled),
-      },
+      { ...metrics, ...settleMetric(settled) },
       { ...report, settle: settled },
     );
-    expect(firstData).toBeLessThan(FIRST_DATA_BUDGET_MS);
-    expect(report.ratio).toBeLessThan(LONG_FRAME_BUDGET);
+    expectBudgets(metrics);
     await expect(page.getByRole('status').filter({ hasText: 'records' })).toBeVisible();
     await page.context().close();
   });

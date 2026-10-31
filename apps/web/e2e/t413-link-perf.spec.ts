@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 
-import { recordPerf } from './perf-results';
+import { budgeted, expectBudgets, recordPerf } from './perf-results';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
 
@@ -9,8 +9,8 @@ import { apiSignIn, ok } from './support';
  * table (200 000 records) a self-link field is added; the picker of a
  * cell shows its first candidates < 500 ms after Enter (the picker chunk
  * is preloaded with the grid, the first page is 50 candidates).
+ * `PERF_BUDGETS` holds the product and `ci-runner` budgets.
  */
-const PICKER_BUDGET_MS = 500;
 const HEADER_HEIGHT = 36;
 const ROW_HEIGHT = 34;
 
@@ -104,19 +104,16 @@ test.describe('T413 link picker performance @perf', () => {
       `[perf] link-candidates request: ${(timing.responseEnd - timing.requestStart).toFixed(0)} ms\n`,
     );
     process.stdout.write(`[perf] link picker first candidates: ${elapsed.toFixed(0)} ms\n`);
-    await recordPerf(browser, {
-      'picker first candidates': {
-        value: Math.round(elapsed),
-        unit: 'ms',
-        budget: PICKER_BUDGET_MS,
-      },
+    const metrics = {
+      'picker first candidates': budgeted('t413 picker first candidates', elapsed),
       'link-candidates request': {
         value: Math.round(timing.responseEnd - timing.requestStart),
-        unit: 'ms',
+        unit: 'ms' as const,
       },
-    });
+    };
+    await recordPerf(browser, metrics);
     test.info().annotations.push({ type: 'picker (ms)', description: elapsed.toFixed(0) });
-    expect(elapsed).toBeLessThan(PICKER_BUDGET_MS);
+    expectBudgets(metrics);
     await context.close();
   });
 });

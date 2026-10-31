@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
-import { frameMetrics, frameStats, recordPerf } from './perf-results';
+import { budgeted, expectBudgets, frameMetrics, frameStats, recordPerf } from './perf-results';
 import { settle, settleMetric, watchNetwork } from './perf-settle';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
@@ -11,7 +11,9 @@ import { apiSignIn, ok } from './support';
  * stored formula and a virtual one (`TODAY()`):
  * - saving the stored formula shows the backfill progress on its header,
  *   then the cells get their values;
- * - first data of the grid < 1.5 s (cold cache), frames > 32 ms < 5 %.
+ * - first data of the grid < 1.5 s (cold cache), frames > 32 ms < 5 %
+ *   (product budgets; `PERF_BUDGETS` holds both profiles, the runner records
+ *   this steady scroll's frames only).
  *
  * Frames are sampled only once the page has settled after its first data and the move to
  * the computed columns
@@ -21,7 +23,6 @@ import { apiSignIn, ok } from './support';
  */
 
 const FIRST_DATA_MARK = 'app:grid:first-data';
-const LONG_FRAME_MS = 32;
 const RUN = String(Date.now()).slice(-6);
 const STORED = `Gấp đôi ${RUN}`;
 const VIRTUAL = `Quá hạn ${RUN}`;
@@ -143,10 +144,9 @@ test.describe('T468 computed columns @perf', () => {
       FIRST_DATA_MARK,
     );
     process.stdout.write(`[perf] first data with computed: ${firstData.toFixed(0)} ms\n`);
-    await recordPerf(browser, {
-      'first data': { value: Math.round(firstData), unit: 'ms', budget: 1_500 },
-    });
-    expect(firstData).toBeLessThan(1_500);
+    const first = { 'first data': budgeted('t468 first data', firstData) };
+    await recordPerf(browser, first);
+    expectBudgets(first);
     // Scroll right to the computed columns, then down ~10 000 rows, 20 rows a frame.
     await revealColumn(page, VIRTUAL);
     const settled = await settle(page, 'computed');
@@ -174,17 +174,17 @@ test.describe('T468 computed columns @perf', () => {
         }),
       [34 * 20, 34 * 10_000] as const,
     );
-    const report = frameStats(deltas, LONG_FRAME_MS);
-    const long = report.ratio;
+    const report = frameStats(deltas);
+    const frames = frameMetrics(report);
     await recordPerf(
       browser,
-      { ...frameMetrics(report), ...settleMetric(settled) },
+      { ...frames, ...settleMetric(settled) },
       { ...report, settle: settled },
     );
     process.stdout.write(
-      `[perf] frames: ${String(deltas.length)}, > 32 ms: ${(long * 100).toFixed(1)} %\n`,
+      `[perf] frames: ${String(deltas.length)}, > 32 ms: ${(report.ratio * 100).toFixed(1)} %\n`,
     );
-    expect(long).toBeLessThan(0.05);
+    expectBudgets(frames);
     await page.context().close();
   });
 });

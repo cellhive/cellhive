@@ -1,19 +1,20 @@
 import { expect, test } from '@playwright/test';
 
 import { settleAfterBulkWrites } from './perf-db';
-import { recordPerf } from './perf-results';
+import { budgeted, expectBudgets, recordPerf } from './perf-results';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
 
 /**
  * T818 performance budget on `seed:bench` (200 000 records): a dashboard of
  * five data widgets (KPI, stacked bar, weekly line, pie, top-10 table) shows
- * every widget's data within 2 s on a cold widget cache (Mốc S7, S§22; the
- * reference machine is the nightly `perf` job, T801). Tagged @perf:
- * `pnpm test:e2e:perf` runs it.
+ * every widget's data within 2 s on a cold widget cache (Mốc S7, S§22: the
+ * product budget; the nightly `perf` job asserts the `ci-runner` one, both in
+ * `PERF_BUDGETS`). Tagged @perf: `pnpm test:e2e:perf` runs it; alone, with
+ * `--grep T818` (`perf.yml` input `grep`), it has no CPU contention left over
+ * from the earlier specs.
  */
 
-const BUDGET_MS = 2_000;
 const WIDGETS = 5;
 
 let dashboardPath = '';
@@ -167,20 +168,17 @@ test.describe('T818 dashboard performance @perf', () => {
     process.stdout.write(
       `[perf] dashboard 5 widgets: all data shown ${measured.ready.toFixed(0)} ms, last response ${measured.lastResponse.toFixed(0)} ms, requests ${sortedRequests.join('/')} ms, cache ${cache.join(',')}\n`,
     );
-    await recordPerf(
-      browser,
-      {
-        'dashboard data': { value: Math.round(measured.ready), unit: 'ms', budget: BUDGET_MS },
-        'slowest widget request': {
-          value: sortedRequests[sortedRequests.length - 1] ?? -1,
-          unit: 'ms',
-        },
+    const metrics = {
+      'dashboard data': budgeted('t818 dashboard data', measured.ready),
+      'slowest widget request': {
+        value: sortedRequests[sortedRequests.length - 1] ?? -1,
+        unit: 'ms' as const,
       },
-      { requests: sortedRequests, cache },
-    );
+    };
+    await recordPerf(browser, metrics, { requests: sortedRequests, cache });
     expect(measured.requests.length).toBe(WIDGETS);
     expect(cache.every((value) => value === 'miss')).toBe(true);
-    expect(measured.ready).toBeLessThan(BUDGET_MS);
+    expectBudgets(metrics);
     await context.close();
   });
 });

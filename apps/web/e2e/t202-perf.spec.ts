@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
-import { frameMetrics, recordPerf } from './perf-results';
+import { budgeted, expectBudgets, frameStats, phaseFrameMetrics, recordPerf } from './perf-results';
 import { settle, settleMetric, watchNetwork } from './perf-settle';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn } from './support';
@@ -14,6 +14,9 @@ import { apiSignIn } from './support';
  * - scrolling from the first to the last row does not hang
  * - frames longer than 32 ms < 5 %
  *
+ * (product budgets; `PERF_BUDGETS` in `perf-results.ts` holds them and the
+ * `ci-runner` ones `perf.yml` asserts.)
+ *
  * Frames are sampled only once the page has settled after its first data
  * (`perf-settle.ts`: network quiet 500 ms, fonts, one idle callback, 10
  * animation frames without a long animation frame); the first data is still
@@ -21,33 +24,6 @@ import { apiSignIn } from './support';
  */
 
 const FIRST_DATA_MARK = 'app:grid:first-data';
-const FIRST_DATA_BUDGET_MS = 1_500;
-const LONG_FRAME_MS = 32;
-const LONG_FRAME_BUDGET = 0.05;
-
-interface FrameStats {
-  frames: number;
-  long: number;
-  ratio: number;
-  p50: number;
-  p95: number;
-  max: number;
-}
-
-function stats(deltas: readonly number[]): FrameStats {
-  const sorted = [...deltas].sort((a, b) => a - b);
-  const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0;
-  const long = deltas.filter((delta) => delta > LONG_FRAME_MS).length;
-  return {
-    frames: deltas.length,
-    long,
-    ratio: long / Math.max(1, deltas.length),
-    p50: Math.round(at(0.5) * 10) / 10,
-    p95: Math.round(at(0.95) * 10) / 10,
-    max: Math.round((sorted[sorted.length - 1] ?? 0) * 10) / 10,
-  };
-}
-
 let gridPath = '';
 
 async function signedInPage(browser: Browser): Promise<Page> {
@@ -125,10 +101,9 @@ test.describe('T202 grid performance @perf', () => {
     );
     test.info().annotations.push({ type: 'first data (ms)', description: firstData.toFixed(0) });
     process.stdout.write(`[perf] first data: ${firstData.toFixed(0)} ms\n`);
-    await recordPerf(browser, {
-      'first data': { value: Math.round(firstData), unit: 'ms', budget: FIRST_DATA_BUDGET_MS },
-    });
-    expect(firstData).toBeLessThan(FIRST_DATA_BUDGET_MS);
+    const metrics = { 'first data': budgeted('t202 first data', firstData) };
+    await recordPerf(browser, metrics);
+    expectBudgets(metrics);
     // Above 100 000 rows the API sends `total_estimate` (CONTRACTS §1.1).
     await expect(page.getByRole('status').filter({ hasText: 'records' })).toHaveText(
       /^About [\d,]+ records$/u,
@@ -160,12 +135,18 @@ test.describe('T202 grid performance @perf', () => {
     const back = await scrollByFrames(page, rowHeight * 5, height - rowHeight * 2_000);
 
     const all = [...steady, ...jump, ...back];
-    const report = { steady: stats(steady), jump: stats(jump), back: stats(back), all: stats(all) };
+    const report = {
+      steady: frameStats(steady),
+      jump: frameStats(jump),
+      back: frameStats(back),
+      all: frameStats(all),
+    };
     test.info().annotations.push({ type: 'frames', description: JSON.stringify(report) });
     process.stdout.write(`[perf] frames: ${JSON.stringify(report)}\n`);
+    const frames = phaseFrameMetrics(report);
     await recordPerf(
       browser,
-      { ...frameMetrics(report.all), ...settleMetric(settled) },
+      { ...frames, ...settleMetric(settled) },
       { ...report, settle: settled },
     );
 
@@ -188,7 +169,7 @@ test.describe('T202 grid performance @perf', () => {
     const lastRow = page.locator('table[role="grid"] tr[aria-rowindex="200001"] td').first();
     await expect(lastRow).not.toHaveText('', { timeout: 15_000 });
 
-    expect(report.all.ratio).toBeLessThan(LONG_FRAME_BUDGET);
+    expectBudgets(frames);
     await page.context().close();
   });
 });

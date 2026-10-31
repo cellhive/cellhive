@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
-import { frameMetrics, recordPerf } from './perf-results';
+import { budgeted, expectBudgets, frameStats, phaseFrameMetrics, recordPerf } from './perf-results';
 import { settle, settleMetric, watchNetwork } from './perf-settle';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
@@ -9,8 +9,9 @@ import { apiSignIn, ok } from './support';
  * T312 performance budget (FRONTEND §11.1) on `seed:bench` (200 000
  * records): a grid view grouped by "Trạng thái" then "Khu vực" (two levels,
  * virtual headers) — first data < 1.5 s with a cold cache, and scrolling
- * the whole table with frames > 32 ms < 5 % (the T202 harness). Tagged
- * @perf: `pnpm test:e2e:perf` runs it.
+ * the whole table with frames > 32 ms < 5 % (the T202 harness; product
+ * budgets, `PERF_BUDGETS` holds both profiles). Tagged @perf:
+ * `pnpm test:e2e:perf` runs it.
  *
  * Frames are sampled only once the page has settled after its first data
  * (`perf-settle.ts`: network quiet 500 ms, fonts, one idle callback, 10
@@ -19,24 +20,6 @@ import { apiSignIn, ok } from './support';
  */
 
 const FIRST_DATA_MARK = 'app:grid:first-data';
-const FIRST_DATA_BUDGET_MS = 1_500;
-const LONG_FRAME_MS = 32;
-const LONG_FRAME_BUDGET = 0.05;
-
-function stats(deltas: readonly number[]) {
-  const sorted = [...deltas].sort((a, b) => a - b);
-  const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0;
-  const long = deltas.filter((delta) => delta > LONG_FRAME_MS).length;
-  return {
-    frames: deltas.length,
-    long,
-    ratio: long / Math.max(1, deltas.length),
-    p50: Math.round(at(0.5) * 10) / 10,
-    p95: Math.round(at(0.95) * 10) / 10,
-    max: Math.round((sorted[sorted.length - 1] ?? 0) * 10) / 10,
-  };
-}
-
 let gridPath = '';
 
 async function signedInPage(browser: Browser): Promise<Page> {
@@ -145,16 +128,21 @@ test.describe('T312 grouped grid performance @perf', () => {
     const jump = await scrollByFrames(page, Math.ceil(height / 300), height);
     const back = await scrollByFrames(page, rowHeight * 5, height - rowHeight * 2_000);
     const all = [...steady, ...jump, ...back];
-    const report = { steady: stats(steady), jump: stats(jump), back: stats(back), all: stats(all) };
+    const report = {
+      steady: frameStats(steady),
+      jump: frameStats(jump),
+      back: frameStats(back),
+      all: frameStats(all),
+    };
     test.info().annotations.push({ type: 'frames', description: JSON.stringify(report) });
     process.stdout.write(`[perf] grouped frames: ${JSON.stringify(report)}\n`);
+    const metrics = {
+      'first data': budgeted('t312 first data', firstData),
+      ...phaseFrameMetrics(report),
+    };
     await recordPerf(
       browser,
-      {
-        'first data': { value: Math.round(firstData), unit: 'ms', budget: FIRST_DATA_BUDGET_MS },
-        ...frameMetrics(report.all),
-        ...settleMetric(settled),
-      },
+      { ...metrics, ...settleMetric(settled) },
       { ...report, settle: settled },
     );
 
@@ -176,8 +164,7 @@ test.describe('T312 grouped grid performance @perf', () => {
       .first();
     await expect(lastRow).not.toHaveText('', { timeout: 15_000 });
 
-    expect(firstData).toBeLessThan(FIRST_DATA_BUDGET_MS);
-    expect(report.all.ratio).toBeLessThan(LONG_FRAME_BUDGET);
+    expectBudgets(metrics);
     await page.context().close();
   });
 });

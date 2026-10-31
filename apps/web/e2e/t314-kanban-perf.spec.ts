@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { recordPerf } from './perf-results';
+import { budgeted, expectBudgets, recordPerf } from './perf-results';
 import { BENCH_EMAIL, BENCH_PASSWORD, runSeed } from './seed';
 import { apiSignIn, ok } from './support';
 
@@ -8,11 +8,11 @@ import { apiSignIn, ok } from './support';
  * T314 performance budget on `seed:bench` (200 000 records): a kanban view
  * grouped by "Trạng thái" shows its first cards within 1.5 s (cold cache)
  * and loads only the first page of each column (FRONTEND §11.1: never
- * every record). Tagged @perf: `pnpm test:e2e:perf` runs it.
+ * every record; `PERF_BUDGETS` holds the product and `ci-runner` budgets).
+ * Tagged @perf: `pnpm test:e2e:perf` runs it.
  */
 
 const FIRST_CARDS_MARK = 'app:kanban:first-cards';
-const FIRST_CARDS_BUDGET_MS = 1_500;
 
 let boardPath = '';
 
@@ -74,10 +74,9 @@ test.describe('T314 kanban performance @perf', () => {
     );
     test.info().annotations.push({ type: 'first cards (ms)', description: firstCards.toFixed(0) });
     process.stdout.write(`[perf] kanban first cards: ${firstCards.toFixed(0)} ms\n`);
-    await recordPerf(browser, {
-      'first cards': { value: Math.round(firstCards), unit: 'ms', budget: FIRST_CARDS_BUDGET_MS },
-    });
-    expect(firstCards).toBeLessThan(FIRST_CARDS_BUDGET_MS);
+    const metrics = { 'first cards': budgeted('t314 first cards', firstCards) };
+    await recordPerf(browser, metrics);
+    expectBudgets(metrics);
     await page.waitForLoadState('networkidle');
     expect(offsets.length).toBeGreaterThan(0);
     expect(offsets.every((offset) => offset === 0)).toBe(true);

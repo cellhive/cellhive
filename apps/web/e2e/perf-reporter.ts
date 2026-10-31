@@ -4,7 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 
-import { PERF_ATTACHMENT, type PerfAttachment, type PerfMetric } from './perf-results';
+import {
+  PERF_ATTACHMENT,
+  PERF_PROFILE,
+  withinBudget,
+  type PerfAttachment,
+  type PerfMetric,
+  type PerfProfile,
+} from './perf-results';
 
 import type {
   FullConfig,
@@ -19,7 +26,8 @@ import type {
  * the `@perf` specs record (`perf-results.ts`) and the machine they ran on to
  * `perf-results.json` (`E2E_PERF_RESULTS` overrides the path, relative to
  * `apps/web`), and appends a Markdown table to `$GITHUB_STEP_SUMMARY` when
- * set (the nightly `perf` workflow).
+ * set (the nightly `perf` workflow), with the bounds of both budget profiles
+ * (`ci-runner`, `product`; the active one is asserted and decides the bold).
  */
 
 interface PerfTestResult {
@@ -93,6 +101,7 @@ export default class PerfReporter implements Reporter {
       started_at: this.startedAt.toISOString(),
       duration_ms: Math.round(result.duration),
       commit: process.env['GITHUB_SHA'] ?? null,
+      profile: PERF_PROFILE,
       machine,
       repeat: Math.max(1, ...this.tests.map((test) => test.repeat_index + 1)),
       tests: this.tests,
@@ -182,9 +191,20 @@ interface Machine extends CpuInfo {
   runner_image: string | null;
 }
 
+const PROFILES: readonly PerfProfile[] = ['ci-runner', 'product'];
+
+/** `< 1500 ms` / `≤ 1750 ms` / `record only` (FRONTEND §11.1). */
+function bound(metric: PerfMetric, profile: PerfProfile): string {
+  const value = metric.budgets?.[profile];
+  if (value === undefined) return '';
+  if (value === null) return 'record only';
+  return `${profile === 'product' ? '<' : '≤'} ${String(value)} ${metric.unit}`;
+}
+
 function markdown(report: {
   status: string;
   commit: string | null;
+  profile: PerfProfile;
   machine: Machine;
   repeat: number;
   tests: readonly PerfTestResult[];
@@ -193,29 +213,32 @@ function markdown(report: {
   const cores = m.cpu_cores === null ? '?' : String(m.cpu_cores);
   const runs = report.repeat > 1;
   const lines = [
-    `## Perf (\`@perf\`, FRONTEND §11.1): ${report.status}`,
+    `## Perf (\`@perf\`, FRONTEND §11.1): ${report.status} · profile \`${report.profile}\``,
     '',
     `**CPU: ${m.cpu_family ?? 'unknown family'}** — ${m.cpu_model ?? '?'} · ${cores} cores / ${String(m.cpu_threads)} threads (${String(m.cpus)} usable)`,
     '',
     `Commit \`${report.commit ?? 'local'}\` · ${String(m.memory_gb)} GB RAM · ${m.platform} ${m.arch} · ${m.runner_image ?? 'no runner image'} · Chromium ${m.browser ?? '?'}${runs ? ` · ${String(report.repeat)} runs per test` : ''}`,
     '',
-    `| Spec | Test |${runs ? ' Run |' : ''} Metric | Value | Budget | Test status |`,
-    `|---|---|${runs ? '---:|' : ''}---|---:|---:|---|`,
+    `Bold: over the asserted \`${report.profile}\` budget. Runner bounds are regression gates of this 2-core runner; product bounds are the user-facing targets.`,
+    '',
+    `| Spec | Test |${runs ? ' Run |' : ''} Metric | Value | ${PROFILES.map((profile) => `Budget \`${profile}\`${profile === report.profile ? ' (asserted)' : ''}`).join(' | ')} | Test status |`,
+    `|---|---|${runs ? '---:|' : ''}---|---:|---:|---:|---|`,
   ];
   for (const test of report.tests) {
     const entries = Object.entries(test.metrics);
     const status = test.retry === 0 ? test.status : `${test.status} (retry ${String(test.retry)})`;
     const run = runs ? ` ${String(test.repeat_index + 1)} |` : '';
     if (entries.length === 0) {
-      lines.push(`| ${test.file} | ${test.title} |${run} — | — | — | ${status} |`);
+      lines.push(`| ${test.file} | ${test.title} |${run} — | — | — | — | ${status} |`);
       continue;
     }
     for (const [name, metric] of entries) {
-      const over = metric.budget !== undefined && metric.value >= metric.budget;
+      const over =
+        metric.budget !== undefined && !withinBudget(metric.value, metric.budget, report.profile);
       const value = `${String(metric.value)} ${metric.unit}`;
-      const budget = metric.budget === undefined ? '' : `< ${String(metric.budget)} ${metric.unit}`;
+      const budgets = PROFILES.map((profile) => bound(metric, profile)).join(' | ');
       lines.push(
-        `| ${test.file} | ${test.title} |${run} ${name} | ${over ? `**${value}**` : value} | ${budget} | ${status} |`,
+        `| ${test.file} | ${test.title} |${run} ${name} | ${over ? `**${value}**` : value} | ${budgets} | ${status} |`,
       );
     }
   }
