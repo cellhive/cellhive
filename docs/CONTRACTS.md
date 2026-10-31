@@ -2909,7 +2909,7 @@ Zod: `packages/contracts/src/automation-actions/ai.ts` (`aiGenerateTextActionSch
 
 ## 30. Server MCP (S8, ADR-40)
 
-Server MCP (Model Context Protocol) tích hợp trong API cho client của người dùng (Claude Code, Cursor, VS Code…). Zod: `packages/contracts/src/mcp.ts`; server: `apps/api/src/modules/mcp/**` (SDK `@modelcontextprotocol/server` v2, ADR-40 §7); OpenAPI: một operation `mcp` (tag `mcp`) — danh sách tool nằm ở `tools/list`, không ở OpenAPI. T920 viết §30.1 và §30.6; tool đọc/tổng hợp/ghi ở §30.2–§30.5 (T921–T923); `docs/integrations/` là T924.
+Server MCP (Model Context Protocol) tích hợp trong API cho client của người dùng (Claude Code, Cursor, VS Code…). Zod: `packages/contracts/src/mcp.ts`; server: `apps/api/src/modules/mcp/**` (SDK `@modelcontextprotocol/server` v2, ADR-40 §7); OpenAPI: một operation `mcp` (tag `mcp`) — danh sách tool nằm ở `tools/list`, không ở OpenAPI. T920 viết §30.1 và §30.6; tool đọc/tổng hợp/ghi ở §30.2–§30.5 (T921–T923). Hướng dẫn người dùng: `docs/integrations/mcp.md`; UI (công tắc, preset, hộp kết nối): F§15.6 (T924).
 
 ### 30.1 Endpoint, xác thực, thời kỳ, `settings.mcp` (T920)
 

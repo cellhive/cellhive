@@ -8,6 +8,8 @@ This guide is for scripts, back-end services and integrations (n8n, CI jobs, cro
 - **Dashboards**: reading dashboards and the numbers of their widgets (§11).
 - **What others see**: how changes made with a token appear in record history and the audit log.
 
+To connect an AI client (Claude Code, Cursor, VS Code…) with a token instead of calling the API yourself, see [mcp.md](mcp.md).
+
 The normative formats are in `docs/CONTRACTS.md` §1.1, §6, §7, §26 and §28. The architecture is in ADR-36 (and ADR-38 for dashboards). Building, reading and sharing dashboards in the app is described in [dashboards.md](dashboards.md). If this guide and those documents disagree, the contracts win. Please report the mismatch.
 
 ## Contents
@@ -46,6 +48,10 @@ A token belongs to **one member of one organization**. It acts as that member: i
      | Read and write data | `records:read`, `records:write`, `schema:read` |
      | Manage structure | `records:read`, `schema:read`, `schema:write` |
      | Automation | `records:read`, `schema:read`, `automations:read`, `automations:write` |
+     | MCP — read only (while the organization allows MCP) | `records:read`, `schema:read` |
+     | MCP — read & write (while MCP may also write) | `records:read`, `records:write`, `schema:read` |
+
+     The MCP presets also show how to connect an AI client once the token is created ([mcp.md](mcp.md) §2).
 
    - **Bases**: all bases you can open, or only the bases you pick (up to 50).
    - **Expiration**: 7, 30, **90 (default)** or 365 days, a custom date (at most 3,650 days away), or "No expiration" when the organization allows it (§12).
@@ -597,6 +603,8 @@ Organization owners and admins find the **All tokens** and **Policy** tabs on th
   - `max_lifetime_days` (default `null` = no limit, 1–3,650). New tokens must then have an expiry within that many days (`422 VALIDATION_FAILED` / `TOKEN_LIFETIME_EXCEEDED`, `params.max_lifetime_days`), and "No expiration" is not offered. Existing tokens keep their expiry.
 
 Recommended for most organizations: keep tokens on, set `max_lifetime_days` (for example 365), and review **All tokens** for unused tokens (`last_used_at`).
+
+The same tab holds the **MCP clients** switches (`organizations.settings.mcp`, off by default): whether members may connect AI clients with their tokens, and whether those clients may create and update records. See [mcp.md](mcp.md) §1.
 
 ---
 
