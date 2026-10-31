@@ -24,6 +24,11 @@ export interface GridToolbarProps {
   readonly children?: ReactNode;
   /** The view's search box (T311), right-aligned before the record actions. */
   readonly search?: ReactNode;
+  /**
+   * (T914) After the "⋯" menu: "Ask AI" — outside the controls that scroll
+   * on phones, left of where its panel opens on wide screens.
+   */
+  readonly assist?: ReactNode;
   /** Before the view controls: undo / redo (icon-only; from 768 px, else in the menu). */
   readonly leading?: ReactNode;
   /**
@@ -57,6 +62,7 @@ export function GridToolbar({
   densityLocked,
   children,
   search,
+  assist,
   leading,
   selection,
   primary,
@@ -119,6 +125,7 @@ export function GridToolbar({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {assist === undefined ? null : <div className="flex shrink-0 items-center">{assist}</div>}
       {selection === undefined || selection === null ? null : (
         <div className="flex shrink-0 items-center gap-1">{selection}</div>
       )}

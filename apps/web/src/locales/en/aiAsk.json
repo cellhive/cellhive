@@ -1,0 +1,107 @@
+{
+  "title": "Ask AI",
+  "subtitle": "About {{table}}",
+  "close": "Close Ask AI",
+  "intro": "Ask a question about the records of {{table}}: the answer is a number, a chart or a table, computed from the records you can see.",
+  "privacy": {
+    "namesOnly": "The AI reads the names of the fields you can see, never their values. Cellhive computes the numbers.",
+    "withData": "The AI reads the names of the fields you can see, and the totals of an answer to write a short summary. Cellhive computes the numbers."
+  },
+  "suggestions": {
+    "label": "Try asking",
+    "sumByMonth": "Total {{number}} by month",
+    "countBy": "How many {{table}} per {{field}}?",
+    "topBy": "Which {{field}} has the highest total {{number}}?",
+    "countByMonth": "How many {{table}} per month?",
+    "total": "Total {{number}}",
+    "count": "How many {{table}} are there?"
+  },
+  "history": "Questions and answers",
+  "youAsked": "You asked:",
+  "untitled": "Answer",
+  "interpretation": "Interpretation",
+  "narrative": "AI summary of the numbers above",
+  "edit": "Edit question",
+  "retry": "Try again",
+  "metrics": {
+    "count": "Count of records",
+    "count_distinct": "Distinct values of {{field}}",
+    "sum": "Sum of {{field}}",
+    "avg": "Average of {{field}}",
+    "min": "Lowest {{field}}",
+    "max": "Highest {{field}}"
+  },
+  "dimension": {
+    "plain": "By {{field}}",
+    "bucket": "By {{field}}, per {{bucket}}"
+  },
+  "series": {
+    "plain": "Split by {{field}}",
+    "bucket": "Split by {{field}}, per {{bucket}}"
+  },
+  "buckets": {
+    "day": "day",
+    "week": "week",
+    "month": "month",
+    "quarter": "quarter",
+    "year": "year"
+  },
+  "compare": {
+    "day": "Compared with the previous day",
+    "week": "Compared with the previous week",
+    "month": "Compared with the previous month",
+    "quarter": "Compared with the previous quarter",
+    "year": "Compared with the previous year"
+  },
+  "anyOf": "Any of these filters:",
+  "operators": {
+    "==": "{{field}} is {{value}}",
+    "!=": "{{field}} is not {{value}}",
+    ">": "{{field}} > {{value}}",
+    ">=": "{{field}} ≥ {{value}}",
+    "<": "{{field}} < {{value}}",
+    "<=": "{{field}} ≤ {{value}}",
+    "intersectsList": "{{field}} is any of {{value}}",
+    "intersectsText": "{{field}} contains {{value}}",
+    "disjointList": "{{field}} is none of {{value}}",
+    "disjointText": "{{field}} does not contain {{value}}",
+    "empty": "{{field}} is empty",
+    "non_empty": "{{field}} is not empty"
+  },
+  "values": {
+    "today": "today",
+    "yesterday": "yesterday",
+    "tomorrow": "tomorrow",
+    "me": "me",
+    "checked": "checked",
+    "unchecked": "not checked"
+  },
+  "unanswerable": {
+    "title": "Couldn't answer this yet",
+    "detail": "Try asking another way: say what to count or add up, and how to group it."
+  },
+  "waiting": {
+    "text": "Understanding the question…",
+    "later": "Computing the numbers, and fixing how the question was read if needed…",
+    "laterWithData": "Computing the numbers, then writing a short summary…",
+    "hint": "AI can take up to 90 seconds to answer."
+  },
+  "announce": {
+    "answer": "Answer: {{title}}"
+  },
+  "composer": {
+    "label": "Your question",
+    "placeholder": "Ask about this table…",
+    "send": "Ask",
+    "keys": "Enter asks · Shift+Enter for a new line",
+    "count": "{{count, number}} / {{limit}}"
+  },
+  "errors": {
+    "AI_QUOTA_EXCEEDED": "Your organization has used up today's AI quota.",
+    "AI_TIMEOUT": "The AI took longer than 90 seconds. Try again, or ask a simpler question.",
+    "AI_NOT_CONFIGURED": "AI is turned off or not set up for this organization. An organization admin can set it up in Organization settings › AI.",
+    "AI_INVALID_OUTPUT": "The AI could not turn this question into numbers in 3 tries. Rephrase it, or name the fields to use.",
+    "QUERY_TIMEOUT": "The numbers took too long to compute. Try again, or narrow the question with a filter.",
+    "WIDGET_TOO_LARGE": "The answer has too many groups ({{groups, number}}; at most {{limit, number}}). Ask for a coarser grouping, or add a filter."
+  }
+}

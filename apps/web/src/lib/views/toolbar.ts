@@ -1,3 +1,4 @@
+import type { AskAiEntryProps } from '../ai/ask';
 import type { SummaryBarProps } from './summary/types';
 import type { ViewConfigState } from './use-view-config';
 import type { FieldDto, ViewDto } from '@cellhive/contracts';
@@ -73,4 +74,9 @@ export interface ViewToolbarComponents {
   readonly SummaryBar?: ComponentType<SummaryBarProps>;
   readonly Controls: ComponentType<ViewToolbarProps>;
   readonly Search: ComponentType<ViewSearchProps>;
+  /**
+   * (T914) "Ask AI" of the table, before the search box: renders nothing
+   * while AI is not available in the organization; its panel is lazy.
+   */
+  readonly AskAi?: ComponentType<AskAiEntryProps>;
 }

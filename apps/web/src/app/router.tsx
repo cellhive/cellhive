@@ -6,6 +6,7 @@ import { createGuards } from './guards';
 import { HydrateFallback, PageLoading, RootLayout } from './layouts/RootLayout';
 import { NotFoundPage } from './NotFoundPage';
 
+import type { AskAiEntryProps, AskAiPanelProps } from '../lib/ai/ask';
 import type { LinkComponents } from '../lib/links/picker';
 import type { RecordDetailComponents } from '../lib/records/detail';
 import type { FieldToolsProps } from '../lib/schema/field-tools';
@@ -54,6 +55,18 @@ const FormulaField = lazy(() => import('../features/formula/components/FormulaFi
  */
 const FormulaPopover = lazy(() => import('../features/formula/components/FormulaPopover'));
 
+/**
+ * "Ask AI" of a table (T914, FRONTEND §20): the panel (`features/ai-ask`) is
+ * a chunk loaded when it first opens; it draws answers with the dashboard's
+ * widget renderer (`features/dashboard`), another lazy chunk — ECharts only
+ * comes with the first chart. The button lives in the view toolbar's chunk.
+ */
+const AskAiPanelChunk = lazy(() => import('../features/ai-ask/AskAiPanel'));
+const AskAnswerWidget = lazy(() => import('../features/dashboard/widgets/AnswerWidget'));
+function AskAiPanel(props: AskAiPanelProps) {
+  return <AskAiPanelChunk {...props} Answer={AskAnswerWidget} />;
+}
+
 /** The board of kanban views (T314): its own chunk, loaded when a kanban view opens. */
 const KanbanPage = lazy(() => import('../features/kanban/components/KanbanPage'));
 
@@ -78,7 +91,7 @@ const loadTableViewRoute = async () => {
     { TableViewPage },
     { GridPage },
     { FieldTools },
-    { ViewToolbar, ViewSearch },
+    { ViewToolbar, ViewSearch, AskAiButton },
     { SummaryBar },
     { RecordFilterEditor },
     { LookupConditionEditor },
@@ -104,7 +117,8 @@ const loadTableViewRoute = async () => {
     import('../features/export/components/ExportMenu'),
     import('../features/import/components/ImportMenu'),
   ]);
-  const viewToolbar = { Controls: ViewToolbar, Search: ViewSearch, SummaryBar };
+  const AskAi = (props: AskAiEntryProps) => <AskAiButton {...props} Panel={AskAiPanel} />;
+  const viewToolbar = { Controls: ViewToolbar, Search: ViewSearch, SummaryBar, AskAi };
   const LookupEditor = (props: LookupFieldEditorProps) => (
     <LookupFieldEditor {...props} WhereEditor={LookupConditionEditor} />
   );

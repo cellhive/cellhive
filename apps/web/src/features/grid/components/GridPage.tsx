@@ -1081,6 +1081,15 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
             />
           )
         }
+        assist={
+          ViewToolbar?.AskAi === undefined ? undefined : (
+            <ViewToolbar.AskAi
+              table={table}
+              fields={fieldList.items}
+              orgId={base.organization_id}
+            />
+          )
+        }
         leading={
           <UndoRedoButtons
             editable={undoable}

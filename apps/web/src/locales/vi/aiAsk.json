@@ -1,0 +1,107 @@
+{
+  "title": "Hỏi AI",
+  "subtitle": "Về {{table}}",
+  "close": "Đóng Hỏi AI",
+  "intro": "Đặt câu hỏi về các bản ghi của {{table}}: câu trả lời là một con số, biểu đồ hoặc bảng, tính từ các bản ghi bạn xem được.",
+  "privacy": {
+    "namesOnly": "AI đọc tên các trường bạn xem được, không bao giờ đọc giá trị. Cellhive tự tính các con số.",
+    "withData": "AI đọc tên các trường bạn xem được, và số tổng hợp của câu trả lời để viết một đoạn tóm tắt ngắn. Cellhive tự tính các con số."
+  },
+  "suggestions": {
+    "label": "Thử hỏi",
+    "sumByMonth": "Tổng {{number}} theo tháng",
+    "countBy": "Có bao nhiêu {{table}} theo từng {{field}}?",
+    "topBy": "{{field}} nào có tổng {{number}} cao nhất?",
+    "countByMonth": "Có bao nhiêu {{table}} mỗi tháng?",
+    "total": "Tổng {{number}}",
+    "count": "Có bao nhiêu {{table}}?"
+  },
+  "history": "Câu hỏi và câu trả lời",
+  "youAsked": "Bạn hỏi:",
+  "untitled": "Câu trả lời",
+  "interpretation": "Cách hiểu",
+  "narrative": "AI tóm tắt từ các số ở trên",
+  "edit": "Sửa câu hỏi",
+  "retry": "Thử lại",
+  "metrics": {
+    "count": "Số bản ghi",
+    "count_distinct": "Số giá trị khác nhau của {{field}}",
+    "sum": "Tổng {{field}}",
+    "avg": "Trung bình {{field}}",
+    "min": "{{field}} nhỏ nhất",
+    "max": "{{field}} lớn nhất"
+  },
+  "dimension": {
+    "plain": "Theo {{field}}",
+    "bucket": "Theo {{field}}, từng {{bucket}}"
+  },
+  "series": {
+    "plain": "Tách theo {{field}}",
+    "bucket": "Tách theo {{field}}, từng {{bucket}}"
+  },
+  "buckets": {
+    "day": "ngày",
+    "week": "tuần",
+    "month": "tháng",
+    "quarter": "quý",
+    "year": "năm"
+  },
+  "compare": {
+    "day": "So với ngày trước",
+    "week": "So với tuần trước",
+    "month": "So với tháng trước",
+    "quarter": "So với quý trước",
+    "year": "So với năm trước"
+  },
+  "anyOf": "Một trong các điều kiện:",
+  "operators": {
+    "==": "{{field}} là {{value}}",
+    "!=": "{{field}} không là {{value}}",
+    ">": "{{field}} > {{value}}",
+    ">=": "{{field}} ≥ {{value}}",
+    "<": "{{field}} < {{value}}",
+    "<=": "{{field}} ≤ {{value}}",
+    "intersectsList": "{{field}} là một trong {{value}}",
+    "intersectsText": "{{field}} chứa {{value}}",
+    "disjointList": "{{field}} không là cái nào trong {{value}}",
+    "disjointText": "{{field}} không chứa {{value}}",
+    "empty": "{{field}} trống",
+    "non_empty": "{{field}} không trống"
+  },
+  "values": {
+    "today": "hôm nay",
+    "yesterday": "hôm qua",
+    "tomorrow": "ngày mai",
+    "me": "tôi",
+    "checked": "đã đánh dấu",
+    "unchecked": "chưa đánh dấu"
+  },
+  "unanswerable": {
+    "title": "Chưa trả lời được",
+    "detail": "Thử hỏi theo cách khác: nêu cần đếm hay cộng gì, và nhóm theo gì."
+  },
+  "waiting": {
+    "text": "Đang hiểu câu hỏi…",
+    "later": "Đang tính số liệu, và sửa cách hiểu câu hỏi nếu cần…",
+    "laterWithData": "Đang tính số liệu, rồi viết đoạn tóm tắt ngắn…",
+    "hint": "AI có thể cần tới 90 giây để trả lời."
+  },
+  "announce": {
+    "answer": "Câu trả lời: {{title}}"
+  },
+  "composer": {
+    "label": "Câu hỏi của bạn",
+    "placeholder": "Hỏi về bảng này…",
+    "send": "Hỏi",
+    "keys": "Enter để hỏi · Shift+Enter để xuống dòng",
+    "count": "{{count, number}} / {{limit}}"
+  },
+  "errors": {
+    "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay.",
+    "AI_TIMEOUT": "AI trả lời quá 90 giây. Hãy thử lại, hoặc hỏi một câu đơn giản hơn.",
+    "AI_NOT_CONFIGURED": "AI đang tắt hoặc chưa được cài đặt cho tổ chức này. Quản trị viên tổ chức có thể cài đặt ở Cài đặt tổ chức › AI.",
+    "AI_INVALID_OUTPUT": "AI không chuyển được câu hỏi này thành số liệu sau 3 lần thử. Hãy hỏi theo cách khác, hoặc nêu tên các trường cần dùng.",
+    "QUERY_TIMEOUT": "Tính số liệu mất quá nhiều thời gian. Hãy thử lại, hoặc thu hẹp câu hỏi bằng một điều kiện lọc.",
+    "WIDGET_TOO_LARGE": "Câu trả lời có quá nhiều nhóm ({{groups, number}}; tối đa {{limit, number}}). Hãy nhóm thô hơn, hoặc thêm điều kiện lọc."
+  }
+}

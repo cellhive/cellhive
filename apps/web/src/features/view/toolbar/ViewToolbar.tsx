@@ -18,6 +18,7 @@ import { TOOLBAR_LABEL } from '../../../lib/views/toolbar';
 import { ToolbarPopover } from '../../../lib/views/ToolbarPopover';
 import { ColorRulesButton } from '../color-rules/ColorRulesButton';
 
+import { AskAiButton } from './AskAiButton';
 import {
   checkFilter,
   filterableFields,
@@ -271,5 +272,5 @@ export function ViewToolbar(props: ViewToolbarProps) {
   );
 }
 
-export { ViewSearch };
+export { AskAiButton, ViewSearch };
 export default ViewToolbar;

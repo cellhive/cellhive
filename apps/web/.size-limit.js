@@ -169,6 +169,9 @@ const ROUTE_BUDGETS = [
   // PDF viewer of the lightbox (T407): PDF.js (~130 KB gzip), loaded only when a PDF is opened;
   // its worker is a separate asset fetched by PDF.js itself.
   { prefixes: ['src/features/attachment/components/PdfViewer'], limit: '200 KB' },
+  // "Ask AI" panel (T914): a lazy chunk loaded when the panel first opens, the default 150 KB,
+  // named explicitly (BACKLOG S8); with the answer renderer it loads, checked below.
+  { prefixes: ['src/features/ai-ask/'], limit: '150 KB' },
   // Formula editor (T466): the CodeMirror dialog with the formula engine it shares with the
   // formula part of the field dialog; the CodeMirror part alone is checked below (120 KB).
   { prefixes: ['src/features/formula/components/FormulaEditorDialog'], limit: '185 KB' },
@@ -255,6 +258,31 @@ checks.push({
     (file) => !initial.has(file) && !dashboardView.has(file),
   ),
   limit: '40 KB',
+  gzip: true,
+});
+
+/**
+ * "Ask AI" of a table (T914, FRONTEND §20): what opening the panel from a
+ * grid downloads — the panel (`features/ai-ask`) and the dashboard's widget
+ * renderer that draws its answers — without what the grid route already
+ * loaded and without the ECharts chunk shared with dashboards (it comes with
+ * the first chart, measured above). 150 KB (BACKLOG S8, research §5).
+ */
+const gridRoute = new Set(
+  closure([
+    'src/features/view/components/TableViewPage.tsx',
+    'src/features/grid/components/GridPage.tsx',
+    'src/features/view/toolbar/ViewToolbar.tsx',
+  ]),
+);
+const echarts = new Set(closure(['src/features/dashboard/charts/EChart.tsx']));
+checks.push({
+  name: 'Ask AI panel with its answer renderer (opened from a grid, without ECharts)',
+  path: closure([
+    'src/features/ai-ask/AskAiPanel.tsx',
+    'src/features/dashboard/widgets/AnswerWidget.tsx',
+  ]).filter((file) => !initial.has(file) && !gridRoute.has(file) && !echarts.has(file)),
+  limit: '150 KB',
   gzip: true,
 });
 
