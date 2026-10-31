@@ -425,6 +425,54 @@ describe('AI automation draft API (T908)', () => {
     expect(JSON.stringify(chats()[0]?.body)).not.toContain(botId);
   });
 
+  it('offers the AI actions only with record data on (T911); the draft is saved checked', async () => {
+    expect(JSON.stringify(chats())).toBe('[]');
+    fake.script(answer());
+    expect((await ask('u_admin')).statusCode).toBe(200);
+    expect(JSON.stringify(chats()[0]?.body?.['response_format'])).not.toContain('ai_classify');
+    const on = await fx.call('owner', 'PUT', `/orgs/${fx.orgId}/ai-settings`, {
+      allow_record_data: true,
+      confirm: true,
+    });
+    expect(on.statusCode, on.body).toBe(200);
+    try {
+      fake.requests.length = 0;
+      fake.script(
+        answer({
+          actions: [
+            {
+              ...ACTION,
+              type: 'ai_classify',
+              prompt: 'Phân loại {{ [Tiêu đề] }}',
+              target_field: 'Trạng thái',
+            },
+          ],
+        }),
+      );
+      const response = await ask('u_admin');
+      expect(response.statusCode, response.body).toBe(200);
+      expect(JSON.stringify(chats()[0]?.body?.['response_format'])).toContain('ai_classify');
+      expect(response.json()).toMatchObject({
+        definition: {
+          actions: [
+            {
+              type: 'ai_classify',
+              config: {
+                input: `Phân loại {{ [${fx.fld['ticketTitle']?.id ?? ''}] }}`,
+                target_field_id: fx.fld['ticketStatus']?.id,
+              },
+            },
+          ],
+        },
+      });
+    } finally {
+      const off = await fx.call('owner', 'PUT', `/orgs/${fx.orgId}/ai-settings`, {
+        allow_record_data: false,
+      });
+      expect(off.statusCode, off.body).toBe(200);
+    }
+  });
+
   it('gives up after 2 repair rounds: 422 AI_INVALID_OUTPUT with attempts 3', async () => {
     const wrong = answer({ actions: [{ ...NOTIFY, title: null }] });
     fake.script(wrong, wrong, wrong);

@@ -86,15 +86,19 @@ export class AiAutomationService {
     );
     const bots = await this.secrets.listUsableInBase(scope, base.base.id, 'telegram_bot');
     const organization = await this.organizations.findById(base.org.organizationId);
-    const digest = automationDraftDigest({
-      context,
-      views: views.flat(),
-      bots,
-      // The system sender: a draft never picks a sender identity (the builder can).
-      email:
-        this.config.mail !== null && orgEmailSettingsOf(organization?.settings).systemSenderEnabled,
-      currentTableId: body.table_id,
-    });
+    const digestOf = (recordData: boolean) =>
+      automationDraftDigest({
+        context,
+        views: views.flat(),
+        bots,
+        // The system sender: a draft never picks a sender identity (the builder can).
+        email:
+          this.config.mail !== null &&
+          orgEmailSettingsOf(organization?.settings).systemSenderEnabled,
+        currentTableId: body.table_id,
+        recordData,
+      });
+    let digest = digestOf(false);
 
     const check = async (
       draft: AutomationDraft,
@@ -138,6 +142,8 @@ export class AiAutomationService {
         meta,
       },
       async (call) => {
+        // The AI actions only when the organization lets AI see record values (T911).
+        digest = digestOf(call.allowRecordData);
         const result = await call.llm.completeStructured(
           {
             organizationId: call.organizationId,

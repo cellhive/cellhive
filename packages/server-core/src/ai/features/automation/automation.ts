@@ -20,6 +20,7 @@ import { normalizeTuple, TUPLE_OPERATORS, type FilterNode } from '@cellhive/filt
 import { isViewVisible } from '@cellhive/permissions';
 import { z } from 'zod';
 
+import { isMultipleSelect } from '../../../automation/definition/validate.js';
 import { canManageAutomation } from '../../../automation/permissions/manage.js';
 import { checkAutomationTemplate } from '../../../automation/values/check.js';
 import { previousSourceOf, TRIGGER_REFERENCES } from '../../../automation/values/references.js';
@@ -64,7 +65,8 @@ export type AutomationDraftTriggerType = (typeof AUTOMATION_DRAFT_TRIGGER_TYPES)
 
 /**
  * Actions a draft may use: never `http_request`, `run_n8n_workflow`,
- * `update_records`, `delete_record`, `find_records`, `if` (Quyết định S8 #7).
+ * `update_records`, `delete_record`, `find_records`, `if` (Quyết định S8 #7);
+ * the AI actions only when the organization lets AI see record values (T911).
  */
 export const AUTOMATION_DRAFT_ACTION_TYPES = [
   'send_notification',
@@ -73,6 +75,8 @@ export const AUTOMATION_DRAFT_ACTION_TYPES = [
   'update_record',
   'create_record',
   'delay',
+  'ai_generate_text',
+  'ai_classify',
 ] as const;
 export type AutomationDraftActionType = (typeof AUTOMATION_DRAFT_ACTION_TYPES)[number];
 
@@ -103,6 +107,8 @@ export interface AutomationDraftSources {
   readonly email: boolean;
   /** The table the builder was opened from (managed by the caller), else `null`. */
   readonly currentTableId: Id<'tbl'> | null;
+  /** `allow_record_data` of the organization: the AI actions may be drafted (T911). */
+  readonly recordData?: boolean;
 }
 
 interface DigestField {
@@ -132,6 +138,8 @@ export interface AutomationDraftDigest {
   /** Base admin: may draft a `schedule` (no trigger table, ADR-25). */
   readonly admin: boolean;
   readonly currentTable: string | null;
+  /** AI actions may be drafted (`allow_record_data`, T911). */
+  readonly recordData: boolean;
 }
 
 const USER_TYPES: ReadonlySet<string> = new Set(['user', 'created_by', 'updated_by']);
@@ -231,6 +239,7 @@ export function automationDraftDigest(sources: AutomationDraftSources): Automati
     email: sources.email,
     admin: context.access.is_admin,
     currentTable: tables.find((table) => table.id === sources.currentTableId)?.name ?? null,
+    recordData: sources.recordData === true,
   };
 }
 
@@ -272,6 +281,12 @@ function namesOf(digest: AutomationDraftDigest) {
     forms: enumOf(digest.tables.flatMap((table) => table.forms.map((form) => form.name))),
     bots: enumOf(digest.bots.map((bot) => bot.name)),
     hasUserField: fields.some((field) => field.user),
+    // Single selects an `ai_classify` may write (T911).
+    selects: enumOf(
+      fields
+        .filter((field) => field.meta.type === 'select' && !isMultipleSelect(field.meta))
+        .map((field) => field.meta.name),
+    ),
   };
 }
 
@@ -296,6 +311,8 @@ export function automationDraftTypes(digest: AutomationDraftDigest): {
     update_record: names.fields !== null,
     create_record: names.fields !== null,
     delay: true,
+    ai_generate_text: digest.recordData && names.fields !== null,
+    ai_classify: digest.recordData && names.selects !== null,
   };
   return {
     triggers: AUTOMATION_DRAFT_TRIGGER_TYPES.filter((type) => trigger[type]),
@@ -375,6 +392,13 @@ export function automationDraftSchema(digest: AutomationDraftDigest): z.ZodType<
           chat_id: z.string().trim().nullable(),
           chat_field: orNull(names.fields),
           minutes: z.int().min(MIN_DELAY_MINUTES).max(MAX_DELAY_MINUTES).nullable(),
+          // The AI actions' keys only when they may be drafted (T911).
+          ...(types.actions.some((type) => type.startsWith('ai_'))
+            ? {
+                prompt: z.string().nullable().optional(),
+                target_field: orNull(names.fields).optional(),
+              }
+            : {}),
         }),
       )
       .max(AI_AUTOMATION_MAX_ACTIONS),
@@ -419,6 +443,9 @@ export interface AutomationDraft {
     readonly chat_id: string | null;
     readonly chat_field: string | null;
     readonly minutes: number | null;
+    /** AI actions (T911): the request to the model, and the field written. */
+    readonly prompt?: string | null;
+    readonly target_field?: string | null;
   }[];
   readonly explanation: string;
   readonly warnings: readonly {
@@ -462,6 +489,15 @@ const ACTION_HELP: Record<AutomationDraftActionType, string> = {
   update_record: '- update_record: sets `fields` of the trigger record.',
   create_record: '- create_record: adds a record to `table` with `fields`.',
   delay: '- delay: waits `minutes` (1 to 43200) before the next action.',
+  ai_generate_text:
+    '- ai_generate_text: the AI writes a text from `prompt` (the request, with values of the ' +
+    'trigger record as {{ [Field name] }}); `target_field` is a text field of the trigger ' +
+    'record that receives it, or null. Later actions insert the text as {{ [act_N] }}, N being ' +
+    'the position of this action (1 for the first).',
+  ai_classify:
+    '- ai_classify: the AI picks the option of `target_field` (a single select field of the ' +
+    'trigger record) that fits the record described by `prompt` (with {{ [Field name] }}) ' +
+    'and sets it.',
 };
 
 /**
@@ -661,6 +697,12 @@ export function compileAutomationDraft(
   const snapshot = automationSnapshot(digest.context, rowTable?.id ?? null, null, {
     trigger: TRIGGER_REFERENCES[type],
     steps: new Map(),
+    // `{{ [act_N] }}`: the text of an `ai_generate_text` action (order checked when saved).
+    texts: new Set(
+      draft.actions.flatMap((action, index) =>
+        action.type === 'ai_generate_text' ? [`act_${String(index + 1)}`] : [],
+      ),
+    ),
     ...previousSourceOf(type, rowTable?.id ?? null),
   });
   const template = (source: string, path: string): string => {
@@ -791,6 +833,30 @@ export function compileAutomationDraft(
       case 'delay':
         if (action.minutes === null) problem(`${at}.minutes`, 'REQUIRED', 'Give the minutes');
         return { id, type: action.type, config: { minutes: action.minutes } };
+      case 'ai_generate_text':
+      case 'ai_classify': {
+        // The AI rules (same record only, target kind) are the save check's.
+        const prompt = required(action.prompt ?? null, `${at}.prompt`, 'Write the request');
+        const target =
+          action.target_field === null || action.target_field === undefined
+            ? undefined
+            : fieldOf(rowTable, action.target_field, `${at}.target_field`);
+        if (action.type === 'ai_generate_text') {
+          return {
+            id,
+            type: action.type,
+            config: { prompt, target_field_id: target?.meta.id ?? null },
+          };
+        }
+        if (action.target_field === null || action.target_field === undefined) {
+          problem(`${at}.target_field`, 'REQUIRED', 'Name the select field to set');
+        }
+        return {
+          id,
+          type: action.type,
+          config: { input: prompt, target_field_id: target?.meta.id ?? '' },
+        };
+      }
     }
   });
 

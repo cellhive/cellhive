@@ -700,3 +700,84 @@ describe('automation draft compilation (T908)', () => {
     ]);
   });
 });
+
+describe('AI actions in a draft (T911, T908 hand-off)', () => {
+  it('are offered only when the organization lets AI see record values', () => {
+    expect(automationDraftTypes(digestOf()).actions).not.toContain('ai_classify');
+    const on = automationDraftTypes(digestOf({ recordData: true })).actions;
+    expect(on).toEqual(expect.arrayContaining(['ai_generate_text', 'ai_classify']));
+    // Off: the AI keys are not even in the answer format.
+    const shape = JSON.stringify(llmJsonSchema(automationDraftSchema(digestOf())));
+    expect(shape).not.toContain('target_field');
+    expect(
+      JSON.stringify(llmJsonSchema(automationDraftSchema(digestOf({ recordData: true })))),
+    ).toContain('target_field');
+  });
+
+  it('compiles ai_classify, ai_generate_text and a later {{ [act_N] }} to what the save check accepts', () => {
+    const digest = digestOf({ recordData: true });
+    const definition = compiled(
+      draft({
+        trigger: { ...TRIGGER, type: 'record.created' },
+        actions: [
+          {
+            ...ACTION,
+            type: 'ai_classify',
+            prompt: 'Mức độ của: {{ [Tiêu đề] }}',
+            target_field: 'Trạng thái',
+          },
+          {
+            ...ACTION,
+            type: 'ai_generate_text',
+            prompt: 'Tóm tắt {{ [Tiêu đề] }}',
+            target_field: null,
+          },
+          {
+            ...ACTION,
+            type: 'send_notification',
+            recipients: ['Phụ trách'],
+            title: 'Tóm tắt: {{ [act_2] }}',
+          },
+        ],
+      }),
+      digest,
+    );
+    expect(definition.actions.slice(0, 2)).toEqual([
+      {
+        id: 'act_1',
+        type: 'ai_classify',
+        config: {
+          input: `Mức độ của: {{ [${F.title}] }}`,
+          instructions: null,
+          target_field_id: F.status,
+        },
+      },
+      {
+        id: 'act_2',
+        type: 'ai_generate_text',
+        config: {
+          prompt: `Tóm tắt {{ [${F.title}] }}`,
+          instructions: null,
+          max_output_tokens: 300,
+          target_field_id: null,
+        },
+      },
+    ]);
+    const notify = definition.actions[2];
+    expect(notify?.type === 'send_notification' && notify.config.title.template).toBe(
+      'Tóm tắt: {{ [act_2] }}',
+    );
+  });
+
+  it('asks for the request and the select field', () => {
+    expect(
+      problemsOf(
+        draft({ actions: [{ ...ACTION, type: 'ai_classify', prompt: null, target_field: null }] }),
+        digestOf({ recordData: true }),
+      ).map(({ path, code }) => ({ path, code })),
+    ).toEqual([
+      { path: 'actions[0].prompt', code: 'REQUIRED' },
+      { path: 'actions[0].target_field', code: 'REQUIRED' },
+    ]);
+  });
+});
