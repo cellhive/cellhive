@@ -188,12 +188,23 @@ describe('automationScope', () => {
           type: 'create_record',
           config: { table_id: ORDERS, fields: {} },
         },
+        {
+          id: 'act_6',
+          type: 'ai_classify',
+          config: { input: 'x', target_field_id: 'fld_Priority00000001' },
+        },
+        { id: 'act_7', type: 'ai_generate_text', config: { prompt: 'x' } },
       ],
     });
     expect(automationScope(definition)).toEqual({
       reads: [TICKETS, ORDERS],
       writes: [
-        { tableId: TICKETS, fields: ['fld_Status0000000001'], add: false, delete: true },
+        {
+          tableId: TICKETS,
+          fields: ['fld_Status0000000001', 'fld_Priority00000001'],
+          add: false,
+          delete: true,
+        },
         { tableId: ORDERS, fields: [], add: true, delete: false },
       ],
     });

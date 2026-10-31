@@ -67,6 +67,15 @@ export function automationScope(definition: AutomationDefinition): AutomationSco
           break;
         case 'delay':
           break;
+        // T911: the AI steps write their target field of the trigger record.
+        case 'ai_generate_text':
+          if (action.config.target_field_id !== null) {
+            write(trigger, [action.config.target_field_id]);
+          }
+          break;
+        case 'ai_classify':
+          write(trigger, [action.config.target_field_id]);
+          break;
       }
     }
   };

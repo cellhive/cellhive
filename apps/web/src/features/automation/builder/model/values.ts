@@ -186,6 +186,11 @@ export function stepPathsOf(type: string): readonly string[] {
       return ['id'];
     case 'find_records':
       return ['records[0].id', 'count'];
+    // T911 (CONTRACTS §29.6).
+    case 'ai_generate_text':
+      return ['text'];
+    case 'ai_classify':
+      return ['option_id', 'option_name'];
     default:
       return [];
   }
