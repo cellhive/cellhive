@@ -108,7 +108,9 @@
     "send_notification": "Send notification",
     "send_telegram": "Send Telegram message",
     "http_request": "Send HTTP request",
-    "run_n8n_workflow": "Run n8n workflow"
+    "run_n8n_workflow": "Run n8n workflow",
+    "ai_generate_text": "Generate text with AI",
+    "ai_classify": "Classify with AI"
   },
   "trigger": {
     "type": "Starts when",

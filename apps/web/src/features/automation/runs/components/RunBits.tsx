@@ -199,6 +199,13 @@ export function runErrorText(
     }
     case 'http_status':
       return t('automationRuns:error.http_status', { status: textParam(p, 'status') ?? '?' });
+    case 'ai_unavailable':
+      // T911: AI off, or the organization keeps record values from AI.
+      return t(
+        textParam(p, 'reason') === 'record_data_disabled'
+          ? 'automationRuns:error.ai_unavailable_record_data_disabled'
+          : 'automationRuns:error.ai_unavailable',
+      );
     case 'batch_fanout_exceeded':
       return t('automationRuns:error.batch_fanout_exceeded', {
         limit: format.number(Number(textParam(p, 'limit') ?? 0)),

@@ -105,7 +105,9 @@
     "send_notification": "Gửi thông báo",
     "send_telegram": "Gửi Telegram",
     "http_request": "Gửi yêu cầu HTTP",
-    "run_n8n_workflow": "Chạy workflow n8n"
+    "run_n8n_workflow": "Chạy workflow n8n",
+    "ai_generate_text": "Tạo văn bản bằng AI",
+    "ai_classify": "Phân loại bằng AI"
   },
   "trigger": {
     "type": "Bắt đầu khi",

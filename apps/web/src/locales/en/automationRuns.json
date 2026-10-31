@@ -181,7 +181,12 @@
     "cancelled_by_user": "Cancelled by a person.",
     "cancelled_by_user_named": "Cancelled by {{name}}.",
     "secret_host_not_allowed": "The URL of this HTTP step is not an allowed host of its secret (a plain http URL needs an entry with its port): nothing was sent. Add the host to the secret in the organization settings if it is the real receiver.",
-    "secret_host_not_allowed_legacy_expired": "The secret of this HTTP step was created before allowed hosts existed and its transition period is over: set its allowed hosts in the organization settings."
+    "secret_host_not_allowed_legacy_expired": "The secret of this HTTP step was created before allowed hosts existed and its transition period is over: set its allowed hosts in the organization settings.",
+    "ai_unavailable": "AI is turned off or not set up for the organization.",
+    "ai_unavailable_record_data_disabled": "The organization does not let AI see record values.",
+    "ai_quota_exceeded": "The AI quota of the organization for today was used up; the step was not retried.",
+    "ai_invalid_output": "The AI did not give a valid answer; the field was not changed.",
+    "ai_provider_error": "The AI provider refused the request."
   },
   "cause": {
     "database_busy": "the database was busy",

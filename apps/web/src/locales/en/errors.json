@@ -349,6 +349,8 @@
     "AI_PROVIDER_ERROR_truncated": "The answer of the model was cut off at its length limit.",
     "AI_INVALID_OUTPUT": "The answer was still not valid after {{attempts}} tries.",
     "AI_QUOTA_EXCEEDED": "The AI quota of the organization for today is used up. It resets at midnight in the organization time zone.",
+    "AI_NOT_CONFIGURED": "AI is not set up or is turned off for this organization.",
+    "AI_RECORD_DATA_DISABLED": "This organization does not let AI see record values.",
     "RECORD_DATA_NOT_CONFIRMED": "Confirm that record values may be sent to the AI provider."
   },
   "retryAfter_one": "Try again in {{count, number}} second.",

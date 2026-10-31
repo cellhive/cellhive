@@ -15,14 +15,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { conditionSlot } from '../../model/check';
-import {
-  asFieldId,
-  asTableId,
-  earlierActions,
-  isUnset,
-  NO_TABLE,
-  type MenuActionType,
-} from '../../model/draft';
+import { asFieldId, asTableId, earlierActions, isUnset, NO_TABLE } from '../../model/draft';
 import { issuesOf, type BuilderIssue, type StepKey } from '../../model/issues';
 import { useBuilderEnv, useFields } from '../env';
 import { FieldMapEditor } from '../values/FieldMapEditor';
@@ -682,7 +675,7 @@ function ConditionIssues({ step, path }: { readonly step: StepKey; readonly path
  * and `delay` until T506, the send steps until T514–T516 (editors T522). It
  * stays in the flow (the server keeps it) and can be removed.
  */
-export function ComingSoonPanel({ type }: { readonly type: MenuActionType }) {
+export function ComingSoonPanel({ type }: { readonly type: AutomationAction['type'] }) {
   const { t } = useTranslation('automationBuilder');
   return (
     <Note

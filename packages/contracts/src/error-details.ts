@@ -299,6 +299,10 @@ export const AUTOMATION_DETAIL_CODES = [
   // literal URL that can never be called (`params.reason` like `ssrf_blocked`).
   'HEADER_NOT_ALLOWED',
   'INVALID_URL',
+  // AI actions (T911, CONTRACTS §29.6): AI is off or not set up, or the
+  // organization does not let AI see record values (path `…actions[i].type`).
+  'AI_NOT_CONFIGURED',
+  'AI_RECORD_DATA_DISABLED',
 ] as const;
 
 /**

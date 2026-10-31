@@ -91,12 +91,17 @@ export const ACTION_MENU = [
 export type MenuActionType = (typeof ACTION_MENU)[number];
 
 /**
- * Types whose step cannot be added yet, and the task that brings it (none
- * left: `send_email`/`send_notification` came with T522, `send_telegram`
- * with T516, `http_request`/`run_n8n_workflow` with T613). The server answers `unsupported_action` for a type without a
- * handler, so the builder does not offer them.
+ * Types whose step cannot be edited yet, and the task that brings their
+ * editor: the AI steps (T911) until T915 — kept, shown and removable when a
+ * draft or a saved automation has them, never offered in the menu (an AI
+ * entry point only renders with AI available). The menu types all have
+ * editors (`send_email`/`send_notification` T522, `send_telegram` T516,
+ * `http_request`/`run_n8n_workflow` T613).
  */
-export const COMING_SOON: Readonly<Partial<Record<MenuActionType, string>>> = {};
+export const COMING_SOON: Readonly<Partial<Record<AutomationAction['type'], string>>> = {
+  ai_generate_text: 'T915',
+  ai_classify: 'T915',
+};
 
 export function isAddable(type: MenuActionType): type is AddableActionType {
   return COMING_SOON[type] === undefined;

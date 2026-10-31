@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { aiClassifyActionSchema, aiGenerateTextActionSchema } from './automation-actions/ai.js';
 import { delayActionSchema } from './automation-actions/delay.js';
 import { httpRequestActionSchema } from './automation-actions/http-request.js';
 import { ifActionSchemaOf } from './automation-actions/if.js';
@@ -54,6 +55,7 @@ export * from './automation-actions/send-notification.js';
 export * from './automation-actions/send-telegram.js';
 export * from './automation-actions/http-request.js';
 export * from './automation-actions/run-n8n-workflow.js';
+export * from './automation-actions/ai.js';
 
 /**
  * Automations (SPEC §11, CONTRACTS §21; BACKLOG T502): the definition
@@ -113,6 +115,8 @@ export const automationBranchActionSchema = z
     sendTelegramActionSchema,
     httpRequestActionSchema,
     runN8nWorkflowActionSchema,
+    aiGenerateTextActionSchema,
+    aiClassifyActionSchema,
   ])
   .meta({ id: 'AutomationBranchAction', description: 'An action other than `if`' });
 export type AutomationBranchAction = z.infer<typeof automationBranchActionSchema>;
@@ -133,13 +137,15 @@ export const automationActionSchema = z
     sendTelegramActionSchema,
     httpRequestActionSchema,
     runN8nWorkflowActionSchema,
+    aiGenerateTextActionSchema,
+    aiClassifyActionSchema,
     ifActionSchema,
   ])
   .meta({ id: 'AutomationAction', description: 'One step of the run (SPEC §11.5)' });
 export type AutomationAction = z.infer<typeof automationActionSchema>;
 export type AutomationActionType = AutomationAction['type'];
 
-/** Action types (SPEC §11.5; `send_email` T514, `send_notification` T515, `send_telegram` T516, `http_request` T606, `run_n8n_workflow` T607). */
+/** Action types (SPEC §11.5; `send_email` T514, `send_notification` T515, `send_telegram` T516, `http_request` T606, `run_n8n_workflow` T607, `ai_generate_text`/`ai_classify` T911). */
 export const AUTOMATION_ACTION_TYPES = [
   'create_record',
   'update_record',
@@ -152,6 +158,8 @@ export const AUTOMATION_ACTION_TYPES = [
   'send_telegram',
   'http_request',
   'run_n8n_workflow',
+  'ai_generate_text',
+  'ai_classify',
   'if',
 ] as const satisfies readonly AutomationActionType[];
 
@@ -389,6 +397,15 @@ export const validateAutomationTemplateRequestSchema = z
         description:
           'The body of a `send_email` step that has a `digest` (T514): `{{ [@digest] }}` may ' +
           'place its lines. Ignored for a `digest.row_template`',
+      }),
+    text_steps: z
+      .array(automationActionIdSchema)
+      .max(MAX_AUTOMATION_ACTIONS)
+      .default([])
+      .meta({
+        description:
+          'Earlier `ai_generate_text` steps (T911): `{{ [act_…] }}` is their text. Ignored for ' +
+          'a `digest.row_template`',
       }),
   })
   .meta({ id: 'ValidateAutomationTemplateRequest' });

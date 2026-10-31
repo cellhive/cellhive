@@ -171,7 +171,12 @@
     "cancelled_by_user": "Đã bị huỷ thủ công.",
     "cancelled_by_user_named": "Huỷ bởi {{name}}.",
     "secret_host_not_allowed": "URL của bước HTTP này không thuộc các host được phép của secret (URL http thường cần mục có cổng): không có gì được gửi đi. Nếu đó là bên nhận thật, hãy thêm host vào secret trong cài đặt tổ chức.",
-    "secret_host_not_allowed_legacy_expired": "Secret của bước HTTP này được tạo trước khi có host được phép và đã hết hạn chuyển đổi: hãy đặt host được phép cho secret trong cài đặt tổ chức."
+    "secret_host_not_allowed_legacy_expired": "Secret của bước HTTP này được tạo trước khi có host được phép và đã hết hạn chuyển đổi: hãy đặt host được phép cho secret trong cài đặt tổ chức.",
+    "ai_unavailable": "AI của tổ chức đang tắt hoặc chưa được cài đặt.",
+    "ai_unavailable_record_data_disabled": "Tổ chức không cho AI xem giá trị bản ghi.",
+    "ai_quota_exceeded": "Đã dùng hết hạn mức AI hôm nay của tổ chức; bước không được thử lại.",
+    "ai_invalid_output": "AI không đưa ra câu trả lời hợp lệ; field không bị thay đổi.",
+    "ai_provider_error": "Nhà cung cấp AI từ chối yêu cầu."
   },
   "cause": {
     "database_busy": "cơ sở dữ liệu đang bận",

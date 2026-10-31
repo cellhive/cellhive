@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { AI_ACTION_STEP_ERROR_CODES } from './automation-actions/ai.js';
 import { HTTP_REQUEST_STEP_ERROR_CODES } from './automation-actions/http-request.js';
 import {
   emailRecipientRejectionSchema,
@@ -97,7 +98,9 @@ export const AUTOMATION_RUN_TIMEOUT_MS = 15 * 60_000;
  *   (both retried, a 429 after its `retry_after`);
  * - HTTP steps through the outbox (T605, CONTRACTS §25.5): `ssrf_blocked`,
  *   `http_timeout`, `http_network`, `http_response_too_large`, `http_status`,
- *   `rate_limited` (and `secret_unavailable` above).
+ *   `rate_limited` (and `secret_unavailable` above);
+ * - AI steps (T911, CONTRACTS §29.6): `ai_unavailable`, `ai_quota_exceeded`
+ *   (never retried), `ai_invalid_output`, `ai_provider_error`.
  */
 export const AUTOMATION_STEP_ERROR_CODES = [
   'permission_denied',
@@ -112,6 +115,7 @@ export const AUTOMATION_STEP_ERROR_CODES = [
   ...HTTP_DELIVERY_STEP_ERROR_CODES,
   ...HTTP_REQUEST_STEP_ERROR_CODES,
   ...WEBHOOK_TRIGGER_STEP_ERROR_CODES,
+  ...AI_ACTION_STEP_ERROR_CODES,
 ] as const;
 export type AutomationStepErrorCode = (typeof AUTOMATION_STEP_ERROR_CODES)[number];
 

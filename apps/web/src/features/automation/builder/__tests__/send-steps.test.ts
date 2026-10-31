@@ -61,7 +61,8 @@ describe('new send steps (T522)', () => {
     expect(isAddable('send_email')).toBe(true);
     expect(isAddable('send_notification')).toBe(true);
     expect(isAddable('send_telegram')).toBe(true);
-    expect(COMING_SOON).toEqual({});
+    // Only the AI steps wait for their editors (T915); none is in the menu.
+    expect(COMING_SOON).toEqual({ ai_generate_text: 'T915', ai_classify: 'T915' });
   });
 
   it.each([

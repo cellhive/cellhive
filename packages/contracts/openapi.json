@@ -617,6 +617,64 @@
         ],
         "type": "object"
       },
+      "AiClassifyAction": {
+        "additionalProperties": false,
+        "description": "The model answers one option name of the target field (an `enum`); output `{ option_id, option_name }` (+ `skipped_not_editable`)",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/AiClassifyConfig"
+          },
+          "id": {
+            "description": "Action id, unique in the definition",
+            "example": "act_1",
+            "pattern": "^act_[0-9A-Za-z_]{1,32}$/u",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "ai_classify"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "config"
+        ],
+        "type": "object"
+      },
+      "AiClassifyConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "description": "Template (stored form, `{{ [fld_…] }}`) of fields of the trigger record only: no link, lookup or formula reading another record, no attachment, button or AI field, no `[@…]`/`[act_…]` reference. Each value reaches the model in an untrusted data block",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "instructions": {
+            "default": null,
+            "description": "Extra guidance for the model (tone, language, length)",
+            "maxLength": 2000,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_field_id": {
+            "description": "A single select field of the trigger table (not an AI field)",
+            "example": "fld_A1b2C3d4E5f6G7h8",
+            "pattern": "^fld_[0-9A-Za-z]{16}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "input",
+          "target_field_id"
+        ],
+        "type": "object"
+      },
       "AiFieldGenerate": {
         "additionalProperties": false,
         "properties": {
@@ -918,6 +976,73 @@
         },
         "required": [
           "description"
+        ],
+        "type": "object"
+      },
+      "AiGenerateTextAction": {
+        "additionalProperties": false,
+        "description": "Output: `{ text, prompt_tokens, completion_tokens }` (+ `skipped_not_editable` with a target): later steps use `{ \"step\": \"act_…\", \"path\": \"text\" }` or `{{ [act_…] }}`",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/AiGenerateTextConfig"
+          },
+          "id": {
+            "description": "Action id, unique in the definition",
+            "example": "act_1",
+            "pattern": "^act_[0-9A-Za-z_]{1,32}$/u",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "ai_generate_text"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "config"
+        ],
+        "type": "object"
+      },
+      "AiGenerateTextConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "default": null,
+            "description": "Extra guidance for the model (tone, language, length)",
+            "maxLength": 2000,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_output_tokens": {
+            "default": 300,
+            "maximum": 2000,
+            "minimum": 16,
+            "type": "integer"
+          },
+          "prompt": {
+            "description": "Template (stored form, `{{ [fld_…] }}`) of fields of the trigger record only: no link, lookup or formula reading another record, no attachment, button or AI field, no `[@…]`/`[act_…]` reference. Each value reaches the model in an untrusted data block",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "target_field_id": {
+            "default": null,
+            "description": "A plain `text` field of the trigger table (not an AI field) the text is written to (`ai_fill_field`); `null` = output only",
+            "example": "fld_A1b2C3d4E5f6G7h8",
+            "pattern": "^fld_[0-9A-Za-z]{16}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "prompt"
         ],
         "type": "object"
       },
@@ -2123,6 +2248,8 @@
         "description": "One step of the run (SPEC §11.5)",
         "discriminator": {
           "mapping": {
+            "ai_classify": "#/components/schemas/AiClassifyAction",
+            "ai_generate_text": "#/components/schemas/AiGenerateTextAction",
             "create_record": "#/components/schemas/CreateRecordAction",
             "delay": "#/components/schemas/DelayAction",
             "delete_record": "#/components/schemas/DeleteRecordAction",
@@ -2173,6 +2300,12 @@
             "$ref": "#/components/schemas/RunN8nWorkflowAction"
           },
           {
+            "$ref": "#/components/schemas/AiGenerateTextAction"
+          },
+          {
+            "$ref": "#/components/schemas/AiClassifyAction"
+          },
+          {
             "$ref": "#/components/schemas/IfAction"
           }
         ]
@@ -2181,6 +2314,8 @@
         "description": "An action other than `if`",
         "discriminator": {
           "mapping": {
+            "ai_classify": "#/components/schemas/AiClassifyAction",
+            "ai_generate_text": "#/components/schemas/AiGenerateTextAction",
             "create_record": "#/components/schemas/CreateRecordAction",
             "delay": "#/components/schemas/DelayAction",
             "delete_record": "#/components/schemas/DeleteRecordAction",
@@ -2228,6 +2363,12 @@
           },
           {
             "$ref": "#/components/schemas/RunN8nWorkflowAction"
+          },
+          {
+            "$ref": "#/components/schemas/AiGenerateTextAction"
+          },
+          {
+            "$ref": "#/components/schemas/AiClassifyAction"
           }
         ]
       },
@@ -3013,6 +3154,10 @@
                   "secret_host_not_allowed",
                   "http_request_too_large",
                   "trigger_data_expired",
+                  "ai_unavailable",
+                  "ai_quota_exceeded",
+                  "ai_invalid_output",
+                  "ai_provider_error",
                   "run_timeout",
                   "invalid_definition",
                   "batch_fanout_exceeded",
@@ -3323,6 +3468,10 @@
                   "secret_host_not_allowed",
                   "http_request_too_large",
                   "trigger_data_expired",
+                  "ai_unavailable",
+                  "ai_quota_exceeded",
+                  "ai_invalid_output",
+                  "ai_provider_error",
                   "run_timeout",
                   "invalid_definition",
                   "batch_fanout_exceeded",
@@ -3594,6 +3743,10 @@
                   "secret_host_not_allowed",
                   "http_request_too_large",
                   "trigger_data_expired",
+                  "ai_unavailable",
+                  "ai_quota_exceeded",
+                  "ai_invalid_output",
+                  "ai_provider_error",
                   "run_timeout",
                   "invalid_definition",
                   "batch_fanout_exceeded",
@@ -3986,6 +4139,10 @@
               "secret_host_not_allowed",
               "http_request_too_large",
               "trigger_data_expired",
+              "ai_unavailable",
+              "ai_quota_exceeded",
+              "ai_invalid_output",
+              "ai_provider_error",
               "run_timeout",
               "invalid_definition",
               "batch_fanout_exceeded",
@@ -20343,6 +20500,18 @@
           "template": {
             "maxLength": 20000,
             "type": "string"
+          },
+          "text_steps": {
+            "default": [],
+            "description": "Earlier `ai_generate_text` steps (T911): `{{ [act_…] }}` is their text. Ignored for a `digest.row_template`",
+            "items": {
+              "description": "Action id, unique in the definition",
+              "example": "act_1",
+              "pattern": "^act_[0-9A-Za-z_]{1,32}$/u",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": "array"
           },
           "trigger_type": {
             "default": null,

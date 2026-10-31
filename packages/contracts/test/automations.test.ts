@@ -129,6 +129,8 @@ describe('automation actions (SPEC §11.5)', () => {
 
   it('lists every action type the union accepts', () => {
     expect([...AUTOMATION_ACTION_TYPES].sort()).toEqual([
+      'ai_classify',
+      'ai_generate_text',
       'create_record',
       'delay',
       'delete_record',
@@ -367,6 +369,7 @@ describe('template check request (CONTRACTS §21)', () => {
       trigger_type: null,
       steps: [],
       digest: false,
+      text_steps: [],
     });
   });
 
@@ -404,5 +407,62 @@ describe('template references (T505)', () => {
     ['fld_x', false],
   ])('isTemplateReferenceId(%s) → %s', (id, expected) => {
     expect(isTemplateReferenceId(id)).toBe(expected);
+  });
+});
+
+describe('AI actions (T911, CONTRACTS §29.6)', () => {
+  const trigger = { type: 'record.created', table_id: TBL };
+  const parse = (action: Record<string, unknown>) =>
+    automationDefinitionSchema.safeParse({ trigger, actions: [{ id: 'act_1', ...action }] });
+
+  it('fills the defaults of ai_generate_text and ai_classify', () => {
+    const generate = parse({ type: 'ai_generate_text', config: { prompt: ' {{ [A] }} ' } });
+    expect(generate.success && generate.data.actions[0]?.config).toEqual({
+      prompt: '{{ [A] }}',
+      instructions: null,
+      max_output_tokens: 300,
+      target_field_id: null,
+    });
+    const classify = parse({ type: 'ai_classify', config: { input: 'x', target_field_id: FLD } });
+    expect(classify.success && classify.data.actions[0]?.config).toEqual({
+      input: 'x',
+      instructions: null,
+      target_field_id: FLD,
+    });
+  });
+
+  it.each([
+    ['an empty prompt', { type: 'ai_generate_text', config: { prompt: '  ' } }],
+    ['a prompt over 4,000', { type: 'ai_generate_text', config: { prompt: 'x'.repeat(4_001) } }],
+    [
+      '15 output tokens',
+      { type: 'ai_generate_text', config: { prompt: 'x', max_output_tokens: 15 } },
+    ],
+    [
+      '2,001 output tokens',
+      { type: 'ai_generate_text', config: { prompt: 'x', max_output_tokens: 2_001 } },
+    ],
+    [
+      'instructions over 2,000',
+      { type: 'ai_generate_text', config: { prompt: 'x', instructions: 'x'.repeat(2_001) } },
+    ],
+    ['a classify without target', { type: 'ai_classify', config: { input: 'x' } }],
+    [
+      'a target that is no field id',
+      { type: 'ai_classify', config: { input: 'x', target_field_id: TBL } },
+    ],
+  ])('refuses %s', (_name, action) => {
+    expect(parse(action).success).toBe(false);
+  });
+
+  it('lets AI steps sit in an if branch', () => {
+    const result = parse({
+      type: 'if',
+      config: {
+        conditions: [{ filter: {} }],
+        then: [{ id: 'act_2', type: 'ai_classify', config: { input: 'x', target_field_id: FLD } }],
+      },
+    });
+    expect(result.success).toBe(true);
   });
 });

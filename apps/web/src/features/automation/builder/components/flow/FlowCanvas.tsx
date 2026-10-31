@@ -39,6 +39,7 @@ import {
   Bell,
   Rows3,
   Settings,
+  Sparkles,
   Workflow,
   type LucideIcon,
 } from 'lucide-react';
@@ -82,6 +83,8 @@ export const ACTION_ICONS: Record<string, LucideIcon> = {
   send_telegram: Send,
   http_request: Globe,
   run_n8n_workflow: Workflow,
+  ai_generate_text: Sparkles,
+  ai_classify: Sparkles,
 };
 
 export interface FlowCanvasProps {
