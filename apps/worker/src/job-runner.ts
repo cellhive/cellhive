@@ -220,6 +220,40 @@ export const CRON_ITEMS: readonly CronItem[] = [
   },
 ];
 
+/**
+ * Every minute: AI field rows whose lease ended, paused rows whose reason is
+ * gone, queued rows whose job was lost (T910); on the AI runner.
+ */
+export const AI_GENERATION_RESCUE_CRON = '* * * * *';
+
+/** Recurring jobs of the AI runner (`ai.*` tasks only, T910). */
+export const AI_CRON_ITEMS: readonly CronItem[] = [
+  {
+    task: 'ai.generation_rescue',
+    match: AI_GENERATION_RESCUE_CRON,
+    identifier: 'ai.generation_rescue',
+    options: { backfillPeriod: 0, maxAttempts: 1 },
+  },
+];
+
+/** Prefix of the tasks the AI runner runs, and the main runner never does (T910). */
+export const AI_TASK_PREFIX = 'ai.';
+
+/**
+ * `taskList` split between the main runner and the AI runner (BACKLOG T910,
+ * ADR-39 §7): calls to an AI provider take 5–60 s and must never hold the
+ * slots of `events.dispatch` or `automation.run`. graphile-worker only takes
+ * jobs of the tasks it knows, so each runner sees its own jobs only.
+ */
+export function splitAiTasks(taskList: TaskList): { main: TaskList; ai: TaskList } {
+  const main: TaskList = {};
+  const ai: TaskList = {};
+  for (const [name, task] of Object.entries(taskList)) {
+    (name.startsWith(AI_TASK_PREFIX) ? ai : main)[name] = task;
+  }
+  return { main, ai };
+}
+
 export interface JobRunnerOptions {
   readonly connectionString: string;
   /** Jobs run at once by this process (`WORKER_CONCURRENCY`). */

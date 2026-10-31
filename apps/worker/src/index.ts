@@ -1,7 +1,9 @@
 export { createWorker, type CreateWorkerOptions, type WorkerHandle } from './create-worker.js';
 export {
+  AI_CRON_ITEMS,
   CRON_ITEMS,
   MAINTENANCE_CLEANUP_CRON,
+  splitAiTasks,
   PARTITIONS_MAINTAIN_CRON,
   startJobRunner,
   type JobRunnerOptions,

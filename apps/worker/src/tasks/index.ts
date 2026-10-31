@@ -1,9 +1,11 @@
 import {
+  AiFieldGenerator,
   AutomationDispatcher,
   AutomationRunEngine,
   AutomationTimeTriggers,
   createSendEmailAction,
   createSendNotificationAction,
+  createAiKeySource,
   createSendTelegramAction,
   DateReminderScanner,
   defaultActionRegistry,
@@ -20,6 +22,7 @@ import {
   ImportsRepository,
   JOB_STATEMENT_TIMEOUT_MS,
   JobsRepository,
+  LlmClient,
   createMemoryTelegramPacers,
   NotificationEmailDelivery,
   NotificationFanout,
@@ -60,6 +63,8 @@ import {
 
 import { transcodeEmailImage } from '../thumbnails/email-image.js';
 
+import { createAiGenerateTask } from './ai-generate.js';
+import { createAiGenerationRescueTask } from './ai-generation-rescue.js';
 import { createAttachmentsCleanupTask } from './attachments-cleanup.js';
 import { createAuditExportTask } from './audit-export.js';
 import { createPasswordResetEmailTask } from './auth-password-reset-email.js';
@@ -90,6 +95,8 @@ import { createNotificationsTelegramReplyTask } from './notifications-telegram-r
 import { createNotificationsTelegramSparsePollTask } from './notifications-telegram-sparse-poll.js';
 import { createNotificationsTelegramWebhookCheckTask } from './notifications-telegram-webhook-check.js';
 import { createPartitionsMaintainTask } from './partitions-maintain.js';
+export { AI_GENERATE_JOB_BUDGET_MS, createAiGenerateTask } from './ai-generate.js';
+export { createAiGenerationRescueTask } from './ai-generation-rescue.js';
 export {
   createRecordsPurgeOrgTask,
   createRecordsPurgeTask,
@@ -197,6 +204,15 @@ export interface TaskDeps {
   };
   /** Tests only: clock of the Telegram replies and of the webhook check (T609). */
   readonly telegramNow?: () => Date;
+  /**
+   * AI fields (T910): DNS of the provider (tests resolve `localhost`), the clock
+   * of the quota day, the time of batches per `ai.generate` job.
+   */
+  readonly ai?: {
+    readonly lookup?: HostLookup;
+    readonly now?: () => Date;
+    readonly jobBudgetMs?: number;
+  };
 }
 
 /** Every task this worker runs, by identifier (`GraphileWorker.Tasks`). */
@@ -285,6 +301,46 @@ export function buildTaskList(deps: TaskDeps): TaskList {
     ...(deps.telegramClient === undefined ? {} : { client: deps.telegramClient }),
     ...(deps.telegramPoll ?? {}),
   });
+  // AI fields (T910): one generator per process, on the AI runner's tasks only.
+  const schemaPublisher =
+    realtime === undefined
+      ? undefined
+      : new RealtimeSchemaChangePublisher(realtime, {
+          onError: (err: unknown) => {
+            deps.logger.warn({ err }, 'ai state publish failed');
+          },
+        });
+  const aiGenerator = new AiFieldGenerator(deps.db, {
+    llm: new LlmClient({
+      allowlist: httpAllowlistSource(deps.db),
+      privateAllowlist: deps.config.outboundHttp.privateAllowlist,
+      keys: createAiKeySource(deps.db, deps.config.security.appMasterKey),
+      ...(deps.ai?.lookup === undefined ? {} : { lookup: deps.ai.lookup }),
+      ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
+    }),
+    records: recordQuery,
+    mutations: records,
+    defaultTimeZone: deps.config.defaults.timezone,
+    defaultLocale: deps.config.defaults.locale,
+    ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
+    ...(schemaPublisher === undefined
+      ? {}
+      : {
+          onStateChange: async (changes) => {
+            for (const change of changes) {
+              await schemaPublisher.publish({
+                organization_id: change.organizationId,
+                base_id: change.baseId,
+                table_id: change.tableId,
+                entity: 'field',
+                entity_id: change.fieldId,
+                action: 'updated',
+                ai_state: change.state,
+              });
+            }
+          },
+        }),
+  });
   const notificationMailer =
     deps.notificationMailer !== undefined
       ? deps.notificationMailer
@@ -292,6 +348,18 @@ export function buildTaskList(deps: TaskDeps): TaskList {
         ? null
         : mailService;
   return {
+    'ai.generate': createAiGenerateTask({
+      db: deps.db,
+      generator: aiGenerator,
+      logger: deps.logger.child({ task: 'ai.generate' }),
+      ...(deps.ai?.jobBudgetMs === undefined ? {} : { budgetMs: deps.ai.jobBudgetMs }),
+    }),
+    'ai.generation_rescue': createAiGenerationRescueTask({
+      db: deps.db,
+      generator: aiGenerator,
+      logger: deps.logger.child({ task: 'ai.generation_rescue' }),
+      ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
+    }),
     'attachments.cleanup': createAttachmentsCleanupTask({
       db: deps.db,
       storage,

@@ -22,7 +22,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 
-import { CRON_ITEMS, startJobRunner } from './job-runner.js';
+import { AI_CRON_ITEMS, CRON_ITEMS, splitAiTasks, startJobRunner } from './job-runner.js';
 import {
   closeWorkerCacheClient,
   createWorkerCacheClient,
@@ -69,6 +69,8 @@ export const STARTUP_MAINTENANCE_JOB_KEY = 'partitions.maintain:startup';
 @Injectable()
 export class JobRunnerService implements OnApplicationBootstrap, BeforeApplicationShutdown {
   #runner: Runner | undefined;
+  /** The runner of `ai.*` jobs (T910, `AI_CONCURRENCY`); none when the task list has none. */
+  #aiRunner: Runner | undefined;
 
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
@@ -84,11 +86,8 @@ export class JobRunnerService implements OnApplicationBootstrap, BeforeApplicati
     const version = await assertSupportedPostgres(this.db.kysely);
     this.logger.info({ postgres: version.version }, 'database version supported');
     const concurrency = this.config.limits.workerConcurrency;
-    const runner = await startJobRunner({
-      connectionString: this.config.database.url,
-      concurrency,
-      taskList:
-        this.options.taskList ??
+    const tasks = splitAiTasks(
+      this.options.taskList ??
         buildTaskList({
           config: this.config,
           db: this.db,
@@ -121,17 +120,41 @@ export class JobRunnerService implements OnApplicationBootstrap, BeforeApplicati
             keyPrefix: WORKER_CACHE_KEY_PREFIX,
           }),
         }),
+    );
+    const poll =
+      this.options.pollIntervalMs === undefined
+        ? {}
+        : { pollIntervalMs: this.options.pollIntervalMs };
+    const runner = await startJobRunner({
+      connectionString: this.config.database.url,
+      concurrency,
+      taskList: tasks.main,
       logger: this.logger,
       cron: CRON_ITEMS,
-      ...(this.options.pollIntervalMs === undefined
-        ? {}
-        : { pollIntervalMs: this.options.pollIntervalMs }),
+      ...poll,
     });
     this.#runner = runner;
     runner.promise.catch((err: unknown) => {
       this.logger.fatal({ err }, 'job runner stopped on an error');
       this.options.onFatal?.(err);
     });
+    if (Object.keys(tasks.ai).length > 0) {
+      const aiConcurrency = this.config.limits.aiConcurrency;
+      const aiRunner = await startJobRunner({
+        connectionString: this.config.database.url,
+        concurrency: aiConcurrency,
+        taskList: tasks.ai,
+        logger: this.logger.child({ runner: 'ai' }),
+        cron: AI_CRON_ITEMS,
+        ...poll,
+      });
+      this.#aiRunner = aiRunner;
+      aiRunner.promise.catch((err: unknown) => {
+        this.logger.fatal({ err }, 'AI job runner stopped on an error');
+        this.options.onFatal?.(err);
+      });
+      this.logger.info({ concurrency: aiConcurrency }, 'AI job runner started');
+    }
     // Partitions for the coming months even if the daily run was missed.
     if (this.options.taskList === undefined) {
       await runner.addJob('partitions.maintain', {}, { jobKey: STARTUP_MAINTENANCE_JOB_KEY });
@@ -140,11 +163,14 @@ export class JobRunnerService implements OnApplicationBootstrap, BeforeApplicati
   }
 
   async beforeApplicationShutdown(): Promise<void> {
-    const runner = this.#runner;
+    const runners = [this.#runner, this.#aiRunner].filter(
+      (runner): runner is Runner => runner !== undefined,
+    );
     this.#runner = undefined;
-    if (runner === undefined) return;
+    this.#aiRunner = undefined;
+    if (runners.length === 0) return;
     this.logger.info('stopping job runner');
-    await runner.stop('shutdown');
+    await Promise.all(runners.map((runner) => runner.stop('shutdown')));
     this.logger.info('job runner stopped');
   }
 }
