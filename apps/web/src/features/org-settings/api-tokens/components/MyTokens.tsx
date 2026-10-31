@@ -15,18 +15,24 @@ import {
   TokenRevealDialog,
   type RevealedToken,
 } from './dialogs';
+import { McpConnectDialog } from './mcp';
 import { Note, Section } from './parts';
 import { TokenList } from './TokenList';
 
-import type { ApiTokenDto, ApiTokenPolicy } from '@cellhive/contracts';
+import type { ApiTokenDto, ApiTokenPolicy, McpPolicy } from '@cellhive/contracts';
 
-/** "Mine": the caller's tokens in the organization — create (shown once), rename, revoke. */
+/**
+ * "Mine": the caller's tokens in the organization — create (shown once),
+ * rename, revoke, and "Connect via MCP" while the organization allows MCP.
+ */
 export function MyTokens({
   orgId,
   policy,
+  mcp,
 }: {
   readonly orgId: string;
   readonly policy: ApiTokenPolicy;
+  readonly mcp: McpPolicy;
 }) {
   const { t } = useTranslation('apiTokens');
   const list = useInfiniteQuery(myTokensQuery(orgId));
@@ -40,6 +46,7 @@ export function MyTokens({
   const [reveal, setReveal] = useState<RevealedToken | null>(null);
   const [renaming, setRenaming] = useState<ApiTokenDto | null>(null);
   const [revoking, setRevoking] = useState<ApiTokenDto | null>(null);
+  const [connecting, setConnecting] = useState<ApiTokenDto | null>(null);
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
   const now = new Date();
 
@@ -87,6 +94,13 @@ export function MyTokens({
           onRevoke={(token) => {
             setRevoking(token);
           }}
+          onConnect={
+            mcp.enabled
+              ? (token) => {
+                  setConnecting(token);
+                }
+              : undefined
+          }
         />
       )}
       {list.hasNextPage ? (
@@ -105,6 +119,7 @@ export function MyTokens({
         orgId={orgId}
         open={creating}
         maxLifetimeDays={policy.max_lifetime_days}
+        mcp={mcp}
         onClose={() => {
           setCreating(false);
         }}
@@ -133,6 +148,14 @@ export function MyTokens({
           setRevoking(null);
         }}
       />
+      {mcp.enabled ? (
+        <McpConnectDialog
+          token={connecting}
+          onClose={() => {
+            setConnecting(null);
+          }}
+        />
+      ) : null}
     </Section>
   );
 }

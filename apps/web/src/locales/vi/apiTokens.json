@@ -86,7 +86,11 @@
       "schema": "Quản trị schema",
       "schemaHint": "Tạo và sửa bảng, trường, view; đọc bản ghi.",
       "automation": "Automation",
-      "automationHint": "Đọc và sửa automation; đọc được giá trị bản ghi (xem trước, gửi thử, chi tiết lần chạy)."
+      "automationHint": "Đọc và sửa automation; đọc được giá trị bản ghi (xem trước, gửi thử, chi tiết lần chạy).",
+      "mcpRead": "MCP — chỉ đọc",
+      "mcpReadHint": "Cho client AI như Claude Code, Cursor hay VS Code: xem bảng, tra cứu và tổng hợp bản ghi.",
+      "mcpReadWrite": "MCP — đọc và ghi",
+      "mcpReadWriteHint": "Thêm tạo và sửa bản ghi: tối đa 50 mỗi lần gọi, không bao giờ xoá."
     },
     "groups": {
       "records": "Bản ghi",
@@ -173,5 +177,69 @@
   "toast": {
     "renamed": "Đã đổi tên token.",
     "revoked": "Đã thu hồi “{{name}}”."
+  },
+  "mcp": {
+    "policy": {
+      "title": "Client MCP",
+      "intro": "Thành viên có thể kết nối client AI như Claude Code, Cursor hay VS Code với Cellhive qua Model Context Protocol (MCP), bằng một API token của mình. Client chỉ thấy những gì chủ token đọc được, trong phạm vi quyền và base của token.",
+      "enabled": "Cho phép client MCP",
+      "enabledOff": "Tắt: endpoint MCP từ chối mọi token.",
+      "enabledOn": "Thành viên kết nối từ “Kết nối MCP” trên token của mình. Mọi lần đọc bản ghi đều được ghi vào nhật ký hoạt động.",
+      "writes": "Cho phép client MCP tạo và sửa bản ghi",
+      "writesHint": "Chỉ với token có quyền sửa bản ghi: tối đa 50 bản ghi mỗi lần gọi, không bao giờ xoá. Tắt: client MCP chỉ đọc.",
+      "writesNeedsMcp": "Hãy bật client MCP trước.",
+      "toast": {
+        "enabled": {
+          "on": "Đã cho phép client MCP.",
+          "off": "Đã tắt client MCP."
+        },
+        "allow_writes": {
+          "on": "Client MCP giờ tạo và sửa được bản ghi.",
+          "off": "Client MCP giờ chỉ đọc."
+        }
+      },
+      "confirm": {
+        "enabled": {
+          "title": "Cho phép client MCP?",
+          "lead": "Thành viên sẽ gửi được các bản ghi mình đọc được tới model AI mà client MCP của họ dùng.",
+          "point1": "Điều này vẫn đúng khi cài đặt AI không cho AI xem giá trị bản ghi: cài đặt đó chỉ áp cho nhà cung cấp AI của Cellhive, không áp cho client của thành viên.",
+          "point2": "Client hành động như chủ token: không bao giờ đọc nhiều hơn người đó, trong phạm vi quyền và base của token.",
+          "point3": "Mọi lần đọc bản ghi qua MCP đều được ghi vào nhật ký hoạt động, không kèm giá trị.",
+          "action": "Cho phép client MCP"
+        },
+        "allow_writes": {
+          "title": "Cho client MCP sửa bản ghi?",
+          "lead": "Client có token được sửa bản ghi sẽ tạo và sửa được bản ghi dưới tên chủ token.",
+          "point1": "Tối đa 50 bản ghi mỗi lần gọi, theo quyền của chủ token; không bao giờ xoá, không đổi bảng hay trường. Automation chạy như với mọi thay đổi qua API.",
+          "point2": "Bản ghi có thể chứa chữ do người khác viết, ví dụ nội dung gửi qua form. Model có thể coi đó là chỉ dẫn và ghi sai dữ liệu: hãy để client hỏi lại trước mỗi thay đổi.",
+          "point3": "Lời gọi được gửi lại sau khi mất kết nối có thể tạo trùng bản ghi.",
+          "action": "Cho phép sửa"
+        }
+      }
+    },
+    "connect": {
+      "action": "Kết nối MCP",
+      "actionLabel": "Kết nối {{name}} qua MCP",
+      "title": "Kết nối MCP",
+      "description": "Dùng “{{name}}” trong một client AI hỗ trợ MCP.",
+      "url": "URL máy chủ",
+      "client": "Client",
+      "clients": {
+        "claudeCode": "Claude Code",
+        "cursor": "Cursor",
+        "vscode": "VS Code"
+      },
+      "snippet": {
+        "claudeCode": "Lệnh",
+        "cursor": "mcp.json",
+        "vscode": ".vscode/mcp.json"
+      },
+      "hint": {
+        "claudeCode": "Chạy lệnh trong terminal, rồi gõ /mcp trong Claude Code để kiểm tra kết nối.",
+        "cursor": "Thêm vào ~/.cursor/mcp.json cho mọi dự án, hoặc .cursor/mcp.json trong một dự án.",
+        "vscode": "Thêm vào .vscode/mcp.json. VS Code hỏi token khi khởi động máy chủ lần đầu và cất trong kho bí mật của nó."
+      },
+      "placeholder": "Thay {{masked}} bằng token đầy đủ. Cellhive chỉ hiện token một lần, lúc tạo."
+    }
   }
 }

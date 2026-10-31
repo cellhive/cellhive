@@ -7,7 +7,7 @@ import { axeViolations } from '../../../../../test/axe';
 import { createTestI18n } from '../../../../../test/i18n';
 import { clearToasts } from '../../../../lib/toast/toast';
 
-import type { ApiTokenDto, ApiTokenPolicy, OrgApiTokenDto } from '@cellhive/contracts';
+import type { ApiTokenDto, ApiTokenPolicy, McpPolicy, OrgApiTokenDto } from '@cellhive/contracts';
 
 /** T714: the API tokens page — mine (create, shown once, rename, revoke), all tokens, policy. */
 
@@ -85,26 +85,31 @@ function serve(
   options: {
     role?: 'owner' | 'member';
     policy?: ApiTokenPolicy;
+    mcp?: McpPolicy;
     mine?: ApiTokenDto[];
     createProblem?: () => Response;
   } = {},
 ) {
   let mine = options.mine ?? [MINE];
   let policy = options.policy ?? { enabled: true, max_lifetime_days: null };
+  let mcp = options.mcp ?? { enabled: false, allow_writes: false };
   const calls: Call[] = [];
   const body = (init: RequestInit | undefined): unknown =>
     typeof init?.body === 'string' ? JSON.parse(init.body) : null;
   const role = options.role ?? 'member';
-  const org = () => ({ ...ORG, role, settings: { ...ORG.settings, api_tokens: policy } });
+  const org = () => ({ ...ORG, role, settings: { ...ORG.settings, api_tokens: policy, mcp } });
   stubApi({
     signedIn: true,
     routes: {
       'GET /me': () => json({ ...ME, orgs: [{ ...ME.orgs[0], role }] }),
       [`GET /orgs/${ORG.id}`]: () => json(org()),
       [`PATCH /orgs/${ORG.id}`]: (init) => {
-        const sent = body(init) as { settings: { api_tokens: ApiTokenPolicy } };
+        const sent = body(init) as {
+          settings: { api_tokens?: ApiTokenPolicy; mcp?: Partial<McpPolicy> };
+        };
         calls.push({ route: 'policy', body: sent });
         policy = { ...policy, ...sent.settings.api_tokens };
+        mcp = { ...mcp, ...sent.settings.mcp };
         return json({ ...org(), updated_at: new Date().toISOString() });
       },
       [`GET /orgs/${ORG.id}/workspaces`]: () =>
@@ -433,5 +438,190 @@ describe('ApiTokensPage (T714)', () => {
         body: { settings: { api_tokens: { enabled: false, max_lifetime_days: 30 } } },
       });
     });
+  });
+});
+
+describe('MCP on the API tokens page (T924)', () => {
+  const MCP_ON = { enabled: true, allow_writes: false };
+
+  it('MCP off: no MCP preset, no "Connect via MCP"; the writes switch waits for MCP', async () => {
+    const calls = serve({
+      role: 'owner',
+      mine: [{ ...MINE, scopes: ['records:read', 'schema:read'] }],
+    });
+    await renderApp(PATH);
+    const row = await screen.findByTestId('token-row');
+    expect(within(row).queryByTestId('token-connect-mcp')).toBeNull();
+    await userEvent.click(screen.getByTestId('token-create'));
+    const form = await screen.findByTestId('token-create-form');
+    expect(within(form).queryByTestId('token-preset-mcpRead')).toBeNull();
+    expect(within(form).queryByTestId('token-preset-mcpReadWrite')).toBeNull();
+    expect(form).not.toHaveTextContent('MCP');
+    await userEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+
+    await userEvent.click(screen.getByTestId('api-tokens-tab-policy'));
+    const section = await screen.findByTestId('mcp-policy');
+    const enabled = within(section).getByRole('switch', { name: 'Allow MCP clients' });
+    expect(enabled).not.toBeChecked();
+    expect(enabled).toHaveAccessibleDescription('Off: the MCP endpoint refuses every token.');
+    const writes = within(section).getByRole('switch', {
+      name: 'Let MCP clients create and update records',
+    });
+    expect(writes).toBeDisabled();
+    expect(writes).toHaveAccessibleDescription('Turn on MCP clients first.');
+    expect(await axeViolations(document.body)).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
+  it('an admin turns MCP and writes on after a confirmation each, and off without one', async () => {
+    const calls = serve({ role: 'owner' });
+    await renderApp(`${PATH}?tab=policy`);
+    const section = await screen.findByTestId('mcp-policy');
+    // A draft of the token policy survives the MCP switches (saved at once).
+    const policy = screen.getByTestId('token-policy');
+    await userEvent.click(within(policy).getByTestId('token-policy-limit'));
+    await userEvent.clear(within(policy).getByTestId('token-policy-days'));
+    await userEvent.type(within(policy).getByTestId('token-policy-days'), '30');
+
+    const enabled = within(section).getByTestId('mcp-enabled');
+    await userEvent.click(enabled);
+    const dialog = await screen.findByRole('alertdialog', { name: 'Allow MCP clients?' });
+    expect(dialog).toHaveTextContent(
+      'Members will be able to send the records they can read to the AI model that their MCP client uses.',
+    );
+    expect(dialog).toHaveTextContent('even when the AI settings keep record values away from AI');
+    expect(enabled).not.toBeChecked();
+    expect(await axeViolations(document.body)).toEqual([]);
+    await userEvent.click(within(dialog).getByTestId('mcp-confirm'));
+    await waitFor(() => {
+      expect(calls).toContainEqual({
+        route: 'policy',
+        body: { settings: { mcp: { enabled: true } } },
+      });
+    });
+    expect(await screen.findByText('MCP clients allowed.')).toBeVisible();
+    await waitFor(() => {
+      expect(within(section).getByTestId('mcp-enabled')).toBeChecked();
+    });
+    expect(within(policy).getByTestId('token-policy-days')).toHaveValue(30);
+
+    // Writes: "Cancel" keeps them off and sends nothing.
+    const writes = within(section).getByTestId('mcp-allow-writes');
+    expect(writes).toBeEnabled();
+    await userEvent.click(writes);
+    const ask = await screen.findByRole('alertdialog', { name: 'Let MCP clients change records?' });
+    expect(ask).toHaveTextContent('can create the same records twice');
+    expect(ask).toHaveTextContent('take it for instructions');
+    await userEvent.click(within(ask).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    expect(writes).not.toBeChecked();
+    expect(calls).toHaveLength(1);
+    await userEvent.click(writes);
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByTestId('mcp-confirm'),
+    );
+    await waitFor(() => {
+      expect(calls).toContainEqual({
+        route: 'policy',
+        body: { settings: { mcp: { allow_writes: true } } },
+      });
+    });
+
+    // Off: at once, no question.
+    await userEvent.click(within(section).getByTestId('mcp-enabled'));
+    await waitFor(() => {
+      expect(calls).toContainEqual({
+        route: 'policy',
+        body: { settings: { mcp: { enabled: false } } },
+      });
+    });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('creates an "MCP — read only" token and shows how to connect, with the value only once', async () => {
+    const calls = serve({ mine: [], mcp: MCP_ON });
+    await renderApp(PATH);
+    await userEvent.click(await screen.findByTestId('token-create'));
+    const form = await screen.findByTestId('token-create-form');
+    // Writes are not allowed: no "read & write" MCP preset.
+    expect(within(form).queryByTestId('token-preset-mcpReadWrite')).toBeNull();
+    const preset = within(form).getByTestId('token-preset-mcpRead');
+    expect(preset).toHaveAccessibleName('MCP — read only');
+    await userEvent.click(preset);
+    expect(preset).toBeChecked();
+    // Same scopes as "Read data", but the MCP preset stays the chosen one.
+    expect(within(form).getByTestId('token-preset-read')).not.toBeChecked();
+    await userEvent.type(within(form).getByTestId('token-name-input'), 'Claude Code');
+    await userEvent.click(within(form).getByTestId('token-create-submit'));
+
+    const reveal = await screen.findByTestId('token-reveal');
+    expect(calls[0]).toMatchObject({
+      route: 'create',
+      body: { name: 'Claude Code', scopes: ['records:read', 'schema:read'] },
+    });
+    expect(within(reveal).queryByTestId('token-curl')).toBeNull();
+    const url = `${window.location.origin}/api/v1/mcp`;
+    expect(within(reveal).getByTestId('mcp-url')).toHaveValue(url);
+    expect(within(reveal).getByTestId('mcp-client-claudeCode')).toBeChecked();
+    expect(within(reveal).getByTestId('mcp-snippet')).toHaveValue(
+      `claude mcp add --transport http cellhive ${url} --header "Authorization: Bearer ${VALUE}"`,
+    );
+    expect(within(reveal).queryByTestId('mcp-placeholder')).toBeNull();
+    // The clients form one radio group: arrow keys move between them.
+    within(reveal).getByTestId('mcp-client-claudeCode').focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(within(reveal).getByTestId('mcp-client-cursor')).toBeChecked();
+    const snippet = () => within(reveal).getByTestId<HTMLTextAreaElement>('mcp-snippet').value;
+    expect(snippet()).toContain(`"Authorization": "Bearer ${VALUE}"`);
+    await userEvent.click(within(reveal).getByText('VS Code'));
+    expect(snippet()).not.toContain(VALUE);
+    expect(within(reveal).getByTestId('mcp-snippet')).toHaveAccessibleDescription(
+      expect.stringContaining('VS Code asks for the token'),
+    );
+    expect(await axeViolations(document.body)).toEqual([]);
+    await userEvent.click(within(reveal).getByTestId('token-reveal-confirm'));
+    await userEvent.click(within(reveal).getByTestId('token-reveal-done'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('token-reveal')).toBeNull();
+    });
+    expect(document.body.innerHTML).not.toContain(VALUE);
+    expect(storageText()).not.toContain(VALUE);
+
+    // From the list: the masked token stands in for the value.
+    const row = (await screen.findByText('Claude Code')).closest('li') as HTMLElement;
+    await userEvent.click(within(row).getByRole('button', { name: 'Connect Claude Code via MCP' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect via MCP' });
+    const masked = `cht_${VALUE.slice(4, 12)}…`;
+    expect(within(dialog).getByTestId('mcp-snippet')).toHaveValue(
+      `claude mcp add --transport http cellhive ${url} --header "Authorization: Bearer ${masked}"`,
+    );
+    expect(within(dialog).getByTestId('mcp-placeholder')).toHaveTextContent(
+      `Replace ${masked} with the full token.`,
+    );
+    expect(await axeViolations(document.body)).toEqual([]);
+  });
+
+  it('offers "MCP — read & write" when writes are allowed; tokens without schema:read cannot connect', async () => {
+    const calls = serve({ mcp: { enabled: true, allow_writes: true } });
+    await renderApp(PATH);
+    // `MINE` has only `records:read`: the endpoint would refuse it.
+    const row = await screen.findByTestId('token-row');
+    expect(within(row).queryByTestId('token-connect-mcp')).toBeNull();
+    await userEvent.click(screen.getByTestId('token-create'));
+    const form = await screen.findByTestId('token-create-form');
+    await userEvent.click(within(form).getByTestId('token-preset-mcpReadWrite'));
+    expect(within(form).getByTestId('token-scope-records:write')).toBeChecked();
+    await userEvent.type(within(form).getByTestId('token-name-input'), 'Cursor');
+    await userEvent.click(within(form).getByTestId('token-create-submit'));
+    expect(await screen.findByTestId('mcp-connect')).toBeVisible();
+    expect(calls[0]).toMatchObject({
+      body: { scopes: ['records:read', 'records:write', 'schema:read'] },
+    });
+
+    const vi18n = await createTestI18n('vi');
+    expect(vi18n.t('apiTokens:create.preset.mcpRead')).toBe('MCP — chỉ đọc');
+    expect(vi18n.t('apiTokens:mcp.connect.action')).toBe('Kết nối MCP');
   });
 });

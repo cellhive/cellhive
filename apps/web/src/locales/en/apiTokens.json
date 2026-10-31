@@ -86,7 +86,11 @@
       "schema": "Manage structure",
       "schemaHint": "Create and change tables, fields and views; read records.",
       "automation": "Automation",
-      "automationHint": "Read and change automations; read record values (previews, test sends, run details)."
+      "automationHint": "Read and change automations; read record values (previews, test sends, run details).",
+      "mcpRead": "MCP — read only",
+      "mcpReadHint": "For AI clients such as Claude Code, Cursor or VS Code: browse tables, query and summarize records.",
+      "mcpReadWrite": "MCP — read & write",
+      "mcpReadWriteHint": "Also create and update records: up to 50 per call, never deleting."
     },
     "groups": {
       "records": "Records",
@@ -173,5 +177,69 @@
   "toast": {
     "renamed": "Token renamed.",
     "revoked": "“{{name}}” revoked."
+  },
+  "mcp": {
+    "policy": {
+      "title": "MCP clients",
+      "intro": "Members can connect AI clients such as Claude Code, Cursor or VS Code to Cellhive through the Model Context Protocol (MCP), with one of their API tokens. A client sees only what the token's owner can read, within the token's scopes and bases.",
+      "enabled": "Allow MCP clients",
+      "enabledOff": "Off: the MCP endpoint refuses every token.",
+      "enabledOn": "Members connect from “Connect via MCP” on their tokens. Every read of records is recorded in the audit log.",
+      "writes": "Let MCP clients create and update records",
+      "writesHint": "Only for tokens that can change records: up to 50 records per call, never deleting. Off: MCP clients only read.",
+      "writesNeedsMcp": "Turn on MCP clients first.",
+      "toast": {
+        "enabled": {
+          "on": "MCP clients allowed.",
+          "off": "MCP clients turned off."
+        },
+        "allow_writes": {
+          "on": "MCP clients can now create and update records.",
+          "off": "MCP clients can only read now."
+        }
+      },
+      "confirm": {
+        "enabled": {
+          "title": "Allow MCP clients?",
+          "lead": "Members will be able to send the records they can read to the AI model that their MCP client uses.",
+          "point1": "This holds even when the AI settings keep record values away from AI: those cover Cellhive's own AI provider, not the members' clients.",
+          "point2": "A client acts as the token's owner: it never reads more than that person can, within the token's scopes and bases.",
+          "point3": "Every read of records through MCP is recorded in the audit log, without the values.",
+          "action": "Allow MCP clients"
+        },
+        "allow_writes": {
+          "title": "Let MCP clients change records?",
+          "lead": "Clients whose token can change records will be able to create and update records as the token's owner.",
+          "point1": "Up to 50 records per call, with the owner's permissions; never deleting, never changing tables or fields. Automations run as for any API change.",
+          "point2": "Records can hold text written by others, such as form submissions. A model may take it for instructions and write wrong data: keep clients asking before each change.",
+          "point3": "A call sent again after a lost connection can create the same records twice.",
+          "action": "Allow changes"
+        }
+      }
+    },
+    "connect": {
+      "action": "Connect via MCP",
+      "actionLabel": "Connect {{name}} via MCP",
+      "title": "Connect via MCP",
+      "description": "Use “{{name}}” in an AI client that supports MCP.",
+      "url": "Server URL",
+      "client": "Client",
+      "clients": {
+        "claudeCode": "Claude Code",
+        "cursor": "Cursor",
+        "vscode": "VS Code"
+      },
+      "snippet": {
+        "claudeCode": "Command",
+        "cursor": "mcp.json",
+        "vscode": ".vscode/mcp.json"
+      },
+      "hint": {
+        "claudeCode": "Run it in a terminal, then type /mcp in Claude Code to check the connection.",
+        "cursor": "Add it to ~/.cursor/mcp.json for every project, or to .cursor/mcp.json in one project.",
+        "vscode": "Add it to .vscode/mcp.json. VS Code asks for the token when it first starts the server and keeps it in its secret storage."
+      },
+      "placeholder": "Replace {{masked}} with the full token. Cellhive showed it only once, when the token was created."
+    }
   }
 }

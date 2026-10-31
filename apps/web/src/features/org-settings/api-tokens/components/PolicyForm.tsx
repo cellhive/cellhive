@@ -51,7 +51,7 @@ export function PolicyForm({
             return;
           }
           save.mutate(
-            { enabled, max_lifetime_days: max },
+            { api_tokens: { enabled, max_lifetime_days: max } },
             {
               onSuccess: () => {
                 showToast({ variant: 'success', message: t('policy.saved') });

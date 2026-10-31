@@ -1,9 +1,9 @@
 import { Button, cn } from '@cellhive/ui';
-import { Ban, CircleAlert, CircleCheck, Pencil, Trash2, TriangleAlert } from 'lucide-react';
+import { Ban, CircleAlert, CircleCheck, Pencil, Plug, Trash2, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useFormatters } from '../../../../lib/i18n/format';
-import { maskedToken, scopeKey, tokenStatus, tokenWarning } from '../model';
+import { canUseMcp, maskedToken, scopeKey, tokenStatus, tokenWarning } from '../model';
 
 import type { ApiTokenDto, OrgApiTokenDto } from '@cellhive/contracts';
 
@@ -18,7 +18,8 @@ const STATUS_STYLE = {
 /**
  * The rows of a token list (BACKLOG T714): name, `cht_xxxxxxxx…`, scopes,
  * bases, expiry (a warning under 7 days or once expired), last use, status,
- * and the actions. Rows wrap into cards on narrow screens.
+ * and the actions — "Connect via MCP" only with `onConnect` (MCP on) and on
+ * active tokens that can open the endpoint. Rows wrap into cards on narrow screens.
  */
 export function TokenList({
   tokens,
@@ -26,11 +27,13 @@ export function TokenList({
   now,
   onRename,
   onRevoke,
+  onConnect,
 }: {
   readonly tokens: readonly Token[];
   readonly baseNames: ReadonlyMap<string, string>;
   readonly now: Date;
   readonly onRename?: (token: Token) => void;
+  readonly onConnect?: ((token: Token) => void) | undefined;
   readonly onRevoke: (token: Token) => void;
 }) {
   const { t } = useTranslation('apiTokens');
@@ -126,6 +129,19 @@ export function TokenList({
             </div>
             {status === 'revoked' ? null : (
               <div className="flex shrink-0 flex-wrap gap-1">
+                {onConnect !== undefined && canUseMcp(token, now) ? (
+                  <Button
+                    variant="secondary"
+                    aria-label={t('mcp.connect.actionLabel', { name: token.name })}
+                    data-testid="token-connect-mcp"
+                    onClick={() => {
+                      onConnect(token);
+                    }}
+                  >
+                    <Plug aria-hidden="true" />
+                    <span className="max-sm:sr-only">{t('mcp.connect.action')}</span>
+                  </Button>
+                ) : null}
                 {onRename === undefined ? null : (
                   <Button
                     variant="secondary"

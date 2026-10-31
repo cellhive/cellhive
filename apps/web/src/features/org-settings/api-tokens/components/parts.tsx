@@ -51,19 +51,21 @@ export function Note({
  * A read-only value in monospace with "Copy": focus selects it all, so
  * Ctrl/⌘+C works where the Clipboard API does not; "Copied" is announced
  * through a `role="status"` live region. `multiline` shows a wrapped
- * `<textarea>` (the curl example).
+ * `<textarea>` of `rows` lines (the curl example, MCP configurations).
  */
 export function CopyField({
   label,
   value,
   hint,
   multiline = false,
+  rows = 3,
   'data-testid': testId,
 }: {
   readonly label: string;
   readonly value: string;
   readonly hint?: ReactNode;
   readonly multiline?: boolean;
+  readonly rows?: number;
   readonly 'data-testid'?: string;
 }) {
   const { t } = useTranslation('apiTokens');
@@ -99,7 +101,7 @@ export function CopyField({
       </label>
       <div className="flex min-w-0 items-start gap-2">
         {multiline ? (
-          <textarea {...shared} rows={3} className={cn(box, 'resize-none py-1.5 break-all')} />
+          <textarea {...shared} rows={rows} className={cn(box, 'resize-none py-1.5 break-all')} />
         ) : (
           <input {...shared} className={cn(box, 'h-control')} />
         )}

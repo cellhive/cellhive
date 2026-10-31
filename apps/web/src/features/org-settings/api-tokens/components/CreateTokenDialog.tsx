@@ -15,38 +15,43 @@ import {
   expiryAt,
   expiryChoiceState,
   initialCreateForm,
+  isMcpPreset,
   orderedScopes,
   presetOf,
+  presetsFor,
   SCOPE_GROUPS,
-  SCOPE_PRESETS,
   scopeKey,
   scopesOfPreset,
   type CreateFormErrors,
   type CreateTokenForm,
+  type ScopePreset,
 } from '../model';
 
 import { Note } from './parts';
 
 import type { RevealedToken } from './dialogs';
-import type { ApiTokenScope, CreateApiTokenRequest } from '@cellhive/contracts';
+import type { ApiTokenScope, CreateApiTokenRequest, McpPolicy } from '@cellhive/contracts';
 
 /**
  * "New API token" (BACKLOG T714): name, scopes by group with presets, bases
  * (all / chosen), expiration (7, 30, 90 by default, 365 days, a custom date, or never
  * — never only when the policy allows; choices longer than the policy's
- * limit are disabled with the reason). The created token goes to
- * `onCreated` once; the mutation forgets it right away.
+ * limit are disabled with the reason). The MCP presets render only while the
+ * organization allows MCP (T924). The created token goes to `onCreated`
+ * once; the mutation forgets it right away.
  */
 export function CreateTokenDialog({
   orgId,
   open,
   maxLifetimeDays,
+  mcp,
   onClose,
   onCreated,
 }: {
   readonly orgId: string;
   readonly open: boolean;
   readonly maxLifetimeDays: number | null;
+  readonly mcp: McpPolicy;
   readonly onClose: () => void;
   readonly onCreated: (token: RevealedToken) => void;
 }) {
@@ -67,6 +72,7 @@ export function CreateTokenDialog({
         <CreateForm
           orgId={orgId}
           maxLifetimeDays={maxLifetimeDays}
+          mcp={mcp}
           onClose={onClose}
           onCreated={onCreated}
         />
@@ -78,11 +84,13 @@ export function CreateTokenDialog({
 function CreateForm({
   orgId,
   maxLifetimeDays,
+  mcp,
   onClose,
   onCreated,
 }: {
   readonly orgId: string;
   readonly maxLifetimeDays: number | null;
+  readonly mcp: McpPolicy;
   readonly onClose: () => void;
   readonly onCreated: (token: RevealedToken) => void;
 }) {
@@ -91,6 +99,8 @@ function CreateForm({
   const queryClient = useQueryClient();
   const ids = useId();
   const [form, setForm] = useState<CreateTokenForm>(() => initialCreateForm(maxLifetimeDays));
+  // The preset last picked: an MCP one shares its scopes with a plain one.
+  const [picked, setPicked] = useState<ScopePreset>('read');
   const [errors, setErrors] = useState<CreateFormErrors>({});
   const [now] = useState(() => new Date());
   const bases = useQuery(orgBasesQuery(orgId));
@@ -105,7 +115,7 @@ function CreateForm({
     setErrors({});
     if (create.isError) create.reset();
   };
-  const preset = presetOf(form.scopes);
+  const preset = presetOf(form.scopes, picked);
   const expiresAt = expiryAt(form.expiry, maxLifetimeDays, now);
   const errorText = (field: keyof CreateFormErrors): string | undefined => {
     const error = errors[field];
@@ -146,7 +156,12 @@ function CreateForm({
           {
             onSuccess: (created) => {
               // The value goes to the caller once; the mutation cache forgets it.
-              onCreated({ id: created.id, name: created.name, token: created.token });
+              onCreated({
+                id: created.id,
+                name: created.name,
+                token: created.token,
+                mcp: isMcpPreset(preset),
+              });
               create.reset();
             },
           },
@@ -176,7 +191,7 @@ function CreateForm({
           {t('create.accessHint')}
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
-          {SCOPE_PRESETS.map((item) => (
+          {presetsFor(mcp).map((item) => (
             <Choice
               key={item}
               name={`${ids}-preset`}
@@ -185,6 +200,7 @@ function CreateForm({
               hint={t(`create.preset.${item}Hint`)}
               data-testid={`token-preset-${item}`}
               onSelect={() => {
+                setPicked(item);
                 update({ scopes: scopesOfPreset(item) });
               }}
             />

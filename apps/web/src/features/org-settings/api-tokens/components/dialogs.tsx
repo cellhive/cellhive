@@ -9,6 +9,7 @@ import { showToast } from '../../../../lib/toast/toast';
 import { apiTokenKeys, apiTokensApi, useRevokeToken } from '../api';
 import { curlExample } from '../model';
 
+import { McpConnect } from './mcp';
 import { CopyField, Note } from './parts';
 
 import type { ApiTokenDto, OrgApiTokenDto } from '@cellhive/contracts';
@@ -20,11 +21,13 @@ export interface RevealedToken {
   readonly id: string;
   readonly name: string;
   readonly token: string;
+  /** Created from an MCP preset: the dialog shows how to connect a client (T924). */
+  readonly mcp: boolean;
 }
 
 /**
  * The new token, shown **once** (CONTRACTS §26.1): a warning, the value and a
- * curl example with "Copy", and a required "I've saved it" check before the
+ * curl example — or, for an MCP preset, the "Connect via MCP" box — with "Copy", and a required "I've saved it" check before the
  * dialog closes. The value lives only in the caller's component state (never
  * in storage, the URL or the query cache — FRONTEND §12) and is dropped when
  * the dialog closes.
@@ -88,13 +91,17 @@ function RevealDialog({
           {t('reveal.warning')}
         </Note>
         <CopyField label={t('reveal.label')} value={reveal.token} data-testid="token-value" />
-        <CopyField
-          label={t('reveal.example')}
-          value={curlExample(window.location.origin, reveal.token)}
-          hint={t('reveal.exampleHint')}
-          multiline
-          data-testid="token-curl"
-        />
+        {reveal.mcp ? (
+          <McpConnect token={reveal.token} masked={false} />
+        ) : (
+          <CopyField
+            label={t('reveal.example')}
+            value={curlExample(window.location.origin, reveal.token)}
+            hint={t('reveal.exampleHint')}
+            multiline
+            data-testid="token-curl"
+          />
+        )}
         <div className="flex flex-col gap-1">
           <Checkbox
             ref={checkbox}

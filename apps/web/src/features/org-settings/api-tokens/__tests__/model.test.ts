@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canUseMcp,
   createRequestOf,
   curlExample,
   defaultExpiry,
   expiryAt,
   expiryChoiceState,
+  isMcpPreset,
   maskedToken,
+  mcpSnippet,
+  mcpUrl,
   presetOf,
+  presetsFor,
   scopesOfPreset,
   tokenStatus,
   tokenWarning,
@@ -52,6 +57,44 @@ describe('presets', () => {
     [[], 'custom'],
   ] as const)('presetOf(%j) = %s', (scopes, preset) => {
     expect(presetOf(scopes)).toBe(preset);
+  });
+
+  // T924: the MCP presets need what the tools need (C§30): the route
+  // `schema:read`, the read tools `records:read`, the write tools `records:write`.
+  it.each([
+    ['mcpRead', ['records:read', 'schema:read']],
+    ['mcpReadWrite', ['records:read', 'records:write', 'schema:read']],
+  ] as const)('%s → %j, kept when picked', (preset, scopes) => {
+    expect(scopesOfPreset(preset)).toEqual(scopes);
+    expect(isMcpPreset(preset)).toBe(true);
+    expect(presetOf(scopes, preset)).toBe(preset);
+    // Not picked: the plain preset with the same scopes.
+    expect(presetOf(scopes)).toBe(preset === 'mcpRead' ? 'read' : 'readWrite');
+  });
+
+  it.each([
+    [['records:read'], 'mcpRead', 'custom'],
+    [['records:read', 'schema:read', 'schema:write'], 'mcpRead', 'schema'],
+  ] as const)(
+    'presetOf(%j, %s) = %s: a picked preset that no longer matches',
+    (scopes, picked, preset) => {
+      expect(presetOf(scopes, picked)).toBe(preset);
+    },
+  );
+
+  it.each([
+    [{ enabled: false, allow_writes: false }, []],
+    [{ enabled: false, allow_writes: true }, []],
+    [{ enabled: true, allow_writes: false }, ['mcpRead']],
+    [{ enabled: true, allow_writes: true }, ['mcpRead', 'mcpReadWrite']],
+  ] as const)('MCP policy %j offers the MCP presets %j', (mcp, offered) => {
+    expect(presetsFor(mcp)).toEqual(['read', 'readWrite', 'schema', 'automation', ...offered]);
+  });
+
+  it('only the MCP presets are MCP ones', () => {
+    for (const preset of ['read', 'readWrite', 'schema', 'automation', 'custom'] as const) {
+      expect(isMcpPreset(preset)).toBe(false);
+    }
   });
 });
 
@@ -191,5 +234,60 @@ describe('display', () => {
     expect(curlExample('https://ob.example', 'cht_x')).toBe(
       'curl -H "Authorization: Bearer cht_x" https://ob.example/api/v1/me',
     );
+  });
+});
+
+describe('MCP (T924)', () => {
+  const url = mcpUrl('https://ch.example');
+  const fake = 'cht_FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE';
+
+  it('the endpoint is PUBLIC_URL + /api/v1/mcp', () => {
+    expect(url).toBe('https://ch.example/api/v1/mcp');
+  });
+
+  it('Claude Code: one `claude mcp add` command with the header', () => {
+    expect(mcpSnippet('claudeCode', url, fake)).toBe(
+      `claude mcp add --transport http cellhive https://ch.example/api/v1/mcp --header "Authorization: Bearer ${fake}"`,
+    );
+  });
+
+  it('Cursor: `mcp.json` with url and headers', () => {
+    expect(JSON.parse(mcpSnippet('cursor', url, fake))).toEqual({
+      mcpServers: {
+        cellhive: { url, headers: { Authorization: `Bearer ${fake}` } },
+      },
+    });
+  });
+
+  it('VS Code: an http server whose token comes from an input, never the value', () => {
+    const snippet = mcpSnippet('vscode', url, fake);
+    expect(snippet).not.toContain(fake);
+    expect(JSON.parse(snippet)).toEqual({
+      inputs: [
+        {
+          type: 'promptString',
+          id: 'cellhive-token',
+          description: 'Cellhive API token',
+          password: true,
+        },
+      ],
+      servers: {
+        cellhive: {
+          type: 'http',
+          url,
+          headers: { Authorization: 'Bearer $' + '{input:cellhive-token}' },
+        },
+      },
+    });
+  });
+
+  it.each([
+    [{}, true],
+    [{ scopes: ['records:read'] }, false],
+    [{ scopes: ['schema:read'] }, true],
+    [{ expires_at: inDays(-1) }, false],
+    [{ revoked_at: inDays(-1) }, false],
+  ] as const)('canUseMcp(%j) = %s', (patch, can) => {
+    expect(canUseMcp({ ...token, ...patch }, NOW)).toBe(can);
   });
 });

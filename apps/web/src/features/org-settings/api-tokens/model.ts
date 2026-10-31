@@ -8,6 +8,7 @@ import {
   type ApiTokenStatus,
   type CreateApiTokenRequest,
   type Id,
+  type McpPolicy,
 } from '@cellhive/contracts';
 
 /**
@@ -32,7 +33,14 @@ export const SCOPE_GROUPS = [
   { key: 'automations', scopes: ['automations:read', 'automations:write'] },
 ] as const satisfies readonly { key: string; scopes: readonly ApiTokenScope[] }[];
 
-export const SCOPE_PRESETS = ['read', 'readWrite', 'schema', 'automation'] as const;
+export const SCOPE_PRESETS = [
+  'read',
+  'readWrite',
+  'schema',
+  'automation',
+  'mcpRead',
+  'mcpReadWrite',
+] as const;
 export type ScopePreset = (typeof SCOPE_PRESETS)[number];
 
 const PRESET_SCOPES: Record<ScopePreset, readonly ApiTokenScope[]> = {
@@ -42,7 +50,32 @@ const PRESET_SCOPES: Record<ScopePreset, readonly ApiTokenScope[]> = {
   // Previews, test sends and run details show record values, which need
   // `records:read` (CONTRACTS §26.2).
   automation: ['records:read', 'schema:read', 'automations:read', 'automations:write'],
+  // The MCP route needs `schema:read`, the read tools `records:read`, the write
+  // tools `records:write` (CONTRACTS §30). Same scopes as "read"/"readWrite":
+  // the MCP ones also open the "Connect via MCP" box once created.
+  mcpRead: ['records:read', 'schema:read'],
+  mcpReadWrite: ['records:read', 'records:write', 'schema:read'],
 };
+
+/** A preset meant for an MCP client (T924). */
+export function isMcpPreset(preset: ScopePreset | 'custom'): boolean {
+  return preset === 'mcpRead' || preset === 'mcpReadWrite';
+}
+
+/**
+ * The presets of the create form under the organization's MCP policy
+ * (CONTRACTS §30.1): the MCP ones only while MCP is on, "read & write" only
+ * while MCP may write.
+ */
+export function presetsFor(mcp: McpPolicy): ScopePreset[] {
+  return SCOPE_PRESETS.filter((preset) =>
+    preset === 'mcpRead'
+      ? mcp.enabled
+      : preset === 'mcpReadWrite'
+        ? mcp.enabled && mcp.allow_writes
+        : true,
+  );
+}
 
 /**
  * i18n key of a scope's name: `records:read` → `scopes.records.read` (`:` is
@@ -62,10 +95,18 @@ export function scopesOfPreset(preset: ScopePreset): ApiTokenScope[] {
   return orderedScopes(PRESET_SCOPES[preset]);
 }
 
-/** The preset with exactly these scopes, else `custom`. */
-export function presetOf(scopes: readonly ApiTokenScope[]): ScopePreset | 'custom' {
+/**
+ * The preset with exactly these scopes — `preferred` when it has them (an MCP
+ * preset shares its scopes with a plain one) — else `custom`.
+ */
+export function presetOf(
+  scopes: readonly ApiTokenScope[],
+  preferred?: ScopePreset,
+): ScopePreset | 'custom' {
   const key = orderedScopes(scopes).join(' ');
-  return SCOPE_PRESETS.find((preset) => scopesOfPreset(preset).join(' ') === key) ?? 'custom';
+  const matches = (preset: ScopePreset) => scopesOfPreset(preset).join(' ') === key;
+  if (preferred !== undefined && matches(preferred)) return preferred;
+  return SCOPE_PRESETS.find(matches) ?? 'custom';
 }
 
 // --- Expiry ------------------------------------------------------------------------------
@@ -241,4 +282,64 @@ export function maskedToken(prefix: string): string {
 /** The example request of the "shown once" dialog. */
 export function curlExample(origin: string, token: string): string {
   return `curl -H "Authorization: Bearer ${token}" ${origin}/api/v1/me`;
+}
+
+// --- MCP (T924, CONTRACTS §30) -------------------------------------------------------------
+
+export const MCP_CLIENTS = ['claudeCode', 'cursor', 'vscode'] as const;
+export type McpClient = (typeof MCP_CLIENTS)[number];
+
+/** The MCP endpoint: `${PUBLIC_URL}/api/v1/mcp` (the web app is served from `PUBLIC_URL`). */
+export function mcpUrl(origin: string): string {
+  return `${origin}/api/v1/mcp`;
+}
+
+/** A token that can open the MCP endpoint (its route needs `schema:read`) and still works. */
+export function canUseMcp(
+  token: TokenTimes & { readonly scopes: readonly ApiTokenScope[] },
+  now: Date,
+): boolean {
+  return token.scopes.includes('schema:read') && tokenStatus(token, now) === 'active';
+}
+
+/**
+ * The configuration of a client: Claude Code's `claude mcp add` command,
+ * Cursor's `mcp.json`, VS Code's `.vscode/mcp.json` — the last one asks for
+ * the token in VS Code (an input), so it never holds it.
+ */
+export function mcpSnippet(client: McpClient, url: string, token: string): string {
+  const authorization = `Bearer ${token}`;
+  switch (client) {
+    case 'claudeCode':
+      return `claude mcp add --transport http cellhive ${url} --header "Authorization: ${authorization}"`;
+    case 'cursor':
+      return JSON.stringify(
+        { mcpServers: { cellhive: { url, headers: { Authorization: authorization } } } },
+        null,
+        2,
+      );
+    case 'vscode':
+      return JSON.stringify(
+        {
+          inputs: [
+            {
+              type: 'promptString',
+              id: 'cellhive-token',
+              description: 'Cellhive API token',
+              password: true,
+            },
+          ],
+          servers: {
+            cellhive: {
+              type: 'http',
+              url,
+              // VS Code fills in its input: not a template literal of this code.
+              headers: { Authorization: 'Bearer ${input:cellhive-token}' },
+            },
+          },
+        },
+        null,
+        2,
+      );
+  }
 }

@@ -12,8 +12,9 @@ import { notFound } from '../../../../lib/navigation/not-found';
 import { isOrgAdmin } from '../../../../lib/permissions/org';
 import { orgQuery } from '../../../../lib/query/queries';
 import { meQuery } from '../../../../lib/session/session';
-import { policyOf } from '../api';
+import { mcpPolicyOf, policyOf } from '../api';
 
+import { McpPolicySection } from './mcp';
 import { MyTokens } from './MyTokens';
 import { OrgTokens } from './OrgTokens';
 import { PolicyForm } from './PolicyForm';
@@ -83,6 +84,7 @@ export function ApiTokensPage() {
     tabs.current[next]?.focus();
   };
   const policy = policyOf(org.data);
+  const mcp = mcpPolicyOf(org.data);
 
   return (
     <div className="flex min-h-full flex-col bg-canvas">
@@ -146,9 +148,17 @@ export function ApiTokensPage() {
         ) : tab === 'all' ? (
           <OrgTokens orgId={summary.id} />
         ) : tab === 'policy' ? (
-          <PolicyForm key={org.data.updated_at} orgId={summary.id} policy={policy} />
+          <>
+            {/* Keyed by its own values: saving the MCP switches keeps its draft. */}
+            <PolicyForm
+              key={`${String(policy.enabled)}:${String(policy.max_lifetime_days)}`}
+              orgId={summary.id}
+              policy={policy}
+            />
+            <McpPolicySection orgId={summary.id} mcp={mcp} />
+          </>
         ) : (
-          <MyTokens orgId={summary.id} policy={policy} />
+          <MyTokens orgId={summary.id} policy={policy} mcp={mcp} />
         )}
       </div>
     </div>
