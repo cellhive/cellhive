@@ -810,8 +810,9 @@ export class AutomationService {
    * system sender) and a footer the policies allow (T514, ADR-33);
    * `send_notification` steps, known users and groups (T515); `send_telegram`
    * and `http_request` steps, secrets usable in the base (T516, T606).
+   * Also the check of an AI draft (T908): what `create` would accept.
    */
-  private async validate(
+  async validate(
     base: BaseAccess,
     definition: AutomationDefinition,
     automationId: Id<'aut'> | null,
@@ -921,7 +922,7 @@ export class AutomationService {
   }
 
   /** Tables, fields and the caller's access, computed fields locked for them (T457). */
-  private async schemaContext(base: BaseAccess): Promise<AutomationValidationContext> {
+  async schemaContext(base: BaseAccess): Promise<AutomationValidationContext> {
     const scope = base.org.scope;
     const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
     const locked = new Set<string>();
