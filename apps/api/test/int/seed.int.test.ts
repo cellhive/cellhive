@@ -22,11 +22,13 @@ import {
   type Id,
 } from '@cellhive/contracts';
 import { loadConfig } from '@cellhive/server-core';
+import { startFakeOpenAiServer, type FakeOpenAiServer } from '@cellhive/server-core/testing';
 import { createWorker, CRON_ITEMS } from '@cellhive/worker';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 
 import { PasswordHasher } from '../../src/common/auth/password/password-hasher.js';
+import { DEMO_AI_ENV } from '../../src/seed/demo-ai.js';
 import {
   DEMO_AUTOMATION_NAMES,
   DEMO_BUTTON_FIELD,
@@ -899,6 +901,22 @@ describe('pnpm seed:demo (T012)', () => {
              + (SELECT count(*)::int FROM meta.user_channel_link_tokens) AS n
       `.execute(db.kysely);
       expect(channels.rows[0]?.n).toBe(0);
+    });
+
+    it('configures no AI without DEMO_AI_*: no settings, no key, no AI line (T917)', async () => {
+      const { rows } = await sql<{ settings: number; keys: number; usage: number }>`
+        SELECT (SELECT count(*)::int FROM meta.ai_settings) AS settings,
+               (SELECT count(*)::int FROM meta.secrets WHERE kind = 'ai_api_key') AS keys,
+               (SELECT count(*)::int FROM meta.ai_usage_daily) AS usage
+      `.execute(db.kysely);
+      expect(rows[0]).toEqual({ settings: 0, keys: 0, usage: 0 });
+      const audit = await db.kysely
+        .selectFrom('meta.audit_logs')
+        .select('action')
+        .where('action', 'like', 'ai%')
+        .execute();
+      expect(audit).toEqual([]);
+      expect([...first.out, ...first.err].join('\n')).not.toMatch(/AI provider|DEMO_AI/u);
     });
 
     it('leaves no session behind', async () => {
@@ -1776,6 +1794,166 @@ describe('pnpm seed:demo (T012)', () => {
       const run = await seed(database.url);
       expect(run.code).toBe(1);
       expect(run.err.join('\n')).toMatch(/Some demo data exists.*Sales/);
+    });
+  });
+
+  describe('with DEMO_AI_* (T917)', () => {
+    /** Obviously fake: the fake provider never checks it, nothing real is ever called. */
+    const KEY = 'sk-test-FAKE-demo-seed-0000000000000000';
+    let database: TestDatabase;
+    let db: Db;
+    let fake: FakeOpenAiServer;
+    let run: SeedRun;
+    let aiEnv: Env;
+
+    beforeAll(async () => {
+      database = await createMigratedDatabase();
+      db = createTestDb(database.url);
+      fake = await startFakeOpenAiServer();
+      aiEnv = {
+        [DEMO_AI_ENV.baseUrl]: fake.baseUrl,
+        [DEMO_AI_ENV.model]: 'fake-model',
+        [DEMO_AI_ENV.apiKey]: KEY,
+      };
+      run = await seed(database.url, [], aiEnv);
+    });
+
+    afterAll(async () => {
+      await fake.close();
+      await db.destroy();
+      await database.drop();
+    });
+
+    it('refuses an incomplete or unusable DEMO_AI_* before creating anything', async () => {
+      const other = await createMigratedDatabase();
+      const otherDb = createTestDb(other.url);
+      try {
+        for (const overrides of [
+          { [DEMO_AI_ENV.model]: 'fake-model' },
+          { [DEMO_AI_ENV.baseUrl]: 'http://127.0.0.1:11434/v1', [DEMO_AI_ENV.model]: 'm' },
+        ]) {
+          const refused = await seed(other.url, [], overrides);
+          expect(refused.code).toBe(1);
+          expect(refused.err.join('\n')).toMatch(/DEMO_AI_BASE_URL/u);
+        }
+        const orgs = await otherDb.kysely.selectFrom('meta.organizations').select('id').execute();
+        expect(orgs).toHaveLength(0);
+      } finally {
+        await otherDb.destroy();
+        await other.drop();
+      }
+    });
+
+    it('stores the AI settings with record data off, the key as a secret and the allowlist entry', async () => {
+      expect(run.code, run.err.join('\n')).toBe(0);
+      expect(run.err.join('\n')).not.toContain('Warning');
+      const settings = await db.kysely
+        .selectFrom('meta.ai_settings as a')
+        .innerJoin('meta.organizations as o', 'o.id', 'a.organization_id')
+        .selectAll('a')
+        .select('o.name as org')
+        .execute();
+      expect(settings).toHaveLength(1);
+      expect(settings[0]).toMatchObject({
+        org: DEMO_ORG.name,
+        enabled: true,
+        provider_base_url: fake.baseUrl,
+        model: 'fake-model',
+        allow_record_data: false,
+        log_prompts: false,
+        structured_output: 'auto',
+        detected_output: null,
+      });
+      const secret = await db.kysely
+        .selectFrom('meta.secrets')
+        .select(['id', 'kind', 'allowed_hosts', 'base_scope'])
+        .where('id', '=', settings[0]?.api_key_secret_id ?? 'sec_none')
+        .executeTakeFirstOrThrow();
+      expect(secret).toMatchObject({
+        kind: 'ai_api_key',
+        allowed_hosts: [`localhost:${String(fake.port)}`],
+        base_scope: 'all',
+      });
+      const allowlist = await db.kysely
+        .selectFrom('meta.http_allowlist')
+        .select('pattern')
+        .orderBy('pattern')
+        .execute();
+      expect(allowlist.map((row) => row.pattern)).toEqual([
+        `localhost:${String(fake.port)}`,
+        DEMO_ALLOWLIST_PATTERN,
+      ]);
+      const audit = await db.kysely
+        .selectFrom('meta.audit_logs')
+        .select(['action', 'after'])
+        .where('action', '=', 'ai_settings.updated')
+        .execute();
+      expect(audit).toHaveLength(1);
+      expect(audit[0]?.after).toMatchObject({ enabled: true, allow_record_data: false });
+    });
+
+    it('never calls the provider, never prints or audits the key', async () => {
+      expect(fake.requests).toEqual([]);
+      expect(fake.connections()).toBe(0);
+      const summary = run.out.join('\n');
+      expect(summary).toContain(
+        `AI provider (${DEMO_AI_ENV.baseUrl}): localhost, model fake-model, key stored as a secret (not printed), record data off`,
+      );
+      expect(summary).toContain(
+        `HTTP allowlist: localhost:${String(fake.port)} (for the AI provider)`,
+      );
+      expect(summary).not.toContain(fake.baseUrl);
+      const { rows } = await sql<{ hits: number }>`
+        SELECT count(*)::int AS hits FROM meta.audit_logs
+         WHERE before::text LIKE ${`%${KEY}%`} OR after::text LIKE ${`%${KEY}%`}
+      `.execute(db.kysely);
+      expect(rows[0]?.hits).toBe(0);
+      expect([...run.out, ...run.err].join('\n')).not.toContain(KEY);
+    });
+
+    it('the seeded settings work: "Test connection" reaches the provider with the key', async () => {
+      fake.capabilities.apiKey = KEY;
+      const t = await startTestApp(
+        { DATABASE_URL: database.url },
+        { outboundLookup: () => Promise.resolve(['127.0.0.1']) },
+      );
+      try {
+        const browser = new Browser(t.app);
+        const admin = DEMO_USERS.find((user) => user.key === 'u_admin');
+        expect((await browser.login(admin?.email ?? '', DEMO_PASSWORD)).statusCode).toBe(204);
+        const org = await db.kysely
+          .selectFrom('meta.organizations')
+          .select('id')
+          .where('name', '=', DEMO_ORG.name)
+          .executeTakeFirstOrThrow();
+        const tested = await browser.request({
+          method: 'POST',
+          url: `/api/v1/orgs/${org.id}/ai-settings/test`,
+          payload: {},
+        });
+        expect(tested.statusCode, tested.body).toBe(200);
+        expect(tested.json()).toMatchObject({ ok: true, models: ['fake-model'] });
+        expect(fake.chatRequests().length).toBeGreaterThan(0);
+        expect(
+          fake.requests.every((request) => request.headers.authorization === `Bearer ${KEY}`),
+        ).toBe(true);
+      } finally {
+        fake.capabilities.apiKey = null;
+        await t.close();
+      }
+    });
+
+    it('changes nothing when run again, DEMO_AI_* ignored with a hint', async () => {
+      const before = await db.kysely.selectFrom('meta.audit_logs').select('id').execute();
+      const again = await seed(database.url, [], aiEnv);
+      expect(again.code).toBe(0);
+      expect(again.err.join('\n')).toContain(
+        `${DEMO_AI_ENV.baseUrl} ignored: the demo data already exists`,
+      );
+      expect(again.out.join('\n')).not.toMatch(/AI provider/u);
+      expect(await db.kysely.selectFrom('meta.audit_logs').select('id').execute()).toHaveLength(
+        before.length,
+      );
     });
   });
 

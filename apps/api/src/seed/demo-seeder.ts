@@ -16,6 +16,7 @@ import {
   WorkspacesRepository,
   type Db,
   type User,
+  type HostLookup,
 } from '@cellhive/server-core';
 
 import { AccessService, type BaseAccess } from '../common/access/access.service.js';
@@ -30,6 +31,7 @@ import { RoleService } from '../modules/role/role.service.js';
 import { lockSetup, OrganizationProvisioner } from '../modules/setup/org-provisioning.js';
 import { WorkspaceService } from '../modules/workspace/workspace.service.js';
 
+import { seedDemoAi, type DemoAiProvider, type DemoAiResult } from './demo-ai.js';
 import { seedDemoAutomations, type DemoAutomationsResult } from './demo-automations.js';
 import {
   DEFAULT_DEMO_PROFILE,
@@ -102,6 +104,11 @@ export interface DemoSeedResult {
    * when the data already existed.
    */
   readonly s7: DemoS7Result | null;
+  /**
+   * The AI provider of `DEMO_AI_*` (BACKLOG T917, development only); `null`
+   * when none was given or the data already existed.
+   */
+  readonly ai: DemoAiResult | null;
 }
 
 export interface DemoSeedOptions {
@@ -110,6 +117,13 @@ export interface DemoSeedOptions {
   readonly onProgress?: (message: string) => void;
   /** Create the sample share links (development only; default `true`). */
   readonly shareLinks?: boolean;
+  /** The AI provider of `DEMO_AI_*` (BACKLOG T917); none by default: no AI, no network. */
+  readonly ai?: {
+    readonly provider: DemoAiProvider;
+    readonly privateAllowlist: 'org' | 'off';
+    /** Test-only: DNS of the provider host. */
+    readonly lookup?: HostLookup;
+  } | null;
 }
 
 /**
@@ -159,7 +173,10 @@ function tokenOf(inviteUrl: string): string {
  *    T519), so nothing is ever notified about it; the S5
  *    samples — sender identities, a Telegram bot, a button field and
  *    automations (`seedDemoAutomations`); last, the custom role `Sales` of
- *    CONTRACTS §5 given to the group (`RoleService`).
+ *    CONTRACTS §5 given to the group (`RoleService`). Only with the
+ *    development-only `DEMO_AI_*` (BACKLOG T917), before the settlement: the
+ *    AI settings with record data off and the provider's allowlist entry
+ *    (`seedDemoAi`); without them no AI is configured and nothing resolved.
  */
 export class DemoSeeder {
   private readonly db: Db;
@@ -285,6 +302,7 @@ export class DemoSeeder {
           s5c: null,
           s6: null,
           s7: null,
+          ai: null,
         },
       };
     }
@@ -443,6 +461,22 @@ export class DemoSeeder {
         meta: stepMeta,
       });
 
+      // BACKLOG T917: only with `DEMO_AI_*` (development) — the AI settings
+      // (record data off) and, for an internal host, its allowlist entry —
+      // before the settlement too. The provider is never called.
+      let ai: DemoAiResult | null = null;
+      if (options.ai !== undefined && options.ai !== null) {
+        options.onProgress?.('AI provider of DEMO_AI_* (record data off)');
+        ai = await seedDemoAi(this.app, {
+          organizationId,
+          admin: principal,
+          provider: options.ai.provider,
+          privateAllowlist: options.ai.privateAllowlist,
+          ...(options.ai.lookup === undefined ? {} : { lookup: options.ai.lookup }),
+          meta: stepMeta,
+        });
+      }
+
       // BACKLOG T519: no automation exists yet, so the events of the sample
       // data can start nothing. Settle them now instead of leaving ~27 000
       // `events.dispatch` jobs queued in front of real work on a fresh database.
@@ -512,6 +546,7 @@ export class DemoSeeder {
         s5c: { ...s5cSources, automations: s5cAutomations },
         s6,
         s7,
+        ai,
       };
     } finally {
       await this.sessions.revoke(session);
