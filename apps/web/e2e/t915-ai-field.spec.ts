@@ -22,6 +22,9 @@ import {
  * values allowed while the spec runs, in a base of its own: Tickets
  * (Tiêu đề, Mô tả, Mức độ).
  *
+ * - (T917, S8 milestone) record values not allowed: the AI type is offered
+ *   disabled with the reason and a link to the settings, the server refuses
+ *   the field too; allowed again, it can be picked;
  * - "Summary" (AI · Summarize): the type's templates fill the prompt with
  *   the "Mô tả" chip; "Preview 5 rows" → 5 inputs and answers, the tokens
  *   of every row; "Create field" → "Generate values for 6 existing rows?"
@@ -355,6 +358,60 @@ test.afterAll(async ({ browser }) => {
   if (fx.baseId !== '') await api(page, 'DELETE', `/bases/${fx.baseId}`);
   await context.close();
   await fake.close();
+});
+
+test('record data off: the AI type is offered disabled with the reason; on, it can be picked (T917)', async ({
+  browser,
+}) => {
+  const { context, page } = await openAs(browser, ADMIN_EMAIL);
+  const newField = async () => {
+    await openGrid(page);
+    await page.getByTestId('grid-toolbar-more').click();
+    await page.getByRole('menuitem', { name: 'Add field' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New field' });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  };
+  await ok(page, 'PUT', `/orgs/${fx.orgId}/ai-settings`, { allow_record_data: false });
+  try {
+    const before = fake.chatRequests().length;
+    const dialog = await newField();
+    const option = dialog.getByLabel('Type').locator('optgroup[label="AI"] option');
+    await expect(option).toHaveText(['AI field (needs record values)']);
+    await expect(option).toBeDisabled();
+    const reason = dialog.getByTestId('ai-type-blocked');
+    await expect(reason).toContainText('this organization does not allow it');
+    await expect(
+      reason.getByRole('link', { name: 'Open Organization settings › AI' }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page, 'AI type blocked without record data');
+    await shots(page, 'type-picker-blocked');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    // The server refuses it as well, before any provider call.
+    const refused = await api<{ code: string }>(page, 'POST', `/tables/${fx.tickets}/fields`, {
+      name: `Summary ${RUN}`,
+      type: 'text',
+      options: { ai: { task: 'summarize', prompt: `{{ [${fx.description}] }}` } },
+    });
+    expect({ status: refused.status, code: refused.body.code }).toEqual({
+      status: 422,
+      code: 'AI_RECORD_DATA_DISABLED',
+    });
+    expect(fake.chatRequests().length).toBe(before);
+  } finally {
+    await ok(page, 'PUT', `/orgs/${fx.orgId}/ai-settings`, {
+      allow_record_data: true,
+      confirm: true,
+    });
+  }
+  const dialog = await newField();
+  const option = dialog.getByLabel('Type').locator('optgroup[label="AI"] option');
+  await expect(option).toHaveText(['AI field']);
+  await expect(option).toBeEnabled();
+  await expect(dialog.getByTestId('ai-type-blocked')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await context.close();
 });
 
 test('Summary: templates, a preview of 5 rows, the empty cells generated, live in another tab', async ({
