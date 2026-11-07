@@ -17,6 +17,7 @@ import {
   RecordMutationService,
   RecordQueryService,
   recomputeJobBatchId,
+  systemAuditContext,
   type AiBatchOutcome,
   type Db,
 } from '@cellhive/server-core';
@@ -733,6 +734,37 @@ describe('AI fields (T910)', () => {
     expect((await cell(records.r1))?.fields[field.id]).toBeNull();
   });
 
+  /** u_out becomes a manager of Orders who cannot read `cost` (QA S8), once. */
+  let managerReady = false;
+  const managerWithoutCost = async () => {
+    if (managerReady) return;
+    const role = await fx.call('u_admin', 'POST', `/bases/${fx.baseId}/roles`, {
+      name: 'Orders manager without cost',
+      config: {
+        tables: {
+          [fx.orders.id]: {
+            perm: 'manage',
+            field_rule: {
+              mode: 'specify',
+              fields: { [fld('cost')]: 'no_perm' },
+              option_edit_fields: [],
+              file_download_fields: [],
+            },
+          },
+        },
+        base_rule: { copy: false, download: false, share_link: false },
+      },
+    });
+    expect(role.statusCode, role.body).toBe(201);
+    const assigned = await fx.call('u_admin', 'PUT', `/bases/${fx.baseId}/role-assignments`, {
+      principal_type: 'user',
+      principal_id: fx.users.u_out.id,
+      role_id: role.json<{ id: string }>().id,
+    });
+    expect(assigned.statusCode, assigned.body).toBe(200);
+    managerReady = true;
+  };
+
   it('a formula over an AI field locks with it; a manager locked out of it cannot preview it (QA S8)', async () => {
     const aiCost = await addField({
       name: 'ai_cost_note',
@@ -759,30 +791,7 @@ describe('AI fields (T910)', () => {
     });
 
     // A table manager who cannot read `cost`: the AI field is one they cannot read in formulas.
-    const role = await fx.call('u_admin', 'POST', `/bases/${fx.baseId}/roles`, {
-      name: 'Orders manager without cost',
-      config: {
-        tables: {
-          [fx.orders.id]: {
-            perm: 'manage',
-            field_rule: {
-              mode: 'specify',
-              fields: { [fld('cost')]: 'no_perm' },
-              option_edit_fields: [],
-              file_download_fields: [],
-            },
-          },
-        },
-        base_rule: { copy: false, download: false, share_link: false },
-      },
-    });
-    expect(role.statusCode, role.body).toBe(201);
-    const assigned = await fx.call('u_admin', 'PUT', `/bases/${fx.baseId}/role-assignments`, {
-      principal_type: 'user',
-      principal_id: fx.users.u_out.id,
-      role_id: role.json<{ id: string }>().id,
-    });
-    expect(assigned.statusCode, assigned.body).toBe(200);
+    await managerWithoutCost();
     // Exactly like `[cost]` itself: a field that does not exist for them.
     for (const expression of ['[cost]', '[ai_cost_note]', '[ai_cost_copy]']) {
       const preview = await fx.call('u_out', 'POST', `/tables/${fx.orders.id}/computed-preview`, {
@@ -795,6 +804,63 @@ describe('AI fields (T910)', () => {
         { code: 'UNKNOWN_FIELD' },
       ]);
     }
+  });
+
+  it('a manager locked out of an AI field cannot drop, change or convert it; a stale prompt writes nothing (QA S8)', async () => {
+    const secret = await addField({
+      name: 'ai_cost_secret',
+      type: 'text',
+      options: { ai: { task: 'custom', prompt: 'Cost {{ [cost] }}', auto_update: false } },
+    });
+    await fx.call('u_admin', 'POST', `/fields/${secret.id}/ai/generate`, {
+      scope: 'records',
+      record_ids: [records.r1],
+    });
+    await drain(secret.id);
+    expect((await cell(records.r1))?.fields[secret.id]).toMatch(/^fake: /u);
+    await managerWithoutCost();
+    for (const [method, path, body] of [
+      ['PATCH', `/fields/${secret.id}`, { options: { ai: null } }],
+      [
+        'PATCH',
+        `/fields/${secret.id}`,
+        { options: { ai: { task: 'custom', prompt: '{{ [title] }}', auto_update: false } } },
+      ],
+      ['PUT', `/fields/${secret.id}`, { type: 'number', options: {} }],
+      ['POST', `/fields/${secret.id}/convert-preview`, { type: 'number', options: {} }],
+    ] as const) {
+      expectProblem(await fx.call('u_out', method, path, body), 403, 'PERMISSION_DENIED');
+    }
+    // Still an AI field, still locked for them.
+    expect((await fx.call('u_out', 'GET', `/fields/${secret.id}`)).json()).toMatchObject({
+      type: 'text',
+      locked: true,
+    });
+    expect((await cell(records.r1, 'u_out'))?.fields[secret.id] ?? null).toBeNull();
+
+    // Values made from a prompt edited since are not written: made again from the new one.
+    const mutations = t.app.get(RecordMutationService);
+    const version = (
+      await sql<{ version: number }>`
+        SELECT __version AS version FROM data.${sql.id(fx.orders.db_table_name)}
+        WHERE __id = ${records.r1}`.execute(db.kysely)
+    ).rows[0]?.version;
+    const write = await mutations.writeAiValues(
+      orgScope(fx.orgId),
+      fx.orders.id,
+      secret.id,
+      [{ recordId: records.r1, version: version ?? 0, value: 'from an older prompt' }],
+      { ...systemAuditContext(), via: { ai_field_id: secret.id } },
+      { prompt: `Old {{ [${fld('cost')}] }}` },
+    );
+    expect(write).toMatchObject({ written: [], stale: [records.r1] });
+    expect((await cell(records.r1))?.fields[secret.id]).toMatch(/^fake: /u);
+
+    // Someone who reads every source still may turn it into a plain field.
+    const plain = await fx.call('u_admin', 'PATCH', `/fields/${secret.id}`, {
+      options: { ai: null },
+    });
+    expect(plain.statusCode, plain.body).toBe(200);
   });
 
   it('refuses a link or a parent as a prompt source; a field converted to a link fails the row (QA S8)', async () => {

@@ -38,6 +38,7 @@ import {
   loadErrorRefs,
   organizationTimeZone,
   readabilityOf,
+  requireAiFieldUnlocked,
   type ErrorRefRows,
 } from './computed-fields.js';
 import { FieldConversionService } from './field-conversion.service.js';
@@ -289,6 +290,9 @@ export class FieldService {
     meta: RequestMeta,
   ): Promise<UpdateFieldResponse> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
+    if (input.options !== undefined && Object.hasOwn(input.options, 'ai')) {
+      await requireAiFieldUnlocked(this.db, base, field);
+    }
     if (field.type === 'text' || field.type === 'select')
       await this.requireAiFor(base, input.options);
     const link =

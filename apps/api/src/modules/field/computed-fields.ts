@@ -1,4 +1,5 @@
 import {
+  aiFieldLockedFor,
   computedImpactOf,
   displayExpression,
   fieldErrorOf,
@@ -7,8 +8,10 @@ import {
   type Db,
   formulaReferenceIds,
   formulaTypeOf,
+  isAiField,
   isComputedFieldLocked,
   isComputedRow,
+  loadBaseSchemaRows,
   publicResultType,
   snapshotOfBase,
   type BaseSchemaRows,
@@ -20,6 +23,7 @@ import {
   type TablesRepository,
 } from '@cellhive/server-core';
 
+import { permissionDenied } from '../../common/access/access.service.js';
 import { firstTimeZone, settingOf } from '../../common/access/time-zone.js';
 import { canManageTable } from '../../common/schema/schema-access.js';
 
@@ -54,6 +58,25 @@ export function readabilityOf(access: EffectiveAccess): SchemaReadability {
       return perm !== undefined && perm !== 'no_perm';
     },
   };
+}
+
+/**
+ * `403` when `field` is an AI field whose values the caller is locked out
+ * of (QA S8): they may not change or remove its `options.ai`, nor convert
+ * it — a new prompt or a plain field would show them values made from
+ * fields they cannot read.
+ */
+export async function requireAiFieldUnlocked(
+  db: Db,
+  base: BaseAccess,
+  field: FieldRow,
+): Promise<void> {
+  if (!isAiField(field)) return;
+  const rows = await loadBaseSchemaRows(db, base.org.scope, base.base.id);
+  const readable = readabilityOf(base.access);
+  if (aiFieldLockedFor(field, rows, (id) => readable.field(field.table_id, id))) {
+    throw permissionDenied('The values of this AI field are made from fields you cannot read.');
+  }
 }
 
 /** Zone of computed values (ADR-21): the organization's, else the instance default. */

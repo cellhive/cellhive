@@ -443,7 +443,8 @@ export class AiFieldGenerator {
       fieldId,
       values,
       { ...systemAuditContext(batchId), via: { ai_field_id: fieldId } },
-      causation === undefined ? {} : { causation },
+      // Values of the prompt read at the start of the batch only (QA S8).
+      { prompt: ai.prompt, ...(causation === undefined ? {} : { causation }) },
     );
     const byRecord = new Map(taken.map((row) => [row.recordId as string, row]));
     const rowsOf = (ids: readonly string[]) =>
