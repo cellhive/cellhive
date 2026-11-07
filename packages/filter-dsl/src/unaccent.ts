@@ -2,13 +2,29 @@ import { UNACCENT_RULES } from './unaccent-rules.js';
 
 let table: ReadonlyMap<string, string> | null = null;
 
-function rules(): ReadonlyMap<string, string> {
+/**
+ * The rules by character, decoded once from the runs of
+ * `unaccent-rules.ts` (format there): `*` repeats the replacement over the
+ * run, `+` steps it with the code point.
+ */
+export function unaccentRules(): ReadonlyMap<string, string> {
   if (table === null) {
     const map = new Map<string, string>();
+    let code = 0;
     for (const line of UNACCENT_RULES.split('\n')) {
       const tab = line.indexOf('\t');
-      if (tab === -1) map.set(line, '');
-      else map.set(line.slice(0, tab), line.slice(tab + 1));
+      const head = line.slice(0, tab);
+      const to = line.slice(tab + 1);
+      const kind = head.search(/[*+]/u);
+      code += parseInt(kind === -1 ? head : head.slice(0, kind), 36);
+      const length = kind === -1 ? 1 : parseInt(head.slice(kind + 1), 36);
+      const step = head[kind] === '+' ? (to.codePointAt(0) ?? 0) : null;
+      for (let offset = 0; offset < length; offset += 1) {
+        map.set(
+          String.fromCodePoint(code + offset),
+          step === null ? to : String.fromCodePoint(step + offset),
+        );
+      }
     }
     table = map;
   }
@@ -23,7 +39,7 @@ function rules(): ReadonlyMap<string, string> {
  * checked against the database by the equivalence harness.
  */
 export function unaccent(text: string): string {
-  const map = rules();
+  const map = unaccentRules();
   let out = '';
   for (const char of text) out += map.get(char) ?? char;
   return out;
