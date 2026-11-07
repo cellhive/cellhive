@@ -1,8 +1,9 @@
 /**
  * Constants the web client's first load needs (API client, share page),
  * kept apart from the zod schemas of the modules that re-export them
- * (`auth.ts`, `records.ts`, `shares.ts`, `forms.ts`): importing one of them
- * does not pull those schemas into the page (T422, FRONTEND §11.1).
+ * (`auth.ts`, `records.ts`, `shares.ts`, `forms.ts`, `dashboard-widgets.ts`):
+ * importing one of them does not pull those schemas into the page (T422,
+ * FRONTEND §11.1). The same holds for the shared dashboard's chunks (T1000).
  */
 
 /**
@@ -29,3 +30,18 @@ export const SHARE_CSRF_HEADER = 'x-share-csrf-token';
 export const SHARE_FORM_MAX_FILES_PER_QUESTION = 10;
 /** Most bytes (announced sizes) uploaded with one submit token. */
 export const SHARE_FORM_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
+/** Relative ranges of a dashboard `date_range` filter control (CONTRACTS §28.4). */
+export const RELATIVE_DATE_RANGES = [
+  'today',
+  'yesterday',
+  'last_7_days',
+  'last_30_days',
+  'this_week',
+  'last_week',
+  'this_month',
+  'last_month',
+  'this_quarter',
+  'this_year',
+  'last_year',
+] as const;

@@ -1,10 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import { loadDashboardsApi } from '../../../lib/query/dashboards';
-import { keys } from '../../../lib/query/keys';
-import { fieldsQuery } from '../../../lib/query/queries';
-import { widgetDataQuery, widgetOptionsQuery, type WidgetDataContext } from '../api';
-
+import type { WidgetDataContext } from '../api';
 import type {
   FieldDto,
   WidgetDataDto,
@@ -56,31 +52,17 @@ export interface DashboardDataSource {
   readonly filtersOff: 'editing' | 'link';
 }
 
-/** The member routes (T811–T813). */
-export const memberDataSource: DashboardDataSource = {
-  widgetData: (widget, context, filters) =>
-    widgetDataQuery(widget, context, filters) as unknown as SourceQuery<WidgetDataDto>,
-  widgetOptions: (widget, context, filters, search) =>
-    widgetOptionsQuery(
-      widget,
-      context,
-      filters,
-      search,
-    ) as unknown as SourceQuery<WidgetOptionsDto>,
-  fields: (tableId) =>
-    fieldsQuery(tableId) as unknown as SourceQuery<{ readonly items: readonly FieldDto[] }>,
-  members: (baseId) => ({
-    queryKey: keys.baseMembers(baseId),
-    queryFn: async ({ signal }) => (await loadDashboardsApi()).baseMembers(baseId, signal),
-    staleTime: 60_000,
-  }),
-  dashboardKey: (dashboardId) => keys.dashboard(dashboardId),
-  filtersOff: 'editing',
-};
-
-export const DashboardDataSourceContext = createContext<DashboardDataSource>(memberDataSource);
+/**
+ * The data source of the widgets below: `memberDataSource`
+ * (`member-data-source.ts`) on the member routes, `sharedDataSource` on a
+ * share link. No default: the member one would pull the member API (and its
+ * zod schemas) into the shared dashboard's chunks (T1000, FRONTEND §11.1).
+ */
+export const DashboardDataSourceContext = createContext<DashboardDataSource | null>(null);
 
 /** The data source of the dashboard on screen. */
 export function useDashboardDataSource(): DashboardDataSource {
-  return useContext(DashboardDataSourceContext);
+  const source = useContext(DashboardDataSourceContext);
+  if (source === null) throw new Error('useDashboardDataSource outside a dashboard data source');
+  return source;
 }
