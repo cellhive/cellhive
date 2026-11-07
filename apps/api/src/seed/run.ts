@@ -3,7 +3,13 @@ import 'reflect-metadata';
 import { randomBytes } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
-import { ConfigError, loadConfig, type AppConfig, type Env } from '@cellhive/server-core';
+import {
+  ConfigError,
+  loadConfig,
+  type AppConfig,
+  type Env,
+  type HostLookup,
+} from '@cellhive/server-core';
 import { NestFactory } from '@nestjs/core';
 import { destination, pino, type Logger } from 'pino';
 
@@ -11,6 +17,7 @@ import { AppModule } from '../app.module.js';
 import { NestLoggerAdapter } from '../common/logging/app-logger.js';
 import { rootLoggerOptions } from '../common/logging/root-logger.js';
 
+import { DEMO_AI_ENV, demoAiProviderOf, type DemoAiProvider } from './demo-ai.js';
 import {
   DEFAULT_DEMO_PROFILE,
   DEMO_BASE,
@@ -71,7 +78,13 @@ data (an interrupted run) is not repaired: reset the database instead.
             digits and dashes. Given together.
 
 The environment is the server's (DATABASE_URL, CACHE_URL, …); run
-\`pnpm db:migrate\` first.`;
+\`pnpm db:migrate\` first.
+
+Development only, optional: ${DEMO_AI_ENV.baseUrl} and ${DEMO_AI_ENV.model} (with
+${DEMO_AI_ENV.apiKey} when the provider needs a key) give the demo organization an
+OpenAI-compatible AI provider: AI on, record data off, plus an HTTP allowlist
+entry host:port when the host is on your network. The provider is not called
+(run "Test connection" in Settings › AI). Without them no AI is configured.`;
 
 const RESET_HINT =
   'To start over in development: pnpm dev:infra:down && pnpm dev:infra && pnpm db:migrate && pnpm seed:demo';
@@ -178,7 +191,23 @@ export function summaryLines(
     ...s5cLines(result, config.nodeEnv !== 'production'),
     ...s6Lines(result, config.nodeEnv !== 'production'),
     ...s7Lines(result),
+    ...aiLines(result.ai),
     ...shareLinkLines(result.shareLinks),
+  ];
+}
+
+/**
+ * The AI provider of `DEMO_AI_*` (BACKLOG T917): host and model — never the
+ * key, never the full URL —, and its allowlist entry. Nothing without one.
+ */
+function aiLines(ai: DemoSeedResult['ai']): string[] {
+  if (ai === null) return [];
+  return [
+    '',
+    `AI provider (${DEMO_AI_ENV.baseUrl}): ${ai.host}, model ${ai.model}, ` +
+      `${ai.keyStored ? 'key stored as a secret (not printed)' : 'no key'}, record data off`,
+    ...(ai.allowlist === null ? [] : [`  HTTP allowlist: ${ai.allowlist} (for the AI provider)`]),
+    '  Check it with "Test connection" in Settings › AI.',
   ];
 }
 
@@ -341,7 +370,7 @@ async function createSeedContext(
 }
 
 async function seedWith(
-  options: Pick<DemoSeedOptions, 'tableCounts'>,
+  options: Pick<DemoSeedOptions, 'tableCounts' | 'ai'>,
   profile: DemoProfile,
   app: INestApplicationContext,
   config: AppConfig,
@@ -352,6 +381,11 @@ async function seedWith(
   switch (state.kind) {
     case 'complete':
       io.err('Demo data already exists; nothing to do.');
+      if (options.ai !== undefined && options.ai !== null) {
+        io.err(
+          `${DEMO_AI_ENV.baseUrl} ignored: the demo data already exists — set the provider in Settings › AI.`,
+        );
+      }
       for (const line of summaryLines(
         config,
         state.result,
@@ -375,7 +409,9 @@ async function seedWith(
           io.err(`  ${message}`);
         },
       });
-      for (const warning of result.s5?.warnings ?? []) io.err(`Warning: ${warning}`);
+      for (const warning of [...(result.s5?.warnings ?? []), ...(result.ai?.warnings ?? [])]) {
+        io.err(`Warning: ${warning}`);
+      }
       if (result.salesRoleAdjustments > 0) {
         io.err(
           `Warning: the Sales role config was adjusted (${String(result.salesRoleAdjustments)} change(s)).`,
@@ -395,8 +431,8 @@ export async function runSeed(
   argv: readonly string[],
   env: Env,
   io: SeedIo,
-  /** Test-only: smaller tables. */
-  seedOptions: Pick<DemoSeedOptions, 'tableCounts'> = {},
+  /** Test-only: smaller tables; the DNS of the `DEMO_AI_*` provider host. */
+  seedOptions: Pick<DemoSeedOptions, 'tableCounts'> & { readonly aiLookup?: HostLookup } = {},
 ): Promise<number> {
   let app: INestApplicationContext | undefined;
   let logger: Logger | undefined;
@@ -414,9 +450,31 @@ export async function runSeed(
           'production instance anyway, pass --force: users then get random passwords.',
       );
     }
+    // Checked before anything is created; never set in production.
+    let provider: DemoAiProvider | null = demoAiProviderOf(env);
+    if (provider !== null && config.nodeEnv === 'production') {
+      io.err(`Warning: ${DEMO_AI_ENV.baseUrl} is for development only; ignored in production.`);
+      provider = null;
+    }
     logger = seedLogger(config);
     app = await createSeedContext(config, logger);
-    await seedWith(seedOptions, options.profile, app, config, io);
+    await seedWith(
+      {
+        ...(seedOptions.tableCounts === undefined ? {} : { tableCounts: seedOptions.tableCounts }),
+        ai:
+          provider === null
+            ? null
+            : {
+                provider,
+                privateAllowlist: config.outboundHttp.privateAllowlist,
+                ...(seedOptions.aiLookup === undefined ? {} : { lookup: seedOptions.aiLookup }),
+              },
+      },
+      options.profile,
+      app,
+      config,
+      io,
+    );
     return 0;
   } catch (error) {
     if (error instanceof SeedError || error instanceof ConfigError) {
