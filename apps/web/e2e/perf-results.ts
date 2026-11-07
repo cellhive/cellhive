@@ -52,6 +52,13 @@ const phase = (baselineMax: number): Budget => ({
 });
 
 /**
+ * Runner bound of a timing that has no baseline nights yet: the product bound stands in for
+ * the slowest run, so the bound is `timing(product, product)`, product × 1.25 rounded up to
+ * 50 ms. Recalibrated with `timing` in a commit that cites ≥ 5 runs on `main` (T820).
+ */
+const provisional = (product: number): Budget => timing(product, product);
+
+/**
  * The one budget table of the `@perf` specs (FRONTEND §11.1 lists the same
  * numbers); `null` = recorded only. Timings: `timing(product, slowest run of
  * the baseline on main)` — baseline runs in F§11.1; a runner bound changes
@@ -72,6 +79,8 @@ export const PERF_BUDGETS = {
   't417 branch opens': timing(300, 141),
   't422 first data': timing(1_500, 1_425),
   't468 first data': timing(1_500, 1_512),
+  // T1001: from the E2E spec, "the other tab sees #REF! < 1 s" (FRONTEND §11.1).
+  't468 #REF! in another tab': provisional(1_000),
   't818 dashboard data': timing(2_000, 2_567),
   'frames > 32 ms': { unit: '%', product: 5, 'ci-runner': null },
   'steady frames > 32 ms': { unit: '%', product: null, 'ci-runner': null },
