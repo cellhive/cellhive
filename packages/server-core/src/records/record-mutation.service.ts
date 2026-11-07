@@ -24,7 +24,7 @@ import {
 import { sql, type RawBuilder, type SqlBool } from 'kysely';
 import { z } from 'zod';
 
-import { isAiField } from '../ai/generation/options.js';
+import { aiOptionsOf, isAiField } from '../ai/generation/options.js';
 import {
   auditContextSchema,
   type AuditContext,
@@ -1446,7 +1446,16 @@ export class RecordMutationService {
       readonly value: string | null;
     }[],
     auditContext: AuditContext,
-    options: { readonly causation?: Causation } = {},
+    options: {
+      readonly causation?: Causation;
+      /**
+       * The stored prompt the values were made from: changed since (an edit
+       * during the batch), nothing is written and every record is `stale`,
+       * to be made again from the new prompt — whose sources decide who
+       * reads the values (QA S8).
+       */
+      readonly prompt?: string;
+    } = {},
   ): Promise<AiValuesWrite> {
     this.assertScope(scope);
     if (!auditContextSchema.safeParse(auditContext).success) {
@@ -1469,6 +1478,9 @@ export class RecordMutationService {
           !isAiField(field)
         ) {
           return none;
+        }
+        if (options.prompt !== undefined && aiOptionsOf(field)?.prompt !== options.prompt) {
+          return { ...none, stale: items.map((item) => item.recordId), fieldFound: true };
         }
         const capture = await this.systemCapture(txScope, table, fieldId);
         const fields = capture?.fields ?? [target];

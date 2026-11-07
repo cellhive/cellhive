@@ -95,6 +95,7 @@ import {
   definitionVisible,
   organizationTimeZone,
   readabilityOf,
+  requireAiFieldUnlocked,
 } from './computed-fields.js';
 import { LinkConversionService } from './link-conversion.service.js';
 
@@ -259,6 +260,7 @@ export class FieldConversionService {
   ): Promise<ConvertFieldPreview> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
     assertNoButton(field, body.type);
+    await requireAiFieldUnlocked(this.db, base, field);
     // T404: link fields (direction, allow_multiple; link ↔ other types refused).
     if (this.links.handles(field, body)) return this.links.preview(principal, base, field, body);
     // T463: to a formula/lookup; from one, the converter reads every source.
@@ -326,6 +328,7 @@ export class FieldConversionService {
   ): Promise<ConvertFieldResponse> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
     assertNoButton(field, body.type);
+    await requireAiFieldUnlocked(this.db, base, field);
     if (this.links.handles(field, body)) {
       const converted = await this.links.convert(principal, base, field, body, meta);
       return {
