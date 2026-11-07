@@ -292,6 +292,17 @@ describe('audit viewer repository (T709)', () => {
       expect(captured).toHaveLength(1);
       return explain(db, database.url, captured[0] as (typeof captured)[number]);
     };
+    // Partitions run from 4 months back to next month (`createPartitions`): a
+    // 7-day window starting last month (the first week of a month) also reads it.
+    const partitionsSince = (from: Date) => {
+      const now = new Date();
+      return (
+        (now.getUTCFullYear() - from.getUTCFullYear()) * 12 +
+        now.getUTCMonth() -
+        from.getUTCMonth() +
+        2
+      );
+    };
     const allPartitions = async () =>
       (
         await sql<{ name: string }>`
@@ -301,25 +312,21 @@ describe('audit viewer repository (T709)', () => {
       ).rows.length;
 
     it('an actor over 7 days: audit_logs_actor_idx, only the partitions of those days', async () => {
-      const plan = await planOf({
-        actorIds: [actorOf(PLAN_ORG, 3)],
-        from: new Date(Date.now() - 7 * 86_400_000),
-      });
+      const from = new Date(Date.now() - 7 * 86_400_000);
+      const plan = await planOf({ actorIds: [actorOf(PLAN_ORG, 3)], from });
       expect(plan.indexes).toEqual(['audit_logs_actor_idx']);
       expect(plan.seqScan).toBe(false);
       expect(plan.partitions.length).toBeGreaterThan(0);
-      expect(plan.partitions.length).toBeLessThanOrEqual(2);
+      expect(plan.partitions.length).toBeLessThanOrEqual(partitionsSince(from));
       expect(await allPartitions()).toBeGreaterThan(plan.partitions.length + 2);
     });
 
     it('a rare action over 7 days: audit_logs_action_idx, partitions pruned', async () => {
-      const plan = await planOf({
-        actions: ['role.updated'],
-        from: new Date(Date.now() - 7 * 86_400_000),
-      });
+      const from = new Date(Date.now() - 7 * 86_400_000);
+      const plan = await planOf({ actions: ['role.updated'], from });
       expect(plan.indexes).toEqual(['audit_logs_action_idx']);
       expect(plan.seqScan).toBe(false);
-      expect(plan.partitions.length).toBeLessThanOrEqual(2);
+      expect(plan.partitions.length).toBeLessThanOrEqual(partitionsSince(from));
     });
 
     it('a rare action group without dates: audit_logs_action_idx', async () => {
