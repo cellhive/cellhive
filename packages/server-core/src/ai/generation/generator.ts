@@ -335,10 +335,9 @@ export class AiFieldGenerator {
     await this.options.onStateChange(await aiFieldStateChanges(this.db, scope, fieldIds));
   }
 
-  /** When the next queued row of the field is due (`null`: none queued). */
-  private async nextDue(scope: OrgScope, fieldId: Id<'fld'>): Promise<Date | null> {
-    const due = await this.queue.dueFields(scope, this.now());
-    return due.find((item) => item.fieldId === fieldId)?.dueAt ?? null;
+  /** When the next queued row of the field is due (`null`: none queued); reads that field's rows only. */
+  private nextDue(scope: OrgScope, fieldId: Id<'fld'>): Promise<Date | null> {
+    return this.queue.dueAt(scope, fieldId, this.now());
   }
 
   /**

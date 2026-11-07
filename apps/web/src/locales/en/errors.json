@@ -63,7 +63,8 @@
     "AI_TIMEOUT": "The AI took too long to answer. Try again.",
     "AI_NOT_CONFIGURED": "AI is not set up or is turned off for this organization.",
     "AI_RECORD_DATA_DISABLED": "This organization does not let AI see record values.",
-    "AI_QUOTA_EXCEEDED": "The AI quota of the organization for today is used up."
+    "AI_QUOTA_EXCEEDED": "The AI quota of the organization for today is used up.",
+    "AI_GENERATION_RUNNING": "This AI field is already being generated. Wait until it is done, then try again."
   },
   "client": {
     "NETWORK_ERROR": "The server could not be reached. Check your connection and try again.",
@@ -164,7 +165,7 @@
     "REQUIRES_LOGIN": "A submission limit needs the form to require sign-in.",
     "SUBMISSION_LIMIT_REACHED": "You have already filled in this form.",
     "UNLOCK_REQUIRED": "Enter the link password first.",
-    "TOO_MANY_ROWS": "The file has more than {{limit}} rows.",
+    "TOO_MANY_ROWS": "Too many rows at once: at most {{limit, number}}.",
     "TOO_MANY_COLUMNS": "Too many columns: a table can have at most {{limit}} fields.",
     "INVALID_FILE": "The file cannot be read as CSV or XLSX.",
     "ARCHIVE_LIMIT_EXCEEDED": "The workbook is too large once decompressed.",
@@ -351,7 +352,8 @@
     "AI_QUOTA_EXCEEDED": "The AI quota of the organization for today is used up. It resets at midnight in the organization time zone.",
     "AI_NOT_CONFIGURED": "AI is not set up or is turned off for this organization.",
     "AI_RECORD_DATA_DISABLED": "This organization does not let AI see record values.",
-    "RECORD_DATA_NOT_CONFIRMED": "Confirm that record values may be sent to the AI provider."
+    "RECORD_DATA_NOT_CONFIRMED": "Confirm that record values may be sent to the AI provider.",
+    "AI_GENERATION_RUNNING": "Another request is generating this field. Its cells show their progress."
   },
   "retryAfter_one": "Try again in {{count, number}} second.",
   "retryAfter_other": "Try again in {{count, number}} seconds.",

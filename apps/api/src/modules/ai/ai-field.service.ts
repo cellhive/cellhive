@@ -1,4 +1,5 @@
 import {
+  AI_FIELD_GENERATE_MAX_ROWS,
   AI_FIELD_PREVIEW_INPUT_LENGTH,
   AI_FIELD_PREVIEW_ROWS,
   newId,
@@ -29,8 +30,11 @@ import {
   snapshotOfBase,
   withTxScope,
   type AiFieldTarget,
+  type AiSettingsState,
   type AppConfig,
   type Db,
+  type OrgScope,
+  type RecordAccessContext,
 } from '@cellhive/server-core';
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -45,8 +49,35 @@ import { AiAccess } from './ai-access.js';
 import type { Principal } from '../../common/auth/principal.js';
 import type { RequestMeta } from '../../common/auth/request-meta.js';
 
-/** Most rows one generate request queues (a table larger than this needs several). */
-const AI_GENERATE_MAX_ROWS = 1_000_000;
+/** Ids read per query while a generate request collects its rows (never every id at once). */
+const AI_GENERATE_ID_BATCH = 5_000;
+
+/** `409 AI_GENERATION_RUNNING`: a generate request of the field still runs (`params.job_id`). */
+function generationRunning(jobId: Id<'job'>): AppError {
+  const message = 'This AI field is already being generated.';
+  return new AppError('AI_GENERATION_RUNNING', {
+    detail: `${message} Follow job ${jobId} until it ends, then generate again.`,
+    errors: [{ path: '', code: 'AI_GENERATION_RUNNING', message, params: { job_id: jobId } }],
+    params: { job_id: jobId },
+  });
+}
+
+/** `422 TOO_MANY_ROWS`: the request names more rows than one may queue (never cut short). */
+function tooManyRows(rows: number, limit: number): AppError {
+  return new AppError('VALIDATION_FAILED', {
+    detail:
+      `This request names ${String(rows)} rows; one generate request queues at most ` +
+      `${String(limit)}.`,
+    errors: [
+      {
+        path: 'scope',
+        code: 'TOO_MANY_ROWS',
+        message: `More than ${String(limit)} rows`,
+        params: { rows, limit },
+      },
+    ],
+  });
+}
 
 /**
  * AI fields (CONTRACTS §29.5, BACKLOG T910): the 5-record preview of a
@@ -54,9 +85,16 @@ const AI_GENERATE_MAX_ROWS = 1_000_000;
  * generate request (rows queued for the AI worker, a `meta.jobs` row to
  * follow). Both need schema rights on the table — `404`/`403` before
  * anything about AI — and record data allowed (`AI_RECORD_DATA_DISABLED`).
+ *
+ * `maxRows` and `idBatch` are plain fields so tests can lower them.
  */
 @Injectable()
 export class AiFieldService {
+  /** Most rows one generate request queues (`AI_FIELD_GENERATE_MAX_ROWS`). */
+  maxRows: number = AI_FIELD_GENERATE_MAX_ROWS;
+  /** Ids read per query while a generate request collects its rows. */
+  idBatch: number = AI_GENERATE_ID_BATCH;
+
   constructor(
     @Inject(SchemaAccess) private readonly schemaAccess: SchemaAccess,
     @Inject(AiAccess) private readonly ai: AiAccess,
@@ -191,6 +229,15 @@ export class AiFieldService {
     );
   }
 
+  /**
+   * Queues the rows `body` names for the AI worker (BACKLOG T910, T1003):
+   * after the field's `404`/`403`/`422` checks, the AI rate limit and
+   * today's quota (`429`, nothing queued); one generate request of a field
+   * at a time (`409 AI_GENERATION_RUNNING` while one has rows queued or
+   * being generated); at most {@link maxRows} rows (`422 TOO_MANY_ROWS`,
+   * never cut short), read {@link idBatch} ids at a time. Rows queue, the
+   * job is created and `ai.generate` is scheduled in one transaction.
+   */
   async generate(
     principal: Principal,
     fieldId: Id<'fld'>,
@@ -211,74 +258,110 @@ export class AiFieldService {
     if (aiFieldLockedFor(field, rows, (id) => readable.field(field.table_id, id))) {
       throw permissionDenied('Generating this field needs every field of its prompt readable.');
     }
-    requireAi(await this.settings.find(scope), { recordData: true });
+    const saved = await this.settings.find(scope);
+    requireAi(saved, { recordData: true });
+    await this.ai.admit(principal, base.org, saved as AiSettingsState);
+    const queue = new AiGenerationQueueRepository(this.db);
+    const running = await queue.runningJobOf(scope, fieldId);
+    if (running !== null) throw generationRunning(running);
     const access = await recordAccessContextOf(
       { groupMembers: this.groupMembers, config: this.config },
       principal.user,
       base,
     );
-    const queue = new AiGenerationQueueRepository(this.db);
-    let ids: Id<'rec'>[];
-    switch (body.scope) {
-      case 'records':
-        ids = [
-          ...(await this.records.matchingIds(
-            scope,
-            field.table_id,
-            access,
-            body.record_ids ?? [],
-            null,
-          )),
-        ] as Id<'rec'>[];
-        break;
-      case 'failed':
-      case 'paused': {
-        // (T1002) `paused`: "Resume" — only the cells that were queued and paused.
-        const listed = await queue.recordIdsOf(scope, fieldId, body.scope);
-        ids = [
-          ...(await this.records.matchingIds(scope, field.table_id, access, listed, null)),
-        ] as Id<'rec'>[];
-        break;
-      }
-      case 'empty':
-        ids = await this.records.allMatchingIds(
-          scope,
-          field.table_id,
-          access,
-          { op: 'and', items: [{ field: fieldId, operator: 'is_empty' }] },
-          AI_GENERATE_MAX_ROWS,
-        );
-        break;
-      case 'all':
-        ids = await this.records.allMatchingIds(
-          scope,
-          field.table_id,
-          access,
-          null,
-          AI_GENERATE_MAX_ROWS,
-        );
-        break;
-    }
-    const job = await this.db.withTx(async (tx) => {
+    const ids = await this.rowsOf(scope, field.table_id, fieldId, access, body, queue);
+    const jobId = newId('job');
+    const queued = await this.db.withTx(async (tx) => {
       const txScope = withTxScope(scope, tx);
-      const created = await this.jobs.create(txScope, {
+      // A request that waited here for another one sees that one's job now.
+      await queue.lockGenerate(txScope, fieldId);
+      const other = await queue.runningJobOf(txScope, fieldId);
+      if (other !== null) throw generationRunning(other);
+      // Rows that failed with `invalid_output` go again only when asked for (`failed`, `all`).
+      const count =
+        ids.length === 0
+          ? 0
+          : await queue.enqueue(txScope, fieldId, ids, {
+              jobId,
+              retryInvalidOutput: body.scope === 'failed' || body.scope === 'all',
+            });
+      await this.jobs.create(txScope, {
+        id: jobId,
         type: 'ai.generate',
         createdBy: principal.userId,
-        result: { field_id: fieldId, rows: ids.length },
+        result: { field_id: fieldId, rows: count },
       });
-      await this.jobs.markRunning(txScope, created.id);
-      if (ids.length === 0) {
-        await this.jobs.markSucceeded(txScope, created.id, { rows: 0, failed: 0 });
-        return created;
+      await this.jobs.markRunning(txScope, jobId);
+      if (count === 0) {
+        await this.jobs.markSucceeded(txScope, jobId, { rows: 0, failed: 0 });
+        return 0;
       }
-      await queue.enqueue(txScope, fieldId, ids, { jobId: created.id });
       await queue.resume(txScope, ['quota', 'ai_disabled', 'record_data_disabled'], fieldId);
       await enqueueAiGeneration(tx, scope.organizationId, fieldId, new Date());
-      return created;
+      return count;
     });
     // A rough figure, not an upper bound: the stored prompt and the longest answer per row —
     // the values, the instructions and repair calls are not counted (CONTRACTS §29.5).
     const perRow = estimateTokens(ai.prompt) + ai.max_output_tokens;
-    return { job_id: job.id, rows: ids.length, estimated_tokens: ids.length * perRow };
+    return { job_id: jobId, rows: queued, estimated_tokens: queued * perRow };
+  }
+
+  /**
+   * The records `body` names among those the caller reads, {@link idBatch}
+   * ids per query; more than {@link maxRows} is `422 TOO_MANY_ROWS` — from
+   * the count, before any id is read, for every scope but `records`.
+   */
+  private async rowsOf(
+    scope: OrgScope,
+    tableId: Id<'tbl'>,
+    fieldId: Id<'fld'>,
+    access: RecordAccessContext,
+    body: AiFieldGenerateRequest,
+    queue: AiGenerationQueueRepository,
+  ): Promise<Id<'rec'>[]> {
+    const ids: Id<'rec'>[] = [];
+    const add = (batch: Iterable<string>) => {
+      for (const id of batch) ids.push(id as Id<'rec'>);
+      if (ids.length > this.maxRows) throw tooManyRows(ids.length, this.maxRows);
+    };
+    switch (body.scope) {
+      case 'records':
+        add(await this.records.matchingIds(scope, tableId, access, body.record_ids ?? [], null));
+        return ids;
+      case 'failed':
+      case 'paused': {
+        // (T1002) `paused`: "Resume" — only the cells that were queued and paused.
+        const total = await queue.countOf(scope, fieldId, body.scope);
+        if (total > this.maxRows) throw tooManyRows(total, this.maxRows);
+        let after: Id<'rec'> | null = null;
+        for (;;) {
+          const page = await queue.recordIdPage(scope, fieldId, body.scope, after, this.idBatch);
+          if (page.length > 0) {
+            add(await this.records.matchingIds(scope, tableId, access, page, null));
+          }
+          if (page.length < this.idBatch) return ids;
+          after = page.at(-1) ?? null;
+        }
+      }
+      case 'empty':
+      case 'all': {
+        const filter =
+          body.scope === 'empty'
+            ? { op: 'and', items: [{ field: fieldId, operator: 'is_empty' }] }
+            : null;
+        const total = await this.records.countMatching(scope, tableId, access, filter);
+        if (total > this.maxRows) throw tooManyRows(total, this.maxRows);
+        let after: Id<'rec'> | null = null;
+        do {
+          const batch = await this.records.matchingIdBatch(scope, tableId, access, filter, {
+            after,
+            limit: this.idBatch,
+          });
+          add(batch.ids);
+          after = batch.next;
+        } while (after !== null);
+        return ids;
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { aiAskRequestSchema, aiAskSchema } from '../../ai-ask.js';
 import { aiAutomationDraftRequestSchema, aiAutomationDraftSchema } from '../../ai-automation.js';
 import {
+  AI_FIELD_GENERATE_MAX_ROWS,
   aiFieldGenerateRequestSchema,
   aiFieldGenerateSchema,
   aiFieldPreviewRequestSchema,
@@ -36,6 +37,11 @@ const AI_LIMITED =
   '`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute, or 2 at once, ' +
   'by the user (8 at once on the instance); `AI_QUOTA_EXCEEDED` with `Retry-After` and ' +
   '`errors[0].params.reset_at`: the daily token quota is used up';
+
+const GENERATE_LIMITED =
+  '`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute by the user; ' +
+  '`AI_QUOTA_EXCEEDED` with `Retry-After` and `errors[0].params.reset_at`: the daily token ' +
+  'quota is used up';
 
 /**
  * AI settings, quota and usage of an organization (CONTRACTS §29.1; BACKLOG
@@ -264,9 +270,14 @@ export const registerAiRoutes: RouteRegistrar = (registry, components) => {
     description:
       'Needs schema rights on the table of the AI field and every field of its prompt readable ' +
       '(`403` otherwise for a reader of the field, `404` for anyone else), before anything ' +
-      'about AI; AI and record data on (`422`). Queues the `empty` cells, the `failed` ones, ' +
-      '`all` (overwriting: old values stay in the record history) or the `records` listed, ' +
-      'among the records the caller reads; paused rows of the field resume. The AI worker ' +
+      'about AI; AI and record data on (`422`); then the AI rate limit and the quota of the ' +
+      'day (`429`, nothing queued). Queues the `empty` cells, the `failed` ones, `all` ' +
+      '(overwriting: old values stay in the record history), the `records` listed or the ' +
+      '`paused` ones, among the records the caller reads — at most ' +
+      `${String(AI_FIELD_GENERATE_MAX_ROWS)} rows, whatever the scope (more is refused, never ` +
+      'cut short); paused rows of the field resume. Cells that failed with `invalid_output` ' +
+      'are queued again only by `failed` and `all`. One generate request of a field at a ' +
+      'time: while one has rows queued or being generated, another is `409`. The AI worker ' +
       'generates them in the background (`job_id`: `GET /jobs/{jobId}`, `job.progress`); cells ' +
       'show their state in `record.meta.ai` (CONTRACTS §29.5).',
     params: fieldParams,
@@ -274,9 +285,14 @@ export const registerAiRoutes: RouteRegistrar = (registry, components) => {
     status: 202,
     response: aiFieldGenerateSchema,
     errors: {
+      409:
+        '`AI_GENERATION_RUNNING`: a generate request of the field still runs ' +
+        '(`errors[0].params.job_id`)',
       422:
-        '`VALIDATION_FAILED`: not an AI field, or `record_ids` without `scope: records`; ' +
-        '`AI_NOT_CONFIGURED`; `AI_RECORD_DATA_DISABLED`',
+        '`VALIDATION_FAILED`: not an AI field, `record_ids` without `scope: records`, or ' +
+        '`TOO_MANY_ROWS` (path `scope`, `params.rows`, `params.limit`); `AI_NOT_CONFIGURED`; ' +
+        '`AI_RECORD_DATA_DISABLED`',
+      429: GENERATE_LIMITED,
     },
   });
 };

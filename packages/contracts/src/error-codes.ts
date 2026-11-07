@@ -76,6 +76,8 @@ export const ERROR_STATUS = {
   DEPENDENCY_UNAVAILABLE: 503,
   QUERY_TIMEOUT: 504,
   AI_TIMEOUT: 504,
+  // `POST /fields/{fieldId}/ai/generate` while a generate request of the field still runs.
+  AI_GENERATION_RUNNING: 409,
 } as const satisfies Record<string, number>;
 
 export type ErrorCode = keyof typeof ERROR_STATUS;

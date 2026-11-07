@@ -78,6 +78,7 @@ const CONTRACT_ERRORS: readonly [ErrorCode, number][] = [
   ['DEPENDENCY_UNAVAILABLE', 503],
   ['QUERY_TIMEOUT', 504],
   ['AI_TIMEOUT', 504],
+  ['AI_GENERATION_RUNNING', 409],
 ];
 
 const REQUEST_ID = 'req_9fK2mQ1xZp0aB7cD';
