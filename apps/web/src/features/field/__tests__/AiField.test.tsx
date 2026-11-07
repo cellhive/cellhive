@@ -165,6 +165,18 @@ describe('the AI group of the types (T915)', () => {
                   output: null,
                   error: { code: 'AI_TIMEOUT' },
                 },
+                {
+                  record_id: 'rec_A000000000000003',
+                  input_preview: 'Summarize in one sentence: Máy quét',
+                  output: null,
+                  error: { code: 'AI_PROVIDER_ERROR', reason: 'truncated' },
+                },
+                {
+                  record_id: 'rec_A000000000000004',
+                  input_preview: 'Summarize in one sentence: Két tiền',
+                  output: null,
+                  error: { code: 'AI_PROVIDER_ERROR', reason: 'http_status' },
+                },
               ],
               estimate: { rows: 6, tokens: 480 },
             }),
@@ -204,6 +216,9 @@ describe('the AI group of the types (T915)', () => {
     expect(rows[0]).toHaveTextContent('Input: Máy in lỗi');
     expect(rows[0]).toHaveTextContent('Result: Máy in hỏng.');
     expect(rows[1]).toHaveTextContent('The AI took too long');
+    // QA S8: what went wrong, not "the provider refused" for every provider error.
+    expect(rows[2]).toHaveTextContent('The answer was cut off at its length limit');
+    expect(rows[3]).toHaveTextContent('The AI provider answered with an error');
     expect(within(dialog).getByTestId('ai-preview-estimate')).toHaveTextContent(
       'Every row (6): about 480 tokens.',
     );
