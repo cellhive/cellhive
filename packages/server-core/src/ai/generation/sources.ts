@@ -52,10 +52,18 @@ export function aiReadFieldIds(
 }
 
 /**
- * Of `sourceIds`, the formulas/lookups that read another record or table
- * (a link, a lookup, `[Table]`, at any depth): an AI field may not read
- * them (`CROSS_TABLE_NOT_SUPPORTED`) — the worker reads every record, a
- * reader under a record rule would learn records they cannot read.
+ * Field types whose cell shows other records: a link (titles of the linked
+ * table) and a tree parent (the title of another record of the table).
+ */
+const RECORD_REFERENCE_TYPES: ReadonlySet<string> = new Set(['link', 'parent']);
+
+/**
+ * Of `sourceIds`, the fields that read another record or table: a link or
+ * a parent field (rendered as the titles of the records it points to), and
+ * formulas/lookups reading a link, a lookup or `[Table]` at any depth. An
+ * AI field may not read them (`CROSS_TABLE_NOT_SUPPORTED`) — the worker
+ * reads every record, a reader under a record or table rule would learn
+ * records they cannot read.
  */
 export function aiCrossRecordSources(
   sourceIds: readonly string[],
@@ -65,7 +73,9 @@ export function aiCrossRecordSources(
   const byId = new Map<string, FieldRow>(rows.fields.map((row) => [row.id, row]));
   return sourceIds.filter((id) => {
     const source = byId.get(id);
-    if (source === undefined || !isComputedRow(source)) return false;
+    if (source === undefined) return false;
+    if (RECORD_REFERENCE_TYPES.has(source.type)) return true;
+    if (!isComputedRow(source)) return false;
     const references = computedReferences(source, rows, analysisOf);
     return references.tables.size > 0 || references.crossFields.size > 0;
   }) as Id<'fld'>[];
