@@ -11,6 +11,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
 
+import { FAKE_LLM_MODEL, startOwnFakeLlm, type FakeLlm } from './fake-llm';
 import { E2E_API_PORT, E2E_WEB_URL } from './ports';
 import { DEMO_ADMIN_EMAIL, DEMO_PASSWORD } from './seed';
 import { apiSignIn, collectCspViolations, expectNoSeriousA11yViolations, ok } from './support';
@@ -18,28 +19,41 @@ import { startFakeTelegram, type FakeTelegram } from './t519-telegram';
 import { startFakeSmtp, type CapturedMail, type FakeSmtp } from './t526-smtp';
 
 /**
- * T519: the end-to-end scenario of SPEC §24, S5 version (no AI, no
- * dashboard yet):
+ * The end-to-end scenario of SPEC §24 — T519 wrote its S5 version (an
+ * `update_record` standing in for AI, no dashboard); T917 made it the S8
+ * version with the real AI step against a fake provider:
  *
  *   ticket from the public form
- *   → A (`record.created`): `update_record` "Mức độ" = Khẩn + "Phụ trách"
- *     (stands in for `ai_classify`)
+ *   → A (`record.created`): `update_record` "Phụ trách", then `ai_classify`
+ *     → "Mức độ" = Khẩn (the fake provider answers the option by a marker of
+ *     A's template; record values reach it in a data block only)
  *   → B (`record.matches` "Mức độ = Khẩn"): `send_notification` +
  *     `send_email` (fake SMTP) + `send_telegram` (fake Bot API)
  *   → C (`record.created`): `delay` + recheck "Trạng thái ≠ Đã xong" →
  *     `send_telegram` "Quá SLA"
  *   → the person in charge sets "Đã xong" in the grid before the delay ends
- *   → C ends `skipped` (`recheck_not_matched`), no "Quá SLA" message.
+ *   → C ends `skipped` (`recheck_not_matched`), no "Quá SLA" message
+ *   → the dashboard count of done tickets goes up by one.
  *
  * Its own stack, so that nothing of the shared one runs these automations:
- * PostgreSQL 18 + Valkey 8 (Testcontainers), migrations and `seed:demo`, the
- * built API (`MODE=api`, its own port) with `SMTP_URL` on an in-process fake
- * SMTP server, and the worker **in this process** (`@cellhive/worker` and
- * `@cellhive/server-core` builds) with its test-only Telegram client
- * pointed at an in-process fake Bot API. The browser's `/api` calls go to
+ * PostgreSQL 18 + Valkey 8 (Testcontainers), migrations and `seed:demo` —
+ * with `DEMO_AI_*` pointing at the fake provider (CONTRACTS §9: AI on,
+ * record data off, the allowlist entry `localhost:<port>`; the spec turns
+ * record data on like an admin) —, the built API (`MODE=api`, its own port)
+ * with `SMTP_URL` on an in-process fake SMTP server, and the worker **in this
+ * process** (`@cellhive/worker` and `@cellhive/server-core` builds) with its
+ * test-only Telegram client pointed at an in-process fake Bot API and the
+ * fake AI provider (`startOwnFakeLlm`). The browser's `/api` calls go to
  * this API (`context.route`); realtime is not used. The delay is the
  * minimum (1 minute), shortened to ~5 s by moving its end and its job to
- * now like the T506 integration test.
+ * now like the T506 integration test. Dates are shown in Asia/Ho_Chi_Minh.
+ *
+ * The other S8 milestone scenarios (BACKLOG T917) run in their own specs on
+ * the shared stack: the milestone sentence → a correct draft, saved and off
+ * (`t913-ai-formula-automation.spec.ts`); u_sales1 asks "doanh thu theo
+ * tháng" → the chart shows r1 only (`t914-ai-ask.spec.ts`); the AI summary
+ * field — record data off: the type cannot be picked; on: it generates;
+ * a low quota pauses it (`t915-ai-field.spec.ts`).
  */
 
 const RUN = String(Date.now()).slice(-6);
@@ -56,6 +70,8 @@ const HEADER_HEIGHT = 36;
 const ROW_HEIGHT = 34;
 /** The fake token of the seeded bot "Bot CSKH (demo)" (CONTRACTS §9). */
 const SEED_BOT_TOKEN = '123456789:DEMO-not-a-real-bot-token-000000000';
+/** In A's `ai_classify` template only: the fake provider answers "Khẩn" to it. */
+const CLASSIFY_MARKER = 'S24-CLASSIFY';
 
 interface Pg {
   Client: new (options: { connectionString: string }) => {
@@ -96,6 +112,7 @@ let env: NodeJS.ProcessEnv;
 let api: ChildProcess;
 let smtp: FakeSmtp;
 let telegram: FakeTelegram;
+let llm: FakeLlm;
 let worker: { close: () => Promise<void> };
 let workerDb: { destroy: () => Promise<void> };
 let formToken = '';
@@ -188,6 +205,7 @@ async function openAs(
   const context = await browser.newContext({
     viewport: { width: 1600, height: 900 },
     locale: 'en-US',
+    timezoneId: 'Asia/Ho_Chi_Minh',
   });
   await context.addInitScript(() => {
     window.localStorage.setItem('cellhive.language', 'en');
@@ -209,6 +227,7 @@ interface Field {
 }
 
 interface Demo {
+  orgId: string;
   baseId: string;
   tickets: string;
   fields: Field[];
@@ -246,6 +265,7 @@ async function findDemo(page: Page): Promise<Demo> {
     );
     const editor = await sql('SELECT id FROM meta.users WHERE email = $1', [EDITOR_EMAIL]);
     return {
+      orgId,
       baseId: base.id,
       tickets,
       fields: fields.items,
@@ -294,14 +314,17 @@ test.describe.configure({ mode: 'serial' });
 
 test.beforeAll(async () => {
   test.setTimeout(600_000);
-  [smtp, telegram] = await Promise.all([
+  [smtp, telegram, llm] = await Promise.all([
     startFakeSmtp({ user: SMTP_USER, pass: SMTP_PASSWORD }),
     startFakeTelegram(),
+    startOwnFakeLlm(),
   ]);
   closers.push(
     () => smtp.close(),
     () => telegram.close(),
+    () => llm.close(),
   );
+  llm.when(CLASSIFY_MARKER, { content: JSON.stringify({ option: 'Khẩn' }) });
   [postgres, valkey] = await Promise.all([
     new PostgreSqlContainer('postgres:18').start(),
     new GenericContainer('valkey/valkey:8')
@@ -335,9 +358,20 @@ test.beforeAll(async () => {
     SMTP_ALLOW_INSECURE: 'true',
   };
   await run('main.js', { MODE: 'migrate' });
-  // The demo data (CONTRACTS §9), development passwords; nothing is mailed by the seed.
-  const seeded = await run('seed.js', { NODE_ENV: 'development' });
+  // The demo data (CONTRACTS §9), development passwords; nothing is mailed by the seed. With
+  // DEMO_AI_* it saves the AI settings (record data off) and the provider's allowlist entry,
+  // without calling the provider.
+  const seeded = await run('seed.js', {
+    NODE_ENV: 'development',
+    DEMO_AI_BASE_URL: llm.baseUrl,
+    DEMO_AI_MODEL: FAKE_LLM_MODEL,
+  });
   expect(smtp.messages).toEqual([]);
+  expect(seeded).toContain(
+    `AI provider (DEMO_AI_BASE_URL): localhost, model ${FAKE_LLM_MODEL}, no key, record data off`,
+  );
+  expect(seeded).toContain(`HTTP allowlist: ${new URL(llm.baseUrl).host} (for the AI provider)`);
+  expect(llm.chatRequests()).toEqual([]);
   formToken = /Gửi yêu cầu hỗ trợ\s+public\s+\S+\/s\/([A-Za-z0-9_-]{43})/u.exec(seeded)?.[1] ?? '';
   expect(formToken).not.toBe('');
   api = await startApi();
@@ -359,7 +393,7 @@ test.afterAll(async () => {
   for (const close of closers.reverse()) await close();
 });
 
-test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skipped once done', async ({
+test('S§24 (S8): public form → A classifies with AI → B notifies, mails, Telegram → C skipped once done → the dashboard counts it', async ({
   browser,
 }) => {
   test.setTimeout(300_000);
@@ -372,7 +406,12 @@ test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skippe
   };
   expect(demo.botId).not.toBe('');
 
-  // "Mức độ": what the AI step of SPEC §24 would fill (A sets it instead).
+  // AI may read record values (an admin confirms it, as in Settings › AI): the seed left it off.
+  await ok(admin.page, 'PUT', `/orgs/${demo.orgId}/ai-settings`, {
+    allow_record_data: true,
+    confirm: true,
+  });
+  // "Mức độ": what the AI step of SPEC §24 fills.
   const level = await ok<{ id: string }>(admin.page, 'POST', `/tables/${demo.tickets}/fields`, {
     name: 'Mức độ',
     type: 'select',
@@ -391,15 +430,21 @@ test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skippe
   const automationA = await create('A · phân loại', {
     trigger: { type: 'record.created', table_id: demo.tickets },
     actions: [
+      // The person in charge first: B's recipients are set once "Mức độ" matches.
       {
-        id: 'act_classify',
+        id: 'act_assign',
         type: 'update_record',
         config: {
           table_id: demo.tickets,
-          fields: {
-            [level.id]: { literal: 'Khẩn' },
-            [field('Phụ trách')]: { literal: [{ id: demo.editorId }] },
-          },
+          fields: { [field('Phụ trách')]: { literal: [{ id: demo.editorId }] } },
+        },
+      },
+      {
+        id: 'act_classify',
+        type: 'ai_classify',
+        config: {
+          input: `${CLASSIFY_MARKER} Mức độ khẩn của ticket: ${ref(field('Tiêu đề'))}`,
+          target_field_id: level.id,
         },
       },
     ],
@@ -506,7 +551,7 @@ test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skippe
     })
     .not.toBe('');
 
-  await test.step('A fills "Mức độ" and the person in charge; B notifies, mails and posts', async () => {
+  await test.step('A sets the person in charge and classifies with AI; B notifies, mails and posts', async () => {
     await expect
       .poll(async () => (await runsOf(admin.page, automationA)).map((item) => item.status), {
         timeout: 60_000,
@@ -523,6 +568,16 @@ test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skippe
       `/tables/${demo.tickets}/records/${ticket}?field_key_type=id`,
     );
     expect(record.fields[level.id]).toBe('Khẩn');
+    // One AI call: the options of "Mức độ" as the answer's enum, the title in a data block.
+    const classify = llm
+      .chatRequests()
+      .filter((request) => JSON.stringify(request.body).includes(CLASSIFY_MARKER));
+    expect(classify).toHaveLength(1);
+    const sent = JSON.stringify(classify[0]?.body);
+    expect(sent).toContain('Thường');
+    expect(sent).toMatch(/<<DATA value [0-9a-f]{16}>>/u);
+    expect(sent).toContain(TITLE.replaceAll(' ', 'ˆ'));
+    expect(sent).not.toMatch(/rec_|fld_|tbl_/u);
     // Email: from the system sender to the person in charge, with the automation header.
     const mail = smtp.messages.find(
       (item: CapturedMail) =>
@@ -563,6 +618,34 @@ test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skippe
     await editor.page.keyboard.press('Escape');
     expect(csp).toEqual([]);
   });
+
+  // "dashboard đếm ticket theo trạng thái" (SPEC §24): a KPI of the done tickets.
+  const statusField = demo.fields.find((item) => item.name === 'Trạng thái') as Field & {
+    options?: { options?: { id: string; name: string }[] };
+  };
+  const done = statusField.options?.options?.find((option) => option.name === 'Đã xong')?.id;
+  const dashboard = await ok<{ id: string }>(
+    admin.page,
+    'POST',
+    `/bases/${demo.baseId}/dashboards`,
+    { name: `Tickets ${RUN}` },
+  );
+  const kpi = await ok<{ id: string }>(admin.page, 'POST', `/dashboards/${dashboard.id}/widgets`, {
+    type: 'kpi',
+    title: 'Ticket đã xong',
+    config: {
+      table_id: demo.tickets,
+      metrics: [{ id: 'm1', aggregation: 'count' }],
+      filter: {
+        op: 'and',
+        items: [{ field: field('Trạng thái'), operator: 'is', value: done }],
+      },
+    },
+  });
+  const doneCount = async () =>
+    (await ok<{ rows: number[][] }>(admin.page, 'POST', `/widgets/${kpi.id}/data`, { filters: [] }))
+      .rows[0]?.[0] ?? 0;
+  const before = await doneCount();
 
   await test.step('they set "Đã xong" in the grid before the delay ends', async () => {
     // A personal view with only this ticket: its row is the first one.
@@ -626,6 +709,20 @@ test('S§24 (S5): public form → A → B notifies, mails, Telegram → C skippe
         (call) => typeof call.body['text'] === 'string' && call.body['text'].startsWith('Quá SLA'),
       ),
     ).toEqual([]);
+  });
+
+  await test.step('the dashboard counts the done ticket', async () => {
+    await expect.poll(doneCount).toBe(before + 1);
+    await admin.page.goto(`/b/${demo.baseId}/d/${dashboard.id}`);
+    // The count with or without a thousands separator (the organization formats numbers).
+    const digits = String(before + 1).replace(/\B(?=(\d{3})+$)/gu, '[.,\u00a0\u202f ]?');
+    await expect(admin.page.getByTestId('kpi-value')).toHaveText(new RegExp(`^${digits}$`, 'u'));
+    // A classified once, never again (the status change is not a creation).
+    expect(
+      llm
+        .chatRequests()
+        .filter((request) => JSON.stringify(request.body).includes(CLASSIFY_MARKER)),
+    ).toHaveLength(1);
   });
 
   await editor.context.close();
