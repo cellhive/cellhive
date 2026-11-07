@@ -13,7 +13,7 @@ if (!existsSync(MANIFEST)) {
   throw new Error('dist/.vite/manifest.json is missing: run `pnpm build` first.');
 }
 
-/** @type {Record<string, { file: string; isEntry?: boolean; imports?: string[] }>} */
+/** @type {Record<string, { file: string; isEntry?: boolean; imports?: string[]; dynamicImports?: string[] }>} */
 const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'));
 
 /** Output files of `keys` and everything they import statically. */
@@ -160,12 +160,9 @@ const ROUTE_BUDGETS = [
   // Notification panel, settings page and the base mute item (T524): lazy chunks, the default
   // 150 KB, named explicitly (S5 conventions). The bell itself is part of the app shell above.
   { prefixes: ['src/features/notifications/'], limit: '150 KB' },
-  // Board of a shared kanban view (T317): it shares a chunk with the shared grid (cell values,
-  // grid field model); T468 added the computed cells (renderers by result type, error tokens,
-  // locks) there: 152.5 KB measured (147.5 KB before); T803 (one owner for the keys around a
-  // cell editor) 160.04 KB; T816 (color rule painting in the shared grid) 165.43 KB. 170 KB
-  // until the chunks are split (S9).
-  { prefixes: ['src/features/share/public/components/SharedBoard'], limit: '170 KB' },
+  // Board of a shared kanban view (T317): the default 150 KB again since T1000 (170 KB after
+  // T816): its record dialog imported the grid barrel, whose side effects kept glide-data-grid
+  // (the shared grid's chunk) in the board: 167.40 → 31.35 KB. Checked below that it stays out.
   // PDF viewer of the lightbox (T407): PDF.js (~130 KB gzip), loaded only when a PDF is opened;
   // its worker is a separate asset fetched by PDF.js itself.
   { prefixes: ['src/features/attachment/components/PdfViewer'], limit: '200 KB' },
@@ -239,6 +236,22 @@ checks.push({
   limit: '310 KB',
   gzip: true,
 });
+
+/**
+ * The board of a shared kanban view (T317) draws cards, not a canvas: it
+ * must not load glide-data-grid, which only the grids need (T1000: a barrel
+ * import from `grid/` pulled it in through side effects). Glide's chunk is
+ * the one that imports glide's overlay editor lazily.
+ */
+const glideChunks = Object.values(manifest)
+  .filter((chunk) => (chunk.dynamicImports ?? []).some((key) => key.includes('glide-data-grid')))
+  .map((chunk) => `dist/${chunk.file}`);
+const boardGlide = closure(['src/features/share/public/components/SharedBoard.tsx']).filter(
+  (file) => glideChunks.includes(file),
+);
+if (boardGlide.length > 0) {
+  throw new Error(`The shared board loads glide-data-grid: ${boardGlide.join(', ')}`);
+}
 
 /**
  * The dashboard editor (T812): a lazy chunk loaded on `?edit=1` by base
