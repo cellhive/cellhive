@@ -622,7 +622,7 @@ Có bảng phím tắt trong UI (i18n), ⌘ trên macOS, Ctrl nơi khác.
   - Panel: lỗi nằm trong panel, phần còn lại của trang vẫn dùng được; lỗi không phải chunk đi tiếp lên boundary trên. `lazyPanel` thay chỗ của panel / phần trang (lịch sử, phần tệp, editor bước automation, chart, view kanban/form, nội dung trang share, popover có khung ở ngoài chunk…); `lazyOverlay` nổi giữa đáy màn hình như toast cho thứ mở đè lên trang hoặc nằm trên thanh công cụ (panel record, dialog, drawer, popover có khung trong chunk, lightbox, nút/menu toolbar) — chỗ của chúng có thể không thấy được (portal, sidebar). React giữ `lazy` đã reject: lỗi thay một `lazy` mới, nên "Thử lại" (fallback Suspense của chỗ đó trong lúc chờ) hoặc lần mở panel sau tải lại chunk.
   - "Tải lại trang" (bản build mới): tải lại toàn trang khi người dùng bấm, không tự tải lại. Mốc thời gian trong `sessionStorage` (`cellhive.chunkReload`, chỉ dùng cho việc này) ẩn nút 60 s sau khi dùng — tải lại không bao giờ lặp.
   - Giới hạn: Chromium < 154 (Playwright 1.63 kèm 153) giữ fetch module đã lỗi suốt đời trang (whatwg/html#6768): thử lại không gửi request, chỉ "Tải lại trang" giúp được; Chrome 156 (đã kiểm, `ModuleMapDoNotCacheFailedFetch`) tải lại được. Vì vậy E2E `t902-lazy-chunks.spec.ts` chạy trên Google Chrome (`channel: 'chrome'`).
-  - App shell + 0,93 KB gzip (T902).
+  - App shell + 0,99 KB gzip (T902, trần + 1 KB): bỏ nút quay "Thử lại" để vừa trần — chỗ đó đã có trạng thái tải riêng.
 
 ### 8.3 Offline / mất kết nối
 
