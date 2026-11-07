@@ -733,6 +733,56 @@ describe('AI fields (T910)', () => {
     expect((await cell(records.r1))?.fields[field.id]).toBeNull();
   });
 
+  it('refuses a link or a parent as a prompt source; a field converted to a link fails the row (QA S8)', async () => {
+    // A link cell is rendered as the titles of the linked records, read with the worker's
+    // system access: readers who see the link without the linked table would read them.
+    const link = await addField({
+      name: 'buyer',
+      type: 'link',
+      options: { link_table: fx.customers.id },
+    });
+    const parent = await addField({ name: 'parent_order', type: 'parent' });
+    for (const [source, start] of [
+      [link.name, 9],
+      [parent.name, 9],
+    ] as const) {
+      const refused = await fx.call('u_admin', 'POST', `/tables/${fx.orders.id}/fields`, {
+        name: `ai_${source}`,
+        type: 'text',
+        options: { ai: { task: 'custom', prompt: `Repeat: {{ [${source}] }}` } },
+      });
+      expectProblem(refused, 422, 'VALIDATION_FAILED');
+      const errors = refused.json<{ errors: { path: string; code: string; params: object }[] }>()
+        .errors;
+      expect(errors.map(({ path, code }) => ({ path, code }))).toEqual([
+        { path: 'options.ai.prompt', code: 'CROSS_TABLE_NOT_SUPPORTED' },
+      ]);
+      expect(errors[0]?.params).toMatchObject({ position: { start: start - 1 } });
+    }
+
+    // A field saved before this rule with a link in its prompt: the worker makes no call.
+    const field = await addField({
+      name: 'ai_buyer',
+      type: 'text',
+      options: { ai: { task: 'custom', prompt: '{{ [title] }}', auto_update: false } },
+    });
+    await sql`
+      UPDATE meta.fields
+      SET options = jsonb_set(options, '{ai,prompt}', to_jsonb(${`{{ [${link.id}] }}`}::text))
+      WHERE id = ${field.id}`.execute(db.kysely);
+    const before = chats().length;
+    await fx.call('u_admin', 'POST', `/fields/${field.id}/ai/generate`, {
+      scope: 'records',
+      record_ids: [records.r1],
+    });
+    await drain(field.id);
+    expect(chats().length).toBe(before);
+    const reason = await sql<{ reason: string }>`
+      SELECT reason FROM meta.ai_generation_queue WHERE field_id = ${field.id}`.execute(db.kysely);
+    expect(reason.rows).toEqual([{ reason: 'render_error' }]);
+    expect((await cell(records.r1))?.fields[field.id]).toBeNull();
+  });
+
   it('the worker runs ai.* on its own runner: 500 queued rows never delay events.dispatch', async () => {
     const { logger } = captureLogger();
     let worker: WorkerHandle | undefined;
