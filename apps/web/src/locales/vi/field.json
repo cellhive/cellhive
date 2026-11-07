@@ -677,7 +677,9 @@
       "stale": "Cài đặt đã đổi sau lần xem trước này: xem trước lại để thấy kết quả mới.",
       "errors": {
         "AI_INVALID_OUTPUT": "Không có câu trả lời hợp lệ",
-        "AI_PROVIDER_ERROR": "Nhà cung cấp AI từ chối",
+        "AI_PROVIDER_ERROR": "Nhà cung cấp AI trả lỗi",
+        "AI_PROVIDER_ERROR_truncated": "Câu trả lời bị cắt ở giới hạn độ dài",
+        "AI_PROVIDER_ERROR_refused": "Model từ chối trả lời",
         "AI_TIMEOUT": "AI trả lời quá lâu"
       }
     },

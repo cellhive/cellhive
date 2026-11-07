@@ -229,7 +229,13 @@ function PreviewRow({
         <p className="flex items-start gap-1.5 text-label font-normal text-danger">
           <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
           <span>
-            {t(`ai.preview.errors.${item.error.code}`, { defaultValue: item.error.code })}
+            {t(
+              [
+                `ai.preview.errors.${item.error.code}_${item.error.reason ?? ''}`,
+                `ai.preview.errors.${item.error.code}`,
+              ],
+              { defaultValue: item.error.code },
+            )}
           </span>
         </p>
       ) : item.output === null || item.output === '' ? (

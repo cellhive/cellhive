@@ -737,7 +737,9 @@
       "stale": "The settings changed since this preview: preview again to see their result.",
       "errors": {
         "AI_INVALID_OUTPUT": "No valid answer",
-        "AI_PROVIDER_ERROR": "The AI provider refused",
+        "AI_PROVIDER_ERROR": "The AI provider answered with an error",
+        "AI_PROVIDER_ERROR_truncated": "The answer was cut off at its length limit",
+        "AI_PROVIDER_ERROR_refused": "The model refused to answer",
         "AI_TIMEOUT": "The AI took too long"
       }
     },
