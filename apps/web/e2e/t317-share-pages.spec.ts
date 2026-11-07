@@ -442,4 +442,49 @@ test.describe('T317 public share pages (S3 milestone)', () => {
     await expectNoSeriousA11yViolations(visitor, 'share gone (vi)');
     await visitor.context().close();
   });
+
+  test('a shared kanban view: its columns with their cards, a card opens its record (T1000)', async ({
+    browser,
+    page,
+  }) => {
+    await asAdmin(page);
+    const table = await ok<{ id: string }>(page, 'POST', `/bases/${ids.baseId}/tables`, {
+      name: 'Giao hàng',
+    });
+    const status = await ok<{ id: string }>(page, 'POST', `/tables/${table.id}/fields`, {
+      name: 'Trạng thái',
+      type: 'select',
+      options: { options: [{ name: 'Mới' }, { name: 'Đang giao' }] },
+    });
+    await ok(page, 'POST', `/tables/${table.id}/records?field_key_type=name`, {
+      records: [
+        { fields: { Name: 'Giao A', 'Trạng thái': 'Mới' } },
+        { fields: { Name: 'Giao B', 'Trạng thái': 'Mới' } },
+        { fields: { Name: 'Giao C', 'Trạng thái': 'Đang giao' } },
+      ],
+    });
+    const board = await ok<{ id: string }>(page, 'POST', `/tables/${table.id}/views`, {
+      name: 'Bảng giao hàng',
+      type: 'kanban',
+      config: { kanban: { group_field: status.id } },
+    });
+    const link = await ok<CreatedLink>(page, 'POST', `/views/${board.id}/share-links`, {
+      audience: 'public',
+    });
+
+    const visitor = await anonymous(browser);
+    await visitor.goto(`/s/${link.token}`);
+    await expect(visitor.getByRole('heading', { level: 1, name: 'Bảng giao hàng' })).toBeVisible();
+    const columns = visitor.getByTestId('share-board-column');
+    const fresh = columns.filter({ has: visitor.getByRole('heading', { name: /^Mới/u }) });
+    const shipping = columns.filter({ has: visitor.getByRole('heading', { name: /^Đang giao/u }) });
+    await expect(fresh.getByTestId('share-card')).toHaveCount(2);
+    await expect(shipping.getByTestId('share-card')).toHaveCount(1);
+    // Cards, not the grids' canvas.
+    await expect(visitor.locator('canvas')).toHaveCount(0);
+    await expectNoSeriousA11yViolations(visitor, 'shared board');
+    await shipping.getByTestId('share-card').click();
+    await expect(visitor.getByRole('dialog', { name: 'Giao C' })).toBeVisible();
+    await visitor.context().close();
+  });
 });

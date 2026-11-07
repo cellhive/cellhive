@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { cellClipboardText } from '../../../../grid';
+import { cellClipboardText } from '../../../../grid/clipboard';
 import { CellValue } from '../../../../grid/display/CellValue';
 import { isApiError } from '../../../../lib/api/client';
 import { keys } from '../../../../lib/query/keys';
