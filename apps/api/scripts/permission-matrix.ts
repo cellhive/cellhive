@@ -1,14 +1,16 @@
 /**
  * `pnpm test:matrix` (BACKLOG T719, CONTRACTS §5): runs, in one command,
  * every integration test file of the API that names a row of the
- * permission matrix — P01–P77 — in a test or describe title, whole
+ * permission matrix — P01–P102 — in a test or describe title, whole
  * (the tests of a file build on each other's state, so they are not
  * filtered by name), then prints how many passing tests name each row.
  * A test counts for the rows its own title names; only a title naming none
  * falls back to its describe titles, so a describe "P39–P43" does not credit
  * every test inside it to all five rows.
  * Fails when a test fails or a row has none. P21 and P65–P77 (S7, BACKLOG
- * T818) joined the required rows with `permissions-s7-matrix.int.test.ts`.
+ * T818) joined the required rows with `permissions-s7-matrix.int.test.ts`;
+ * P78–P102 (S8 AI and MCP, BACKLOG T917) with `permissions-s8-matrix.int.test.ts`
+ * and `mcp.int.test.ts` — row numbers have two or three digits.
  *
  * Extra arguments go to Vitest.
  */
@@ -17,14 +19,14 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const REQUIRED = Array.from({ length: 77 }, (_v, index) => index + 1).map(
+const REQUIRED = Array.from({ length: 102 }, (_v, index) => index + 1).map(
   (n) => `P${String(n).padStart(2, '0')}`,
 );
 
-/** Every name mentioning a row: `P07`, `P01/P19`, `P16–P18` (ranges expanded). */
+/** Every name mentioning a row: `P07`, `P01/P19`, `P16–P18`, `P100` (ranges expanded). */
 export function codesOf(name: string): string[] {
   const codes = new Set<string>();
-  for (const match of name.matchAll(/\bP(\d{2})(?:\s*[–-]\s*P(\d{2}))?\b/gu)) {
+  for (const match of name.matchAll(/\bP(\d{2,3})(?:\s*[–-]\s*P(\d{2,3}))?\b/gu)) {
     const from = Number(match[1]);
     const to = match[2] === undefined ? from : Number(match[2]);
     for (let n = from; n <= Math.max(from, to); n += 1) {
@@ -52,7 +54,7 @@ function matrixFiles(): string[] {
     .filter((name) => name.endsWith('.int.test.ts') && !name.includes('.bench.'))
     .filter((name) => {
       const text = readFileSync(join(root, name), 'utf8');
-      return /(?:describe|it|test)(?:\.each[^(]*\([\s\S]*?\))?\(\s*['"`][^'"`\n]*\bP\d{2}\b/u.test(
+      return /(?:describe|it|test)(?:\.each[^(]*\([\s\S]*?\))?\(\s*['"`][^'"`\n]*\bP\d{2,3}\b/u.test(
         text,
       );
     })
