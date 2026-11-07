@@ -168,3 +168,26 @@ export function withoutLockedAiFields(
     },
   };
 }
+
+/**
+ * The active AI fields a reader is locked out of (QA S8), every table of
+ * the base: automations treat them like locked computed fields — a field
+ * the saver cannot read (`UNKNOWN_FIELD` in conditions, templates,
+ * `watch_fields`).
+ */
+export function lockedAiFieldIds(
+  rows: BaseSchemaRows,
+  readable: SchemaReadability,
+): Set<Id<'fld'>> {
+  const analysisOf = aiAnalysisOf(rows);
+  const tableOf = new Map<string, Id<'tbl'>>(rows.fields.map((row) => [row.id, row.table_id]));
+  const out = new Set<Id<'fld'>>();
+  for (const field of rows.fields) {
+    if (field.deleted_at !== null || !isAiField(field)) continue;
+    const locked = aiReadFieldIds(field, rows, analysisOf).some(
+      (id) => !readable.field(tableOf.get(id) ?? field.table_id, id),
+    );
+    if (locked) out.add(field.id);
+  }
+  return out;
+}

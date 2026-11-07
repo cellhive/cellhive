@@ -863,6 +863,55 @@ describe('AI fields (T910)', () => {
     expect(plain.statusCode, plain.body).toBe(200);
   });
 
+  it('an automation of a manager locked out of an AI field cannot watch or test it (QA S8)', async () => {
+    const band = await addField({
+      name: 'ai_cost_band',
+      type: 'select',
+      options: {
+        options: [{ name: 'High' }, { name: 'Low' }],
+        ai: { task: 'classify', prompt: 'Cost {{ [cost] }}', auto_update: false },
+      },
+    });
+    const high = (band.options['options'] as { id: string; name: string }[])[0]?.id;
+    await managerWithoutCost();
+    const definition = {
+      trigger: {
+        type: 'record.updated',
+        table_id: fx.orders.id,
+        watch_fields: [band.id],
+        skip_bulk: false,
+      },
+      condition: { field: band.id, operator: 'changed_to', value: high },
+      actions: [
+        {
+          id: 'act_1',
+          type: 'update_record',
+          config: {
+            table_id: fx.orders.id,
+            record_id: null,
+            fields: { [fld('title')]: { literal: 'HIGH' } },
+          },
+        },
+      ],
+    };
+    const save = (user: 'u_out' | 'u_admin') =>
+      fx.call(user, 'POST', `/bases/${fx.baseId}/automations`, {
+        name: `copy the band (${user})`,
+        definition,
+      });
+    // The classification is made from `cost`: as unknown to them as `cost` itself.
+    const refused = await save('u_out');
+    expectProblem(refused, 422, 'AUTOMATION_INVALID');
+    const paths = refused
+      .json<{ errors: { path: string; code: string }[] }>()
+      .errors.filter((error) => error.code === 'UNKNOWN_FIELD')
+      .map((error) => error.path)
+      .sort();
+    expect(paths).toEqual(['definition.condition.field', 'definition.trigger.watch_fields[0]']);
+    const saved = await save('u_admin');
+    expect(saved.statusCode, saved.body).toBe(201);
+  });
+
   it('refuses a link or a parent as a prompt source; a field converted to a link fails the row (QA S8)', async () => {
     // A link cell is rendered as the titles of the linked records, read with the worker's
     // system access: readers who see the link without the linked table would read them.
