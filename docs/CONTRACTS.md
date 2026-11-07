@@ -2886,7 +2886,7 @@ Zod: `packages/contracts/src/automation-actions/ai.ts` (`aiGenerateTextActionSch
 
 - **Giao thức**: chỉ OpenAI-compatible **Chat Completions**, không stream: `POST {provider_base_url}/chat/completions` (dấu `/` cuối base URL bị bỏ). Không SDK, không dependency: client `LlmClient` tự viết trên lõi mạng ra (§25.4) — `parseOutboundUrl` → `resolveOutboundTarget` (allowlist org, `HTTP_PRIVATE_ALLOWLIST`; host loopback/nội bộ như `localhost:11434`, `ollama:11434` cần mục allowlist đúng host + cổng) → `guardedRequest` (ghim địa chỉ, **không** theo redirect — `3xx` là lỗi, body ≤ 1 MiB sau giải nén).
 - **Body** gửi đi: `{ model, messages, stream: false, <token_param>: max_output_tokens, response_format? }` — `token_param` = `max_completion_tokens` (OpenAI) hoặc `max_tokens` (Ollama, vLLM, llama.cpp, lớp tương thích khác) theo cài đặt; **không bao giờ** gửi `temperature`, `top_p`, `seed`, `n`, `stream_options`. Header `Authorization: Bearer <key>` chỉ khi org có key: key là secret kind `ai_api_key` (§24), `allowed_hosts` được kiểm **trước** khi giải mã (như §24 cho secret HTTP); host ngoài danh sách → không giải mã, không mở kết nối.
-- **Đọc câu trả lời**: `choices[0].message.content`; `message.refusal` khác rỗng → `refused`; `finish_reason = length` → `truncated`; JSON sai dạng / thiếu `choices` / `content` null → `invalid_response`. `usage.prompt_tokens` + `completion_tokens` khi provider báo; thiếu → ước lượng `ceil(số ký tự / 3)` (ký tự = code point; thận trọng cho tiếng Việt) cho cả prompt lẫn đầu ra, gắn cờ `estimated`. Usage của mọi câu trả lời đọc được (kể cả `refused`/`truncated`) được báo cho người gọi để ghi quota.
+- **Đọc câu trả lời**: `choices[0].message.content`; `message.refusal` khác rỗng → `refused`; `finish_reason = length` → `truncated` — trừ khi model **đã suy luận** (`usage.completion_tokens_details.reasoning_tokens > 0`, hoặc `message.reasoning_content`/`message.reasoning` khác rỗng — QA S8): lời gọi gửi lại **một lần** với `max_output_tokens + 2.048` (`AI_REASONING_ALLOWANCE_TOKENS`, cùng ngân sách thời gian, cả hai lời gọi tính quota), và model đó (theo org + base URL + model, nhớ trong tiến trình) nhận sẵn phần thêm này ở các lời gọi sau; với model không suy luận trần giữ nguyên; JSON sai dạng / thiếu `choices` / `content` null → `invalid_response`. `usage.prompt_tokens` + `completion_tokens` khi provider báo; thiếu → ước lượng `ceil(số ký tự / 3)` (ký tự = code point; thận trọng cho tiếng Việt) cho cả prompt lẫn đầu ra, gắn cờ `estimated`. Usage của mọi câu trả lời đọc được (kể cả `refused`/`truncated`) được báo cho người gọi để ghi quota.
 - **Thang đầu ra có cấu trúc** (bậc cao nhất trước; bậc bắt đầu = cài đặt của org hoặc bậc đã dò được):
 
   | Bậc | `response_format` | Schema ở đâu | Lấy JSON |
@@ -2914,6 +2914,7 @@ Zod: `packages/contracts/src/automation-actions/ai.ts` (`aiGenerateTextActionSch
 | Kết nối TCP/TLS | 5 s |
 | Tầng lồng tối đa của JSON Schema | 10 |
 | Ước lượng token khi thiếu `usage` | `ceil(code point / 3)` |
+| Token thêm cho model suy luận (`AI_REASONING_ALLOWANCE_TOKENS`) | 2.048 (một lần gửi lại khi bị cắt lúc đang suy luận; sau đó từ lời gọi đầu) |
 
 ### 29.8 Hằng số (T906; task sau thêm dòng)
 

@@ -8,6 +8,7 @@
 export {
   AI_USER_AGENT,
   estimateTokens,
+  AI_REASONING_ALLOWANCE_TOKENS,
   LlmClient,
   type AiChatMessage,
   type AiCompleteRequest,
