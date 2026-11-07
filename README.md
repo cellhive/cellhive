@@ -12,7 +12,7 @@ It is **fully open source**. There is no enterprise edition, no license key and 
 
 - **Your data stays yours.** Every table is a real PostgreSQL table that BI tools can read directly, and a whole base can be exported at any time.
 - **Easy to self-host.** One `docker compose up`, runs on a 2 GB machine for small teams, images for amd64 and arm64.
-- **Works offline.** No mandatory external service and no telemetry by default. AI is optional and can run on a local model.
+- **Works offline.** No mandatory external service and no telemetry by default. AI is optional and runs with a local LLM ([AI guide](docs/integrations/ai.md)).
 - **Built in the open.** AGPL-3.0, contributions under the [DCO](https://developercertificate.org/), no CLA.
 
 ## Documentation

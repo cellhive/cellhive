@@ -6,11 +6,12 @@ This guide is for scripts, back-end services and integrations (n8n, CI jobs, cro
 - **Calling the API**: the errors to expect (`401`, `403 INSUFFICIENT_SCOPE`, `404`), rate limits, `Idempotency-Key`, and examples in `curl`, JavaScript and Python.
 - **Realtime with a token**: opening `/ws` from Node.js.
 - **Dashboards**: reading dashboards and the numbers of their widgets (§11).
+- **AI**: the AI routes (formula, automation draft, Ask AI, AI fields) and their scopes (§12).
 - **What others see**: how changes made with a token appear in record history and the audit log.
 
-To connect an AI client (Claude Code, Cursor, VS Code…) with a token instead of calling the API yourself, see [mcp.md](mcp.md).
+To connect an AI client (Claude Code, Cursor, VS Code…) with a token instead of calling the API yourself, see [mcp.md](mcp.md). Setting up the organization's own AI provider is described in [ai.md](ai.md).
 
-The normative formats are in `docs/CONTRACTS.md` §1.1, §6, §7, §26 and §28. The architecture is in ADR-36 (and ADR-38 for dashboards). Building, reading and sharing dashboards in the app is described in [dashboards.md](dashboards.md). If this guide and those documents disagree, the contracts win. Please report the mismatch.
+The normative formats are in `docs/CONTRACTS.md` §1.1, §6, §7, §26, §28 and §29. The architecture is in ADR-36 (and ADR-38 for dashboards, ADR-39 for AI). Building, reading and sharing dashboards in the app is described in [dashboards.md](dashboards.md). If this guide and those documents disagree, the contracts win. Please report the mismatch.
 
 ## Contents
 
@@ -25,9 +26,10 @@ The normative formats are in `docs/CONTRACTS.md` §1.1, §6, §7, §26 and §28.
 9. [History and audit: "via an API token"](#9-history-and-audit-via-an-api-token)
 10. [Files, exports, imports and jobs](#10-files-exports-imports-and-jobs)
 11. [Dashboards](#11-dashboards)
-12. [Organization policy (owners and admins)](#12-organization-policy-owners-and-admins)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Reference: limits](#14-reference-limits)
+12. [AI](#12-ai)
+13. [Organization policy (owners and admins)](#13-organization-policy-owners-and-admins)
+14. [Troubleshooting](#14-troubleshooting)
+15. [Reference: limits](#15-reference-limits)
 
 ---
 
@@ -39,7 +41,7 @@ A token belongs to **one member of one organization**. It acts as that member: i
 
 1. Open the user menu (bottom left) → **API tokens**, or go to `/o/<organization>/settings/api-tokens`. The page is for the organization on screen; a token of one organization never works in another.
 2. Click **New token**, then:
-   - **Name**: what uses it, for example "CI export" (1–100 characters). The name appears in history and in the organization's token list (§9, §12).
+   - **Name**: what uses it, for example "CI export" (1–100 characters). The name appears in history and in the organization's token list (§9, §13).
    - **Access**: start from a preset, then adjust the scopes (§2):
 
      | Preset | Scopes |
@@ -54,7 +56,7 @@ A token belongs to **one member of one organization**. It acts as that member: i
      The MCP presets also show how to connect an AI client once the token is created ([mcp.md](mcp.md) §2).
 
    - **Bases**: all bases you can open, or only the bases you pick (up to 50).
-   - **Expiration**: 7, 30, **90 (default)** or 365 days, a custom date (at most 3,650 days away), or "No expiration" when the organization allows it (§12).
+   - **Expiration**: 7, 30, **90 (default)** or 365 days, a custom date (at most 3,650 days away), or "No expiration" when the organization allows it (§13).
 3. Click **Create token** and **copy the token now**. It is shown once. Cellhive stores only its SHA-256 hash, so a lost token cannot be shown again: revoke it and create a new one.
 
 Creating, renaming and revoking tokens needs a signed-in session. A token cannot create or manage tokens (those routes answer `403 INSUFFICIENT_SCOPE` with `required: ["session"]`). The routes are `GET|POST /api/v1/orgs/:orgId/me/api-tokens`, `PATCH|DELETE /api/v1/api-tokens/:id` (C§26.4).
@@ -99,7 +101,7 @@ A token authenticates only while **all** of these hold:
 | --- | --- |
 | Not revoked (by you, or by an organization owner/admin) | `401 TOKEN_REVOKED` |
 | Not expired (`expires_at` in the future) | `401 TOKEN_EXPIRED` |
-| The organization has API tokens turned on (§12) | `401 UNAUTHENTICATED` |
+| The organization has API tokens turned on (§13) | `401 UNAUTHENTICATED` |
 | Your account is active and still a member of the organization | `401 UNAUTHENTICATED` |
 
 **Resetting your password revokes your tokens** in every organization, by default: the reset screen has "Revoke all my API tokens" ticked (untick it to keep them), `POST /api/v1/auth/password-reset/:token` revokes unless the body says `"revoke_tokens": false`, an admin's reset link revokes them when the link is created unless the admin sends `{ "revoke_tokens": false }`, and the server command `cellhive user reset-password` revokes them unless run with `--keep-tokens`. A reset usually means the account may have been taken over, and a token created by someone else would keep working otherwise. After a reset, create new tokens and update your integrations. The audit log of each organization shows one `api_token.revoked` entry with `reason: "password_reset"` and the number of tokens.
@@ -120,16 +122,16 @@ The list is closed. A write scope **never** includes the matching read scope: a 
 
 | Scope | Allows |
 | --- | --- |
-| `records:read` | Read records (list, get, query, group counts, summaries, tree, history, trash), link candidates, export, download files and thumbnails, read jobs you started, list base members, form submission status; dashboard **numbers**: widget data, filter values, the records behind a widget and widget CSV (§11) |
-| `records:write` | Create, update, delete, restore, purge and revert records; upload files; imports into a table; click buttons; submit a form of a view |
-| `schema:read` | Read workspaces, bases, tables, fields and views; dashboards (list, one dashboard with its widgets, dashboard trash); `GET /me`, `GET /orgs` |
-| `schema:write` | Create, change and delete tables, fields and views; convert field types; import that creates a table (with `records:write`); create, change, delete, restore and duplicate dashboards, their layout and their widgets |
-| `automations:read` | Read automations, runs and run history, HTTP test results, incoming webhook requests and samples |
+| `records:read` | Read records (list, get, query, group counts, summaries, tree, history, trash), link candidates, export, download files and thumbnails, read jobs you started, list base members, form submission status; dashboard **numbers**: widget data, filter values, the records behind a widget and widget CSV (§11); Ask AI and the preview of an AI field (§12) |
+| `records:write` | Create, update, delete, restore, purge and revert records; upload files; imports into a table; click buttons; submit a form of a view; generate the values of an AI field (§12) |
+| `schema:read` | Read workspaces, bases, tables, fields and views; dashboards (list, one dashboard with its widgets, dashboard trash); `GET /me`, `GET /orgs`, `GET /orgs/:id`; AI formula writing (§12) |
+| `schema:write` | Create, change and delete tables, fields and views (AI fields included); convert field types; import that creates a table (with `records:write`); create, change, delete, restore and duplicate dashboards, their layout and their widgets |
+| `automations:read` | Read automations, runs and run history, HTTP test results, incoming webhook requests and samples; AI automation drafts (§12) |
 | `automations:write` | Create, change, enable, disable, duplicate, take over, test and re-run automations; manage incoming webhooks, including **reading** a hook (its response contains the URL that triggers it) |
 
 **Record values never flow through an automation scope.** Previewing or test-sending an email and test-sending an HTTP step with a `record_id` also need `records:read` (`403 INSUFFICIENT_SCOPE`, `required: ["records:read"]`), and the run detail read with a token that lacks `records:read` hides every record value of the steps. An automation created, changed or enabled with a token runs as the token's owner, so `automations:write` lets the integration build automations that read and write records **within the owner's permissions** — grant it only to integrations meant to do that. The "Automation" preset of the token dialog includes `records:read` for this reason, and its description says so ("read record values (previews, test sends, run details)"); untick it for an integration that only manages automations and never needs record values (C§26.2).
 
-**Session only.** Some routes never accept a token, whatever its scopes: API token management, roles and role assignments, members, groups, workspaces (create/change/members), invitations, secrets, the HTTP allowlist, share link management (of views, forms and dashboards, embedding included), the audit log, organization settings, creating/changing/deleting bases, sender identities, password reset links, your notifications and channels, following records, and connected accounts (`/me/identities`). A token gets `403 INSUFFICIENT_SCOPE` with `required: ["session"]` on them.
+**Session only.** Some routes never accept a token, whatever its scopes: API token management, roles and role assignments, members, groups, workspaces (create/change/members), invitations, secrets, the HTTP allowlist, share link management (of views, forms and dashboards, embedding included), the audit log, organization settings, AI settings (with the connection test and AI usage), creating/changing/deleting bases, sender identities, password reset links, your notifications and channels, following records, and connected accounts (`/me/identities`). A token gets `403 INSUFFICIENT_SCOPE` with `required: ["session"]` on them.
 
 **Route by route.** Every operation in the OpenAPI document (`GET /api/v1/openapi.json`) carries `x-api-token-scope`: a scope, `session` or `public`. Operations that accept a token also list `{ "apiToken": ["<scope>"] }` under `security`. The source of the table is `packages/contracts/src/api-token-scopes.ts`, and C§26.3 describes it. A route missing from the table is treated as `session` (deny by default).
 
@@ -215,7 +217,7 @@ WWW-Authenticate: Bearer error="invalid_token"
 - **Failed authentications** (any `401` on the token path) are counted per client IP for one minute. After 300 failures, token requests from that IP get `429` until the minute ends, except for a token that authenticated successfully in the last 10 minutes (from any IP): integrations already running behind a shared IP (CI runners, NAT gateways) keep working while a broken job retries with a revoked token. A token that has not been used yet waits for the minute to end. Stop on `401`, never retry it.
 - The client IP is taken after `TRUSTED_PROXIES` (self-hosters: list your reverse proxies, otherwise every client appears to come from the proxy and shares one failure counter).
 - If Valkey is unavailable, limited requests answer `503 DEPENDENCY_UNAVAILABLE`. Retry later.
-- Some routes have extra limits of their own, for example one running export per user (§10).
+- Some routes have extra limits of their own, for example one running export per user (§10) and 10 AI requests per minute per person (§12).
 
 ---
 
@@ -433,7 +435,7 @@ Who sees which token:
 | The token's owner | The same, for their own tokens |
 | Everyone else (including base admins, for other people's tokens) | "Via an API token" only: `api_token_id` and `api_token_name` are `null` |
 
-So colleagues can tell that a change came from an integration without learning which integrations you run. Filtering the audit log by actor still finds every change made with your tokens, and the audit filter `via=api_token` lists every change made with any token. Organization owners and admins see every token's metadata (never its value) and can revoke any token in **API tokens → All tokens** (§12).
+So colleagues can tell that a change came from an integration without learning which integrations you run. Filtering the audit log by actor still finds every change made with your tokens, and the audit filter `via=api_token` lists every change made with any token. Organization owners and admins see every token's metadata (never its value) and can revoke any token in **API tokens → All tokens** (§13).
 
 Creating and revoking a token are audited (`api_token.created`, `api_token.revoked`, `api_token.updated` for a rename).
 
@@ -593,7 +595,63 @@ Creating and changing share links of dashboards (and of views and forms), embedd
 
 ---
 
-## 12. Organization policy (owners and admins)
+## 12. AI
+
+The AI routes act as the token's owner, exactly as in the app: the same permissions, the same limits and the organization's daily token quota. They work only while an organization owner or admin has set up AI ([ai.md](ai.md) §1). Check `GET /api/v1/orgs/:orgId` (`schema:read`) first: `ai.available` says whether AI is on, and `ai.record_data` whether it may see record values, which AI fields need. The response never contains the provider URL, the model or the key.
+
+### 12.1 Routes and scopes
+
+| Route | Scope | Who may call it | What it does |
+| --- | --- | --- | --- |
+| `POST /api/v1/tables/:tableId/ai/formula` `{ description, current?, field_id? }` | `schema:read` | People who can change the table's fields | Writes a formula, checked like a save. Stores nothing. |
+| `POST /api/v1/bases/:baseId/ai/automation-draft` `{ prompt, table_id? }` | `automations:read` | People who can create automations in the base | Returns a checked automation `definition` to review. Stores nothing, enables nothing. |
+| `POST /api/v1/tables/:tableId/ai/ask` `{ question, timezone? }` | `records:read` | Anyone who can read the table | Returns the interpretation, a widget config and its numbers, computed with your permissions |
+| `POST /api/v1/tables/:tableId/ai/field-preview` `{ field_id, type, choices, ai, record_ids? }` | `records:read` | People who can change the table's fields | Runs an AI field's prompt on up to 5 records and returns the results with an estimate. Writes nothing; sends record values to the provider. |
+| `POST /api/v1/fields/:fieldId/ai/generate` `{ scope, record_ids? }` | `records:write` | People who can change the table's fields and read every field the prompt uses | Queues generation: `202 { job_id, rows, estimated_tokens }` |
+| `POST /api/v1/tables/:tableId/fields`, `PATCH /api/v1/fields/:fieldId` with `options.ai` | `schema:write` | People who can change the table's fields | Creates or changes an AI field; `"ai": null` turns it back into a normal field |
+| AI steps in `POST /api/v1/bases/:baseId/automations`, `PATCH /api/v1/automations/:automationId` | `automations:write` | People who can build automations | `ai_generate_text`, `ai_classify` ([ai.md](ai.md) §7) |
+| `GET`/`PUT /api/v1/orgs/:orgId/ai-settings`, `POST /api/v1/orgs/:orgId/ai-settings/test`, `GET /api/v1/orgs/:orgId/ai-usage` | session only | Organization owners and admins | Provider settings, connection test, usage |
+
+As everywhere, a table, base or field you cannot read answers `404`, and one you can read but not change answers `403`.
+
+### 12.2 Examples
+
+```bash
+# Ask a question about a table (records:read)
+curl -sS -X POST "$CELLHIVE_URL/api/v1/tables/tbl_8fK2mQ1xZp0aB7cD/ai/ask" \
+  -H "Authorization: Bearer $CELLHIVE_TOKEN" \
+  -H "Content-Type: application/json" \
+  --max-time 120 \
+  -d '{ "question": "Revenue by month", "timezone": "Asia/Ho_Chi_Minh" }'
+```
+
+The answer is `{ "status": "ok", "interpretation", "widget": { "type", "title", "config" }, "data", "narrative" }`, where `data` has the shape of a widget's numbers (§11.2) and `narrative` is a short summary written by the model, or `null` (always `null` while AI may not see record values). A question the model cannot turn into a query answers `{ "status": "unanswerable" }`.
+
+```bash
+# Fill the empty cells of an AI field (records:write), then follow the job (records:read)
+curl -sS -X POST "$CELLHIVE_URL/api/v1/fields/fld_3Qn8vR1mXc6tLp2w/ai/generate" \
+  -H "Authorization: Bearer $CELLHIVE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{ "scope": "empty" }'
+# → 202 { "job_id": "job_…", "rows": 118, "estimated_tokens": 41300 }
+curl -sS "$CELLHIVE_URL/api/v1/jobs/job_…" -H "Authorization: Bearer $CELLHIVE_TOKEN"
+```
+
+`scope` is `empty`, `failed`, `all` (overwrites; the old values stay in record history) or `records` with up to 1,000 `record_ids`. The job succeeds when no queued row of it is left, with `result = { rows, failed }`. `estimated_tokens` is a rough figure that ignores the values of the fields; `field-preview` gives a better one ([ai.md](ai.md) §5.2).
+
+### 12.3 Limits, errors and retries
+
+- **10 AI requests per minute per person**, at most 2 at once (formula, draft, Ask AI, previews; your tokens and sessions together) → `429 RATE_LIMITED` with `Retry-After`. Generating is not counted there.
+- **Quota**: `429 AI_QUOTA_EXCEEDED` with `Retry-After` until midnight in the organization's time zone and `errors[0].params.reset_at`. Do not retry before.
+- **Time**: one request may take up to 90 seconds (`504 AI_TIMEOUT` after that). Give your HTTP client a timeout above 90 seconds.
+- `422 AI_NOT_CONFIGURED` (AI off or not set up), `422 AI_RECORD_DATA_DISABLED` (the route sends record values and the organization does not allow it), `422 AI_INVALID_OUTPUT` (the model's answer was still wrong after 2 repair rounds; rephrase), `502 AI_PROVIDER_ERROR` (`errors[0].params.reason`, plus `status` for `http_status`). A `502` caused by a refused key or a blocked address does not fix itself: tell an organization admin. The full list is in [ai.md](ai.md) §9.
+- **`Idempotency-Key`** (§6) is honoured by `formula`, `automation-draft`, `field-preview` and `generate`: a retry with the same key returns the first answer without calling the model again. `ask` ignores it, so every call is a new question and costs tokens.
+- Text written by the model (`explanation`, `warnings[].message`, `narrative`, preview outputs) is plain text: show it as text, never as HTML or Markdown.
+
+---
+
+## 13. Organization policy (owners and admins)
 
 Organization owners and admins find the **All tokens** and **Policy** tabs on the API tokens page.
 
@@ -608,7 +666,7 @@ The same tab holds the **MCP clients** switches (`organizations.settings.mcp`, o
 
 ---
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 | Symptom | Cause and fix |
 | --- | --- |
@@ -626,7 +684,7 @@ The same tab holds the **MCP clients** switches (`organizations.settings.mcp`, o
 
 ---
 
-## 14. Reference: limits
+## 15. Reference: limits
 
 | Item | Value |
 | --- | --- |
@@ -647,3 +705,4 @@ The same tab holds the **MCP clients** switches (`organizations.settings.mcp`, o
 | Groups of one widget query | 1,000 (`422 WIDGET_TOO_LARGE`) |
 | Records behind a widget | 50 per page by default, at most 200; `offset` up to 100,000 |
 | Live filters per widget request | 50 |
+| AI requests (formula, draft, Ask AI, AI field preview) | 10 per minute per person, 2 at once per person; 90 s each (`504 AI_TIMEOUT`); daily token quota of the organization (`429 AI_QUOTA_EXCEEDED`) |

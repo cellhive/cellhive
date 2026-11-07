@@ -12,7 +12,7 @@ Dự án **mã nguồn mở hoàn toàn**. Không có bản Enterprise, không l
 
 - **Dữ liệu là của bạn.** Mỗi bảng là một bảng PostgreSQL thật, công cụ BI đọc trực tiếp được, và xuất được nguyên một base bất cứ lúc nào.
 - **Dễ tự host.** Một lệnh `docker compose up`, chạy được trên máy 2 GB cho nhóm nhỏ, có image amd64 và arm64.
-- **Chạy được offline.** Không bắt buộc dịch vụ bên ngoài, không gửi telemetry mặc định. AI là tuỳ chọn và chạy được bằng model local.
+- **Chạy được offline.** Không bắt buộc dịch vụ bên ngoài, không gửi telemetry mặc định. AI là tuỳ chọn và chạy được với LLM local ([hướng dẫn AI](docs/integrations/ai.md), tiếng Anh).
 - **Phát triển công khai.** AGPL-3.0, đóng góp theo [DCO](https://developercertificate.org/), không CLA.
 
 ## Tài liệu
