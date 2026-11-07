@@ -79,7 +79,8 @@ Measured on 2026-11-07:
 | Model | Served by | Answer format (§2.1) | Automation draft | Ask AI | Formula |
 | --- | --- | --- | --- | --- | --- |
 | DeepSeek-V4.1-Flash (`deepseek-flash`) | DeepSeek API (§2.8) | JSON mode | **20/20** | **19/20** | **19/20** |
-| Qwen2.5 7B Instruct (`qwen2.5:7b-instruct`, Q4_K_M) | Ollama 0.40.15 on an Apple M3 laptop (24 GB unified memory, Metal), context 16,384 | JSON schema | **5 of the first 13** (run cut short) | not measured yet | not measured yet |
+
+No local model was evaluated for this release; use the eval kit (above) to measure yours before relying on it.
 
 Per suite, on the same runs (latency is the whole request as the person waits for it, repair rounds included; tokens are the sum over the cases as the provider counted them):
 
@@ -88,13 +89,11 @@ Per suite, on the same runs (latency is the whole request as the person waits fo
 | DeepSeek-V4.1-Flash | Automation draft | 1 (1 case) | 3.3 s / 5.4 s | 84,705 + 9,444 | none |
 | DeepSeek-V4.1-Flash | Ask AI | 0 | 1.9 s / 3.7 s | 37,995 + 3,954 | 1 `truncated` (reasoning used the 600-token limit, §2.8) |
 | DeepSeek-V4.1-Flash | Formula | 9 (9 cases) | 3.8 s / 5.2 s | 133,533 + 6,584 | 1 `truncated` |
-| Qwen2.5 7B Instruct | Automation draft (13 cases) | 11 (6 cases) | 63.2 s / 90.1 s | 55,961 + 7,855 | 5 `AI_INVALID_OUTPUT` after 3 tries, 3 `AI_TIMEOUT` at 90 s |
 
 What this means for choosing a model:
 
 - **A hosted model of the DeepSeek-V4.1-Flash class does every AI feature**, including the sentence of the Cellhive milestone ("khi ticket chuyển DONE thì gửi Telegram cho người phụ trách", drafted as a notification to the person in charge and saved turned off).
-- **Automation drafts need a hosted model or a large local model.** A 7–8B local model is not enough: Qwen2.5 7B Instruct failed 8 of the first 13 sentences, the milestone sentence among them, and a laptop GPU writes a draft slowly (about 10 answer tokens a second under a JSON schema, so drafts took 30–90 seconds and three hit the 90-second limit). The project has not measured a larger local model yet; plan for one of about 30B parameters or more on a GPU, or use a hosted model for this feature.
-- **Ask AI, formulas and AI fields** ask for much shorter answers. Their results with a 7–8B local model are not measured yet.
+- **Automation drafts** need the longest structured answers of all the AI features (several tables, triggers and actions at once). Start with a hosted model, or measure a local model with the eval kit first; a larger local model (about 30B parameters or more) is the safer bet. A slow local model also risks the 90-second limit of a request (§5.3).
 - Use an **instruction-tuned** model, preferably one that does not think before answering (§2.4). A base (completion) model rarely answers with the JSON Cellhive asks for.
 - Every answer is checked by Cellhive (§2.1), so a weaker model costs more repair rounds and failed requests, never unchecked output.
 
@@ -152,8 +151,8 @@ Anthropic offers an OpenAI-compatible endpoint (`https://api.anthropic.com/v1`).
 - **Listen address.** Ollama listens on `127.0.0.1:11434` by default, which a Cellhive container or another machine cannot reach. Start it with `OLLAMA_HOST=0.0.0.0:11434` and keep port 11434 away from the internet: Ollama has no authentication.
 - **Base URL** `http://<host>:11434/v1`, **no key**, and the model name as `ollama list` prints it (for example `llama3.1:8b`). Pull the model first (`ollama pull <model>`).
 - **Allowlist entry** `<host>:11434` (§3). The **Allow** button of a blocked test adds it.
-- **Context length.** Ollama uses a context window of 4,096 tokens unless told otherwise. Cellhive's prompts list the tables and fields the person can read, so on a large base a formula or draft request can need more; set `OLLAMA_CONTEXT_LENGTH` when starting Ollama (for example `OLLAMA_CONTEXT_LENGTH=16384`, if your GPU has the memory). Ollama 0.40 still started models with 4,096 tokens on a 24 GB Apple M3. On the small demo base an automation draft took about 1,900–2,900 prompt tokens a call at the **JSON schema** rung; the lower rungs add the schema to the prompt, and repair rounds add the previous answer. **Usage** shows how many prompt tokens your requests take.
-- **Thinking models.** Some models think before they answer by default (Ollama's `ollama show <model>` lists `thinking` under **Capabilities**; `qwen3` is one). Ollama returns the thinking apart from the answer, and Cellhive reads only the answer, but the thinking counts against the answer token limit and takes time: `qwen3:8b` spent about 300 tokens thinking about a one-line sum, while Ask AI plans and formulas allow 600. Ollama's OpenAI-compatible endpoint turns thinking off when a request sends `reasoning_effort: "none"`, which Cellhive's fixed request does not, so prefer a model without thinking for Cellhive.
+- **Context length.** Ollama uses a context window of 4,096 tokens unless told otherwise. Cellhive's prompts list the tables and fields the person can read, so on a large base a formula or draft request can need more; set `OLLAMA_CONTEXT_LENGTH` when starting Ollama (for example `OLLAMA_CONTEXT_LENGTH=16384`, if your GPU has the memory). The default is too small for an automation draft plus its repair rounds: set at least 16,384. The lower rungs (§2.1) add the schema to the prompt, and each repair round adds the previous answer. **Usage** shows how many prompt tokens your requests take.
+- **Thinking models.** Some models think before they answer by default (Ollama's `ollama show <model>` lists `thinking` under **Capabilities**). Ollama returns the thinking apart from the answer, and Cellhive reads only the answer, but the thinking counts against the answer token limit and takes time; Ask AI plans and formulas allow 600 answer tokens. Ollama's OpenAI-compatible endpoint turns thinking off when a request sends `reasoning_effort: "none"`, which Cellhive's fixed request does not, so prefer a model without thinking for Cellhive.
 - **First request.** Ollama loads a model on first use, which can take longer than a test allows. If **Test connection** times out, test again, or raise the **Request timeout** under **Advanced** (10–120 seconds, default 60).
 - **Token parameter.** Ollama reads `max_tokens`, which is the default for every host other than `api.openai.com`.
 
