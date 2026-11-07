@@ -542,8 +542,17 @@ test('the column menu regenerates; a small quota pauses the rest until "Resume"'
     await expect(dialog).toHaveCount(0);
   });
 
-  await test.step('a quota of 10,000 tokens: long answers use it up, the rest pauses', async () => {
-    await ok(page, 'PUT', `/orgs/${fx.orgId}/ai-settings`, { daily_token_limit: 10_000 });
+  await test.step('a small quota: long answers use it up, the rest pauses', async () => {
+    // A generate request is refused once today's quota is used up (T1003): leave room for about
+    // one long answer over what the organization used today, so generating starts, then pauses.
+    const usage = await ok<{ quota: { used_today: number } }>(
+      page,
+      'GET',
+      `/orgs/${fx.orgId}/ai-usage`,
+    );
+    await ok(page, 'PUT', `/orgs/${fx.orgId}/ai-settings`, {
+      daily_token_limit: Math.max(10_000, usage.quota.used_today + 1_000),
+    });
     fake.script(...TICKETS.map(() => ({ content: LONG_ANSWER })));
     const menu = await columnMenu(page, 'Summary');
     await menu.getByTestId('ai-regenerate-all').click();
