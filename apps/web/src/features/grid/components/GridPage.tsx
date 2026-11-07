@@ -89,7 +89,6 @@ import { useRecordBlocks } from '../blocks/use-record-blocks';
 import { useGridClipboard } from '../bulk/use-grid-clipboard';
 import { useGridButtons } from '../buttons/use-grid-buttons';
 import { useColorRulesRefetch } from '../colors/use-color-rules-refetch';
-import { ComputedErrorPopover } from '../computed/ComputedErrorPopover';
 import { RecomputeBanner } from '../computed/RecomputeBanner';
 import { useComputedColumns } from '../computed/use-computed-columns';
 import { ConversionBanners, conversionBannerId } from '../conversion/ConversionBanners';
@@ -129,6 +128,10 @@ import type { ViewDto } from '@cellhive/contracts';
 const AiGenerateDialog = lazyOverlay(() => import('../../../lib/ai/AiGenerateDialog'));
 /** (T915) Paused AI fields: the banner loads only when one is paused. */
 const AiPausedBanner = lazyPanel(() => import('../ai/AiPausedBanner'));
+/** (T1000) The error popover of a computed cell: loaded when it first opens. */
+const ComputedErrorPopover = lazyOverlay(async () => ({
+  default: (await import('../computed/ComputedErrorPopover')).ComputedErrorPopover,
+}));
 
 /** Skeleton rows shown until the first block answers. */
 const LOADING_ROWS = 12;
@@ -1481,28 +1484,30 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
       {computed.errorOpen === null ||
       computed.openField === undefined ||
       computed.details === null ? null : (
-        <ComputedErrorPopover
-          fieldName={computed.openField.name}
-          type={computed.openField.type === 'lookup' ? 'lookup' : 'formula'}
-          details={computed.details}
-          anchor={computed.errorOpen.anchor}
-          canManage={canManage && FieldTools !== undefined}
-          busy={computed.busy}
-          onRestore={computed.restore}
-          onEdit={() => {
-            const open = computed.errorOpen;
-            const field = computed.openField;
-            computed.closeError();
-            if (open === null || field === undefined) return;
-            setToolRequest(
-              field.type === 'formula'
-                ? { kind: 'formula', fieldId: field.id, anchor: open.anchor }
-                : { kind: 'edit', fieldId: field.id },
-            );
-          }}
-          onRetry={computed.retry}
-          onClose={computed.closeError}
-        />
+        <Suspense fallback={null}>
+          <ComputedErrorPopover
+            fieldName={computed.openField.name}
+            type={computed.openField.type === 'lookup' ? 'lookup' : 'formula'}
+            details={computed.details}
+            anchor={computed.errorOpen.anchor}
+            canManage={canManage && FieldTools !== undefined}
+            busy={computed.busy}
+            onRestore={computed.restore}
+            onEdit={() => {
+              const open = computed.errorOpen;
+              const field = computed.openField;
+              computed.closeError();
+              if (open === null || field === undefined) return;
+              setToolRequest(
+                field.type === 'formula'
+                  ? { kind: 'formula', fieldId: field.id, anchor: open.anchor }
+                  : { kind: 'edit', fieldId: field.id },
+              );
+            }}
+            onRetry={computed.retry}
+            onClose={computed.closeError}
+          />
+        </Suspense>
       )}
       {groupMenu === null || menuGroup === undefined ? null : (
         <GroupHeaderMenu

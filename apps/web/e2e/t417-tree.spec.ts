@@ -420,6 +420,43 @@ test.describe.serial('T417 sub-records tree', () => {
     await page.context().close();
   });
 
+  test('the row menu\'s "Change parent record…" picks a parent, then none (T1000)', async ({
+    browser,
+  }) => {
+    const page = await openAdmin(browser);
+    await openGrid(page, ['Mở cửa hàng Đà Nẵng', 'Kiểm kê quý 3', 'Chuẩn bị khai trương']);
+    const changeParent = async (row: number, title: string) => {
+      const point = await rowPoint(page, row);
+      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await page
+        .getByTestId('tree-row-menu')
+        .getByRole('menuitem', { name: 'Change parent record…' })
+        .click();
+      const dialog = page.getByRole('dialog', { name: `Parent record of “${title}”` });
+      await expect(dialog).toBeVisible();
+      return dialog;
+    };
+    // The dialog is a chunk of its own, loaded on this first opening.
+    const picker = await changeParent(2, 'Chuẩn bị khai trương');
+    await picker.getByRole('button', { name: 'Kiểm kê quý 3' }).click();
+    await expect(picker).toBeHidden();
+    await expect.poll(() => parentOf(page, 'Chuẩn bị khai trương')).toBe('Kiểm kê quý 3');
+    await expect
+      .poll(() => primaryTexts(page))
+      .toEqual([
+        'Mở cửa hàng Đà Nẵng',
+        'Kiểm kê quý 3',
+        'Chuẩn bị khai trương',
+        'Tổng hợp tồn kho',
+      ]);
+    const again = await changeParent(2, 'Chuẩn bị khai trương');
+    await expect(again.getByRole('button', { name: /Kiểm kê quý 3/u })).toContainText('Current');
+    await again.getByRole('button', { name: /No parent/u }).click();
+    await expect(again).toBeHidden();
+    await expect.poll(() => parentOf(page, 'Chuẩn bị khai trương')).toBeNull();
+    await page.context().close();
+  });
+
   test('a record cannot go into its own branch (cycle)', async ({ browser }) => {
     const page = await openAdmin(browser);
     await openGrid(page, ['Mở cửa hàng Đà Nẵng', 'Kiểm kê quý 3', 'Chuẩn bị khai trương']);

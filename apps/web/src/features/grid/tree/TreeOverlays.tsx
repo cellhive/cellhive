@@ -1,4 +1,6 @@
-import { ParentPickerDialog } from '../../../lib/records/ParentPickerDialog';
+import { Suspense } from 'react';
+
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 
 import { DeleteBranchDialog } from './DeleteBranchDialog';
 import { indentTarget, outdentTarget } from './moves';
@@ -7,6 +9,11 @@ import { TreeRowMenu, type TreeRowAction } from './TreeRowMenu';
 import type { GridTreeState } from './use-grid-tree';
 import type { CellAddress, HeaderMenuAnchor } from '../../../grid';
 import type { ReactNode } from 'react';
+
+/** "Change parent record…" (T1000): a chunk of its own, loaded when the dialog first opens. */
+const ParentPickerDialog = lazyOverlay(async () => ({
+  default: (await import('../../../lib/records/ParentPickerDialog')).ParentPickerDialog,
+}));
 
 export interface TreeOverlaysProps {
   readonly tree: GridTreeState;
@@ -101,19 +108,21 @@ export function TreeOverlays({
         onResolve={tree.resolveDelete}
       />
       {picked === null || primaryFieldId === null ? null : (
-        <ParentPickerDialog
-          open
-          tableId={tableId}
-          recordId={picked}
-          recordTitle={tree.titleOf(picked)}
-          primaryFieldId={primaryFieldId}
-          currentParentId={pickedNode?.parentId ?? null}
-          onSelect={(parentId) => tree.setParent(picked, parentId)}
-          onClose={() => {
-            tree.setPickParentFor(null);
-            onReturnFocus();
-          }}
-        />
+        <Suspense fallback={null}>
+          <ParentPickerDialog
+            open
+            tableId={tableId}
+            recordId={picked}
+            recordTitle={tree.titleOf(picked)}
+            primaryFieldId={primaryFieldId}
+            currentParentId={pickedNode?.parentId ?? null}
+            onSelect={(parentId) => tree.setParent(picked, parentId)}
+            onClose={() => {
+              tree.setPickParentFor(null);
+              onReturnFocus();
+            }}
+          />
+        </Suspense>
       )}
     </>
   );
