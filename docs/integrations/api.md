@@ -606,7 +606,7 @@ The AI routes act as the token's owner, exactly as in the app: the same permissi
 | `POST /api/v1/tables/:tableId/ai/formula` `{ description, current?, field_id? }` | `schema:read` | People who can change the table's fields | Writes a formula, checked like a save. Stores nothing. |
 | `POST /api/v1/bases/:baseId/ai/automation-draft` `{ prompt, table_id? }` | `automations:read` | People who can create automations in the base | Returns a checked automation `definition` to review. Stores nothing, enables nothing. |
 | `POST /api/v1/tables/:tableId/ai/ask` `{ question, timezone? }` | `records:read` | Anyone who can read the table | Returns the interpretation, a widget config and its numbers, computed with your permissions |
-| `POST /api/v1/tables/:tableId/ai/field-preview` `{ field_id, type, choices, ai, record_ids? }` | `records:read` | People who can change the table's fields | Runs an AI field's prompt on up to 5 records and returns the results with an estimate. Writes nothing; sends record values to the provider. |
+| `POST /api/v1/tables/:tableId/ai/field-preview` `{ ai, field_id?, type?, choices?, record_ids? }` | `records:read` | People who can change the table's fields | Runs an AI field's prompt on up to 5 records and returns the results with an estimate. Writes nothing; sends record values to the provider. |
 | `POST /api/v1/fields/:fieldId/ai/generate` `{ scope, record_ids? }` | `records:write` | People who can change the table's fields and read every field the prompt uses | Queues generation: `202 { job_id, rows, estimated_tokens }` |
 | `POST /api/v1/tables/:tableId/fields`, `PATCH /api/v1/fields/:fieldId` with `options.ai` | `schema:write` | People who can change the table's fields | Creates or changes an AI field; `"ai": null` turns it back into a normal field |
 | AI steps in `POST /api/v1/bases/:baseId/automations`, `PATCH /api/v1/automations/:automationId` | `automations:write` | People who can build automations | `ai_generate_text`, `ai_classify` ([ai.md](ai.md) §7) |
@@ -642,7 +642,7 @@ curl -sS "$CELLHIVE_URL/api/v1/jobs/job_…" -H "Authorization: Bearer $CELLHIVE
 
 ### 12.3 Limits, errors and retries
 
-- **10 AI requests per minute per person**, at most 2 at once (formula, draft, Ask AI, previews; your tokens and sessions together) → `429 RATE_LIMITED` with `Retry-After`. Generating is not counted there.
+- **10 AI requests per minute per person**, at most 2 at once per person and 8 per API instance (formula, draft, Ask AI, previews; your tokens and sessions together) → `429 RATE_LIMITED` with `Retry-After`. Generating is not counted there.
 - **Quota**: `429 AI_QUOTA_EXCEEDED` with `Retry-After` until midnight in the organization's time zone and `errors[0].params.reset_at`. Do not retry before.
 - **Time**: one request may take up to 90 seconds (`504 AI_TIMEOUT` after that). Give your HTTP client a timeout above 90 seconds.
 - `422 AI_NOT_CONFIGURED` (AI off or not set up), `422 AI_RECORD_DATA_DISABLED` (the route sends record values and the organization does not allow it), `422 AI_INVALID_OUTPUT` (the model's answer was still wrong after 2 repair rounds; rephrase), `502 AI_PROVIDER_ERROR` (`errors[0].params.reason`, plus `status` for `http_status`). A `502` caused by a refused key or a blocked address does not fix itself: tell an organization admin. The full list is in [ai.md](ai.md) §9.
