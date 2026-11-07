@@ -197,9 +197,16 @@ export class McpEndpoint {
     server.setRequestHandler('tools/list', () => ({
       tools: listedTools(this.tools, context).map(listingOf),
     }));
-    server.setRequestHandler('tools/call', (request) =>
-      callTool(this.tools, request.params.name, request.params.arguments, context, this.deps),
-    );
+    // The tool calls of one HTTP request (a JSON-RPC batch) run one after the
+    // other, never all at once on the database pool (QA S8).
+    let previous: Promise<unknown> = Promise.resolve();
+    server.setRequestHandler('tools/call', (request) => {
+      const call = previous.then(() =>
+        callTool(this.tools, request.params.name, request.params.arguments, context, this.deps),
+      );
+      previous = call.catch(() => undefined);
+      return call;
+    });
     return server;
   }
 }

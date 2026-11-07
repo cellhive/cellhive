@@ -227,7 +227,7 @@ Listed only when the organization allows writes **and** the token has `records:w
 
 | Item | Value |
 | --- | --- |
-| Rate | 60 requests/s per token (every MCP request); 20 requests/s per token and base (each tool call on a base) → `429` / `RATE_LIMITED` |
+| Rate | 60 requests/s per token (every MCP request; each message of a JSON-RPC batch counts as one request); 20 requests/s per token and base (each tool call on a base) → `429` / `RATE_LIMITED`. The tool calls of one request run one after the other. |
 | Request body | 10 MiB |
 | `list_bases`, `list_tables`, `describe_table` | ≤ 200 bases, ≤ 200 tables, ≤ 200 fields (`truncated`) |
 | Option names per select field | ≤ 50 (`options_truncated`) |
