@@ -17,6 +17,7 @@ Per case it records the verdict, the wall time, the tries (1 + repair rounds, fr
 - Docker running (Testcontainers starts PostgreSQL, Valkey and Garage), Node 24, `pnpm install`.
 - Build the packages the API imports once: `pnpm turbo run build --filter=@cellhive/api^...`.
 - A model that is **instruction-tuned** and served behind an OpenAI-compatible `/v1/chat/completions`. Cellhive does not start one (no Ollama or vLLM in Compose): run it yourself.
+- Ollama: start it with `OLLAMA_CONTEXT_LENGTH=16384` (its default context of 4,096 tokens is close to a draft prompt plus a repair round; `ollama ps` shows the context a loaded model got). A model that thinks before answering (`ollama show` lists `thinking`) spends the answer token limit on it (`docs/integrations/ai.md` §2.4).
 
 ## 1. Check the kit (no model needed)
 
