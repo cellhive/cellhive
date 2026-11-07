@@ -1,7 +1,8 @@
 import { Skeleton } from '@cellhive/ui';
-import { lazy, Suspense, useMemo, type ReactNode } from 'react';
+import { Suspense, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { buildChartModel, type MetricConfig } from '../model/chart-model';
 import { modelTable } from '../model/table';
 import { TEST_IDS } from '../test-ids';
@@ -20,7 +21,7 @@ import type {
   WidgetLiveFilterInput,
 } from '@cellhive/contracts';
 
-const RecordsTable = lazy(() => import('./RecordsTable'));
+const RecordsTable = lazyPanel(() => import('./RecordsTable'));
 
 /** The config keys the view reads (the API filled the defaults, CONTRACTS §28.2). */
 export interface WidgetViewConfig {

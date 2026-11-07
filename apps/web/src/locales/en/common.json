@@ -71,6 +71,13 @@
     "description": "The page could not be shown. Reload to try again.",
     "reload": "Reload"
   },
+  "chunkError": {
+    "page": "Couldn't load this page",
+    "part": "Couldn't load this part",
+    "description": "Check your connection and try again.",
+    "retry": "Try again",
+    "reload": "Reload page"
+  },
   "connection": {
     "offline": "You are offline. What you see is read-only until the connection is back.",
     "reconnecting": "Reconnecting…"

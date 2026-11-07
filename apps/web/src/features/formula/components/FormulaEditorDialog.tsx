@@ -8,11 +8,12 @@ import {
   WandSparkles,
   X,
 } from 'lucide-react';
-import { lazy, Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../../lib/api/client';
 import { useFormatters } from '../../../lib/i18n/format';
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { useAiFormulaEntry } from '../data';
 import { FormulaInput, type FormulaInputHandle } from '../editor/FormulaInput';
 import { FORMULA_LIMITS } from '../model/analysis';
@@ -37,7 +38,7 @@ import type { FieldDto } from '@cellhive/contracts';
  */
 
 /** (T913) "Describe the formula": its own chunk, loaded only with AI on (no download otherwise). */
-const AiFormulaBox = lazy(() => import('./AiFormulaBox'));
+const AiFormulaBox = lazyPanel(() => import('./AiFormulaBox'));
 
 export interface FormulaEditorDialogProps {
   readonly tableId: string;

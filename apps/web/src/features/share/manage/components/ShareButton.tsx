@@ -1,15 +1,16 @@
 import { Button } from '@cellhive/ui';
 import { Share2 } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { lazyOverlay } from '../../../../lib/lazy/chunk-error';
 import { canAddRecord, canCreateShareLink } from '../../../../lib/permissions/access';
 
 import type { BaseDetail, ViewDto } from '@cellhive/contracts';
 
 /** The dialog and its data layer load on first use (FRONTEND §11.1). */
-const ShareDialog = lazy(() => import('./ShareDialog'));
+const ShareDialog = lazyOverlay(() => import('./ShareDialog'));
 
 export interface ShareButtonProps {
   readonly view: ViewDto;

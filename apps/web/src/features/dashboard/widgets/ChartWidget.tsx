@@ -7,7 +7,6 @@ import {
 } from '@cellhive/ui';
 import { BarChart3, Filter, FilterX, ListTree, Table2 } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useCallback,
   useContext,
@@ -20,6 +19,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { useChartTheme, useReducedMotion } from '../charts/use-chart-theme';
 import { useDashboardFilters } from '../filters/use-dashboard-filters';
 import { buildChartModel, type ChartModel, type MetricConfig } from '../model/chart-model';
@@ -44,7 +44,7 @@ import type {
  * ECharts with the chart modules is its own chunk inside the dashboard
  * route: a dashboard of KPIs and text never downloads it.
  */
-const EChart = lazy(() => import('../charts/EChart'));
+const EChart = lazyPanel(() => import('../charts/EChart'));
 
 export interface ChartWidgetConfig {
   readonly metrics: readonly MetricConfig[];

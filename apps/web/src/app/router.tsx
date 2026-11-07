@@ -1,5 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { createBrowserRouter, useParams, type RouteObject } from 'react-router';
+
+import { lazyOverlay, lazyPanel } from '../lib/lazy/chunk-error';
+import { lazyRoute } from '../lib/lazy/lazy-route';
 
 import { RouteErrorPage, RouteErrorPanel } from './errors';
 import { createGuards } from './guards';
@@ -19,13 +22,13 @@ import type { QueryClient } from '@tanstack/react-query';
  * (features do not import each other, FRONTEND §1.2).
  */
 const RECORD_DETAIL: RecordDetailComponents = {
-  Panel: lazy(() => import('../features/record/components/RecordPanel')),
-  History: lazy(() => import('../features/history/components/RecordHistory')),
-  CellHistory: lazy(() => import('../features/history/components/CellHistoryPopover')),
+  Panel: lazyOverlay(() => import('../features/record/components/RecordPanel')),
+  History: lazyPanel(() => import('../features/history/components/RecordHistory')),
+  CellHistory: lazyOverlay(() => import('../features/history/components/CellHistoryPopover')),
   // Attachment popover of the grid and section of the panel (T418): chunks of their own.
   Attachments: {
-    CellEditor: lazy(() => import('../features/attachment/components/AttachmentCellEditor')),
-    Section: lazy(() => import('../features/attachment/components/AttachmentSection')),
+    CellEditor: lazyOverlay(() => import('../features/attachment/components/AttachmentCellEditor')),
+    Section: lazyPanel(() => import('../features/attachment/components/AttachmentSection')),
   },
 };
 
@@ -35,8 +38,8 @@ const RECORD_DETAIL: RecordDetailComponents = {
  */
 const loadLink = () => import('../features/link/components/LinkPicker');
 const LINK: LinkComponents = {
-  Picker: lazy(async () => ({ default: (await loadLink()).LinkPicker })),
-  HoverCard: lazy(async () => ({ default: (await loadLink()).LinkHoverCard })),
+  Picker: lazyOverlay(async () => ({ default: (await loadLink()).LinkPicker })),
+  HoverCard: lazyOverlay(async () => ({ default: (await loadLink()).LinkHoverCard })),
   preload: () => {
     void loadLink();
   },
@@ -47,13 +50,13 @@ const LINK: LinkComponents = {
  * formula field is configured; the CodeMirror editor is a further chunk
  * loaded when the editor opens (BACKLOG S4b open question #9).
  */
-const FormulaField = lazy(() => import('../features/formula/components/FormulaField'));
+const FormulaField = lazyPanel(() => import('../features/formula/components/FormulaField'));
 
 /**
  * "Edit formula" of a column header (T468, S4b decision #12): the same
  * editor as a popover under the header, a chunk of its own with CodeMirror.
  */
-const FormulaPopover = lazy(() => import('../features/formula/components/FormulaPopover'));
+const FormulaPopover = lazyOverlay(() => import('../features/formula/components/FormulaPopover'));
 
 /**
  * (T915) The prompt editor of AI fields: the automation template editor
@@ -68,17 +71,17 @@ const AiPromptEditor = lazy(() => import('../features/automation/template-editor
  * widget renderer (`features/dashboard`), another lazy chunk — ECharts only
  * comes with the first chart. The button lives in the view toolbar's chunk.
  */
-const AskAiPanelChunk = lazy(() => import('../features/ai-ask/AskAiPanel'));
-const AskAnswerWidget = lazy(() => import('../features/dashboard/widgets/AnswerWidget'));
+const AskAiPanelChunk = lazyOverlay(() => import('../features/ai-ask/AskAiPanel'));
+const AskAnswerWidget = lazyPanel(() => import('../features/dashboard/widgets/AnswerWidget'));
 function AskAiPanel(props: AskAiPanelProps) {
   return <AskAiPanelChunk {...props} Answer={AskAnswerWidget} />;
 }
 
 /** The board of kanban views (T314): its own chunk, loaded when a kanban view opens. */
-const KanbanPage = lazy(() => import('../features/kanban/components/KanbanPage'));
+const KanbanPage = lazyPanel(() => import('../features/kanban/components/KanbanPage'));
 
 /** Builder and fill page of form views (T315): its own chunk, loaded when a form view opens. */
-const FormViewPage = lazy(() => import('../features/form/components/FormViewPage'));
+const FormViewPage = lazyPanel(() => import('../features/form/components/FormViewPage'));
 
 /**
  * (T521, T612) The automation builder and what it gets from other features
@@ -181,9 +184,10 @@ const loadTableViewRoute = async () => {
 };
 
 /**
- * Route map (FRONTEND §2). Every screen is a lazy chunk; loaders are the
- * guards of `guards.ts`. Each route has an error boundary: full-page ones
- * for auth screens, in-shell panels for app pages.
+ * Route map (FRONTEND §2). Every screen is a lazy chunk, loaded through
+ * `lazyRoute` (T902: one retry, then the route's error boundary); loaders
+ * are the guards of `guards.ts`. Each route has an error boundary:
+ * full-page ones for auth screens, in-shell panels for app pages.
  */
 export function createRoutes(queryClient: QueryClient): RouteObject[] {
   const guards = createGuards(queryClient);
@@ -197,45 +201,47 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
         {
           index: true,
           loader: guards.home,
-          lazy: async () => ({
+          lazy: lazyRoute(async () => ({
             Component: (await import('../features/org/components/NoOrganizationPage')).default,
-          }),
+          })),
         },
         {
-          lazy: async () => ({ Component: (await import('./layouts/AuthLayout')).default }),
+          lazy: lazyRoute(async () => ({
+            Component: (await import('./layouts/AuthLayout')).default,
+          })),
           errorElement: <RouteErrorPage />,
           children: [
             {
               path: 'setup',
               loader: guards.setupOnly,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/auth/components/SetupPage')).default,
-              }),
+              })),
             },
             {
               path: 'login',
               loader: guards.guestOnly,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/auth/components/LoginPage')).default,
-              }),
+              })),
             },
             {
               path: 'forgot-password',
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/auth/components/ForgotPasswordPage')).default,
-              }),
+              })),
             },
             {
               path: 'reset/:token',
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/auth/components/ResetPasswordPage')).default,
-              }),
+              })),
             },
             {
               path: 'invite/:token',
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/auth/components/InvitePage')).default,
-              }),
+              })),
             },
           ],
         },
@@ -243,46 +249,50 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
         // Loading `/s/*` serves `share.html` (its own entry, `share-main.tsx`); this route
         // serves navigations inside the app, e.g. back from sign-in to an `org` link.
         {
-          lazy: async () => ({ Component: (await import('./layouts/ShareLayout')).default }),
+          lazy: lazyRoute(async () => ({
+            Component: (await import('./layouts/ShareLayout')).default,
+          })),
           errorElement: <RouteErrorPage />,
           children: [
             {
               path: 's/:token',
-              lazy: async () => (await import('./share-routes')).loadShareRoute(),
+              lazy: lazyRoute(async () => (await import('./share-routes')).loadShareRoute()),
             },
             // T533: public sender verification (no session), served by the share entry too.
             {
               path: 'verify-sender',
-              lazy: async () => (await import('./share-routes')).loadVerifySenderRoute(),
+              lazy: lazyRoute(async () => (await import('./share-routes')).loadVerifySenderRoute()),
             },
           ],
         },
         {
           loader: guards.requireSession,
-          lazy: async () => ({ Component: (await import('./layouts/AppShell')).default }),
+          lazy: lazyRoute(async () => ({
+            Component: (await import('./layouts/AppShell')).default,
+          })),
           errorElement: <RouteErrorPage />,
           children: [
             {
               path: 'o/:orgSlug',
               loader: guards.org,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/org/components/OrgHomePage')).default,
-              }),
+              })),
             },
             {
               path: 'o/:orgSlug/w/:workspaceId',
               loader: guards.workspace,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/org/components/WorkspacePage')).default,
-              }),
+              })),
             },
             {
               path: 'b/:baseId',
               loader: guards.base,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => {
+              lazy: lazyRoute(async () => {
                 const [{ BasePage }, { ImportMenu }] = await Promise.all([
                   import('../features/base/components/BasePage'),
                   // "Import a file" as a new table (T318).
@@ -294,7 +304,7 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                     return <BasePage actions={<ImportMenu baseId={baseId} />} />;
                   },
                 };
-              },
+              }),
             },
             // A table opens its last (or first) view (FRONTEND §2); the same screen shows
             // "no view" when the user sees none.
@@ -305,7 +315,7 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
               path,
               loader,
               errorElement: <RouteErrorPanel />,
-              lazy: loadTableViewRoute,
+              lazy: lazyRoute(loadTableViewRoute),
             })),
             // Base settings for base admins (FRONTEND §17, T712): the layout with the "Base
             // settings" nav and its pages. The guard is on the layout so other members get the
@@ -314,76 +324,77 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
               path: 'b/:baseId/settings',
               loader: guards.baseSettings,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/base-settings/layout/BaseSettingsLayout'))
                   .default,
-              }),
+              })),
               children: [
                 // T712: "General", entries to the pages where the base is managed.
                 {
                   index: true,
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/base-settings/layout/BaseSettingsGeneralPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T712: people and groups with their role in the base (CONTRACTS §14).
                 {
                   path: 'members',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/base-settings/members/components/MembersPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T712: the roles of the base (CONTRACTS §14).
                 {
                   path: 'roles',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/base-settings/roles/components/RolesPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T713: the permissions of one role (CONTRACTS §14), with the filter builder.
                 {
                   path: 'roles/:roleId',
                   errorElement: <RouteErrorPanel />,
-                  lazy: () =>
+                  lazy: lazyRoute(() =>
                     import('./role-editor-route').then((module) => module.loadRoleEditorRoute()),
+                  ),
                 },
                 // T316: share link management of the base (FRONTEND §2).
                 {
                   path: 'share-links',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/share/manage/components/BaseShareLinksPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T611: incoming webhooks of a base (CONTRACTS §25.1).
                 {
                   path: 'webhooks',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/integrations/incoming-webhooks/components/IncomingWebhooksPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T716: the audit log of the base (CONTRACTS §11.4).
                 {
                   path: 'audit',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (await import('../features/audit/components/BaseAuditLogPage'))
                       .default,
-                  }),
+                  })),
                 },
               ],
             },
@@ -394,107 +405,107 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
               path: 'o/:orgSlug/settings',
               loader: guards.orgSettings,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/org-settings/layout/OrgSettingsLayout'))
                   .default,
-              }),
+              })),
               children: [
                 // T830: "General" — the organization's name, ID and slug.
                 {
                   index: true,
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (await import('../features/org-settings/admin/OrgGeneralPage'))
                       .default,
-                  }),
+                  })),
                 },
                 // T912: the AI provider, quota and usage of the organization (CONTRACTS §29.1).
                 {
                   path: 'ai',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/org-settings/ai/components/AiSettingsPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T830: members with their organization role, and invitations (SPEC §13.1).
                 {
                   path: 'members',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (await import('../features/org-settings/admin/OrgMembersPage'))
                       .default,
-                  }),
+                  })),
                 },
                 // T830: groups and their members (SPEC §14.1).
                 {
                   path: 'groups',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (await import('../features/org-settings/admin/OrgGroupsPage'))
                       .default,
-                  }),
+                  })),
                 },
                 // T526: email settings of the organization (CONTRACTS §23.2, §23.4).
                 {
                   path: 'email',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/org-settings/email/components/EmailSettingsPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T533: sender identities of the organization (ADR-33).
                 {
                   path: 'email/identities',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/org-settings/email-identities/components/EmailIdentitiesPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T516: Telegram bots of the organization (`send_telegram`, CONTRACTS §24).
                 {
                   path: 'telegram',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/org-settings/telegram-bots/components/TelegramBotsPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T613: outbound HTTP allowlist and HTTP secrets (CONTRACTS §24, §25.4).
                 {
                   path: 'integrations',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/org-settings/integrations/components/IntegrationsPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T316: the public sharing policy and share links of the organization (T830:
                 // moved under this layout as it was).
                 {
                   path: 'share-links',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (
                       await import('../features/share/manage/components/OrgShareLinksPage')
                     ).default,
-                  }),
+                  })),
                 },
                 // T716: the audit log of the organization (CONTRACTS §11.4).
                 {
                   path: 'audit',
                   errorElement: <RouteErrorPanel />,
-                  lazy: async () => ({
+                  lazy: lazyRoute(async () => ({
                     Component: (await import('../features/audit/components/OrgAuditLogPage'))
                       .default,
-                  }),
+                  })),
                 },
               ],
             },
@@ -503,72 +514,72 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
               path: 'o/:orgSlug/settings/api-tokens',
               loader: guards.org,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (
                   await import('../features/org-settings/api-tokens/components/ApiTokensPage')
                 ).default,
-              }),
+              })),
             },
             // T524: the caller's notification settings in an organization (FRONTEND §14).
             {
               path: 'o/:orgSlug/settings/notifications',
               loader: guards.org,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (
                   await import('../features/notifications/settings/NotificationSettingsPage')
                 ).default,
-              }),
+              })),
             },
             // Links of notification emails sent before T524 (and bookmarks): the current
             // (last used) organization's settings.
             {
               path: 'me/settings/notifications',
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 loader: (
                   await import('../features/notifications/settings/redirect')
                 ).notificationSettingsRedirect(queryClient),
-              }),
+              })),
             },
             // T831: the caller's profile, password and (T715) connected OIDC accounts;
             // `account/connections` is the same page scrolled to the latter (CONTRACTS §27.3).
             {
               path: 'account',
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/account/AccountPage')).default,
-              }),
+              })),
             },
             {
               path: 'account/connections',
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/account/AccountPage')).default,
-              }),
+              })),
             },
             // T520: the automations of a base (FRONTEND §13).
             {
               path: 'b/:baseId/automations',
               loader: guards.baseAutomations,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (
                   await import('../features/automation/list/components/AutomationListPage')
                 ).default,
-              }),
+              })),
             },
             // T521: the builder of a new automation (created on save) and of an existing one.
             {
               path: 'b/:baseId/automations/new',
               loader: guards.baseAutomations,
               errorElement: <RouteErrorPanel />,
-              lazy: loadAutomationBuilderRoute,
+              lazy: lazyRoute(loadAutomationBuilderRoute),
             },
             {
               path: 'b/:baseId/automations/:automationId',
               loader: guards.baseAutomations,
               errorElement: <RouteErrorPanel />,
-              lazy: loadAutomationBuilderRoute,
+              lazy: lazyRoute(loadAutomationBuilderRoute),
             },
             // T523: the run history of an automation (its "Run history" tab) and of the base.
             ...['b/:baseId/automations/runs', 'b/:baseId/automations/:automationId/runs'].map(
@@ -576,10 +587,10 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                 path,
                 loader: guards.baseAutomations,
                 errorElement: <RouteErrorPanel />,
-                lazy: async () => ({
+                lazy: lazyRoute(async () => ({
                   Component: (await import('../features/automation/runs/components/RunHistoryPage'))
                     .default,
-                }),
+                })),
               }),
             ),
             // T811 (S7): a dashboard, view mode. ECharts and react-grid-layout load with it only.
@@ -589,27 +600,28 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
               path: 'b/:baseId/d/:dashboardId',
               loader: guards.dashboard,
               errorElement: <RouteErrorPanel />,
-              lazy: () =>
+              lazy: lazyRoute(() =>
                 import('./dashboard-route').then((module) =>
                   module.loadDashboardRoute(RECORD_DETAIL),
                 ),
+              ),
             },
             // T469 (S4b decision #4): the base trash (deleted tables), base admins only.
             {
               path: 'b/:baseId/trash',
               loader: guards.baseSettings,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/trash/components/BaseTrashPage')).default,
-              }),
+              })),
             },
             {
               path: 'b/:baseId/t/:tableId/trash',
               loader: guards.table,
               errorElement: <RouteErrorPanel />,
-              lazy: async () => ({
+              lazy: lazyRoute(async () => ({
                 Component: (await import('../features/trash/components/TrashPage')).default,
-              }),
+              })),
             },
           ],
         },

@@ -1,8 +1,9 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { Copy, Monitor, Pencil } from 'lucide-react';
-import { lazy, Suspense, useId, useMemo, useState } from 'react';
+import { Suspense, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { showToast } from '../../../lib/toast/toast';
 import { useFormulaEnvironment } from '../data';
 import { analyzeFormula } from '../model/analysis';
@@ -12,7 +13,7 @@ import { FormulaText } from './FormulaText';
 import type { FormulaFieldProps } from '../../../lib/schema/formula-tools';
 
 /** The editor with CodeMirror: its own chunk, loaded when it is opened (BACKLOG S4b #9). */
-const FormulaEditorDialog = lazy(() => import('./FormulaEditorDialog'));
+const FormulaEditorDialog = lazyPanel(() => import('./FormulaEditorDialog'));
 
 /**
  * The formula of a formula field in the field dialog (T466): the formula

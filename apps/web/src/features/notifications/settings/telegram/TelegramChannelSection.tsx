@@ -13,7 +13,6 @@ import {
   Unlink,
 } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useEffect,
   useId,
@@ -27,6 +26,7 @@ import { Link } from 'react-router';
 
 import { ErrorAlert } from '../../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../../lib/i18n/format';
+import { lazyPanel } from '../../../../lib/lazy/chunk-error';
 import { keys } from '../../../../lib/query/keys';
 import { useRealtimeChannel } from '../../../../lib/realtime/channels';
 import { showErrorToast } from '../../../../lib/toast/toast';
@@ -40,7 +40,7 @@ import {
   type TelegramView,
 } from './model';
 
-const QrCode = lazy(() => import('./QrCode'));
+const QrCode = lazyPanel(() => import('./QrCode'));
 
 /** Id of the card, for the "Link Telegram" shortcut of the type × channel table. */
 export const TELEGRAM_SECTION_ID = 'telegram-channel';

@@ -1,15 +1,16 @@
 import { Button } from '@cellhive/ui';
 import { Share2 } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { lazyOverlay } from '../../../../lib/lazy/chunk-error';
 import { canCreateShareLink } from '../../../../lib/permissions/access';
 
 import type { DashboardShareActionProps } from '../../../../lib/share/dashboard-share';
 
 /** The dialog and its data layer load on first use (FRONTEND §11.1). */
-const ShareDialog = lazy(() => import('./ShareDialog'));
+const ShareDialog = lazyOverlay(() => import('./ShareDialog'));
 
 /**
  * (T814) "Share" in the heading of a dashboard (given to the dashboard page

@@ -1,12 +1,13 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { BaseIcon } from '../../../lib/brand/BaseIcon';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { canCreateBase } from '../../../lib/permissions/org';
 import { basesQuery } from '../api';
 import { basePath } from '../hooks';
@@ -14,7 +15,7 @@ import { basePath } from '../hooks';
 import type { MeOrganization, WorkspaceDto } from '@cellhive/contracts';
 
 /** Loaded when first opened: react-hook-form and zod stay out of the app shell (T700). */
-const CreateBaseDialog = lazy(async () => ({
+const CreateBaseDialog = lazyOverlay(async () => ({
   default: (await import('./CreateBaseDialog')).CreateBaseDialog,
 }));
 

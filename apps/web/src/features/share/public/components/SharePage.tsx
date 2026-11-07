@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams, useSearchParams } from 'react-router';
 
 import { isApiError } from '../../../../lib/api/client';
 import { useFormatters } from '../../../../lib/i18n/format';
+import { lazyOverlay, lazyPanel } from '../../../../lib/lazy/chunk-error';
 import { loginPathFor } from '../../../../lib/navigation/safe-next';
 import { keys } from '../../../../lib/query/keys';
 import { ShareApi } from '../api';
@@ -21,12 +22,12 @@ import type { SharePageParts } from '../../../../lib/share/public-page';
 import type { ShareMeta } from '@cellhive/contracts';
 
 /** The grid (glide) and the board are chunks of their own: a form link loads neither. */
-const SharedGrid = lazy(() => import('./SharedGrid'));
-const SharedBoard = lazy(() => import('./SharedBoard'));
+const SharedGrid = lazyPanel(() => import('./SharedGrid'));
+const SharedBoard = lazyPanel(() => import('./SharedBoard'));
 /** (T814) A dashboard link: its own chunk, never the board's or the grid's. */
-const SharedDashboardPage = lazy(() => import('../dashboard/SharedDashboardPage'));
+const SharedDashboardPage = lazyPanel(() => import('../dashboard/SharedDashboardPage'));
 /** (T814) "Download" of a view link with `allow_export`: loaded only for such links. */
-const ShareExportMenu = lazy(() => import('./ShareExportMenu'));
+const ShareExportMenu = lazyOverlay(() => import('./ShareExportMenu'));
 
 export interface SharePageProps {
   readonly parts: SharePageParts;

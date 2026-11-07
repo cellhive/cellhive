@@ -1,12 +1,13 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
 import { FolderPlus, Settings } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { canCreateWorkspace } from '../../../lib/permissions/org';
 import { workspacesQuery } from '../api';
 import { orgPath, useRouteOrg, workspacePath } from '../hooks';
@@ -14,7 +15,7 @@ import { orgPath, useRouteOrg, workspacePath } from '../hooks';
 import { WorkspaceBaseList } from './WorkspaceBaseList';
 
 /** Loaded when first opened: react-hook-form and zod stay out of the app shell (T700). */
-const CreateWorkspaceDialog = lazy(async () => ({
+const CreateWorkspaceDialog = lazyOverlay(async () => ({
   default: (await import('./CreateWorkspaceDialog')).CreateWorkspaceDialog,
 }));
 

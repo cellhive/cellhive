@@ -1,7 +1,6 @@
 import { Button, cn } from '@cellhive/ui';
 import { TriangleAlert, Upload, X } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useEffect,
   useId,
@@ -14,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { isApplePlatform } from '../../../grid/undo/keys';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { useIssueText, useLimitsText } from '../messages';
 import { useCellFiles } from '../use-cell-files';
 
@@ -23,7 +23,7 @@ import { FileRow, UploadRow } from './rows';
 
 import type { AttachmentCellEditorProps } from '../../../lib/attachments/ui';
 
-const Lightbox = lazy(() => import('./Lightbox'));
+const Lightbox = lazyOverlay(() => import('./Lightbox'));
 
 /** `max_files` at its default (100, like Lark): the count then reads "3 files", not "3 / 100". */
 const NO_VISIBLE_LIMIT = 100;

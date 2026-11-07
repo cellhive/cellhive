@@ -16,7 +16,6 @@ import {
 } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Copy, Info, Lock, PencilLine } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -43,6 +42,7 @@ import { automationsApi } from '../../../../lib/api/automations';
 import { isApiError } from '../../../../lib/api/client';
 import { ErrorAlert } from '../../../../lib/errors/ErrorAlert';
 import { PageHeader } from '../../../../lib/layout/page-header';
+import { lazyOverlay, lazyPanel } from '../../../../lib/lazy/chunk-error';
 import { canManageAutomations, isBaseAdmin } from '../../../../lib/permissions/access';
 import { isOrgAdmin } from '../../../../lib/permissions/org';
 import { automationQuery } from '../../../../lib/query/automations';
@@ -110,9 +110,9 @@ import type { WebhookKit } from '../../../../lib/automation/webhook-kit';
 const NARROW_QUERY = '(max-width: 767.98px)';
 
 /** (T522) The wide editor of `send_email`: a chunk of its own, loaded when such a step opens. */
-const SendEmailEditor = lazy(() => import('../actions/send-email/SendEmailEditor'));
+const SendEmailEditor = lazyPanel(() => import('../actions/send-email/SendEmailEditor'));
 /** "Turn on automation?" of the list: loaded when it is asked (keeps `Trans` out of the builder). */
-const EnableDialog = lazy(async () => ({
+const EnableDialog = lazyOverlay(async () => ({
   default: (await import('../../list/components/ConfirmDialogs')).EnableDialog,
 }));
 

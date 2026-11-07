@@ -21,7 +21,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -42,6 +41,7 @@ import { cellFilesOf } from '../../../lib/attachments/value';
 import { useButtonClicks } from '../../../lib/buttons/use-button-clicks';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { linkDisplayValue, linkRefsOf, linkWriteValue } from '../../../lib/links/values';
 import {
   canAddRecord,
@@ -137,7 +137,7 @@ type Tab = 'details' | 'history';
 const DELETE_MODES: readonly SubrecordDeleteMode[] = ['promote', 'delete'];
 
 /** Sub-tables of link fields (T416, FRONTEND §10.2): a chunk of their own, loaded with the first one. */
-const LinkedSubTable = lazy(() => import('../embedded/LinkedSubTable'));
+const LinkedSubTable = lazyPanel(() => import('../embedded/LinkedSubTable'));
 
 interface FieldListProps {
   readonly fields: readonly GridField[];

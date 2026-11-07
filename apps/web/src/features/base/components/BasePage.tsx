@@ -1,13 +1,14 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Database, Plus, Table2, Trash2 } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
 import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { canManageSchema, canRestoreRecords } from '../../../lib/permissions/access';
 import { tablesQuery } from '../../../lib/query/queries';
 import { baseQuery } from '../api';
@@ -15,7 +16,7 @@ import { baseQuery } from '../api';
 import type { EffectiveAccess, TableDto } from '@cellhive/contracts';
 import type { ReactNode } from 'react';
 
-const CreateTableDialog = lazy(() => import('./CreateTableDialog'));
+const CreateTableDialog = lazyOverlay(() => import('./CreateTableDialog'));
 
 function tablePath(baseId: string, tableId: string): string {
   return `/b/${encodeURIComponent(baseId)}/t/${encodeURIComponent(tableId)}`;

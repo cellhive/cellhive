@@ -7,9 +7,9 @@ import './styles/index.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter } from 'react-router';
 
-import { RootErrorBoundary } from './app/errors';
+import { RootErrorBoundary, RouterRoot } from './app/errors';
 import { Providers } from './app/providers';
 import { createShareRoutes } from './app/share-routes';
 import { initI18n } from './lib/i18n/i18n';
@@ -30,12 +30,12 @@ if (container !== null) {
   const root = createRoot(container);
   void initI18n().then((i18n) => {
     const queryClient = createQueryClient();
-    const router = createBrowserRouter(createShareRoutes());
+    const createRouter = () => createBrowserRouter(createShareRoutes());
     root.render(
       <StrictMode>
         <Providers queryClient={queryClient} i18n={i18n}>
           <RootErrorBoundary>
-            <RouterProvider router={router} />
+            <RouterRoot router={createRouter()} create={createRouter} />
             <Toaster />
           </RootErrorBoundary>
         </Providers>

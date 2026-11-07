@@ -6,10 +6,12 @@ import {
   DropdownMenuTrigger,
 } from '@cellhive/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const MuteItem = lazy(() => import('./BaseMuteItem'));
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
+
+const MuteItem = lazyPanel(() => import('./BaseMuteItem'));
 
 /**
  * The "…" menu of a base in the sidebar tree (T524, board "S5 ·

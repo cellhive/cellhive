@@ -1,8 +1,9 @@
 import { Button, Skeleton, Tooltip } from '@cellhive/ui';
 import { X } from 'lucide-react';
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../../lib/lazy/chunk-error';
 import { SendNotificationPanel } from '../actions/send-notification/SendNotificationPanel';
 import { findPlaced, hasTriggerRecord } from '../model/draft';
 import { issuesOf, type StepKey } from '../model/issues';
@@ -31,15 +32,17 @@ import type {
 } from '@cellhive/contracts';
 
 // (T613) The HTTP editors and their strings load with the first HTTP step opened.
-const HttpRequestEditor = lazy(() => import('../actions/http-request/HttpRequestEditor'));
-const RunN8nWorkflowEditor = lazy(() => import('../actions/run-n8n-workflow/RunN8nWorkflowEditor'));
+const HttpRequestEditor = lazyPanel(() => import('../actions/http-request/HttpRequestEditor'));
+const RunN8nWorkflowEditor = lazyPanel(
+  () => import('../actions/run-n8n-workflow/RunN8nWorkflowEditor'),
+);
 // (T915) The AI steps' panels load with the first AI step opened.
-const AiGenerateTextPanel = lazy(() =>
+const AiGenerateTextPanel = lazyPanel(() =>
   import('../actions/ai/AiActionPanels').then((module) => ({
     default: module.AiGenerateTextPanel,
   })),
 );
-const AiClassifyPanel = lazy(() =>
+const AiClassifyPanel = lazyPanel(() =>
   import('../actions/ai/AiActionPanels').then((module) => ({ default: module.AiClassifyPanel })),
 );
 

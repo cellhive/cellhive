@@ -1,5 +1,8 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useLocation, useSearchParams, type RouteObject } from 'react-router';
+
+import { lazyOverlay, lazyPanel } from '../lib/lazy/chunk-error';
+import { lazyRoute } from '../lib/lazy/lazy-route';
 
 import { RouteErrorPage } from './errors';
 import { ShareLayout, ShareLoading } from './layouts/ShareLayout';
@@ -20,21 +23,21 @@ export async function loadShareRoute() {
   let windowedRows: Promise<UseWindowedRows> | undefined;
   const parts: SharePageParts = {
     // T814: a dashboard link draws with the dashboard renderer (ECharts), a chunk of its own.
-    Dashboard: lazy(() => import('../features/dashboard/share/SharedDashboardView')),
-    FormRenderer: lazy(() => import('../features/form/renderer/FormRenderer')),
+    Dashboard: lazyPanel(() => import('../features/dashboard/share/SharedDashboardView')),
+    FormRenderer: lazyPanel(() => import('../features/form/renderer/FormRenderer')),
     loadWindowedRows: () =>
       (windowedRows ??= import('../features/grid/blocks/use-record-blocks').then(
         (module) => module.useWindowedRecordBlocks,
       )),
-    Files: lazy(() => import('../features/attachment/components/ReadOnlyFiles')),
-    FileViewer: lazy(() => import('../features/attachment/components/ReadOnlyViewer')),
+    Files: lazyPanel(() => import('../features/attachment/components/ReadOnlyFiles')),
+    FileViewer: lazyOverlay(() => import('../features/attachment/components/ReadOnlyViewer')),
     Toolbar: {
-      Controls: lazy(() => import('../features/view/toolbar/ViewToolbar')),
-      Search: lazy(async () => ({
+      Controls: lazyOverlay(() => import('../features/view/toolbar/ViewToolbar')),
+      Search: lazyOverlay(async () => ({
         default: (await import('../features/view/toolbar/ViewSearch')).ViewSearch,
       })),
       // The summary bar of a shared grid (T472), read-only: loaded when the view has summaries.
-      SummaryBar: lazy(async () => ({
+      SummaryBar: lazyOverlay(async () => ({
         default: (await import('../features/view/summary/SummaryBar')).SummaryBar,
       })),
     },
@@ -66,7 +69,7 @@ function LeaveShareEntry() {
 }
 
 /** (T814) The layout of an embedded page: a chunk of its own, only `?embed=1` loads it. */
-const EmbedLayout = lazy(() => import('../features/share/public/components/EmbedLayout'));
+const EmbedLayout = lazyPanel(() => import('../features/share/public/components/EmbedLayout'));
 
 /** (T814) `?embed=1`: the page framed by another site, without the share header. */
 function ShareFrame() {
@@ -92,8 +95,8 @@ export function createShareRoutes(): RouteObject[] {
       errorElement: <RouteErrorPage />,
       hydrateFallbackElement: <ShareLoading />,
       children: [
-        { path: 's/:token', lazy: loadShareRoute },
-        { path: 'verify-sender', lazy: loadVerifySenderRoute },
+        { path: 's/:token', lazy: lazyRoute(loadShareRoute) },
+        { path: 'verify-sender', lazy: lazyRoute(loadVerifySenderRoute) },
         { path: '*', element: <LeaveShareEntry /> },
       ],
     },

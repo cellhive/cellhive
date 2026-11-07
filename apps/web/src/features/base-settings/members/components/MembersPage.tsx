@@ -8,13 +8,14 @@ import {
   type InfiniteData,
 } from '@tanstack/react-query';
 import { Eye, Info, Search, User, Users } from 'lucide-react';
-import { lazy, Suspense, useEffect, useId, useState } from 'react';
+import { Suspense, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useDocumentTitle } from '../../../../lib/a11y/use-document-title';
 import { ErrorAlert } from '../../../../lib/errors/ErrorAlert';
 import { PAGE_GUTTER, PageHeading } from '../../../../lib/layout/page-heading';
+import { lazyOverlay } from '../../../../lib/lazy/chunk-error';
 import { baseQuery, orgMembersQuery } from '../../../../lib/query/queries';
 import { rolesQuery } from '../../../../lib/query/roles';
 import { showToast } from '../../../../lib/toast/toast';
@@ -26,7 +27,7 @@ import { useRoleName } from '../../role-name';
 import type { BasePrincipalDto, BasePrincipalList, RoleDto } from '@cellhive/contracts';
 
 /** (T713) The member access panel: its own chunk, loaded when it is opened. */
-const AccessPanel = lazy(() => import('../access-panel/AccessPanel'));
+const AccessPanel = lazyOverlay(() => import('../access-panel/AccessPanel'));
 
 /** Typing pause before the search is sent. */
 const SEARCH_DEBOUNCE_MS = 300;

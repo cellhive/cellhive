@@ -1,13 +1,15 @@
 import { cn } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
-import { lazy, Suspense, useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 
 import { badgeText, unreadCountQuery } from './unread';
 
 const loadPanel = () => import('../panel/NotificationPanel');
-const NotificationPanel = lazy(loadPanel);
+const NotificationPanel = lazyOverlay(loadPanel);
 
 export interface NotificationBellProps {
   readonly org: { readonly id: string; readonly slug: string };

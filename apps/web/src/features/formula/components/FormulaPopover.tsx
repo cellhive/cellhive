@@ -1,9 +1,10 @@
 import { Button, cn, Skeleton, Spinner } from '@cellhive/ui';
 import { ChevronLeft, ChevronRight, CircleAlert, HelpCircle, Maximize2, X } from 'lucide-react';
-import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../../lib/api/client';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { useFormulaEnvironment } from '../data';
 import { FormulaInput, type FormulaInputHandle } from '../editor/FormulaInput';
 import { FORMULA_LIMITS } from '../model/analysis';
@@ -16,7 +17,7 @@ import type { FormulaDraft, FormulaPopoverProps } from '../../../lib/schema/form
 import type { FormulaSchema } from '../model/schema';
 
 /** The full editor behind "Expand": its own chunk, shared with the field dialog (T466). */
-const FormulaEditorDialog = lazy(() => import('./FormulaEditorDialog'));
+const FormulaEditorDialog = lazyOverlay(() => import('./FormulaEditorDialog'));
 
 const WIDTH = 640;
 const GAP = 4;

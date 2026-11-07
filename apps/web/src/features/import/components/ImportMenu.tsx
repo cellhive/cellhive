@@ -7,16 +7,17 @@ import {
 } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
 import { FilePlus2, TableProperties, Upload } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { baseQuery, fieldsQuery } from '../../../lib/query/queries';
 import { canAppendTo, canImportNewTable } from '../mapping';
 
 import type { ImportTarget } from './types';
 
 /** The wizard is its own chunk, loaded when a user first opens it (FRONTEND §11.1). */
-const ImportWizard = lazy(() => import('./ImportWizard'));
+const ImportWizard = lazyOverlay(() => import('./ImportWizard'));
 
 export interface ImportMenuProps {
   readonly baseId: string;

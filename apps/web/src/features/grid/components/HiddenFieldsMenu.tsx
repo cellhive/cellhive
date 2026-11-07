@@ -1,8 +1,9 @@
 import { Button, cn, Spinner, Tooltip } from '@cellhive/ui';
 import { EyeOff } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { TOOLBAR_LABEL } from '../../../lib/views/toolbar';
 import { ToolbarPopover } from '../../../lib/views/ToolbarPopover';
 
@@ -10,7 +11,7 @@ import type { GridField } from '../../../grid';
 
 // The list (search, drag to reorder with dnd-kit) loads when first opened.
 const loadPanel = () => import('./HiddenFieldsPanel');
-const HiddenFieldsPanel = lazy(loadPanel);
+const HiddenFieldsPanel = lazyPanel(loadPanel);
 
 export interface HiddenFieldsMenuProps {
   /** Every field in the view's column order (the primary one first). */

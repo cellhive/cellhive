@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import {
   Component,
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -36,6 +35,7 @@ import {
   type PreviewMode,
 } from '../../../lib/attachments/kinds';
 import { localPreviews } from '../../../lib/attachments/previews';
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { RECORD_PARAM } from '../../../lib/records/detail';
 import { showToast } from '../../../lib/toast/toast';
 
@@ -45,7 +45,7 @@ import type { PdfViewerHandle } from './PdfViewer';
 import type { CellFile } from '../../../lib/attachments/value';
 
 /** PDF.js and its viewer: a chunk of their own, loaded only when a PDF is opened (T407). */
-const PdfViewer = lazy(() => import('./PdfViewer'));
+const PdfViewer = lazyPanel(() => import('./PdfViewer'));
 
 /** PDFs larger than this are only downloaded (viewing one reads it whole into memory). */
 export const PDF_OPEN_LIMIT = 50 * 1024 * 1024;

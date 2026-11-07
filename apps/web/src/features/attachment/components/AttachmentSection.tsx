@@ -24,12 +24,13 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { lazy, Suspense, useId, useRef, useState, type DragEvent } from 'react';
+import { Suspense, useId, useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApplePlatform } from '../../../grid/undo/keys';
 import { formatBytes, formatProgress } from '../../../lib/attachments/format';
 import { isPreviewImage } from '../../../lib/attachments/kinds';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { useIssueText, useLimitsText } from '../messages';
 import { useCellFiles } from '../use-cell-files';
 
@@ -42,7 +43,7 @@ import type { AttachmentSectionProps } from '../../../lib/attachments/ui';
 import type { UploadItem } from '../../../lib/attachments/uploads';
 import type { CellFile } from '../../../lib/attachments/value';
 
-const Lightbox = lazy(() => import('./Lightbox'));
+const Lightbox = lazyOverlay(() => import('./Lightbox'));
 
 const NO_VISIBLE_LIMIT = 100;
 

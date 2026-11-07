@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazyOverlay, lazyPanel } from '../lib/lazy/chunk-error';
 
 import type { RecordDetailComponents } from '../lib/records/detail';
 
@@ -10,17 +10,15 @@ import type { RecordDetailComponents } from '../lib/records/detail';
  * (T813) Also the record panel of the grid (`features/record`, lazy): a
  * record of a click-through opens in it.
  */
-const RecordFilterEditor = lazy(() =>
-  import('../features/view/toolbar/RecordFilterEditor').then((module) => ({
-    default: module.RecordFilterEditor,
-  })),
-);
+const RecordFilterEditor = lazyPanel(async () => ({
+  default: (await import('../features/view/toolbar/RecordFilterEditor')).RecordFilterEditor,
+}));
 
 /**
  * (T814) "Share" of the dashboard (`features/share/manage`): the button is a
  * small lazy chunk, the dialog another one loaded when it opens.
  */
-const DashboardShareButton = lazy(
+const DashboardShareButton = lazyOverlay(
   () => import('../features/share/manage/components/DashboardShareButton'),
 );
 

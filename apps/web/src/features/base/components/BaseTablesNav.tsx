@@ -9,10 +9,11 @@ import {
 } from '@cellhive/ui';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { MoreHorizontal, Plus, Settings, Table2, Trash2 } from 'lucide-react';
-import { lazy, Suspense, useId, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, useId, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
 
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { isBaseAdmin } from '../../../lib/permissions/access';
 import {
   baseQuery,
@@ -30,9 +31,9 @@ import type { TableDto } from '@cellhive/contracts';
  * strings), loaded when a base admin opens it — the sidebar is part of the
  * app shell (FRONTEND §11.1).
  */
-const DeleteTableDialog = lazy(() => import('./DeleteTableDialog'));
+const DeleteTableDialog = lazyOverlay(() => import('./DeleteTableDialog'));
 /** "New table": its own chunk too, loaded when a base admin opens it. */
-const CreateTableDialog = lazy(() => import('./CreateTableDialog'));
+const CreateTableDialog = lazyOverlay(() => import('./CreateTableDialog'));
 
 /** Tables whose record count the sidebar asks for (one small count request each). */
 export const COUNTED_TABLES = 50;

@@ -1,14 +1,15 @@
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cellFilesOf } from '../../../lib/attachments/value';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 
 import { FileThumb } from './FileThumb';
 
 import type { ReadOnlyFilesProps } from '../../../lib/attachments/ui';
 
 /** The file viewer, loaded when a file is opened (T407/T418). */
-const Lightbox = lazy(() => import('./Lightbox'));
+const Lightbox = lazyOverlay(() => import('./Lightbox'));
 
 /**
  * The files of an attachment cell, read-only (share page, BACKLOG T409): a

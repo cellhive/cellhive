@@ -1,11 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
-import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
+import { createMemoryRouter, Outlet, RouterProvider, type RouteObject } from 'react-router';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { axeViolations } from '../../../test/axe';
 import { createTestI18n } from '../../../test/i18n';
 import { ApiError } from '../../lib/api/client';
-import { RootErrorBoundary, RouteErrorPage, RouteErrorPanel } from '../errors';
+import { lazyRoute, RELOAD_KEY } from '../../lib/lazy/lazy-route';
+import { RootErrorBoundary, RouteErrorPage, RouteErrorPanel, RouterRoot } from '../errors';
 
 import type { i18n as I18n } from 'i18next';
 
@@ -16,6 +19,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  sessionStorage.clear();
   // React reports caught render errors on the console; keep the output clean.
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -88,5 +92,80 @@ describe('error boundaries (FRONTEND §8.2)', () => {
     );
     expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+  });
+});
+
+/** A route module whose chunk fails `failures` times, then loads (T902). */
+function flakyChunk(failures: number) {
+  let left = failures;
+  return vi.fn(() =>
+    left-- > 0
+      ? Promise.reject(
+          new TypeError(
+            'Failed to fetch dynamically imported module: http://localhost/assets/Page.js',
+          ),
+        )
+      : Promise.resolve({ Component: () => <h1>Account</h1> }),
+  );
+}
+
+function renderRouterRoot(routes: () => RouteObject[]) {
+  const create = () => createMemoryRouter(routes(), { initialEntries: ['/'] });
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <RouterRoot router={create()} create={create} />
+    </I18nextProvider>,
+  );
+}
+
+describe('lazy chunks of routes (T902, FRONTEND §8.2)', () => {
+  it('opens the page after one automatic retry', async () => {
+    const load = flakyChunk(1);
+    renderRouterRoot(() => [{ path: '/', lazy: lazyRoute(load) }]);
+    expect(await screen.findByRole('heading', { name: 'Account' })).toBeVisible();
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows "Couldn\'t load this page" inside the shell; "Try again" loads it', async () => {
+    const load = flakyChunk(2);
+    const { container } = renderRouterRoot(() => [
+      {
+        element: <Shell />,
+        errorElement: <RouteErrorPage />,
+        children: [{ path: '/', errorElement: <RouteErrorPanel />, lazy: lazyRoute(load) }],
+      },
+    ]);
+    expect(await screen.findByRole('heading', { name: "Couldn't load this page" })).toBeVisible();
+    expect(screen.getByRole('navigation', { name: 'Sidebar' })).toBeInTheDocument();
+    expect(screen.getByText(/Check your connection and try again/u)).toBeVisible();
+    await waitFor(() => {
+      expect(document.title).toBe("Couldn't load this page · Cellhive");
+    });
+    expect(await axeViolations(container)).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    // React Router keeps a failed `lazy`: the router is built again and the page opens.
+    expect(await screen.findByRole('heading', { name: 'Account' })).toBeVisible();
+    expect(screen.getByRole('navigation', { name: 'Sidebar' })).toBeInTheDocument();
+  });
+
+  it('shows the full-page screen when a layout chunk fails', async () => {
+    renderRouterRoot(() => [
+      { path: '/', errorElement: <RouteErrorPage />, lazy: lazyRoute(flakyChunk(2)) },
+    ]);
+    expect(await screen.findByRole('heading', { name: "Couldn't load this page" })).toBeVisible();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
+  });
+
+  it('"Reload page" reloads once and marks it, so it is not offered again at once', async () => {
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+    renderRouterRoot(() => [
+      { path: '/', errorElement: <RouteErrorPage />, lazy: lazyRoute(flakyChunk(2)) },
+    ]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Reload page' }));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(RELOAD_KEY)).not.toBeNull();
   });
 });

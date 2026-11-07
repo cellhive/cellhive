@@ -2,7 +2,6 @@ import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { LayoutDashboard, Monitor, Pencil } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -18,6 +17,7 @@ import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { isApiError } from '../../../lib/api/client';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { PAGE_GUTTER, PageHeading } from '../../../lib/layout/page-heading';
+import { lazyOverlay, lazyPanel } from '../../../lib/lazy/chunk-error';
 import { canDownload, isBaseAdmin } from '../../../lib/permissions/access';
 import { dashboardQuery } from '../../../lib/query/dashboards';
 import { baseQuery } from '../../../lib/query/queries';
@@ -47,9 +47,9 @@ import type { DashboardDto, WidgetDto } from '@cellhive/contracts';
 const NO_WIDGETS: readonly WidgetDto[] = [];
 
 /** (T812) The editor is its own chunk: view mode never downloads it. */
-const DashboardEditor = lazy(() => import('../edit/DashboardEditor'));
+const DashboardEditor = lazyPanel(() => import('../edit/DashboardEditor'));
 /** (T813) Click-through: its own chunk, loaded when "View records" is first used. */
-const RecordsDrawer = lazy(() => import('../drill/RecordsDrawer'));
+const RecordsDrawer = lazyOverlay(() => import('../drill/RecordsDrawer'));
 
 export interface DashboardPageProps {
   /**

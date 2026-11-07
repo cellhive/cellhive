@@ -71,6 +71,13 @@
     "description": "Không hiển thị được trang. Hãy tải lại để thử lần nữa.",
     "reload": "Tải lại"
   },
+  "chunkError": {
+    "page": "Không tải được trang",
+    "part": "Không tải được phần này",
+    "description": "Hãy kiểm tra kết nối rồi thử lại.",
+    "retry": "Thử lại",
+    "reload": "Tải lại trang"
+  },
   "connection": {
     "offline": "Bạn đang ngoại tuyến. Dữ liệu chỉ xem được cho tới khi có kết nối lại.",
     "reconnecting": "Đang kết nối lại…"

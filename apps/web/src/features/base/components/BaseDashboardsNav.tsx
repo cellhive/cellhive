@@ -8,10 +8,11 @@ import {
 } from '@cellhive/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, LayoutDashboard, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
-import { lazy, Suspense, useId, useState } from 'react';
+import { Suspense, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router';
 
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { isBaseAdmin } from '../../../lib/permissions/access';
 import { dashboardPath, dashboardsQuery, loadDashboardsApi } from '../../../lib/query/dashboards';
 import { keys } from '../../../lib/query/keys';
@@ -21,7 +22,7 @@ import { showErrorToast } from '../../../lib/toast/toast';
 import type { DashboardDialogRequest } from './DashboardDialog';
 
 /** Create / rename / delete: one lazy chunk (with the `base` strings), loaded when opened. */
-const DashboardDialog = lazy(() => import('./DashboardDialog'));
+const DashboardDialog = lazyOverlay(() => import('./DashboardDialog'));
 
 const ITEM_CLASS =
   'flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-body text-fg hover:bg-surface-sunken max-lg:min-h-control';

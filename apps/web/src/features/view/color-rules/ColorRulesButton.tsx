@@ -1,15 +1,16 @@
 import { Button, cn, Spinner, Tooltip } from '@cellhive/ui';
 import { Palette } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../lib/lazy/chunk-error';
 import { TOOLBAR_LABEL } from '../../../lib/views/toolbar';
 import { ToolbarPopover } from '../../../lib/views/ToolbarPopover';
 
 import type { ViewToolbarProps } from '../../../lib/views/toolbar';
 
 /** The rule list and its condition builders: loaded when the panel first opens. */
-const ColorRulesPanel = lazy(() => import('./ColorRulesPanel'));
+const ColorRulesPanel = lazyPanel(() => import('./ColorRulesPanel'));
 
 /**
  * "Color" of a grid view's toolbar (T816, FRONTEND §6.9): the view's color

@@ -4,9 +4,10 @@ import {
   type AutomationTriggerType,
 } from '@cellhive/contracts';
 import { Select, Skeleton, Switch } from '@cellhive/ui';
-import { lazy, Suspense, useId, useMemo } from 'react';
+import { Suspense, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lazyPanel } from '../../../../../lib/lazy/chunk-error';
 import { canManageAutomations, isBaseAdmin } from '../../../../../lib/permissions/access';
 import { conditionSlot } from '../../model/check';
 import {
@@ -34,7 +35,7 @@ import { ScheduleEditor } from './ScheduleEditor';
 import { DateReachedEditor, isVirtual, WatchFieldsEditor } from './trigger-fields';
 
 /** (T612) Hook, URL and sample listening: its own chunk, loaded with the trigger. */
-const WebhookTriggerEditor = lazy(() => import('../../triggers/webhook/WebhookTriggerEditor'));
+const WebhookTriggerEditor = lazyPanel(() => import('../../triggers/webhook/WebhookTriggerEditor'));
 
 /** Paths of the trigger's settings (`errors[].path` below `definition.trigger`). */
 const PATH = {

@@ -1,12 +1,14 @@
 import { Button } from '@cellhive/ui';
 import { TriangleAlert } from 'lucide-react';
-import { Component, type ReactNode } from 'react';
+import { Component, createContext, use, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isRouteErrorResponse, useRouteError } from 'react-router';
+import { isRouteErrorResponse, RouterProvider, useRouteError, type DataRouter } from 'react-router';
 
 import { useDocumentTitle } from '../lib/a11y/use-document-title';
 import { isApiError } from '../lib/api/client';
 import { ErrorAlert } from '../lib/errors/ErrorAlert';
+import { ChunkError } from '../lib/lazy/chunk-error';
+import { ChunkLoadFailed } from '../lib/lazy/lazy-route';
 
 import { NotFoundPage, NotFoundPanel } from './NotFoundPage';
 
@@ -21,7 +23,47 @@ function reload(): void {
   window.location.reload();
 }
 
+/** Builds the router again (`RouterRoot`); without one, a full page load. */
+const RebuildRouter = createContext(reload);
+
+/**
+ * The router of an entry (`main.tsx`, `share-main.tsx`). React Router keeps
+ * a route whose `lazy` failed for good, so "Try again" of a chunk error
+ * (T902) builds the router again: the routes call their `lazy` again, the
+ * query cache and the providers stay.
+ */
+export function RouterRoot({
+  router: first,
+  create,
+}: {
+  router: DataRouter;
+  create: () => DataRouter;
+}) {
+  const [router, setRouter] = useState(first);
+  const rebuild = () => {
+    router.dispose();
+    setRouter(create());
+  };
+  return (
+    <RebuildRouter value={rebuild}>
+      <RouterProvider router={router} />
+    </RebuildRouter>
+  );
+}
+
+/**
+ * A route's lazy chunk failed twice (T902): "Try again" builds the router
+ * again, whose first load calls the route's `lazy` again.
+ */
+function RouteChunkError() {
+  return <ChunkError variant="page" onRetry={use(RebuildRouter)} />;
+}
+
 function ErrorContent({ error }: { error: unknown }) {
+  return error instanceof ChunkLoadFailed ? <RouteChunkError /> : <GenericError error={error} />;
+}
+
+function GenericError({ error }: { error: unknown }) {
   const { t } = useTranslation('common');
   useDocumentTitle(t('errorPage.title'));
   return (
