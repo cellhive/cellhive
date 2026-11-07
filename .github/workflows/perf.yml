@@ -1,10 +1,18 @@
 name: Perf
+# A full run (every spec once) is titled `Perf`; a dispatch with `grep` or `repeat` says so,
+# and the `night` job below does not take it for a full run.
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && (inputs.grep != '' || inputs.repeat != '1')
+  && format('Perf (grep: {0}, repeat: {1})', inputs.grep, inputs.repeat) || 'Perf' }}
 
 # Performance budgets of FRONTEND §11.1 (`@perf` Playwright specs on 200 000 seeded
 # rows) on a GitHub `ubuntu-latest` runner (BACKLOG T801). It asserts the `ci-runner`
 # profile of `apps/web/e2e/perf-results.ts` (regression bounds calibrated on this
 # runner, T900); the summary shows the `product` budgets next to them.
 # Nightly and on demand only: never on pull requests, so it does not gate a merge.
+# Only green full runs on new commits count toward the streak of green nights (FRONTEND
+# §11.1): a scheduled night on the commit of the last green full run skips; a dispatch
+# on it runs and says "no new commit".
 on:
   schedule:
     # 03:27 UTC, away from the top of the hour when scheduled runs queue up.
@@ -31,10 +39,62 @@ env:
   TURBO_TELEMETRY_DISABLED: '1'
 
 jobs:
+  # Is there a new commit since the last green full run of this branch? Counts or skips.
+  night:
+    name: New commit since the last green run?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+      streak: ${{ steps.check.outputs.streak }}
+    steps:
+      - name: Last green full run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_KIND: ${{ github.event_name == 'workflow_dispatch' && (inputs.grep != '' || inputs.repeat != '1') && 'partial' || 'full' }}
+        run: |
+          last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow perf.yml --branch "$GITHUB_REF_NAME" \
+            --status success --limit 50 --json headSha,displayTitle,url \
+            --jq '[.[] | select(.displayTitle == "Perf")][0] // empty | "\(.headSha) \(.url)"') || last=''
+          last_sha=${last%% *}
+          last_url=${last#* }
+          skip=false
+          if [ -n "$last" ] && [ "$last_sha" = "$GITHUB_SHA" ]; then
+            if [ "$EVENT" = schedule ]; then
+              skip=true
+              streak="no new commit since the last green run (${last_url}): skipped, not counted"
+            else
+              streak="no new commit since the last green run (${last_url}): not counted"
+            fi
+          elif [ "$RUN_KIND" = partial ]; then
+            streak='partial run (grep or repeat): not counted'
+          else
+            streak='new commit: counts if green'
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "streak=$streak" >> "$GITHUB_OUTPUT"
+          previous=none
+          if [ -n "$last_sha" ]; then previous="\`$last_sha\`"; fi
+          {
+            echo '## Streak of green nights'
+            echo
+            echo "Commit \`${GITHUB_SHA}\` · last green full run: ${previous}"
+            echo
+            if [ "$skip" = true ]; then echo "**No new commit**: ${streak}."; else echo "Streak: ${streak}."; fi
+            echo
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
   perf:
     name: Perf (@perf, ubuntu-latest)
+    needs: night
+    if: needs.night.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    # Build + 200 000-row bench seed + nine budgets: ~15 minutes; room for `repeat`.
+    # Build + 200 000-row bench seed + ten budgets: ~15 minutes; room for `repeat`.
     timeout-minutes: 120
     permissions:
       contents: read
@@ -51,6 +111,8 @@ jobs:
       # is in `perf-results.json` (`machine.cpu_*`, perf-reporter) and the perf issue.
       - name: Machine
         id: machine
+        env:
+          STREAK: ${{ needs.night.outputs.streak }}
         run: |
           model=$(lscpu | sed -n 's/^Model name:[[:space:]]*//p' | head -n1)
           sockets=$(lscpu | sed -n 's/^Socket(s):[[:space:]]*//p' | head -n1)
@@ -61,6 +123,11 @@ jobs:
             echo '## Machine'
             echo
             echo "**CPU: $cpu**"
+            echo
+            # One key per run, to tabulate nights by CPU model (`perf-results.json`: machine.cpu_model).
+            echo "\`cpu_model\`: ${model:-unknown}"
+            echo
+            echo "Streak: ${STREAK}."
             echo
             echo '```'
             echo "nproc: $(nproc)"
