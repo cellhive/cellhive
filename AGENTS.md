@@ -85,6 +85,7 @@ packages/<pkg>/src/**, packages/<pkg>/test/**
    - `build` + `size` when the web app or a package it bundles changes (`apps/web`, `packages/ui`, `packages/contracts`, …);
    - `test:int` when the API, the worker or a package they import changes;
    - the **full** `test:e2e`, not only the related specs, when shared semantics change: auth/session, realtime/WebSocket, share links, API tokens, permissions, secret rules, causation, rate limits, shared UI (`packages/ui`, `Dialog`), layout and app shell, the demo seed or the E2E harness. The globs are in `tools/verify-push.mjs`.
+   - a change to `docs/SPEC.md`, `docs/CONTRACTS.md` or `docs/FRONTEND.md` adds an entry to its version line (line 3) in the same commit, and resolving a conflict on that line keeps every entry, yours first; `verify:push` warns (without failing) when line 3 did not change or lost an entry of the upstream.
 4. Pushing to `main`:
    - Push a batch of commits once, after `pnpm verify:push` is green for the whole batch, not commit by commit: each push cancels the CI run of the previous one and hides which commit broke `main`.
    - `main` is red → nobody pushes anything but the fix until CI is green again.
