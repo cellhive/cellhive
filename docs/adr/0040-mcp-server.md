@@ -14,7 +14,7 @@ Ràng buộc có sẵn: mọi instance API phục vụ mọi request (S§3, nhi�
 
 ### 1. Endpoint tích hợp, không trạng thái, hai thời kỳ, chỉ JSON
 
-`POST /api/v1/mcp` trong chính API (module `apps/api/src/modules/mcp`), không gói/binary/container riêng. Không `Mcp-Session-Id`, không state trong Valkey: mỗi POST tự xác thực (token tra lại như REST — thu hồi có hiệu lực ngay lời gọi sau), xử lý, trả `application/json`. Request có envelope `2026-07-28` (`server/discover`, `tools/*`) đi theo bản mới; request không envelope (`initialize`, `notifications/initialized`, `tools/*` của client 2025) đi nhánh legacy **không cấp session id**. Notification → `202`. `GET`/`DELETE` → `405` + `Allow: POST` (không SSE, không `subscriptions/listen`, không resumability). Không resources/prompts ở giai đoạn 1.
+`POST /api/v1/mcp` trong chính API (module `apps/api/src/modules/mcp`), không gói/binary/container riêng. Không `Mcp-Session-Id`, không state trong Valkey: mỗi POST tự xác thực (token tra lại như REST — thu hồi có hiệu lực ngay lời gọi sau), xử lý, trả `application/json`. Request có envelope `2026-07-28` (`server/discover`, `tools/*`) đi theo bản mới; request không envelope (`initialize`, `notifications/initialized`, `tools/*` của client 2025) đi nhánh legacy **không cấp session id**. Notification → `202`. Lô JSON-RPC (client 2025-03-26, body là mảng): mỗi thông điệp tính một request vào giới hạn của token, các lời gọi tool của một request chạy lần lượt — một request không chiếm được cả pool DB (QA S8, C§30.1, C§30.6). `GET`/`DELETE` → `405` + `Allow: POST` (không SSE, không `subscriptions/listen`, không resumability). Không resources/prompts ở giai đoạn 1.
 
 ### 2. Xác thực và scope
 
