@@ -2,7 +2,7 @@ import { type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 import { expect, test, WORKER_ORG } from './fixtures';
 import { DEMO_ORDER_CUSTOMER, DEMO_ORDER_TITLE, DEMO_PASSWORD } from './seed';
-import { api, apiSignIn, expectNoSeriousA11yViolations, ok } from './support';
+import { animationsSettled, api, apiSignIn, expectNoSeriousA11yViolations, ok } from './support';
 
 /**
  * T467: the lookup dialog (board "S4b · Cấu hình tra cứu") on the demo
@@ -457,9 +457,11 @@ test.describe.serial('T467 lookup configuration', () => {
       .getByLabel('Shortcut: through a link field')
       .selectOption(`in:${ids.customerLink}`);
     await editor.getByLabel('Field to get').selectOption(ids.amount);
+    // Measured once the dialog's entrance has ended (mid-animation it is 374.9997 px wide).
+    await animationsSettled(page);
     const box = await page.getByRole('dialog').boundingBox();
-    expect(box?.width).toBe(375);
-    expect(box?.height).toBe(812);
+    expect(box?.width).toBeCloseTo(375, 1);
+    expect(box?.height).toBeCloseTo(812, 1);
     const overflow = await page
       .getByRole('dialog')
       .evaluate((element) => element.scrollWidth - element.clientWidth);
