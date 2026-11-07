@@ -1,4 +1,6 @@
 import type {
+  AiCellMetaDto,
+  AiCellReason,
   AiCellState,
   AiFieldStateDto,
   AiFieldTask,
@@ -47,21 +49,59 @@ export function isAiField(field: Pick<FieldDto, 'type' | 'options'>): boolean {
   return aiConfigOf(field) !== null;
 }
 
+/**
+ * The state of an AI cell when it is not simply its value, and why it
+ * failed or is paused (`record.meta.ai`: `{ state, reason? }`, T1002).
+ */
+export function aiCellOf(
+  record: Pick<RecordDto, 'meta'> | undefined,
+  fieldId: string,
+): AiCellMetaDto | undefined {
+  const cell: unknown = (record?.meta?.ai as Readonly<Record<string, unknown>> | undefined)?.[
+    fieldId
+  ];
+  return isObject(cell) && typeof cell['state'] === 'string' ? (cell as AiCellMetaDto) : undefined;
+}
+
 /** The state of an AI cell when it is not simply its value (`record.meta.ai`). */
 export function aiCellStateOf(
   record: Pick<RecordDto, 'meta'> | undefined,
   fieldId: string,
 ): AiCellState | undefined {
-  return (record?.meta?.ai as Readonly<Record<string, AiCellState>> | undefined)?.[fieldId];
+  return aiCellOf(record, fieldId)?.state;
 }
 
-/** Paused rows of an AI field and why (`ai_state` of the field DTO / `schema.changed`). */
-export function aiPausedOf(
-  field: Pick<FieldDto, 'ai_state'>,
-): { readonly count: number; readonly reason: AiFieldStateDto['paused_reason'] } | null {
+/** Why an AI cell failed or is paused, as a code (`undefined`: no reason given). */
+export function aiCellReasonOf(
+  record: Pick<RecordDto, 'meta'> | undefined,
+  fieldId: string,
+): AiCellReason | undefined {
+  return aiCellOf(record, fieldId)?.reason;
+}
+
+/** Paused rows of an AI field, why, and what the provider rejected (`ai_state`, `schema.changed`). */
+export function aiPausedOf(field: Pick<FieldDto, 'ai_state'>): {
+  readonly count: number;
+  readonly reason: AiFieldStateDto['paused_reason'];
+  readonly detail: AiFieldStateDto['paused_detail'];
+} | null {
   const state = field.ai_state;
   if (state === undefined || state.paused === 0) return null;
-  return { count: state.paused, reason: state.paused_reason };
+  return { count: state.paused, reason: state.paused_reason, detail: state.paused_detail ?? null };
+}
+
+/**
+ * When an AI field's queued rows go on while the organization waits for its
+ * provider (T1002), `null` once that time has passed (at `now`).
+ */
+export function aiRetryAtOf(
+  field: Pick<FieldDto, 'ai_state'>,
+  now: number = Date.now(),
+): string | null {
+  const state = field.ai_state;
+  if (state === undefined || state.queued === 0 || state.paused > 0) return null;
+  const at = state.retry_at ?? null;
+  return at === null || Date.parse(at) <= now ? null : at;
 }
 
 /**

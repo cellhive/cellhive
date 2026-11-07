@@ -1,6 +1,6 @@
 import { AppError } from '../errors/app-error.js';
 
-import type { AiProviderErrorReason } from '@cellhive/contracts';
+import type { AiProviderErrorReason, AiProviderPauseDetail } from '@cellhive/contracts';
 
 /**
  * Errors of the AI core (CONTRACTS §29.7, ADR-39). `params` are for logs and
@@ -36,6 +36,8 @@ export interface AiProviderErrorExtra {
   readonly cause?: unknown;
   /** More log-only values (e.g. the SSRF block reason). */
   readonly params?: Readonly<Record<string, string | number>>;
+  /** Raw `Retry-After` header of an error status (`params.retry_after`, never sent to clients). */
+  readonly retryAfter?: string | null;
 }
 
 /** `502 AI_PROVIDER_ERROR` with `params.reason` (and `status` for `http_status`). */
@@ -58,6 +60,7 @@ export function aiProviderError(
       ...extra.params,
       ...clientParams,
       ...(extra.host === undefined ? {} : { host: extra.host }),
+      ...(extra.retryAfter == null ? {} : { retry_after: extra.retryAfter.slice(0, 64) }),
       temporary:
         reason === 'network' ||
         (reason === 'http_status' && extra.status !== undefined && temporaryStatus(extra.status)),
@@ -87,4 +90,43 @@ export function aiInvalidOutput(attempts: number): AppError {
 /** Whether a failed AI call may succeed when tried again later (worker retry). */
 export function isTemporaryAiError(error: unknown): boolean {
   return error instanceof AppError && error.params?.['temporary'] === true;
+}
+
+const PAUSE_STATUSES: Readonly<Record<number, AiProviderPauseDetail>> = {
+  401: 'unauthorized',
+  403: 'forbidden',
+  404: 'not_found',
+};
+
+/**
+ * What a provider error says about the configuration (the key, the URL or
+ * the model), or `null` when trying again may work: `401`, `403`, `404`,
+ * `ssrf_blocked`, `secret_host_not_allowed` and `secret_unavailable` stay
+ * the same for every record until the AI settings or the key change.
+ */
+export function aiProviderPauseDetailOf(error: unknown): AiProviderPauseDetail | null {
+  if (!(error instanceof AppError) || error.code !== 'AI_PROVIDER_ERROR') return null;
+  const reason = error.params?.['reason'];
+  if (
+    reason === 'ssrf_blocked' ||
+    reason === 'secret_host_not_allowed' ||
+    reason === 'secret_unavailable'
+  ) {
+    return reason;
+  }
+  const status = error.params?.['status'];
+  return reason === 'http_status' && typeof status === 'number'
+    ? (PAUSE_STATUSES[status] ?? null)
+    : null;
+}
+
+/**
+ * A `429` of the provider: `{ retryAfter }` = its raw `Retry-After` header
+ * (`null` without one); `null` for any other error.
+ */
+export function aiRateLimitOf(error: unknown): { readonly retryAfter: string | null } | null {
+  if (!(error instanceof AppError) || error.code !== 'AI_PROVIDER_ERROR') return null;
+  if (error.params?.['reason'] !== 'http_status' || error.params['status'] !== 429) return null;
+  const header = error.params['retry_after'];
+  return { retryAfter: typeof header === 'string' ? header : null };
 }

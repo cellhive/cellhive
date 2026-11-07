@@ -59,7 +59,14 @@ const SUMMARY = field('fld_Summary000000001', {
   name: 'Summary',
   position: 2,
   options: { style: { type: 'plain' }, default_value: null, ai: AI },
-  ai_state: { queued: 0, failed: 0, paused: 0, paused_reason: null },
+  ai_state: {
+    queued: 0,
+    failed: 0,
+    paused: 0,
+    paused_reason: null,
+    paused_detail: null,
+    retry_at: null,
+  },
 });
 const FIELDS = [TITLE, DESCRIPTION, SUMMARY];
 

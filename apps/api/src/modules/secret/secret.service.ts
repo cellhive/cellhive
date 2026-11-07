@@ -36,6 +36,7 @@ import {
   orgScope,
   orgTelegramSettingsOf,
   resetChannelsForNewBot,
+  resumeAiProviderPause,
   sealSecret,
   unsealSecret,
   SecretsRepository,
@@ -47,6 +48,7 @@ import {
   type Db,
   type JsonObject,
   type OrgScope,
+  type SchemaChangePublisher,
   type SecretListRow,
   type SecretPatch,
   type SecretRow,
@@ -60,7 +62,10 @@ import { AccessService, notFound, permissionDenied } from '../../common/access/a
 import { mutationContextOf } from '../../common/access/change-log.js';
 import { type RequestMeta } from '../../common/auth/request-meta.js';
 import { iso } from '../../common/dto.js';
+import { AppLogger } from '../../common/logging/app-logger.js';
+import { SCHEMA_CHANGE_PUBLISHER } from '../../common/schema/schema-core.module.js';
 import { APP_CONFIG, DB, TELEGRAM_BOT_API } from '../../common/tokens.js';
+import { announceAiFieldStates } from '../ai/ai-provider-resume.js';
 
 import type { Principal } from '../../common/auth/principal.js';
 import type { Buffer } from 'node:buffer';
@@ -118,6 +123,8 @@ export class SecretService {
     @Inject(OrganizationsRepository) private readonly organizations: OrganizationsRepository,
     @Inject(TELEGRAM_BOT_API) private readonly telegram: TelegramBotApi,
     @Inject(AiSettingsRepository) private readonly aiSettings: AiSettingsRepository,
+    @Inject(SCHEMA_CHANGE_PUBLISHER) private readonly publisher: SchemaChangePublisher,
+    @Inject(AppLogger) private readonly logger: AppLogger,
   ) {
     this.key = deriveSecretKey(config.security.appMasterKey, 'org-secret');
   }
@@ -272,6 +279,7 @@ export class SecretService {
     const oldWebhookToken = newBot === null ? null : await this.webhookTokenOf(current);
 
     const context = mutationContextOf(meta, principal.userId);
+    let resumed: Id<'fld'>[] = [];
     await this.uniqueName(() =>
       this.db.withTx(async (tx) => {
         if (newBot !== null) {
@@ -284,6 +292,13 @@ export class SecretService {
             : await this.secrets.update(scope, secretId, patch);
         if (updated === undefined) throw notFound();
         if (basesChanged) await this.secrets.replaceBases(scope, secretId, baseIds);
+        // (T1002) A new value of the AI settings' key: AI fields paused by a provider error go on.
+        resumed =
+          newValue !== undefined &&
+          current.kind === 'ai_api_key' &&
+          (await this.aiSettings.usesKey(scope, secretId))
+            ? await resumeAiProviderPause(this.db, tx, current.organization_id)
+            : [];
         await this.audit(tx, updated, 'secret.updated', context, {
           before: snapshotOf(current, currentBaseIds),
           after: {
@@ -300,6 +315,11 @@ export class SecretService {
       // Best effort, after commit: a webhook left on a bot Cellhive no longer uses only gets `404`.
       await this.telegram.deleteWebhook(oldWebhookToken).catch(() => undefined);
     }
+    await announceAiFieldStates(
+      { db: this.db, publisher: this.publisher, logger: this.logger },
+      readScope,
+      resumed,
+    );
     const dto = await this.read(readScope, secretId);
     return generated === undefined ? dto : { ...dto, value: generated };
   }

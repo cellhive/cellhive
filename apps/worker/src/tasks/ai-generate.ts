@@ -60,6 +60,10 @@ export function createAiGenerateTask(deps: AiGenerateDeps): Task<'ai.generate'> 
             prompt_tokens: outcome.usage.promptTokens,
             completion_tokens: outcome.usage.completionTokens,
             ...(outcome.pausedReason === undefined ? {} : { paused_reason: outcome.pausedReason }),
+            ...(outcome.pausedDetail === undefined ? {} : { paused_detail: outcome.pausedDetail }),
+            ...(outcome.backOffUntil === undefined
+              ? {}
+              : { back_off_until: outcome.backOffUntil.toISOString() }),
           },
           'ai.generate batch',
         );

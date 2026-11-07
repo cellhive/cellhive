@@ -28,7 +28,14 @@ export {
   remainingOrTimeout,
   type AiDeadline,
 } from './deadline.js';
-export { aiInvalidOutput, aiProviderError, aiTimeout, isTemporaryAiError } from './errors.js';
+export {
+  aiInvalidOutput,
+  aiProviderError,
+  aiProviderPauseDetailOf,
+  aiRateLimitOf,
+  aiTimeout,
+  isTemporaryAiError,
+} from './errors.js';
 export {
   dropNullOptionals,
   LLM_SCHEMA_MAX_DEPTH,
@@ -145,11 +152,14 @@ export {
 } from './generation/definition.js';
 export { AiGenerationEnqueuer } from './generation/enqueue-changes.js';
 export {
+  aiBackOffMs,
   aiFailureReason,
+  aiFieldStateChanges,
   AiFieldGenerator,
   aiSystemAccess,
   aiTargetOf,
   generateAiValue,
+  resumeAiProviderPause,
   type AiBatchOutcome,
   type AiFieldGeneratorOptions,
   type AiFieldStateChange,
@@ -177,7 +187,11 @@ export {
   type RenderContext,
   type RenderedAiInput,
 } from './generation/prompt.js';
-export { AiGenerationQueueRepository, type TakenAiRow } from './generation/queue.repository.js';
+export {
+  aiCellMetaOf,
+  AiGenerationQueueRepository,
+  type TakenAiRow,
+} from './generation/queue.repository.js';
 export {
   aiAnalysisOf,
   aiCrossRecordSources,

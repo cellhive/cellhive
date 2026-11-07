@@ -1,9 +1,14 @@
 import {
+  AI_FIELD_BACKOFF_MS,
   AI_FIELD_BATCH_SIZE,
+  AI_FIELD_BREAKER_ERRORS,
+  AI_FIELD_MAX_BACKOFF_MS,
   AI_FIELD_RETRY_DELAYS_MS,
+  type AiFailureReason,
   type AiFieldOptions,
   type AiFieldStateDto,
   type AiPauseReason,
+  type AiProviderPauseDetail,
   type Id,
 } from '@cellhive/contracts';
 import { isValidTimeZone, selectOptionsSchema } from '@cellhive/field-types';
@@ -12,15 +17,21 @@ import { resolveBaseAccess } from '@cellhive/permissions';
 import { systemAuditContext } from '../../audit/audit-entry.js';
 import { loadBaseSchemaRows, snapshotOfBase } from '../../computed/definition/schema-rows.js';
 import { OrganizationsRepository } from '../../db/repositories/organizations.repository.js';
-import { withTxScope, type OrgScope } from '../../db/repository.js';
+import { orgScope, withTxScope, type OrgScope } from '../../db/repository.js';
 import { AppError } from '../../errors/app-error.js';
+import { parseRetryAfter } from '../../http-out/retry-policy.js';
 import { loadMemberAccessBase } from '../../import/member-access.js';
 import { JobsRepository } from '../../jobs/jobs.repository.js';
 import { FieldsRepository } from '../../schema/fields.repository.js';
 import { TablesRepository } from '../../schema/tables.repository.js';
 import { writeAiRequestedAudit } from '../audit/ai-requested.js';
 import { createDeadline } from '../deadline.js';
-import { isTemporaryAiError, aiInvalidOutput } from '../errors.js';
+import {
+  aiInvalidOutput,
+  aiProviderPauseDetailOf,
+  aiRateLimitOf,
+  isTemporaryAiError,
+} from '../errors.js';
 import { recordAiRequest } from '../metrics.js';
 import { AiSettingsRepository } from '../settings/ai-settings.repository.js';
 import { requireAi, type AiSettingsState } from '../settings/settings.js';
@@ -41,7 +52,7 @@ import {
 import { AiGenerationQueueRepository, type TakenAiRow } from './queue.repository.js';
 import { aiCrossRecordSources } from './sources.js';
 
-import type { Db } from '../../db/create-db.js';
+import type { Db, Tx } from '../../db/create-db.js';
 import type { JsonValue } from '../../db/schema.js';
 import type { Causation } from '../../events/event.js';
 import type { RecordMutationService } from '../../records/record-mutation.service.js';
@@ -107,14 +118,38 @@ export async function generateAiValue(
 }
 
 /** A failed call as the code a `failed` row keeps. */
-export function aiFailureReason(error: unknown): string {
+export function aiFailureReason(error: unknown): AiFailureReason {
   if (error instanceof AiRenderError) return 'render_error';
   if (error instanceof AppError) {
     if (error.code === 'AI_INVALID_OUTPUT') return 'invalid_output';
     if (error.code === 'AI_TIMEOUT') return 'timeout';
+    const reason = error.params?.['reason'];
+    if (error.code === 'AI_PROVIDER_ERROR' && (reason === 'refused' || reason === 'truncated')) {
+      return reason;
+    }
   }
   return 'provider_error';
 }
+
+/**
+ * How long the organization waits after a `429`: its `Retry-After` (at
+ * least a second, at most {@link AI_FIELD_MAX_BACKOFF_MS}), else
+ * {@link AI_FIELD_BACKOFF_MS}.
+ */
+export function aiBackOffMs(retryAfter: string | null, now: Date): number {
+  const at = parseRetryAfter(retryAfter, now);
+  if (at === null) return AI_FIELD_BACKOFF_MS;
+  return Math.min(AI_FIELD_MAX_BACKOFF_MS, Math.max(1_000, at.getTime() - now.getTime()));
+}
+
+/** Why a batch stopped before its last row: the queue paused, or the organization backs off. */
+type AiBatchStop =
+  | {
+      readonly kind: 'pause';
+      readonly reason: AiPauseReason;
+      readonly detail?: AiProviderPauseDetail;
+    }
+  | { readonly kind: 'back_off'; readonly until: Date };
 
 /** A placeholder user of the system read (never a member: no role is ever matched). */
 const SYSTEM_READER: Id<'usr'> = 'usr_SystemAiReader00';
@@ -188,6 +223,10 @@ export interface AiBatchOutcome {
   /** When queued rows of the field are next due (retry), `null` when none is queued. */
   readonly nextRunAt: Date | null;
   readonly pausedReason?: AiPauseReason;
+  /** What the provider rejected (`pausedReason: provider_error`). */
+  readonly pausedDetail?: AiProviderPauseDetail;
+  /** The organization backs off until then (a `429`, or temporary errors in a row). */
+  readonly backOffUntil?: Date;
 }
 
 const NO_USAGE: AiUsage = { promptTokens: 0, completionTokens: 0, estimated: false };
@@ -202,8 +241,11 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
  * provider call per record, values written through `RecordMutationService`
  * only when the record did not change since it was read. AI off or record
  * data off → the organization's queued rows `paused`; quota used up (checked
- * before every call) → `paused quota`; temporary errors retried after 30 s,
- * 2 and 10 minutes, then `failed`. One `ai.requested` audit entry per batch.
+ * before every call) → `paused quota`; the provider rejecting the
+ * configuration → `paused provider_error` (BACKLOG T1002); a `429` or five
+ * temporary errors in a row → the organization backs off; other temporary
+ * errors retried after 30 s, 2 and 10 minutes, then `failed`. One
+ * `ai.requested` audit entry per batch.
  */
 export class AiFieldGenerator {
   private readonly queue: AiGenerationQueueRepository;
@@ -274,37 +316,28 @@ export class AiFieldGenerator {
     }
   }
 
-  /** Pauses every queued row of the organization and tells the fields' readers. */
-  private async pause(scope: OrgScope, reason: AiPauseReason): Promise<void> {
-    const fields = await this.queue.pause(scope, reason);
+  /**
+   * Pauses every queued row of the organization (`detail`: what the
+   * provider rejected) and tells the fields' readers.
+   */
+  private async pause(
+    scope: OrgScope,
+    reason: AiPauseReason,
+    detail?: AiProviderPauseDetail,
+  ): Promise<void> {
+    const fields = await this.queue.pause(scope, reason, { detail: detail ?? null });
     await this.announce(scope, fields);
   }
 
-  /** `schema.changed` with `ai_state` for `fieldIds` (paused or resumed together). */
+  /** `schema.changed` with `ai_state` for `fieldIds` (paused, backed off or resumed together). */
   private async announce(scope: OrgScope, fieldIds: readonly Id<'fld'>[]): Promise<void> {
     if (fieldIds.length === 0 || this.options.onStateChange === undefined) return;
-    const states = await this.queue.statesOf(scope, fieldIds);
-    const changes: AiFieldStateChange[] = [];
-    for (const fieldId of fieldIds) {
-      const field = await this.fields.getById(scope, fieldId);
-      const table =
-        field === undefined ? undefined : await this.tables.getById(scope, field.table_id);
-      const state = states.get(fieldId);
-      if (field === undefined || table === undefined || state === undefined) continue;
-      changes.push({
-        organizationId: scope.organizationId,
-        baseId: table.base_id,
-        tableId: table.id,
-        fieldId,
-        state,
-      });
-    }
-    await this.options.onStateChange(changes);
+    await this.options.onStateChange(await aiFieldStateChanges(this.db, scope, fieldIds));
   }
 
   /** When the next queued row of the field is due (`null`: none queued). */
   private async nextDue(scope: OrgScope, fieldId: Id<'fld'>): Promise<Date | null> {
-    const due = await this.queue.dueFields(scope);
+    const due = await this.queue.dueFields(scope, this.now());
     return due.find((item) => item.fieldId === fieldId)?.dueAt ?? null;
   }
 
@@ -312,6 +345,13 @@ export class AiFieldGenerator {
    * One batch of `fieldId` (the `ai.generate` job runs batches while
    * `status` is `more`, then schedules itself at `nextRunAt`). `batchId` is
    * the `job_…` of the run: the `batch_id` of the audit entries it writes.
+   *
+   * Provider errors: the configuration rejected (`401`, `403`, `404`, an
+   * address or key host refused, the key unreadable) pauses every queued
+   * row of the organization (`provider_error`) with no further call; a
+   * `429`, or {@link AI_FIELD_BREAKER_ERRORS} temporary errors in a row,
+   * backs the organization off (tries unchanged for the `429`); other
+   * temporary errors retry the row; `refused` and `truncated` fail it.
    */
   async runBatch(scope: OrgScope, fieldId: Id<'fld'>, batchId: Id<'job'>): Promise<AiBatchOutcome> {
     const empty = { rows: 0, written: 0, failed: 0, calls: 0, usage: NO_USAGE };
@@ -335,7 +375,7 @@ export class AiFieldGenerator {
       await this.pause(scope, 'quota');
       return { status: 'paused', ...empty, nextRunAt: null, pausedReason: 'quota' };
     }
-    const taken = await this.queue.take(scope, fieldId, AI_FIELD_BATCH_SIZE);
+    const taken = await this.queue.take(scope, fieldId, AI_FIELD_BATCH_SIZE, undefined, this.now());
     if (taken.length === 0) {
       return { status: 'done', ...empty, nextRunAt: await this.nextDue(scope, fieldId) };
     }
@@ -372,7 +412,9 @@ export class AiFieldGenerator {
       map.set(key, [...(map.get(key) ?? []), row]);
     };
     let left: TakenAiRow[] = [];
-    let pausedReason: AiPauseReason | undefined;
+    let stop: AiBatchStop | undefined;
+    // Temporary errors in a row (a call that answered resets it): the circuit breaker.
+    let temporaryInRow = 0;
     for (const [index, row] of taken.entries()) {
       const record = records.get(row.recordId);
       if (record === undefined) {
@@ -387,7 +429,7 @@ export class AiFieldGenerator {
           ((await this.quotaUsedUp(scope, context.timeZone, settings)) ? 'quota' : null);
         if (stopped !== null) {
           left = taken.slice(index);
-          pausedReason = stopped;
+          stop = { kind: 'pause', reason: stopped };
           break;
         }
       }
@@ -419,15 +461,46 @@ export class AiFieldGenerator {
           target,
         );
         calls += result.attempts - 1;
+        temporaryInRow = 0;
         values.push({ recordId: row.recordId, version: record.version, value: result.value });
       } catch (error) {
         // `AI_INVALID_OUTPUT` after repair rounds: every call counts.
         const attempts = error instanceof AppError ? error.params?.['attempts'] : undefined;
         if (typeof attempts === 'number' && attempts > 1) calls += attempts - 1;
-        const temporary = isTemporaryAiError(error);
-        const delay = AI_FIELD_RETRY_DELAYS_MS[row.attempts - 1];
-        if (temporary && delay !== undefined) push(retry, delay, row);
-        else if (error instanceof AppError || error instanceof AiRenderError) {
+        // The same answer for every record until the settings change: no further call.
+        const detail = aiProviderPauseDetailOf(error);
+        if (detail !== null) {
+          left = taken.slice(index);
+          stop = { kind: 'pause', reason: 'provider_error', detail };
+          break;
+        }
+        const limited = aiRateLimitOf(error);
+        if (limited !== null) {
+          const now = this.now();
+          left = taken.slice(index);
+          stop = {
+            kind: 'back_off',
+            until: new Date(now.getTime() + aiBackOffMs(limited.retryAfter, now)),
+          };
+          break;
+        }
+        if (isTemporaryAiError(error)) {
+          temporaryInRow += 1;
+          const delay = AI_FIELD_RETRY_DELAYS_MS[row.attempts - 1];
+          if (delay !== undefined) push(retry, delay, row);
+          else push(failed, aiFailureReason(error), row);
+          if (temporaryInRow >= AI_FIELD_BREAKER_ERRORS) {
+            left = taken.slice(index + 1);
+            stop = {
+              kind: 'back_off',
+              until: new Date(this.now().getTime() + AI_FIELD_BACKOFF_MS),
+            };
+            break;
+          }
+          continue;
+        }
+        if (error instanceof AppError || error instanceof AiRenderError) {
+          if (error instanceof AppError) temporaryInRow = 0;
           push(failed, aiFailureReason(error), row);
         } else {
           await this.queue.requeue(scope, fieldId, taken.slice(index), { refund: true });
@@ -462,16 +535,22 @@ export class AiFieldGenerator {
     for (const [reason, list] of failed) await this.queue.fail(scope, fieldId, list, reason);
     for (const [delay, list] of retry)
       await this.queue.requeue(scope, fieldId, list, { delayMs: delay });
-    if (left.length > 0 && pausedReason !== undefined) {
+    if (stop !== undefined) {
+      // The rows not tried (and the one that stopped the batch) get their try back.
       await this.queue.requeue(scope, fieldId, left, { refund: true });
-      await this.pause(scope, pausedReason);
+      if (stop.kind === 'pause') await this.pause(scope, stop.reason, stop.detail);
+      else await this.announce(scope, await this.queue.backOff(scope, stop.until));
     }
     const failedCount = [...failed.values()].reduce((sum, list) => sum + list.length, 0);
     const durationMs = performance.now() - started;
+    // A batch the provider stopped (paused or backing off) did not do all its rows.
+    const providerStop =
+      stop?.kind === 'back_off' || (stop?.kind === 'pause' && stop.reason === 'provider_error');
+    const status = failedCount === 0 && !providerStop ? 'ok' : 'partial';
     if (calls > 0) {
       recordAiRequest({
         feature: 'field',
-        status: failedCount === 0 ? 'ok' : 'partial',
+        status,
         durationMs,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
@@ -486,7 +565,7 @@ export class AiFieldGenerator {
           entityId: fieldId,
           feature: 'field',
           model: provider.model,
-          status: failedCount === 0 ? 'ok' : 'partial',
+          status,
           attempts: calls,
           usage,
           durationMs,
@@ -498,6 +577,7 @@ export class AiFieldGenerator {
       );
     }
     await this.progress(scope, taken);
+    const pausedReason = stop?.kind === 'pause' ? stop.reason : undefined;
     const nextRunAt = await this.nextDue(scope, fieldId);
     return {
       status:
@@ -513,6 +593,8 @@ export class AiFieldGenerator {
       usage,
       nextRunAt: pausedReason === undefined ? nextRunAt : null,
       ...(pausedReason === undefined ? {} : { pausedReason }),
+      ...(stop?.kind === 'pause' && stop.detail !== undefined ? { pausedDetail: stop.detail } : {}),
+      ...(stop?.kind === 'back_off' ? { backOffUntil: stop.until } : {}),
     };
   }
 
@@ -545,8 +627,10 @@ export class AiFieldGenerator {
   /**
    * The rescue of one organization (cron `ai.generation_rescue`, every
    * minute): leases that ended go back to `queued`; paused rows resume once
-   * their reason is gone (AI and record data on again, quota reset); every
-   * field with queued rows gets its `ai.generate` job (a lost one too).
+   * their reason is gone (AI and record data on again, quota reset) — never
+   * `provider_error` ones, which resume when the AI settings or the key
+   * change; every field with queued rows gets its `ai.generate` job (a lost
+   * one too).
    */
   async rescue(scope: OrgScope): Promise<Id<'fld'>[]> {
     await this.queue.releaseExpired(scope);
@@ -573,6 +657,56 @@ export class AiFieldGenerator {
     }
     return due.map((item) => item.fieldId);
   }
+}
+
+/**
+ * `ai_state` of `fieldIds` with the table and base each belongs to, for
+ * `schema.changed` (fields gone or without their table are left out).
+ */
+export async function aiFieldStateChanges(
+  db: Db,
+  scope: OrgScope,
+  fieldIds: readonly Id<'fld'>[],
+): Promise<AiFieldStateChange[]> {
+  if (fieldIds.length === 0) return [];
+  const fields = new FieldsRepository(db);
+  const tables = new TablesRepository(db);
+  const states = await new AiGenerationQueueRepository(db).statesOf(scope, fieldIds);
+  const changes: AiFieldStateChange[] = [];
+  for (const fieldId of fieldIds) {
+    const field = await fields.getById(scope, fieldId);
+    const table = field === undefined ? undefined : await tables.getById(scope, field.table_id);
+    const state = states.get(fieldId);
+    if (field === undefined || table === undefined || state === undefined) continue;
+    changes.push({
+      organizationId: scope.organizationId,
+      baseId: table.base_id,
+      tableId: table.id,
+      fieldId,
+      state,
+    });
+  }
+  return changes;
+}
+
+/**
+ * In `tx` (the save of the AI settings, or the new value of the key they
+ * use): rows paused because the provider rejected the configuration go back
+ * to `queued` and each of their fields gets its `ai.generate` job. Returns
+ * those fields (their `schema.changed` goes out after commit).
+ */
+export async function resumeAiProviderPause(
+  db: Db,
+  tx: Tx,
+  organizationId: Id<'org'>,
+): Promise<Id<'fld'>[]> {
+  const fieldIds = await new AiGenerationQueueRepository(db).resume(orgScope(organizationId, tx), [
+    'provider_error',
+  ]);
+  for (const fieldId of fieldIds) {
+    await enqueueAiGeneration(tx, organizationId, fieldId, new Date());
+  }
+  return fieldIds;
 }
 
 /** The causation of the writes that queued `rows` (the deepest one: the loop guard keeps counting). */

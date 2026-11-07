@@ -84,6 +84,20 @@
     "queued": "Waiting for AI…",
     "running": "Generating with AI…",
     "failed": "AI could not generate this value",
-    "paused": "AI paused: see the note above the grid"
+    "paused": "AI paused: see the note above the grid",
+    "failedReason": {
+      "invalid_output": "AI could not generate this value: its answer did not fit the field",
+      "provider_error": "AI could not generate this value: the AI provider answered with an error",
+      "timeout": "AI could not generate this value: the AI provider did not answer in time",
+      "render_error": "AI could not generate this value: a field of the prompt is gone or reads another record",
+      "refused": "AI could not generate this value: the model refused to answer",
+      "truncated": "AI could not generate this value: the answer was cut off at its length limit"
+    },
+    "pausedReason": {
+      "quota": "AI paused: the organization’s AI quota for today is used up",
+      "ai_disabled": "AI paused: AI is turned off for the organization",
+      "record_data_disabled": "AI paused: the AI may no longer read record values",
+      "provider_error": "AI paused: the AI provider rejected the settings (see the note above the grid)"
+    }
   }
 }

@@ -82,6 +82,8 @@ describe('AI generation queue (T910)', () => {
       failed: 0,
       paused: 0,
       paused_reason: null,
+      paused_detail: null,
+      retry_at: null,
     });
     expect(await queue().cellStates(scopeB(), [fieldA], [REC_1, REC_2])).toEqual([]);
     expect(await queue().take(scopeB(), fieldA, 20)).toEqual([]);
@@ -111,7 +113,7 @@ describe('AI generation queue (T910)', () => {
     await queue().finish(scopeA(), fieldA, taken);
     expect(await queue().recordIdsOf(scopeA(), fieldA, 'queued')).toEqual([REC_2]);
     expect(await queue().cellStates(scopeA(), [fieldA], [REC_1, REC_2])).toEqual([
-      { field_id: fieldA, record_id: REC_2, status: 'queued' },
+      { field_id: fieldA, record_id: REC_2, status: 'queued', reason: null },
     ]);
     await queue().clear(scopeA(), fieldA);
   });
@@ -135,12 +137,88 @@ describe('AI generation queue (T910)', () => {
       failed: 1,
       paused: 2,
       paused_reason: 'quota',
+      paused_detail: null,
+      retry_at: null,
     });
     // Another reason does not resume them.
     expect(await queue().resume(scopeA(), ['ai_disabled'])).toEqual([]);
     expect(await queue().resume(scopeA(), ['quota'], fieldA)).toEqual([fieldA]);
     expect(await queue().recordIdsOf(scopeA(), fieldA, 'queued')).toEqual([REC_1, REC_3]);
     await queue().clear(scopeA(), fieldA);
+  });
+
+  it('T1002: pauses with what the provider rejected; resumes by reason, never across organizations', async () => {
+    await queue().enqueue(scopeA(), fieldA, [REC_1, REC_2]);
+    await queue().enqueue(scopeB(), fieldB, [REC_3]);
+    expect(await queue().pause(scopeA(), 'provider_error', { detail: 'unauthorized' })).toEqual([
+      fieldA,
+    ]);
+    expect((await queue().statesOf(scopeA(), [fieldA])).get(fieldA)).toMatchObject({
+      paused: 2,
+      paused_reason: 'provider_error',
+      paused_detail: 'unauthorized',
+    });
+    expect(await queue().cellStates(scopeA(), [fieldA], [REC_1])).toEqual([
+      {
+        field_id: fieldA,
+        record_id: REC_1,
+        status: 'paused',
+        reason: 'provider_error:unauthorized',
+      },
+    ]);
+    // B's queue is untouched; resuming another reason or in B changes nothing of A.
+    expect(await queue().recordIdsOf(scopeB(), fieldB, 'queued')).toEqual([REC_3]);
+    expect(
+      await queue().resume(scopeA(), ['quota', 'ai_disabled', 'record_data_disabled']),
+    ).toEqual([]);
+    expect(await queue().resume(scopeB(), ['provider_error'])).toEqual([]);
+    expect(await queue().resume(scopeA(), ['provider_error'])).toEqual([fieldA]);
+    expect(await queue().recordIdsOf(scopeA(), fieldA, 'queued')).toEqual([REC_1, REC_2]);
+    expect((await queue().statesOf(scopeA(), [fieldA])).get(fieldA)).toMatchObject({
+      queued: 2,
+      paused: 0,
+      paused_reason: null,
+      paused_detail: null,
+    });
+    await queue().clear(scopeA(), fieldA);
+    await queue().clear(scopeB(), fieldB);
+  });
+
+  it('T1002: backs an organization off — nothing taken until then, tries kept, rows queued later wait too', async () => {
+    const now = new Date();
+    const until = new Date(now.getTime() + 30_000);
+    await queue().enqueue(scopeA(), fieldA, [REC_1, REC_2]);
+    await queue().enqueue(scopeB(), fieldB, [REC_3]);
+    const [first, second] = await queue().take(scopeA(), fieldA, 2, undefined, now);
+    if (first === undefined || second === undefined) throw new Error('nothing taken');
+    // REC_1's try is given back; REC_2 waits for its own retry later than the back-off.
+    await queue().requeue(scopeA(), fieldA, [first], { refund: true });
+    await queue().requeue(scopeA(), fieldA, [second], { delayMs: 120_000 });
+    expect(await queue().backOff(scopeA(), until)).toEqual([fieldA]);
+    expect(await queue().backOffUntil(scopeA(), now)).toEqual(until);
+    expect(await queue().backOffUntil(scopeB(), now)).toBeNull();
+    expect((await queue().statesOf(scopeA(), [fieldA])).get(fieldA)?.retry_at).toBe(
+      until.toISOString(),
+    );
+    expect((await queue().statesOf(scopeB(), [fieldB])).get(fieldB)?.retry_at).toBeNull();
+    // Nothing of A is taken, a row queued meanwhile neither; B goes on.
+    await queue().enqueue(scopeA(), fieldA, [REC_3]);
+    const later = new Date(now.getTime() + 10_000);
+    expect(await queue().take(scopeA(), fieldA, 20, undefined, later)).toEqual([]);
+    expect((await queue().take(scopeB(), fieldB, 20, undefined, later)).length).toBe(1);
+    expect((await queue().dueFields(scopeA(), later)).map((item) => item.dueAt.getTime())).toEqual([
+      until.getTime(),
+    ]);
+    // After it: the rows due go on with their tries; REC_2 keeps its own later retry.
+    const after = new Date(until.getTime() + 1_000);
+    expect(await queue().backOffUntil(scopeA(), after)).toBeNull();
+    const taken = await queue().take(scopeA(), fieldA, 20, undefined, after);
+    expect(taken.map((row) => [row.recordId, row.attempts])).toEqual([
+      [REC_1, 1],
+      [REC_3, 1],
+    ]);
+    await queue().clear(scopeA(), fieldA);
+    await queue().clear(scopeB(), fieldB);
   });
 
   it('gives expired leases back and lists the organizations the rescue must visit', async () => {
