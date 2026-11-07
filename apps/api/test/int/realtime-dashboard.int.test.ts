@@ -8,6 +8,7 @@
  * subscription (`error NOT_FOUND`, like every channel, T210).
  */
 import {
+  DASHBOARD_DATA_CHANGED_GATHER_MS,
   createdApiTokenSchema,
   dashboardSchema,
   roleListSchema,
@@ -228,20 +229,22 @@ describe('realtime dashboard channel (T807, P69)', () => {
     await admin.expectNone(dataChanged, 6_000);
   });
 
-  it('50 writes in 5 s give one or two messages', async () => {
+  it('50 writes give one message per 5 s gathering window', async () => {
     const sales1 = await watch('u_sales1');
     expect(await sales1.subscribe(channel)).toMatchObject({ type: 'subscribed' });
     const started = Date.now();
     for (let index = 0; index < 50; index += 1) {
       ok(await patchOrders('u_editor', [{ id: r1, fields: { amount: 1_000 + index } }]));
     }
-    const elapsed = Date.now() - started;
-    expect(elapsed).toBeLessThan(5_000);
+    // The writes take under 5 s alone, longer on a loaded machine (QA S8: the old
+    // "< 5 s, at most 2 messages" failed then): the windows they span bound the count.
+    const windows = Math.ceil((Date.now() - started) / DASHBOARD_DATA_CHANGED_GATHER_MS) + 1;
     // Let the last gathering window close.
-    await new Promise((resolve) => setTimeout(resolve, 6_000));
+    await new Promise((resolve) => setTimeout(resolve, DASHBOARD_DATA_CHANGED_GATHER_MS + 1_000));
     const hints = sales1.received.filter(dataChanged);
     expect(hints.length).toBeGreaterThanOrEqual(1);
-    expect(hints.length).toBeLessThanOrEqual(2);
+    expect(hints.length).toBeLessThanOrEqual(windows);
+    expect(hints.length).toBeLessThan(10);
   });
 
   it('configuration changes send dashboard.changed with the new version', async () => {
