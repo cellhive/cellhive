@@ -11,6 +11,7 @@ import { Counter, Histogram } from 'prom-client';
 
 import { AccessService } from '../../common/access/access.service.js';
 import { RouteScopeService } from '../../common/access/route-scope.service.js';
+import { principalKeyOf } from '../../common/auth/principal.js';
 import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { AppLogger } from '../../common/logging/app-logger.js';
 import { ApiRateLimits } from '../../common/rate-limit/api-rate-limits.js';
@@ -79,7 +80,7 @@ export class McpService implements OnApplicationShutdown {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(AccessService) private readonly access: AccessService,
     @Inject(RouteScopeService) scopes: RouteScopeService,
-    @Inject(ApiRateLimits) limits: ApiRateLimits,
+    @Inject(ApiRateLimits) private readonly limits: ApiRateLimits,
     @Inject(DB) db: Db,
     @Inject(WorkspaceService) workspaces: WorkspaceService,
     @Inject(BaseService) bases: BaseService,
@@ -174,6 +175,14 @@ export class McpService implements OnApplicationShutdown {
       throw new AppError('MCP_DISABLED', {
         detail: 'MCP is turned off for this organization (settings.mcp.enabled).',
       });
+    }
+    // A JSON-RPC batch (2025-03-26 clients) counts as one request per message
+    // against the token's limit; the interceptor counted the first (QA S8).
+    if (Array.isArray(request.body)) {
+      const key = principalKeyOf(principal);
+      for (let index = 1; index < request.body.length; index += 1) {
+        await this.limits.hitPrincipal(key);
+      }
     }
     return this.endpoint.handle(webRequestOf(request, this.config.publicUrl), request.body, {
       principal,

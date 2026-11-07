@@ -28,11 +28,13 @@ import {
 import { Client as LegacyClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport as LegacyTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { ApiRateLimits } from '../../src/common/rate-limit/api-rate-limits.js';
 import { DashboardModule } from '../../src/modules/dashboard/dashboard.module.js';
 import { WidgetQueryLimiter } from '../../src/modules/dashboard/widget-query-limiter.js';
 import { MetricsService } from '../../src/modules/metrics/metrics.service.js';
+import { RecordService } from '../../src/modules/record/record.service.js';
 
 import { createMigratedDatabase, createTestDb, type TestDatabase } from './database.js';
 import { listen } from './realtime-support.js';
@@ -1106,6 +1108,56 @@ describe('MCP endpoint (T920)', () => {
         }) as unknown,
       },
     ]);
+  });
+
+  it('a JSON-RPC batch counts each message against the token limit; its calls run one at a time (QA S8)', async () => {
+    expect((await setMcp({ enabled: true })).statusCode).toBe(200);
+    const token = await createToken('u_admin', ['schema:read', 'records:read']);
+    const limits = a.app.get(ApiRateLimits);
+    const rule = limits.perPrincipal;
+    const records = a.app.get(RecordService);
+    const query = records.queryRecords.bind(records);
+    let running = 0;
+    let peak = 0;
+    const spy = vi.spyOn(records, 'queryRecords').mockImplementation(async (...args) => {
+      running += 1;
+      peak = Math.max(peak, running);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return await query(...args);
+      } finally {
+        running -= 1;
+      }
+    });
+    const call = (id: number) => ({
+      jsonrpc: '2.0',
+      id,
+      method: 'tools/call',
+      params: { name: 'query_records', arguments: { table_id: fx.orders.id, limit: 1 } },
+    });
+    const headers = { ...bearer(token), 'mcp-protocol-version': '2025-06-18' };
+    try {
+      limits.perPrincipal = { limit: 8, windowSeconds: 60 };
+      const small = await post(headers, [call(1), call(2), call(3), call(4)]);
+      expect(small.status).toBe(200);
+      const results = (await small.json()) as { result?: { isError?: boolean } }[];
+      const succeeded = results.map(
+        (result) => result.result !== undefined && result.result.isError !== true,
+      );
+      expect(succeeded).toEqual([true, true, true, true]);
+      // One database statement at a time, not four at once on the pool.
+      expect(peak).toBe(1);
+      // 4 + 6 messages > 8 requests of the token: the whole batch is refused.
+      const large = await post(
+        headers,
+        Array.from({ length: 6 }, (_, index) => call(10 + index)),
+      );
+      expect(large.status).toBe(429);
+      expect((await problemOf(large)).code).toBe('RATE_LIMITED');
+    } finally {
+      limits.perPrincipal = rule;
+      spy.mockRestore();
+    }
   });
 
   it('counts requests and tool calls without organization, user or token labels', async () => {

@@ -2958,7 +2958,7 @@ PATCH  /api/v1/orgs/:orgId { "settings": { "mcp": { "enabled"?: bool, "allow_wri
   |---|---|---|
   | 1 | Không có `Authorization` (kể cả có cookie session hợp lệ), scheme khác `Bearer`, token sai/không có/thu hồi/hết hạn, org tắt `api_tokens`, user không `active` | `401` như §26.1 + `WWW-Authenticate: Bearer error="invalid_token"`; cookie không bao giờ được đọc ở route này, không kiểm CSRF; tính vào giới hạn Bearer sai theo IP |
   | 2 | Token thiếu `schema:read` (scope của route, §26.3) | `403 INSUFFICIENT_SCOPE`, `required: ["schema:read"]` |
-  | 3 | Quá 60 req/s/token | `429 RATE_LIMITED` + `Retry-After` |
+  | 3 | Quá 60 req/s/token (body là mảng — lô JSON-RPC: mỗi thông điệp tính một) | `429 RATE_LIMITED` + `Retry-After` cho cả lô |
   | 4 | Có header `Origin` khác origin của `PUBLIC_URL` (chống DNS rebinding) | `403 PERMISSION_DENIED` |
   | 5 | `settings.mcp.enabled = false` của org token | `403 MCP_DISABLED` |
   | 6 | JSON-RPC | xem dưới |
@@ -3037,7 +3037,7 @@ Scope `records:write`; chỉ có trong `tools/list` (và gọi được) khi tok
 |---|---|
 | Thời kỳ giao thức | `2026-07-28` (envelope `_meta`); client 2025 qua `initialize` (`2025-11-25` … `2024-10-07`) — theo `@modelcontextprotocol/server` 2.4.0 |
 | Body request | ≤ 10 MiB (giới hạn JSON của API, `JSON_BODY_LIMIT_BYTES`) |
-| Rate limit | 60 req/s/token (mọi request MCP); 20 req/s/(token, base) mỗi lời gọi tool có base |
+| Rate limit | 60 req/s/token (mọi request MCP; một lô JSON-RPC của client 2025-03-26 tính mỗi thông điệp là một request — QA S8); 20 req/s/(token, base) mỗi lời gọi tool có base; các lời gọi tool của một request chạy lần lượt |
 | `list_bases` (`MCP_LIST_BASES_LIMIT`) | ≤ 200 base |
 | `list_tables` (`MCP_LIST_TABLES_LIMIT`), `describe_table` (`MCP_DESCRIBE_FIELDS_LIMIT`) | ≤ 200 table, ≤ 200 field |
 | Option mỗi field `select` (`MCP_FIELD_OPTIONS_LIMIT`) | ≤ 50 tên |
