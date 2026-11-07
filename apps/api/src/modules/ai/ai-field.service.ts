@@ -274,7 +274,8 @@ export class AiFieldService {
       await enqueueAiGeneration(tx, scope.organizationId, fieldId, new Date());
       return created;
     });
-    // Rough upper bound: the prompt (values unknown here) and the answer, per row.
+    // A rough figure, not an upper bound: the stored prompt and the longest answer per row —
+    // the values, the instructions and repair calls are not counted (CONTRACTS §29.5).
     const perRow = estimateTokens(ai.prompt) + ai.max_output_tokens;
     return { job_id: job.id, rows: ids.length, estimated_tokens: ids.length * perRow };
   }

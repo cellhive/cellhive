@@ -86,3 +86,14 @@ MCP clients bring their own model, so there is nothing to score automatically; t
 8. The audit log has one `mcp.records_read` per read call with its `row_count` and no cell values.
 
 Record per client: connected (yes/no), tools called per question, answers right (yes/no), any error code, and anything the client did that the guide does not say. Turn MCP off again afterwards.
+
+## 5. Open check: Anthropic's OpenAI-compatible endpoint
+
+The setup screen's preset note (`orgAi.provider.presetNote.anthropic`) and ADR-39 say this endpoint answers JSON "from instructions in the prompt only" (it would ignore `response_format`); Anthropic's documentation now says it accepts `json_schema` with `strict: true` and refuses `json_object` (`docs/integrations/ai.md` §2.3). Nobody has run Cellhive against it yet. With a workspace-scoped key:
+
+```bash
+S8_AI_EVAL=1 S8_AI_BASE_URL=https://api.anthropic.com/v1 S8_AI_MODEL=<model id> S8_AI_API_KEY=… \
+  pnpm --filter @cellhive/api test:int test/ai-eval/formula
+```
+
+The first line printed gives the rung "Test connection" found. Only if it is `json_schema` (or `json_object`), update the preset note (`en` and `vi`) and the ADR-39 wording in the same change; otherwise leave them as they are.

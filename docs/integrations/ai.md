@@ -72,9 +72,15 @@ The formula, the draft and Ask AI store nothing: the person checks the result an
 
 ### 1.2 Which model
 
-<!-- T917: replace this placeholder with the evaluated models (name, quantization, hardware, score per feature). -->
+<!-- PLACEHOLDER (BACKLOG T917): no real model has been evaluated yet. Run the eval kit
+     (`apps/api/test/ai-eval/README.md`: `S8_AI_EVAL=1 S8_AI_BASE_URL=… S8_AI_MODEL=…
+     S8_AI_REPORT=<dir> pnpm --filter @cellhive/api test:int test/ai-eval`) with at least one
+     local model (open-weight 7–9B instruct, 8 GB GPU) and one hosted model, then replace this
+     block with a table: model and version, quantization, hardware, and per suite (automation
+     draft, Ask AI, formula) the score out of 20, repair rounds and p50/p95 latency. A local
+     model under 12/20 on a suite: name the minimum model for that feature here instead. -->
 
-> **Evaluated models: to be added.** The Cellhive project is measuring local models (open-weight 7–9B instruction-tuned models that fit an 8 GB GPU) and a hosted model on the formula, automation draft and Ask AI tasks. The models, their quantization, the hardware and the results will be listed here.
+> **Evaluated models: to be added.** The Cellhive project is measuring local models (open-weight 7–9B instruction-tuned models that fit an 8 GB GPU) and a hosted model on 20 automation sentences, 20 Ask AI questions and 20 formula descriptions on the demo data. The models, their quantization, the hardware and the results will be listed here. To measure a model of your own the same way, see [`apps/api/test/ai-eval/README.md`](../../apps/api/test/ai-eval/README.md).
 
 Until then:
 
@@ -86,7 +92,7 @@ Until then:
 
 ## 2. Providers
 
-What every provider must offer: `POST {base URL}/chat/completions` without streaming, and ideally `GET {base URL}/models`. Cellhive sends only `model`, `messages`, `stream: false`, the answer token limit (as `max_tokens` or `max_completion_tokens`) and, when it asks for JSON, `response_format`. It never sends `temperature`, `top_p`, `seed`, `n` or `stream_options`, which some compatible servers refuse. The only header it adds is `Authorization: Bearer <key>`, and only when a key is set. It does not follow redirects (a `3xx` answer is an error) and reads at most 1 MiB of answer.
+What every provider must offer: `POST {base URL}/chat/completions` without streaming, and ideally `GET {base URL}/models`. Cellhive sends only `model`, `messages`, `stream: false`, the answer token limit (as `max_tokens` or `max_completion_tokens`) and, when it asks for JSON, `response_format`. It never sends `temperature`, `top_p`, `seed`, `n` or `stream_options`, which some compatible servers refuse. Besides the standard `Accept`, `Content-Type` and `User-Agent: Cellhive/0.1` headers, the only header it adds is `Authorization: Bearer <key>`, and only when a key is set. It does not follow redirects (a `3xx` answer is an error) and reads at most 1 MiB of answer.
 
 | Provider | Base URL | Key | Allowlist entry (§3) | Notes |
 | --- | --- | --- | --- | --- |
@@ -250,12 +256,12 @@ Things to know:
 | --- | --- | --- |
 | AI formula, automation draft | Work | Work; drafts may also contain AI steps |
 | Ask AI | Numbers and the interpretation only, no written summary | Adds a short summary written from the totals |
-| AI fields | Cannot be created or changed (`422 AI_RECORD_DATA_DISABLED`); existing ones pause (`record_data_disabled`) and keep their values | Work |
+| AI fields | Cannot be created, and their AI settings cannot be changed (`422 AI_RECORD_DATA_DISABLED`; renaming one or removing its AI still works); existing ones pause (`record_data_disabled`) and keep their values | Work |
 | AI steps | Cannot be saved (`422 AUTOMATION_INVALID` / `AI_RECORD_DATA_DISABLED`); steps of existing automations fail with `ai_unavailable` | Work |
 
 ### 4.3 `log_prompts` and the audit log
 
-Every AI operation writes **one** `ai.requested` entry to the audit log (**Organization settings** → **Audit log**, category "Automations, dashboards, AI"): one per interactive request (connection tests included), one per background batch of an AI field (up to 20 records), one per run of an AI step. It holds the feature, the model, the status (`ok` or the error code), the number of attempts, the token counts, the duration and the answer format, never the prompt. The server log has one line per request with the feature, status, provider host, tokens and time, never the URL, a prompt, a value or the key.
+Every AI operation that reaches the provider writes **one** `ai.requested` entry to the audit log (**Organization settings** → **Audit log**, category "Automations, dashboards, AI"): one per interactive request past the configuration, rate and quota checks (connection tests included — a request refused with `AI_NOT_CONFIGURED`, `RATE_LIMITED` or `AI_QUOTA_EXCEEDED` writes none), one per background batch of an AI field (up to 20 records), one per run of an AI step that called the provider. It holds the feature, the model, the status (`ok`, `partial` for a batch where some records failed, or the error code), the number of attempts, the token counts, the duration and the answer format, never the prompt. The server log has one line per request with the feature, status, provider host, tokens and time, never the URL, a prompt, a value or the key.
 
 **Keep prompts and answers in the audit log** (`log_prompts`, off by default) adds to those entries what the person typed (the formula description, the draft sentence, the question) and the answer (the formula, the draft by names, the Ask AI plan), up to 4 KB each. It never adds anything for AI fields and AI steps, nor Ask AI numbers or summaries. People sometimes type values into their questions, so treat the audit log as holding record data once this is on. Audit entries are kept for `AUDIT_RETENTION_DAYS` (default 365).
 
@@ -287,7 +293,7 @@ When the quota is used up:
 ### 5.2 Estimates before spending
 
 - **Preview 5 rows** of an AI field runs the prompt on 5 records and shows "Every row (N): about T tokens": the average tokens of the preview times the records you can read.
-- **Generate** shows, for each choice, "N rows · about T tokens", from the preview's average when there is one. Without a preview it uses the server's figure, `rows × (ceil(prompt characters / 3) + longest answer)`, which does not count the values of the fields: preview first for a realistic number.
+- **Generate** shows, for each choice, "N rows · about T tokens", from the preview's average when there is one. Without a preview it estimates `rows × (ceil(prompt characters / 3) + longest answer)` (the API's `estimated_tokens` uses the same rule on the stored prompt), which counts neither the values of the fields nor the instructions or repair calls — a rough figure, not a ceiling: preview first for a realistic number.
 - The **Longest answer** setting (16–2,000 tokens, default 300) caps the answer of each record. About 3 characters make a token.
 
 ### 5.3 Rate, concurrency and time limits
@@ -301,7 +307,7 @@ When the quota is used up:
 AI fields are generated by the worker on a runner of its own, so slow model answers never hold the job slots that events, automations and HTTP deliveries use (`WORKER_CONCURRENCY`).
 
 - **`AI_CONCURRENCY`** (worker, default 2, 1–100): how many AI fields one worker process generates at once. Set it in `.env` and restart the `worker` (or `app`) container. Match it to what your provider serves in parallel: a single local GPU often serves one or a few requests at a time, and extra parallel requests only wait there.
-- **One field is generated one record at a time** (one request per record, in batches of 20). `AI_CONCURRENCY` therefore runs several fields side by side, never several records of one field. For example, 2,000 records with a model that answers in 3 seconds take roughly 2,000 × 3 s ≈ 1 h 40 min, whatever the setting.
+- **One field is generated one record at a time** (one request per record, in batches of 20). `AI_CONCURRENCY` therefore runs several fields side by side, never several records of one field. For example, 2,000 records with a model that answers in 3 seconds take roughly 2,000 × 3 s ≈ 1 h 40 min, whatever the setting. Measured with a provider answering in 200 ms: 2,000 records of one field took 7 minutes (4.7 records per second), the same 2,000 records split over two fields 3.5 minutes; meanwhile the events of other records were still dispatched in 22 ms (p50; p95 under 50 ms) (CONTRACTS §9, S8 bench).
 - Temporary errors (provider `429`, `5xx`, network errors, timeouts) are retried after 30 seconds, 2 minutes and 10 minutes, then the cell fails. A batch taken by a worker that stopped is picked up again after its 5-minute lease.
 - **AI steps** run inside the automation's job on the main runner: each holds a `WORKER_CONCURRENCY` slot for the length of its call (up to the request timeout). Raise `WORKER_CONCURRENCY` if many automations call AI.
 
@@ -359,7 +365,8 @@ A prompt reads fields of **the same record**, directly or through formulas, and 
 | An attachment, a button, another AI field, or the field itself | `INVALID_FIELD_TYPE` |
 | A field you cannot read | `UNKNOWN_FIELD` (the same as a field that does not exist) |
 | `REGEXMATCH`, `REGEXEXTRACT`, `REGEXREPLACE` in an expression | `UNSUPPORTED_FUNCTION` |
-| A formula that reads this AI field while the prompt reads the formula | `FORMULA_CYCLE` |
+
+A formula that reads this AI field while the prompt reads the formula is a cycle: `422 FORMULA_CYCLE` (`params.cycle`), as for formulas.
 
 If a formula used by the prompt is changed later to read another table, Cellhive stops sending those records: their cells fail (reason `render_error`) and the provider receives nothing.
 
@@ -406,20 +413,21 @@ Two steps in the AI group of the builder's **+** menu. Both read fields of the *
 
 **When you save** (`422 AUTOMATION_INVALID`, with the path of the step), the prompt follows the rules of AI fields (§6.3: same record only), with trigger data (`[@…]`) and earlier steps not allowed in it. The target field must have the right type, must not be an AI or computed field (`FIELD_READ_ONLY`), and you must be able to edit it (`PERMISSION_DENIED`). AI off or record values off: `AI_NOT_CONFIGURED` or `AI_RECORD_DATA_DISABLED` at the step.
 
-**When it runs**, the step reads the prompt's fields with the permissions of the person the automation runs as, checks the quota, makes one request (with up to 2 repair rounds) and, when the step has a target field, writes it like **Update record**: a normal record change that other automations can react to. A record outside that person's edit rules is not written; the step still succeeds (`skipped_not_editable`).
+**When it runs**, the step reads the prompt's fields with the permissions of the person the automation runs as, checks the quota, makes one request (**Classify with AI**: up to 2 repair rounds; a text is never repaired) and, when the step has a target field, writes it like **Update record**: a normal record change that other automations can react to. A record outside that person's edit rules is not written; the step still succeeds (`skipped_not_editable`).
 
 | Step error | Cause | Retried |
 | --- | --- | --- |
 | `ai_unavailable` | AI is off or not set up, or record values are not allowed (`params.reason`: `ai_disabled`, `record_data_disabled`) | No |
 | `ai_quota_exceeded` | The organization's daily quota is used up (`params.reset_at`) | **No**: the builder warns about this on every AI step |
-| `ai_invalid_output` | No valid answer after the repair rounds (an option outside the field's, a text over 10,000 characters); the field is not changed | No |
+| `ai_invalid_output` | No valid answer: an option outside the field's after the repair rounds, or a text over 10,000 characters; the field is not changed | No |
 | `ai_provider_error` | The provider refused for good: an HTTP error, a blocked address, the key's host, a refusal, an answer cut off (`params.reason`, `params.status`) | No |
 | `temporary_error` | The provider answered `429` or `5xx`, timed out, or could not be reached (`params.cause`) | Yes, like every temporary error of an automation |
+| `permission_denied` / `invalid_value` | The person it runs as can no longer write the target field, or a field of the prompt can no longer be read or was deleted (`invalid_value`, `params.error = UNKNOWN_FIELD`) | No |
 
 - Turning AI or record values off later does **not** turn automations off: their AI steps fail with `ai_unavailable` until the setting is back.
 - The run history shows only the ids and numbers of AI output; the text and the option name are hidden.
 - A **Send notification** step that contains AI text reaches only recipients who can read the trigger record and the fields named in the AI step's prompt.
-- Each run of an AI step writes one `ai.requested` audit entry, never with its prompt or text, even with `log_prompts` on.
+- Each run of an AI step that calls the provider writes one `ai.requested` audit entry, never with its prompt or text, even with `log_prompts` on.
 
 ---
 
@@ -454,7 +462,7 @@ The same applies to members' MCP clients, with more at stake because those clien
 | `422 AI_NOT_CONFIGURED` | Same cause: AI is off for the organization, or has no base URL or model. |
 | `422 AI_RECORD_DATA_DISABLED`; "AI field (needs record values)" disabled | The feature sends record values and **Let AI see record values** is off (§4.2). |
 | `422 VALIDATION_FAILED` / `RECORD_DATA_NOT_CONFIRMED` | API only: send `"confirm": true` with `"allow_record_data": true`. |
-| `422 VALIDATION_FAILED` / `INVALID_URL` on the base URL | Not `http`/`https`, contains a user name, query or fragment, or is longer than 2,048 characters. |
+| `422 VALIDATION_FAILED` / `INVALID_URL` on the base URL | Not `http`/`https`, or contains a user name, query or fragment. Longer than 2,048 characters is `TOO_BIG`. |
 | `422 VALIDATION_FAILED` / `SECRET_HOST_NOT_ALLOWED` on the key | The base URL is an IP address, which cannot hold a key: use a host name. |
 | Test: "Cellhive may not call …" (`ssrf_blocked`) | The host needs an allowlist entry: click **Allow `host:port`** (§3). If it says internal addresses are closed, the instance runs `HTTP_PRIVATE_ALLOWLIST=off` (§3.1). If the entry exists already, the address is one Cellhive never calls, or the name does not resolve from the Cellhive containers. |
 | Test: "Cellhive could not reach the provider" (`network`) | Wrong host or port, the server is down, or it listens on `127.0.0.1` only (Ollama: `OLLAMA_HOST=0.0.0.0:11434`, §2.4). In Docker, `localhost` is the container itself (§3). |
@@ -479,4 +487,4 @@ The same applies to members' MCP clients, with more at stake because those clien
 | AI field cells fail | §6.6. `render_error`: a formula of the prompt now reads another table. |
 | AI field locked for some people | They cannot read every field that goes into it (§6.4). |
 | A local model answers badly on large bases | Its context window is too small for the prompt: raise it (Ollama: `OLLAMA_CONTEXT_LENGTH`, §2.4). |
-| AI steps fail with `ai_unavailable`, `ai_quota_exceeded`, `ai_invalid_output` or `ai_provider_error` | §7. None of them is retried; `temporary_error` is. |
+| AI steps fail with `ai_unavailable`, `ai_quota_exceeded`, `ai_invalid_output`, `ai_provider_error`, `permission_denied` or `invalid_value` | §7. None of them is retried; `temporary_error` is. |
