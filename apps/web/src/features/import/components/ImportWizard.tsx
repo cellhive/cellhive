@@ -105,10 +105,12 @@ export function ImportWizard({ baseId, target, onClose }: ImportWizardProps) {
     if (!guarded) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
-      // Escape inside a menu or list of the step closes that first.
+      // Escape inside a menu or list of the step, or on an open field list (T1010), closes that first.
       if (
         event.target instanceof Element &&
-        event.target.closest('[role="listbox"], [role="menu"]')
+        event.target.closest(
+          '[role="listbox"], [role="menu"], [role="combobox"][aria-expanded="true"]',
+        )
       )
         return;
       // Before the dialog closes itself (its `cancel` follows this key).

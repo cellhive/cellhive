@@ -359,14 +359,24 @@ test.describe('T318 import and export', () => {
     await wizard(page).getByRole('button', { name: 'Next' }).click();
 
     // "Giá" and "Mô tả" match fields; the name column is mapped by hand; "Mã kho" has no field.
-    await expect(wizard(page).getByLabel('Field for column Giá')).toHaveValue(
-      ids.fields['Giá'] ?? '',
-    );
-    await expect(wizard(page).getByLabel('Field for column Mô tả')).toHaveValue(
-      ids.fields['Mô tả'] ?? '',
+    const target = (column: string) =>
+      wizard(page).getByRole('combobox', { name: `Field for column ${column}`, exact: true });
+    await expect(target('Giá')).toHaveText('Giá');
+    await expect(target('Mô tả')).toHaveText('Mô tả');
+    await expect(target('Tên sản phẩm')).toHaveText('Do not import');
+    // Sample values under each column name (T1010).
+    await expect(wizard(page).getByTestId('import-column-row').nth(0)).toContainText(
+      'Bàn gỗ · Ghế xoay · Tủ sách',
     );
     await expect(wizard(page).getByText('Not imported: no field with this name')).toHaveCount(2);
-    await wizard(page).getByLabel('Field for column Tên sản phẩm').selectOption({ label: 'Name' });
+    // Keyboard: the list opens on the current choice, ↓ moves, Enter picks (T1010).
+    await target('Tên sản phẩm').focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(wizard(page).getByRole('listbox')).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(target('Tên sản phẩm')).toHaveText('Name');
+    await expect(target('Tên sản phẩm')).toBeFocused();
     await expect(wizard(page).getByText('Not imported: no field with this name')).toHaveCount(1);
     await expectNoSeriousA11yViolations(page, 'import append mapping');
     await wizard(page).getByRole('button', { name: 'Import 5 rows' }).click();

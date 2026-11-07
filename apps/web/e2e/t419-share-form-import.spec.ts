@@ -370,8 +370,11 @@ test.describe('T419 share, form and import with links and attachments', () => {
     const hint = wizard.getByTestId('import-title-hint');
     await expect(hint).toContainText('Khách → Khách: titles of records of Khách hàng T419');
     await expect(hint).toContainText('separate the titles with commas');
-    const photos = wizard.getByLabel('Field for column Ảnh').locator('option', { hasText: 'Ảnh' });
+    await wizard.getByRole('combobox', { name: 'Field for column Ảnh', exact: true }).click();
+    const photos = wizard.getByRole('option', { name: 'Ảnh (files cannot be imported)' });
     await expect(photos).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(wizard.getByRole('listbox')).toBeHidden();
     await expect(wizard.getByTestId('import-files-note')).toContainText('Ảnh holds files');
     await expectNoSeriousA11yViolations(page, 'import mapping with link hints');
     await wizard.getByRole('button', { name: 'Import 2 rows' }).click();

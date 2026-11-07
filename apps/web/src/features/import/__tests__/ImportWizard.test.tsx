@@ -382,18 +382,41 @@ describe('ImportWizard: append', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await screen.findByRole('heading', { name: 'Choose what each column becomes' });
 
-    const target = screen.getByLabelText('Field for column Tên khách');
-    expect(target).toHaveDisplayValue('Tên khách');
+    const target = screen.getByRole('combobox', { name: 'Field for column Tên khách' });
+    expect(target).toHaveTextContent('Tên khách');
+    // Each column shows sample values of the file (T1010).
+    const rows = screen.getAllByTestId('import-column-row');
+    expect(rows[0]).toHaveTextContent('Nguyễn Văn Ánh · Trần Thị Bình · Lê Cường');
     // `Mã` is an auto number: never offered, the column is flagged.
-    expect(within(target).queryByRole('option', { name: 'Mã' })).toBeNull();
+    await user.click(target);
+    const list = screen.getByRole('listbox', { name: 'Field for column Tên khách' });
+    expect(within(list).queryByRole('option', { name: 'Mã' })).toBeNull();
+    expect(await axeViolations(container.ownerDocument.body)).toEqual([]);
+    // Escape closes the list only, not the step (T320 QA's question stays for the step).
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(target).toHaveFocus();
     expect(screen.getByText('Not imported: you cannot write Mã')).toBeInTheDocument();
     expect(await axeViolations(container.ownerDocument.body)).toEqual([]);
 
-    // Two columns on one field block the import.
-    await user.selectOptions(screen.getByLabelText('Field for column Mã'), AMOUNT.id);
+    // Two columns on one field block the import; one line under the rows says which.
+    const warning = screen.getByTestId('field-mapper-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toBeEmptyDOMElement();
+    await user.click(screen.getByRole('combobox', { name: 'Field for column Mã' }));
+    await user.click(screen.getByRole('option', { name: 'Số tiền' }));
     expect(screen.getAllByText('This field is already filled by another column.')).toHaveLength(2);
+    expect(warning).toHaveTextContent('More than one column fills Số tiền.');
+    expect(screen.getByRole('combobox', { name: 'Field for column Mã' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Import 3 rows' })).toBeDisabled();
-    await user.selectOptions(screen.getByLabelText('Field for column Mã'), '');
+    expect(await axeViolations(container.ownerDocument.body)).toEqual([]);
+    await user.click(screen.getByRole('combobox', { name: 'Field for column Mã' }));
+    await user.click(screen.getByRole('option', { name: 'Do not import' }));
+    expect(warning).toBeEmptyDOMElement();
 
     vi.mocked(importsApi.start).mockResolvedValue({ job_id: JOB });
     await user.click(screen.getByRole('button', { name: 'Import 3 rows' }));
@@ -462,10 +485,17 @@ describe('ImportWizard: append', () => {
     await screen.findByRole('heading', { name: 'Choose what each column becomes' });
 
     // The file field is listed, disabled, with its reason; the column says so too.
-    const photos = within(screen.getByLabelText('Field for column Ảnh')).getByRole('option', {
-      name: 'Ảnh (files cannot be imported)',
-    });
-    expect(photos).toBeDisabled();
+    const photosTarget = screen.getByRole('combobox', { name: 'Field for column Ảnh' });
+    await user.click(photosTarget);
+    const photos = screen.getByRole('option', { name: 'Ảnh (files cannot be imported)' });
+    expect(photos).toHaveAttribute('aria-disabled', 'true');
+    expect(
+      within(screen.getByRole('group', { name: 'Cannot be imported' })).getByRole('option'),
+    ).toBe(photos);
+    // Never chosen: a click leaves the list open and the column not imported.
+    await user.click(photos);
+    expect(photosTarget).toHaveTextContent('Do not import');
+    await user.keyboard('{Escape}');
     expect(
       screen.getByText('Not imported: Ảnh holds files, which cannot be imported'),
     ).toBeVisible();
@@ -531,7 +561,9 @@ describe('ImportWizard: append', () => {
     // Escape again: back to the columns, nothing lost.
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(screen.getByLabelText('Field for column Tên khách')).toHaveDisplayValue('Tên khách');
+    expect(screen.getByRole('combobox', { name: 'Field for column Tên khách' })).toHaveTextContent(
+      'Tên khách',
+    );
     expect(onClose).not.toHaveBeenCalled();
     // The close button asks too; "Leave" closes.
     await user.click(screen.getByRole('button', { name: 'Close the import' }));

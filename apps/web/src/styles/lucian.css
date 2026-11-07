@@ -1,0 +1,88 @@
+/*! Lucian UX/UI Prompt theme tokens · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/ */
+/*
+ * The `--ux-*` tokens and `.ux` base rules of Lucian UX/UI Prompt (skill
+ * `lucian-uxui` 1.2.0, `tokens`, catalog 34c4b3e61d), pointed at the Cellhive
+ * tokens of `tokens.css` (FRONTEND §9.3 "Lucian UX/UI", BACKLOG S9 decision #4).
+ * Scoped to `.ux` — the root of every ported element — never global. No
+ * color of its own: every value is a Cellhive token, so light and dark (and a
+ * dashboard's own theme) follow `data-theme` with nothing to repeat here.
+ *
+ * Not mapped, on purpose: `--ux-shadow`/`--ux-shadow-strong` (Lucian colors
+ * for shadows; a ported popover uses `--elevation-popover`, and nothing else
+ * has a shadow), `--ux-glass*`, `--ux-grad` (no decorative gradient).
+ *
+ * In the `base` layer: Tailwind's utilities (the `@cellhive/ui` controls a
+ * port uses) still win over these defaults.
+ */
+@layer base {
+  .ux {
+    --ux-page: var(--bg);
+    --ux-surface: var(--surface);
+    --ux-surface-2: var(--surface-sunken);
+    /* Cellhive has no third surface. */
+    --ux-surface-3: var(--surface-sunken);
+    --ux-ink: var(--text);
+    --ux-ink-2: var(--text-muted);
+    --ux-ink-3: var(--text-subtle);
+    /* Dividers and frames. */
+    --ux-line: var(--border);
+    /* Lucian draws control borders with it: ≥ 3:1 (WCAG 1.4.11, T322b). */
+    --ux-line-2: var(--border-control);
+    /* One accent color. */
+    --ux-accent: var(--accent);
+    --ux-accent-2: var(--accent);
+    --ux-accent-soft: var(--accent-soft);
+    --ux-accent-ink: var(--on-accent);
+    --ux-mint: var(--success);
+    --ux-warn: var(--warning);
+    --ux-danger: var(--danger);
+    /* Lucian's ease-out (.2,.8,.2,1) → the same family in Cellhive. */
+    --ux-ease: var(--ease-enter);
+    --ux-spring: var(--ease-spring);
+  }
+
+  .ux,
+  .ux *,
+  .ux *::before,
+  .ux *::after {
+    box-sizing: border-box;
+  }
+
+  /* The app's font (Be Vietnam Pro); no letter spacing, no Korean `keep-all`. */
+  .ux {
+    font-family: inherit;
+    color: var(--ux-ink);
+    -webkit-tap-highlight-color: transparent;
+    overflow-wrap: break-word;
+  }
+
+  :where(.ux) :is(button, input, textarea, select) {
+    font: inherit;
+    color: inherit;
+  }
+
+  :where(.ux) button {
+    cursor: pointer;
+  }
+
+  .ux :focus-visible {
+    outline: 2px solid var(--ux-accent);
+    outline-offset: 3px;
+  }
+
+  .ux [hidden] {
+    display: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ux,
+    .ux *,
+    .ux *::before,
+    .ux *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
