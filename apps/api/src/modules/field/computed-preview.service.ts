@@ -15,6 +15,7 @@ import {
   loadBaseSchemaRows,
   prepareComputedDefinition,
   RecordQueryService,
+  withoutLockedAiFields,
   type AppConfig,
   type BaseSchemaRows,
   type ComputedDefinitionContext,
@@ -69,7 +70,8 @@ export class ComputedPreviewService {
     const { base, table } = await this.schemaAccess.requireTable(principal, tableId, 'manage');
     const scope = base.org.scope;
     const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
-    const readable = readabilityOf(base.access);
+    // An AI field the caller is locked out of reads as a field that does not exist (QA S8).
+    const readable = withoutLockedAiFields(readabilityOf(base.access), rows);
     const timeZone = organizationTimeZone(base, this.config.defaults.timezone);
     const editing = editedComputedField(rows, table.id, body.field_id ?? null, readable);
     const options = isRecord(body.options) ? body.options : {};

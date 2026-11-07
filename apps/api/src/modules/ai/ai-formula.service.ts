@@ -11,6 +11,7 @@ import {
   formulaMessages,
   formulaRepairProblems,
   loadBaseSchemaRows,
+  withoutLockedAiFields,
   type AiFormulaAnswer,
   type AiValidation,
   type AppConfig,
@@ -56,7 +57,8 @@ export class AiFormulaService {
     const { base, table } = await this.schemaAccess.requireTable(principal, tableId, 'manage');
     const scope = base.org.scope;
     const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
-    const readable = readabilityOf(base.access);
+    // An AI field the caller is locked out of is not in the digest nor a valid answer (QA S8).
+    const readable = withoutLockedAiFields(readabilityOf(base.access), rows);
     const editing = editedComputedField(rows, table.id, body.field_id, readable);
     const context = {
       rows,

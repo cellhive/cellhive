@@ -137,10 +137,25 @@ describe('lock rule', () => {
   const same = row('fld_same000000000000', t1, 'formula');
   const cross = row('fld_cross00000000000', t1, 'lookup');
   const nested = row('fld_nested0000000000', t1, 'formula');
+  // QA S8: an AI field over `cost`, a formula over it, and a lookup reading it from t2.
+  const aiCost = {
+    ...row('fld_aicost0000000000', t1, 'text'),
+    options: {
+      ai: {
+        task: 'custom',
+        prompt: `Cost {{ [${cost.id}] }}`,
+        instructions: null,
+        auto_update: true,
+        max_output_tokens: 300,
+      },
+    },
+  } as unknown as FieldRow;
+  const overAi = row('fld_overai0000000000', t1, 'formula');
+  const lookupAi = row('fld_lookai0000000000', t2, 'lookup');
   const rows: BaseSchemaRows = {
     baseId: 'bse_b000000000000000',
     tables: [],
-    fields: [amount, cost, phone, link, same, cross, nested],
+    fields: [amount, cost, phone, link, same, cross, nested, aiCost, overAi, lookupAi],
   };
   const dep = (field_id: string, kind: FormulaDependency['kind']): FormulaDependency => ({
     field_id,
@@ -164,6 +179,8 @@ describe('lock rule', () => {
       },
     ],
     [nested.id, { dependencies: [dep(same.id, 'same_row')], referenced_tables: [] }],
+    [overAi.id, { dependencies: [dep(aiCost.id, 'same_row')], referenced_tables: [] }],
+    [lookupAi.id, { dependencies: [dep(aiCost.id, 'via_link')], referenced_tables: [t1] }],
   ]);
   const analysisOf = (f: FieldRow) => (analyses.get(f.id) ?? null) as FormulaAnalysis | null;
   const reader = (tables: string[], hidden: string[]) => ({
@@ -185,11 +202,24 @@ describe('lock rule', () => {
     ['same table, no_perm field, strict (P36)', same, [t1], [cost.id], true, true],
     ['nested same-row formula, strict', nested, [t1], [cost.id], true, true],
     ['same table, readable fields, strict', same, [t1], [], true, false],
+    // QA S8: AI values are always strict, so are the computed fields reading them.
+    ['formula over an AI field over a hidden field', overAi, [t1], [cost.id], false, true],
+    ['formula over an AI field, every source readable', overAi, [t1], [], false, false],
+    ['lookup of an AI field over a hidden field', lookupAi, [t1, t2], [cost.id], false, true],
   ] as const)('%s', (_name, target, tables, hidden, strict, locked) => {
     const refs = computedReferences(target, rows, analysisOf);
     expect(isComputedLocked(refs, rows, reader([...tables], [...hidden]) as never, strict)).toBe(
       locked,
     );
+  });
+
+  it('lists what flows in through an AI field as strict (QA S8)', () => {
+    const refs = computedReferences(overAi, rows, analysisOf);
+    expect([...refs.sameRowFields]).toEqual([aiCost.id]);
+    expect([...refs.strictFields]).toEqual([cost.id]);
+    const linked = computedReferences(lookupAi, rows, analysisOf);
+    expect([...linked.crossFields].sort()).toEqual([aiCost.id, cost.id].sort());
+    expect(linked.strictFields.size).toBe(0);
   });
 
   it('reads the base setting', () => {
