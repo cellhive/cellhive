@@ -20,19 +20,15 @@ window.addEventListener('vite:preloadError', (event) => {
 });
 
 /**
- * A dynamic import whose fetch failed: "Failed to fetch dynamically imported
- * module" (Chromium), "error loading dynamically imported module" (Firefox),
- * "Importing a module script failed" (Safari).
+ * `String(error)` (name and message) of a dynamic import whose fetch failed:
+ * "Failed to fetch dynamically imported module" (Chromium), "error loading
+ * dynamically imported module" (Firefox), "Importing a module script
+ * failed" (Safari), webpack's `ChunkLoadError`.
  */
-const CHUNK_MESSAGE = /dynamically imported module|Importing a module script failed/u;
+const CHUNK_ERROR = /ChunkLoadError|dynamically imported module|Importing a module script failed/u;
 
 export function isChunkLoadError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.name === 'ChunkLoadError' ||
-      preloadErrors.has(error) ||
-      CHUNK_MESSAGE.test(error.message))
-  );
+  return error instanceof Error && (preloadErrors.has(error) || CHUNK_ERROR.test(String(error)));
 }
 
 /**

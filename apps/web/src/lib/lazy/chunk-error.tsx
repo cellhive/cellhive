@@ -64,13 +64,46 @@ export function ChunkError({ variant, onRetry }: ChunkErrorProps) {
   );
 }
 
+interface ChunkBoundaryProps {
+  variant: Exclude<ChunkErrorVariant, 'page'>;
+  onFailed: () => void;
+  render: () => ReactNode;
+}
+
+/** The boundary of one lazy panel: {@link ChunkLoadFailed} stays here, any other error goes on up. */
+class ChunkBoundary extends Component<ChunkBoundaryProps, { error: unknown }> {
+  override state: { error: unknown } = { error: null };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
+  }
+
+  override componentDidCatch(error: unknown): void {
+    if (error instanceof ChunkLoadFailed) this.props.onFailed();
+  }
+
+  override render(): ReactNode {
+    const { error } = this.state;
+    if (error === null) return this.props.render();
+    // Not a chunk error: on to the boundary above (a boundary never catches its own render).
+    if (!(error instanceof ChunkLoadFailed)) throw error as Error;
+    return (
+      <ChunkError
+        variant={this.props.variant}
+        onRetry={() => {
+          this.setState({ error: null });
+        }}
+      />
+    );
+  }
+}
+
 /**
  * `React.lazy` for panels and parts of pages (T902): {@link retryChunk}, and
  * an error boundary of its own, so a failure stays inside the panel
- * ({@link ChunkError}) while the rest of the page keeps working; any other
- * error goes on to the boundary above. React keeps a rejected lazy for good,
- * so a failure swaps in a fresh one: "Try again", or the panel's next
- * opening, loads the chunk again.
+ * ({@link ChunkError}) while the rest of the page keeps working. React keeps
+ * a rejected lazy for good, so a failure swaps in a fresh one: "Try again",
+ * or the panel's next opening, loads the chunk again.
  */
 export function lazyPanel<P extends object>(
   load: () => Promise<{ default: ComponentType<P> }>,
@@ -78,31 +111,14 @@ export function lazyPanel<P extends object>(
 ): ComponentType<P> {
   const loadChunk = retryChunk(load);
   let Lazy = lazy(loadChunk);
-  return class LazyPanel extends Component<P, { error: unknown }> {
-    override state: { error: unknown } = { error: null };
-
-    static getDerivedStateFromError(error: unknown) {
-      return { error };
-    }
-
-    override componentDidCatch(error: unknown): void {
-      if (error instanceof ChunkLoadFailed) Lazy = lazy(loadChunk);
-    }
-
-    override render(): ReactNode {
-      const { error } = this.state;
-      if (error === null) return <Lazy {...this.props} />;
-      // Not a chunk error: on to the boundary above (a boundary never catches its own render).
-      if (!(error instanceof ChunkLoadFailed)) throw error as Error;
-      return (
-        <ChunkError
-          variant={variant}
-          onRetry={() => {
-            this.setState({ error: null });
-          }}
-        />
-      );
-    }
+  const refresh = () => {
+    Lazy = lazy(loadChunk);
+  };
+  // A function component, so that a `ref` reaches the panel as a prop (React 19).
+  return function LazyPanel(props: P) {
+    return (
+      <ChunkBoundary variant={variant} onFailed={refresh} render={() => <Lazy {...props} />} />
+    );
   };
 }
 

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, createRef, Suspense, type ReactNode, type Ref } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -118,6 +118,17 @@ describe('lazyPanel (T902, FRONTEND §8.2)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load this part");
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('Panel of Task 1')).toBeVisible();
+  });
+
+  it('passes a ref on to the panel', async () => {
+    function Field({ ref }: { ref?: Ref<HTMLInputElement> }) {
+      return <input ref={ref} aria-label="Field" />;
+    }
+    const LazyField = lazyPanel(() => Promise.resolve({ default: Field }));
+    const ref = createRef<HTMLInputElement>();
+    renderPage(<LazyField ref={ref} />);
+    const field = await screen.findByRole('textbox', { name: 'Field' });
+    expect(ref.current).toBe(field);
   });
 
   it('passes any other error on to the boundary above', async () => {
