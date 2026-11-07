@@ -6,6 +6,7 @@ import {
   type FakeOpenAiServer,
 } from '../../src/ai/testing/fake-openai-server.js';
 import {
+  AI_REASONING_ALLOWANCE_TOKENS,
   AppError,
   createDeadline,
   LlmClient,
@@ -471,6 +472,54 @@ describe('LlmClient with the fake provider (T905)', () => {
 
     it('finish_reason = length: truncated', async () => {
       fake.script({ content: '{"formula":"SUM(', finishReason: 'length' });
+      const error = await failure(structured(client()));
+      expect(error.params).toMatchObject({ reason: 'truncated' });
+      expect(fake.chatRequests()).toHaveLength(1);
+    });
+
+    it('cut off while reasoning: once more with room to reason, then from the start (QA S8)', async () => {
+      // DeepSeek, OpenAI o-series, qwen3: the reasoning counts against max_tokens.
+      const reasoningCutOff = JSON.stringify({
+        choices: [
+          { message: { content: '', reasoning_content: 'Let me think…' }, finish_reason: 'length' },
+        ],
+        usage: {
+          prompt_tokens: 50,
+          completion_tokens: 300,
+          completion_tokens_details: { reasoning_tokens: 300 },
+        },
+      });
+      const answered = JSON.stringify({
+        choices: [
+          {
+            message: { content: '{"formula":"1","explanation":"x"}', reasoning_content: 'Done.' },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: { prompt_tokens: 50, completion_tokens: 420 },
+      });
+      fake.script({ raw: reasoningCutOff }, { raw: answered }, { raw: answered });
+      const usages: AiUsage[] = [];
+      const llm = client();
+      const result = await structured(llm, {}, { onUsage: (usage) => usages.push(usage) });
+      expect(result.value).toEqual({ formula: '1', explanation: 'x' });
+      const sent = () => fake.chatRequests().map((request) => request.body?.['max_tokens']);
+      expect(sent()).toEqual([300, 300 + AI_REASONING_ALLOWANCE_TOKENS]);
+      // Both calls count against the quota.
+      expect(usages.map((usage) => usage.completionTokens)).toEqual([300, 420]);
+      // The model is known to reason now: the next call starts with the allowance.
+      await structured(llm);
+      const room = 300 + AI_REASONING_ALLOWANCE_TOKENS;
+      expect(sent()).toEqual([300, room, room]);
+    });
+
+    it('cut off without reasoning: truncated, no second call', async () => {
+      fake.script({
+        raw: JSON.stringify({
+          choices: [{ message: { content: '{"formula":"SU' }, finish_reason: 'length' }],
+          usage: { prompt_tokens: 5, completion_tokens: 300 },
+        }),
+      });
       const error = await failure(structured(client()));
       expect(error.params).toMatchObject({ reason: 'truncated' });
       expect(fake.chatRequests()).toHaveLength(1);

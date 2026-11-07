@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { AppError } from '../errors/app-error.js';
 import { isOutboundHttpError } from '../net/errors.js';
 import { guardedRequest, type GuardedResponse } from '../net/guarded-request.js';
 import { isLookupQueueTimeout, type HostLookup } from '../net/lookup.js';
@@ -122,6 +123,18 @@ export interface LlmClientOptions {
 
 export const AI_USER_AGENT = 'Cellhive/0.1';
 
+/**
+ * Output tokens added for a model that reasons before it answers (QA S8):
+ * its reasoning counts against `max_tokens`, so a fixed cap of a feature
+ * (the Q&A narrative's 400, a plan's 600, an AI field's 300) can be spent
+ * before a word of the answer. A call cut off while the model reasoned is
+ * sent again once with this allowance, and later calls to that model start
+ * with it.
+ */
+export const AI_REASONING_ALLOWANCE_TOKENS = 2_048;
+/** Models remembered as reasoning, per API or worker process. */
+const REASONING_MODELS_MAX = 1_000;
+
 /** Rough token count where a provider reports none (research §2.4: ~3 characters a token, safe for Vietnamese). */
 export function estimateTokens(text: string): number {
   return Math.ceil(Array.from(text).length / 3);
@@ -147,6 +160,41 @@ const chatResponseSchema = z.object({
     .nullish()
     .catch(null),
 });
+
+const isRecordValue = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Whether an answer shows the model reasoned before answering: reasoning
+ * tokens in `usage.completion_tokens_details` (OpenAI, DeepSeek) or a
+ * reasoning text beside the content (`reasoning_content`: DeepSeek, vLLM;
+ * `reasoning`: Ollama, OpenRouter). Read from the raw JSON: a provider that
+ * shapes these differently only loses the allowance.
+ */
+function showsReasoning(json: unknown): boolean {
+  if (!isRecordValue(json)) return false;
+  const usage = json['usage'];
+  const details = isRecordValue(usage) ? usage['completion_tokens_details'] : undefined;
+  const tokens = isRecordValue(details) ? details['reasoning_tokens'] : undefined;
+  if (typeof tokens === 'number' && tokens > 0) return true;
+  const choices = json['choices'];
+  const first: unknown = Array.isArray(choices) ? choices[0] : undefined;
+  const message = isRecordValue(first) ? first['message'] : undefined;
+  if (!isRecordValue(message)) return false;
+  return ['reasoning_content', 'reasoning'].some((key) => {
+    const text = message[key];
+    return typeof text === 'string' && text.trim() !== '';
+  });
+}
+
+/** `AI_PROVIDER_ERROR truncated` of an answer cut off while the model reasoned. */
+function isReasoningCutOff(error: unknown): boolean {
+  return (
+    error instanceof AppError &&
+    error.params?.['reason'] === 'truncated' &&
+    error.params['reasoning'] === 1
+  );
+}
 
 /** `GET /models` of OpenAI-compatible servers (OpenAI, Ollama, vLLM, llama.cpp, LiteLLM). */
 const modelsResponseSchema = z.object({
@@ -212,9 +260,22 @@ function withInstruction(
  */
 export class LlmClient {
   private readonly now: () => Date;
+  /** `organization, base URL, model` of models seen reasoning (QA S8). */
+  private readonly reasoningModels = new Set<string>();
 
   constructor(private readonly options: LlmClientOptions) {
     this.now = options.now ?? (() => new Date());
+  }
+
+  private static modelKey(request: AiCompleteRequest): string {
+    const { settings } = request;
+    return `${request.organizationId}\n${settings.baseUrl}\n${settings.model}`;
+  }
+
+  private rememberReasoning(key: string): void {
+    if (this.reasoningModels.has(key)) return;
+    if (this.reasoningModels.size >= REASONING_MODELS_MAX) this.reasoningModels.clear();
+    this.reasoningModels.add(key);
   }
 
   /**
@@ -235,6 +296,9 @@ export class LlmClient {
     const output = request.output;
     const schema = output.kind === 'json' ? llmJsonSchemaOf(output.schema) : null;
     let mode: AiOutputMode | null = output.kind === 'json' ? settings.outputMode : null;
+    const key = LlmClient.modelKey(request);
+    // A reasoning model gets room for its reasoning; one cut off while reasoning, once more.
+    let allowance = this.reasoningModels.has(key) ? AI_REASONING_ALLOWANCE_TOKENS : 0;
     for (;;) {
       let messages = request.messages;
       let responseFormat: Record<string, unknown> | undefined;
@@ -247,7 +311,7 @@ export class LlmClient {
         model: settings.model,
         messages,
         stream: false,
-        [settings.tokenParam]: request.maxOutputTokens,
+        [settings.tokenParam]: request.maxOutputTokens + allowance,
         ...(responseFormat === undefined ? {} : { response_format: responseFormat }),
       });
       let response: GuardedResponse;
@@ -270,7 +334,15 @@ export class LlmClient {
         mode = lower;
         continue;
       }
-      return this.read(response, request, messages, mode, host);
+      try {
+        return await this.read(response, request, messages, mode, host, key);
+      } catch (error) {
+        if (allowance === 0 && isReasoningCutOff(error)) {
+          allowance = AI_REASONING_ALLOWANCE_TOKENS;
+          continue;
+        }
+        throw error;
+      }
     }
   }
 
@@ -423,17 +495,22 @@ export class LlmClient {
     sent: readonly AiChatMessage[],
     mode: AiOutputMode | null,
     host: string,
+    modelKey: string,
   ): Promise<AiCompletion> {
     if (response.status < 200 || response.status > 299) {
       // A 3xx is never followed: the provider URL must be the final one.
       throw aiProviderError('http_status', { host, status: response.status });
     }
     let parsed: z.infer<typeof chatResponseSchema>;
+    let reasoned: boolean;
     try {
-      parsed = chatResponseSchema.parse(JSON.parse(response.body.toString('utf8')));
+      const json: unknown = JSON.parse(response.body.toString('utf8'));
+      parsed = chatResponseSchema.parse(json);
+      reasoned = showsReasoning(json);
     } catch {
       throw aiProviderError('invalid_response', { host });
     }
+    if (reasoned) this.rememberReasoning(modelKey);
     const [choice] = parsed.choices;
     const content = choice?.message.content ?? null;
     const refusal = choice?.message.refusal ?? null;
@@ -451,7 +528,12 @@ export class LlmClient {
           };
     await request.onUsage?.(usage);
     if (refusal !== null && refusal !== '') throw aiProviderError('refused', { host });
-    if (choice?.finish_reason === 'length') throw aiProviderError('truncated', { host });
+    if (choice?.finish_reason === 'length') {
+      throw aiProviderError('truncated', {
+        host,
+        ...(reasoned ? { params: { reasoning: 1 } } : {}),
+      });
+    }
     if (content === null) throw aiProviderError('invalid_response', { host });
     return { content, usage, outputMode: mode };
   }
