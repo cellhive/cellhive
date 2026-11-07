@@ -1,7 +1,12 @@
 import { keepKnownTitles } from '../links/values';
 import { keys } from '../query/keys';
 
-import type { RecordDto, RecordListResponse, RecordMetaDto } from '@cellhive/contracts';
+import type {
+  AiCellMetaDto,
+  RecordDto,
+  RecordListResponse,
+  RecordMetaDto,
+} from '@cellhive/contracts';
 import type { QueryClient } from '@tanstack/react-query';
 
 /**
@@ -121,13 +126,18 @@ function sameMeta(a: RecordMetaDto | undefined, b: RecordMetaDto | undefined): b
   );
 }
 
+/** (T1002) Each cell is `{ state, reason? }`: equal when both say the same of every field. */
 function sameAiStates(a: RecordMetaDto['ai'], b: RecordMetaDto['ai']): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
   const left = Object.entries(a);
-  const right: Readonly<Record<string, string>> = b;
+  const right: Readonly<Record<string, AiCellMetaDto | undefined>> = b;
   return (
-    left.length === Object.keys(b).length && left.every(([key, value]) => right[key] === value)
+    left.length === Object.keys(b).length &&
+    left.every(([key, value]) => {
+      const other = right[key];
+      return other !== undefined && other.state === value.state && other.reason === value.reason;
+    })
   );
 }
 

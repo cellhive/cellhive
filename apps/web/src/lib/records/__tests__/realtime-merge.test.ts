@@ -212,17 +212,19 @@ describe('applyRecordPatch: colors of the color rules (T816)', () => {
 
 describe('mergeRecordPatch: states of AI cells (T915)', () => {
   const SUMMARY = 'fld_Summary000000001';
+  const QUEUED = { state: 'queued' } as const;
+  const FAILED = { state: 'failed', reason: 'refused' } as const;
   const queued = (fields: Record<string, unknown>, version = 2): RecordDto => ({
     ...record(version, fields),
-    meta: { ai: { [SUMMARY]: 'queued', [AMOUNT]: 'failed' } },
+    meta: { ai: { [SUMMARY]: QUEUED, [AMOUNT]: FAILED } },
   });
 
-  it.each<[string, Record<string, unknown>, Record<string, string>]>([
-    ['the AI value written: its state goes', { [SUMMARY]: 'A summary' }, { [AMOUNT]: 'failed' }],
+  it.each<[string, Record<string, unknown>, Record<string, unknown>]>([
+    ['the AI value written: its state goes', { [SUMMARY]: 'A summary' }, { [AMOUNT]: FAILED }],
     [
       'another field written: every state stays',
       { [TITLE]: 'b' },
-      { [SUMMARY]: 'queued', [AMOUNT]: 'failed' },
+      { [SUMMARY]: QUEUED, [AMOUNT]: FAILED },
     ],
   ])('%s', (_case, fields, expected) => {
     const merged = mergeRecordPatch(queued({ [SUMMARY]: null }), {
@@ -254,7 +256,7 @@ describe('mergeRecordPatch: states of AI cells (T915)', () => {
     );
     expect(colored?.meta).toEqual({
       color: { row: 'clr_Red0000000000001' },
-      ai: { [SUMMARY]: 'queued', [AMOUNT]: 'failed' },
+      ai: { [SUMMARY]: QUEUED, [AMOUNT]: FAILED },
     });
   });
 });

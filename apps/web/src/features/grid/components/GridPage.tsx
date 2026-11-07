@@ -35,7 +35,7 @@ import {
 } from '../../../grid';
 import { isTextTarget, pageShortcut } from '../../../grid/undo/keys';
 import { tableUndo, useGridUndo } from '../../../grid/undo/table-undo';
-import { aiConfigOf, aiPausedOf, isAiField } from '../../../lib/ai/ai-field';
+import { aiConfigOf, aiPausedOf, aiRetryAtOf, isAiField } from '../../../lib/ai/ai-field';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
 import { lazyOverlay, lazyPanel } from '../../../lib/lazy/chunk-error';
@@ -1287,7 +1287,7 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
           source.showNewRows();
         }}
       />
-      {fieldList.items.some((item) => aiPausedOf(item) !== null) ? (
+      {fieldList.items.some((item) => aiPausedOf(item) !== null || aiRetryAtOf(item) !== null) ? (
         <Suspense fallback={null}>
           <AiPausedBanner
             tableId={tableId}

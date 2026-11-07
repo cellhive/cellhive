@@ -531,6 +531,20 @@
     "runningTip": "AI is generating this value…",
     "failedTip": "AI could not generate this value. Generate the failed cells again from the column menu.",
     "pausedTip": "Generating is paused: see the note above the grid.",
+    "failedTips": {
+      "invalid_output": "AI could not generate this value: its answer did not fit the field. Generate the failed cells again from the column menu.",
+      "provider_error": "AI could not generate this value: the AI provider answered with an error. Generate the failed cells again from the column menu.",
+      "timeout": "AI could not generate this value: the AI provider did not answer in time. Generate the failed cells again from the column menu.",
+      "render_error": "AI could not generate this value: a field of the prompt is gone or reads another record. Check the prompt in the field’s settings.",
+      "refused": "AI could not generate this value: the model refused to answer. Rephrase the prompt, then generate the failed cells again.",
+      "truncated": "AI could not generate this value: the answer was cut off at its length limit. Raise the output limit in the field’s settings, then generate the failed cells again."
+    },
+    "pausedTips": {
+      "quota": "Paused: the organization’s AI quota for today is used up.",
+      "ai_disabled": "Paused: AI is turned off for the organization.",
+      "record_data_disabled": "Paused: the AI may no longer read record values in this organization.",
+      "provider_error": "Paused: the AI provider rejected the settings. See the note above the grid."
+    },
     "readOnly": "AI fills this field: it cannot be edited by hand.",
     "readOnlyManage": "AI fills this field. To edit it by hand, remove AI in the field’s settings.",
     "banner": {
@@ -539,11 +553,22 @@
       "reason": {
         "quota": "The organization’s AI quota for today is used up; generating goes on after the daily reset.",
         "ai_disabled": "AI is turned off for the organization.",
-        "record_data_disabled": "The AI may no longer read record values in this organization."
+        "record_data_disabled": "The AI may no longer read record values in this organization.",
+        "provider_error": {
+          "unauthorized": "The AI provider rejected the API key. An organization admin can update the key in Settings › AI.",
+          "forbidden": "The AI provider refused access with this API key. An organization admin can update the key in Settings › AI.",
+          "not_found": "The AI provider does not know this URL or model. An organization admin can correct them in Settings › AI.",
+          "ssrf_blocked": "The address of the AI provider is blocked. An organization admin can allow it in the organization’s HTTP allowlist or change it in Settings › AI.",
+          "secret_host_not_allowed": "The API key may not be sent to the host of the provider URL. An organization admin can enter the key again in Settings › AI.",
+          "secret_unavailable": "The API key is missing or can no longer be read. An organization admin can enter it again in Settings › AI.",
+          "unknown": "The AI provider rejected the settings. An organization admin can check them in Settings › AI."
+        }
       },
       "resume": "Resume",
       "resumed": "Generating “{{name}}” again.",
-      "settings": "AI settings"
+      "settings": "AI settings",
+      "waitingTitle": "“{{name}}”: waiting for the AI provider.",
+      "waiting": "It asked to slow down; generating goes on by itself at {{time}}."
     }
   }
 }

@@ -12,7 +12,7 @@ import {
   MAX_LIST_LIMIT,
   MAX_QUERY_IDS,
   MAX_RECORD_GROUP_LEVELS,
-  type AiCellState,
+  type AiCellMetaDto,
   type FilterControlKind,
   type Id,
   type ProblemErrorItem,
@@ -41,7 +41,7 @@ import { sql, type RawBuilder, type SqlBool } from 'kysely';
 import { z } from 'zod';
 
 import { isAiField } from '../ai/generation/options.js';
-import { AiGenerationQueueRepository } from '../ai/generation/queue.repository.js';
+import { aiCellMetaOf, AiGenerationQueueRepository } from '../ai/generation/queue.repository.js';
 import { loadAiLockRule } from '../ai/generation/sources.js';
 import { ComputeModel } from '../computed/definition/compute-model.js';
 import { loadBaseSchemaRows } from '../computed/definition/schema-rows.js';
@@ -3431,9 +3431,13 @@ export class RecordQueryService implements ButtonRecordMatcher {
       plan.readableAi.map((field) => field.id),
       records.map((record) => record.id),
     );
-    const byRecord = new Map<string, Record<string, AiCellState>>();
+    // (T1002) `{ state, reason? }`: why a cell failed or is paused, as a code.
+    const byRecord = new Map<string, Record<string, AiCellMetaDto>>();
     for (const row of rows) {
-      byRecord.set(row.record_id, { ...byRecord.get(row.record_id), [row.field_id]: row.status });
+      byRecord.set(row.record_id, {
+        ...byRecord.get(row.record_id),
+        [row.field_id]: aiCellMetaOf(row),
+      });
     }
     return records.map((record) => ({
       ...record,

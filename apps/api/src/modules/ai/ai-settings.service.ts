@@ -37,6 +37,7 @@ import {
   parseOutboundUrl,
   providerSettingsOf,
   quotaDayOf,
+  resumeAiProviderPause,
   sealSecret,
   SecretsRepository,
   transientAiKeySource,
@@ -48,6 +49,7 @@ import {
   type JsonObject,
   type OrgScope,
   type OutboundUrl,
+  type SchemaChangePublisher,
   type SecretRow,
   type AuditContext,
   type LlmClient,
@@ -59,9 +61,12 @@ import { z } from 'zod';
 import { AccessService } from '../../common/access/access.service.js';
 import { mutationContextOf } from '../../common/access/change-log.js';
 import { iso } from '../../common/dto.js';
+import { AppLogger } from '../../common/logging/app-logger.js';
+import { SCHEMA_CHANGE_PUBLISHER } from '../../common/schema/schema-core.module.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
 
 import { AiAccess, type AiCall } from './ai-access.js';
+import { announceAiFieldStates } from './ai-provider-resume.js';
 
 import type { Principal } from '../../common/auth/principal.js';
 import type { RequestMeta } from '../../common/auth/request-meta.js';
@@ -76,6 +81,19 @@ function invalidField(path: string, code: string, message: string, params?: Json
 
 /** Name of the secret created for a key typed into the AI settings. */
 const KEY_SECRET_NAME = 'AI provider key';
+
+/**
+ * Settings whose change may fix what a provider rejected (T1002): saving
+ * one of them (or a new key value) resumes AI fields paused by a provider
+ * error, in the same transaction.
+ */
+const PROVIDER_KEYS = [
+  'provider_base_url',
+  'model',
+  'api_key_secret_id',
+  'structured_output',
+  'token_param',
+] as const satisfies readonly (keyof AiSettingsState)[];
 
 /** The settings keys an `ai_settings.updated` entry shows (never the key, never the detected rung). */
 const AUDITED_KEYS = [
@@ -177,6 +195,8 @@ export class AiSettingsService {
     @Inject(AiAccess) private readonly ai: AiAccess,
     @Inject(AiSettingsRepository) private readonly settings: AiSettingsRepository,
     @Inject(SecretsRepository) private readonly secrets: SecretsRepository,
+    @Inject(SCHEMA_CHANGE_PUBLISHER) private readonly publisher: SchemaChangePublisher,
+    @Inject(AppLogger) private readonly logger: AppLogger,
   ) {
     this.key = deriveSecretKey(config.security.appMasterKey, 'org-secret');
   }
@@ -200,6 +220,7 @@ export class AiSettingsService {
       assertKeyValue(body.api_key.value);
     }
     const context = mutationContextOf(meta, principal.userId);
+    let resumed: Id<'fld'>[] = [];
     const saved = await this.db.withTx(async (tx) => {
       const scope = orgScope(organizationId, tx);
       const stored = await this.settings.find(scope, { forUpdate: true });
@@ -243,6 +264,10 @@ export class AiSettingsService {
       const changed = AUDITED_KEYS.filter((key) => next[key] !== before[key]);
       if (stored !== undefined && changed.length === 0 && !keyReplaced) return stored;
       const row = await this.settings.save(scope, next);
+      // (T1002) Another provider, model or key: rows paused by a provider error go on.
+      if (keyReplaced || PROVIDER_KEYS.some((key) => next[key] !== before[key])) {
+        resumed = await resumeAiProviderPause(this.db, tx, organizationId);
+      }
       if (changed.length > 0 || keyReplaced) {
         await audit.write(tx, {
           action: 'ai_settings.updated',
@@ -260,6 +285,11 @@ export class AiSettingsService {
       }
       return row;
     });
+    await announceAiFieldStates(
+      { db: this.db, publisher: this.publisher, logger: this.logger },
+      org.scope,
+      resumed,
+    );
     return this.dtoOf(org.scope, saved);
   }
 

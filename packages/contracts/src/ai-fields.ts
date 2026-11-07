@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { isoDateTimeSchema } from './common.js';
 import { idOf } from './ids.js';
 
 /**
@@ -31,6 +32,15 @@ export const AI_FIELD_BATCH_SIZE = 20;
 export const AI_FIELD_LEASE_MS = 5 * 60_000;
 /** Waits before the 2nd, 3rd and 4th try of a row after a temporary error; then `failed`. */
 export const AI_FIELD_RETRY_DELAYS_MS = [30_000, 120_000, 600_000] as const;
+/**
+ * The organization's queued rows wait this long after a `429` without
+ * `Retry-After`, or after {@link AI_FIELD_BREAKER_ERRORS} temporary errors
+ * in a row; a `Retry-After` is followed up to {@link AI_FIELD_MAX_BACKOFF_MS}.
+ */
+export const AI_FIELD_BACKOFF_MS = 60_000;
+export const AI_FIELD_MAX_BACKOFF_MS = 3_600_000;
+/** Temporary errors (5xx, network, timeout) in a row within a batch that back the organization off. */
+export const AI_FIELD_BREAKER_ERRORS = 5;
 /** Records of a preview. */
 export const AI_FIELD_PREVIEW_ROWS = 5;
 /** Characters of the rendered input shown per previewed record. */
@@ -90,16 +100,51 @@ export const aiFieldStoredOptionsSchema = aiFieldOptionsSchema.extend({
 export const AI_CELL_STATES = ['queued', 'running', 'failed', 'paused'] as const;
 export type AiCellState = (typeof AI_CELL_STATES)[number];
 
-/** Why rows of an AI field are `paused` (`ai_state.paused_reason`). */
-export const AI_PAUSE_REASONS = ['quota', 'ai_disabled', 'record_data_disabled'] as const;
+/**
+ * Why rows of an AI field are `paused` (`ai_state.paused_reason`): the
+ * quota of the day is used up, AI or record data is turned off, or the
+ * provider rejects the configuration (`provider_error`, with
+ * `paused_detail`).
+ */
+export const AI_PAUSE_REASONS = [
+  'quota',
+  'ai_disabled',
+  'record_data_disabled',
+  'provider_error',
+] as const;
 export type AiPauseReason = (typeof AI_PAUSE_REASONS)[number];
 
-/** `reason` of a `failed` row: an error code, never a value. */
+/**
+ * What the provider rejected when rows are `paused provider_error`
+ * (`ai_state.paused_detail`): the key (`unauthorized` = HTTP 401,
+ * `forbidden` = 403), the URL or model (`not_found` = 404), an address that
+ * may not be called (`ssrf_blocked`), a key that may not go to the host of
+ * the URL (`secret_host_not_allowed`) or a key that is gone or unreadable
+ * (`secret_unavailable`). Saving the AI settings or replacing the key's
+ * value resumes them.
+ */
+export const AI_PROVIDER_PAUSE_DETAILS = [
+  'unauthorized',
+  'forbidden',
+  'not_found',
+  'ssrf_blocked',
+  'secret_host_not_allowed',
+  'secret_unavailable',
+] as const;
+export type AiProviderPauseDetail = (typeof AI_PROVIDER_PAUSE_DETAILS)[number];
+
+/**
+ * `reason` of a `failed` row: an error code, never a value — `refused`
+ * (the model refused to answer) and `truncated` (the answer reached its
+ * length limit) apart from other provider errors.
+ */
 export const AI_FAILURE_REASONS = [
   'invalid_output',
   'provider_error',
   'timeout',
   'render_error',
+  'refused',
+  'truncated',
 ] as const;
 export type AiFailureReason = (typeof AI_FAILURE_REASONS)[number];
 
@@ -110,9 +155,40 @@ export const aiFieldStateSchema = z
     failed: z.int().min(0),
     paused: z.int().min(0),
     paused_reason: z.enum(AI_PAUSE_REASONS).nullable(),
+    paused_detail: z.enum(AI_PROVIDER_PAUSE_DETAILS).nullable().meta({
+      description: 'What the provider rejected, with `paused_reason: provider_error` only',
+    }),
+    retry_at: isoDateTimeSchema.nullable().meta({
+      description:
+        'The organization waits for the provider until then (a `429`, or temporary errors in ' +
+        'a row): queued rows stay `queued`',
+    }),
   })
   .meta({ id: 'AiFieldState' });
 export type AiFieldStateDto = z.infer<typeof aiFieldStateSchema>;
+
+/** Every `reason` a cell may carry (`record.meta.ai`), each code once. */
+export const AI_CELL_REASONS = [...new Set([...AI_FAILURE_REASONS, ...AI_PAUSE_REASONS])] as [
+  AiFailureReason | AiPauseReason,
+  ...(AiFailureReason | AiPauseReason)[],
+];
+export type AiCellReason = AiFailureReason | AiPauseReason;
+
+/** The state of one AI cell (`record.meta.ai.<fld>`): `reason` with `failed` and `paused`. */
+export const aiCellMetaSchema = z
+  .strictObject({
+    state: z.enum(AI_CELL_STATES),
+    reason: z
+      .enum(AI_CELL_REASONS)
+      .optional()
+      .meta({
+        description:
+          '`failed`: one of `AI_FAILURE_REASONS`; `paused`: one of `AI_PAUSE_REASONS` (an error ' +
+          'code, never a value)',
+      }),
+  })
+  .meta({ id: 'AiCellMeta' });
+export type AiCellMetaDto = z.infer<typeof aiCellMetaSchema>;
 
 export const aiFieldPreviewRequestSchema = z
   .strictObject({
@@ -165,14 +241,15 @@ export const aiFieldPreviewSchema = z
   .meta({ id: 'AiFieldPreview' });
 export type AiFieldPreview = z.infer<typeof aiFieldPreviewSchema>;
 
-export const AI_FIELD_GENERATE_SCOPES = ['empty', 'failed', 'all', 'records'] as const;
+export const AI_FIELD_GENERATE_SCOPES = ['empty', 'failed', 'all', 'records', 'paused'] as const;
 
 export const aiFieldGenerateRequestSchema = z
   .strictObject({
     scope: z.enum(AI_FIELD_GENERATE_SCOPES).meta({
       description:
         '`empty` cells, `failed` cells, `all` (overwrites; old values stay in the record ' +
-        'history) or the `records` listed',
+        'history), the `records` listed, or the `paused` cells (resume: never a cell that ' +
+        'was not queued)',
     }),
     record_ids: z
       .array(idOf('rec'))

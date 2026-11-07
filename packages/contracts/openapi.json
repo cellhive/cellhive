@@ -617,6 +617,39 @@
         ],
         "type": "object"
       },
+      "AiCellMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "description": "`failed`: one of `AI_FAILURE_REASONS`; `paused`: one of `AI_PAUSE_REASONS` (an error code, never a value)",
+            "enum": [
+              "invalid_output",
+              "provider_error",
+              "timeout",
+              "render_error",
+              "refused",
+              "truncated",
+              "quota",
+              "ai_disabled",
+              "record_data_disabled"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "running",
+              "failed",
+              "paused"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "type": "object"
+      },
       "AiClassifyAction": {
         "additionalProperties": false,
         "description": "The model answers one option name of the target field (an `enum`); output `{ option_id, option_name }` (+ `skipped_not_editable`)",
@@ -716,12 +749,13 @@
             "type": "array"
           },
           "scope": {
-            "description": "`empty` cells, `failed` cells, `all` (overwrites; old values stay in the record history) or the `records` listed",
+            "description": "`empty` cells, `failed` cells, `all` (overwrites; old values stay in the record history), the `records` listed, or the `paused` cells (resume: never a cell that was not queued)",
             "enum": [
               "empty",
               "failed",
               "all",
-              "records"
+              "records",
+              "paused"
             ],
             "type": "string"
           }
@@ -8574,11 +8608,28 @@
                 "minimum": 0,
                 "type": "integer"
               },
+              "paused_detail": {
+                "description": "What the provider rejected, with `paused_reason: provider_error` only",
+                "enum": [
+                  "unauthorized",
+                  "forbidden",
+                  "not_found",
+                  "ssrf_blocked",
+                  "secret_host_not_allowed",
+                  "secret_unavailable",
+                  null
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "paused_reason": {
                 "enum": [
                   "quota",
                   "ai_disabled",
                   "record_data_disabled",
+                  "provider_error",
                   null
                 ],
                 "type": [
@@ -8590,13 +8641,24 @@
                 "description": "Rows waiting or being generated",
                 "minimum": 0,
                 "type": "integer"
+              },
+              "retry_at": {
+                "description": "The organization waits for the provider until then (a `429`, or temporary errors in a row): queued rows stay `queued`",
+                "example": "2026-09-20T03:15:00.000Z",
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
               "queued",
               "failed",
               "paused",
-              "paused_reason"
+              "paused_reason",
+              "paused_detail",
+              "retry_at"
             ],
             "type": "object"
           },
@@ -13960,15 +14022,9 @@
         "properties": {
           "ai": {
             "additionalProperties": {
-              "enum": [
-                "queued",
-                "running",
-                "failed",
-                "paused"
-              ],
-              "type": "string"
+              "$ref": "#/components/schemas/AiCellMeta"
             },
-            "description": "AI field id → state of its cell when it is not simply its value (T910): `queued`, `running`, `failed`, `paused`. Present on every record of a table with AI fields the reader sees (and is not locked out of); `{}` = every AI value is current",
+            "description": "AI field id → `{ state, reason? }` of its cell when it is not simply its value (T910): `queued`, `running`, `failed` (`reason`: a failure code) or `paused` (`reason`: why). Present on every record of a table with AI fields the reader sees (and is not locked out of); `{}` = every AI value is current",
             "type": "object"
           },
           "color": {
@@ -19317,11 +19373,28 @@
                 "minimum": 0,
                 "type": "integer"
               },
+              "paused_detail": {
+                "description": "What the provider rejected, with `paused_reason: provider_error` only",
+                "enum": [
+                  "unauthorized",
+                  "forbidden",
+                  "not_found",
+                  "ssrf_blocked",
+                  "secret_host_not_allowed",
+                  "secret_unavailable",
+                  null
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "paused_reason": {
                 "enum": [
                   "quota",
                   "ai_disabled",
                   "record_data_disabled",
+                  "provider_error",
                   null
                 ],
                 "type": [
@@ -19333,13 +19406,24 @@
                 "description": "Rows waiting or being generated",
                 "minimum": 0,
                 "type": "integer"
+              },
+              "retry_at": {
+                "description": "The organization waits for the provider until then (a `429`, or temporary errors in a row): queued rows stay `queued`",
+                "example": "2026-09-20T03:15:00.000Z",
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
               "queued",
               "failed",
               "paused",
-              "paused_reason"
+              "paused_reason",
+              "paused_detail",
+              "retry_at"
             ],
             "type": "object"
           },

@@ -39,7 +39,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { aiCellStateOf } from '../lib/ai/ai-field';
+import { aiCellOf } from '../lib/ai/ai-field';
 import { buttonKey, buttonViewOf } from '../lib/buttons/model';
 
 import { columnHeaderLabel, useColumnHeaderLabels, type HeaderHint } from './a11y';
@@ -114,6 +114,7 @@ import type {
 } from './hooks';
 import type { GridTree } from './tree/types';
 import type { CellFileAccess, CellRenderContext, GridField, GridRecord } from './types';
+import type { AiCellMetaDto } from '@cellhive/contracts';
 import type { LocaleContext } from '@cellhive/field-types';
 
 const CUSTOM_RENDERERS = [
@@ -1668,14 +1669,18 @@ export function GridView({
     [fields, getRecord, buttonHooks, shareButtonHint],
   );
 
-  /** (T915) What hovering an AI cell in each state says (longer than its accessible state). */
-  const aiTips = useMemo(
-    () => ({
-      queued: t('ai.queuedTip'),
-      running: t('ai.runningTip'),
-      failed: t('ai.failedTip'),
-      paused: t('ai.pausedTip'),
-    }),
+  /**
+   * (T915) What hovering an AI cell in each state says (longer than its
+   * accessible state); (T1002) a failed or paused cell says why.
+   */
+  const aiTipOf = useCallback(
+    (cell: AiCellMetaDto): string => {
+      const generic = t(`ai.${cell.state}Tip`);
+      if (cell.reason === undefined || (cell.state !== 'failed' && cell.state !== 'paused')) {
+        return generic;
+      }
+      return t(`ai.${cell.state}Tips.${cell.reason}`, { defaultValue: generic });
+    },
     [t],
   );
 
@@ -1699,16 +1704,16 @@ export function GridView({
         const aiField = fields[col];
         if (aiField?.ai !== undefined) {
           const record = getRecord(row);
-          const aiState = aiCellStateOf(record, aiField.field.id);
+          const aiCell = aiCellOf(record, aiField.field.id);
           const text = aiField.ai.locked
             ? ctx.labels.ai?.locked
-            : aiState === undefined
+            : aiCell === undefined
               ? undefined
-              : aiTips[aiState];
+              : aiTipOf(aiCell);
           if (record === undefined || text === undefined) return null;
           return {
             text,
-            tone: aiState === 'failed' ? 'error' : 'info',
+            tone: aiCell?.state === 'failed' ? 'error' : 'info',
             x: bounds.x,
             y: bounds.y + bounds.height + 4,
             source,
@@ -1737,7 +1742,7 @@ export function GridView({
         source,
       } satisfies Tip;
     },
-    [cellStateAt, fields, getRecord, ctx, buttonTipAt, aiTips],
+    [cellStateAt, fields, getRecord, ctx, buttonTipAt, aiTipOf],
   );
 
   // (T915) The tip of the selected cell follows its record: an AI cell's state changes under it.

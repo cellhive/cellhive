@@ -1,4 +1,4 @@
-import type { AiCellState, Id, SummaryFunction } from '@cellhive/contracts';
+import type { AiCellMetaDto, Id, SummaryFunction } from '@cellhive/contracts';
 import type { ResolvedBaseAccess } from '@cellhive/permissions';
 
 /** How `fields`, `sort` and tuple filters name fields, and how records are keyed (CONTRACTS §1.3). */
@@ -205,8 +205,8 @@ export interface RecordOutput {
    */
   readonly meta?: {
     readonly color?: RecordColorOutput;
-    /** AI field id → state of its cell when not simply its value (T910). */
-    readonly ai?: Readonly<Record<string, AiCellState>>;
+    /** AI field id → state (and reason code) of its cell when not simply its value (T910, T1002). */
+    readonly ai?: Readonly<Record<string, AiCellMetaDto>>;
   };
 }
 

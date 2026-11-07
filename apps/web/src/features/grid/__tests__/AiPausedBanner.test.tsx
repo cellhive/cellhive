@@ -15,12 +15,14 @@ import { untrackAllJobs } from '../../../lib/realtime/jobs';
 import { clearToasts } from '../../../lib/toast/toast';
 import { AiPausedBanner } from '../ai/AiPausedBanner';
 
-import type { FieldDto } from '@cellhive/contracts';
+import type { AiPauseReason, FieldDto } from '@cellhive/contracts';
 import type { ReactNode } from 'react';
 
 /**
  * T915: the paused banner of AI fields (research S8 §5.6) — the reason,
- * "Resume" on the paused cells the grid holds — and the "Regenerate"
+ * "Resume" of the paused cells (T1002: `scope: paused`, never `empty`), one
+ * sentence per thing the provider rejected, the settings link for
+ * owners/admins only, the provider's wait — and the "Regenerate"
  * confirmation of the column menu (rows, tokens, overwrite).
  */
 
@@ -29,7 +31,11 @@ const NOW = '2026-11-01T00:00:00.000Z';
 const SUMMARY = 'fld_Summary000000001';
 const PAUSED = 'rec_A000000000000001';
 
-function summary(paused: number, reason: 'quota' | 'ai_disabled' | null): FieldDto {
+function summary(
+  paused: number,
+  reason: AiPauseReason | null,
+  extra: Partial<NonNullable<FieldDto['ai_state']>> = {},
+): FieldDto {
   return {
     id: SUMMARY,
     table_id: TABLE,
@@ -51,7 +57,15 @@ function summary(paused: number, reason: 'quota' | 'ai_disabled' | null): FieldD
     position: 3,
     created_at: NOW,
     updated_at: NOW,
-    ai_state: { queued: 0, failed: 2, paused, paused_reason: reason },
+    ai_state: {
+      queued: 0,
+      failed: 2,
+      paused,
+      paused_reason: reason,
+      paused_detail: null,
+      retry_at: null,
+      ...extra,
+    },
   };
 }
 
@@ -66,7 +80,7 @@ async function renderWith(children: ReactNode) {
         updated_at: NOW,
         version: 1,
         fields: {},
-        meta: { ai: { [SUMMARY]: 'paused' } },
+        meta: { ai: { [SUMMARY]: { state: 'paused', reason: 'quota' } } },
       },
       {
         id: 'rec_A000000000000002',
@@ -100,7 +114,7 @@ afterEach(() => {
 });
 
 describe('AiPausedBanner (T915)', () => {
-  it('says why and resumes the paused cells it knows', async () => {
+  it('says why and resumes the paused cells (scope: paused, whatever the grid holds)', async () => {
     const fetchMock = stubApi({
       signedIn: true,
       routes: { [`POST /fields/${SUMMARY}/ai/generate`]: generated },
@@ -122,10 +136,73 @@ describe('AiPausedBanner (T915)', () => {
       expect(fetchMock.mock.calls.some(([url]) => url.includes('/ai/generate'))).toBe(true);
     });
     const call = fetchMock.mock.calls.find(([url]) => url.includes('/ai/generate'));
-    expect(JSON.parse(call?.[1]?.body as string)).toEqual({
-      scope: 'records',
-      record_ids: [PAUSED],
-    });
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({ scope: 'paused' });
+  });
+
+  it.each([
+    ['unauthorized', 'The AI provider rejected the API key.'],
+    ['forbidden', 'The AI provider refused access with this API key.'],
+    ['not_found', 'The AI provider does not know this URL or model.'],
+    ['ssrf_blocked', 'The address of the AI provider is blocked.'],
+    ['secret_host_not_allowed', 'The API key may not be sent to the host of the provider URL.'],
+    ['secret_unavailable', 'The API key is missing or can no longer be read.'],
+  ] as const)(
+    'provider_error %s: its own sentence, "Resume" and the settings',
+    async (detail, text) => {
+      stubApi({ signedIn: true });
+      await renderWith(
+        <AiPausedBanner
+          tableId={TABLE}
+          fields={[summary(5, 'provider_error', { paused_detail: detail })]}
+          canManage
+          settingsPath="/o/acme/settings/ai"
+        />,
+      );
+      const banner = screen.getByTestId('ai-paused-banner');
+      expect(banner).toHaveTextContent('“Summary”: 5 cells wait.');
+      expect(banner).toHaveTextContent(text);
+      expect(screen.getByRole('button', { name: 'Resume' })).toBeVisible();
+      expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute(
+        'href',
+        '/o/acme/settings/ai',
+      );
+      expect(await axeViolations(banner)).toEqual([]);
+    },
+  );
+
+  it('provider_error for a member: the reason, no settings link, no "Resume" without schema rights', async () => {
+    stubApi({ signedIn: true });
+    await renderWith(
+      <AiPausedBanner
+        tableId={TABLE}
+        fields={[summary(2, 'provider_error', { paused_detail: 'unauthorized' })]}
+        canManage={false}
+        settingsPath={null}
+      />,
+    );
+    expect(screen.getByTestId('ai-paused-banner')).toHaveTextContent(
+      'The AI provider rejected the API key.',
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
+  });
+
+  it('says when generating goes on while the provider asked to wait', async () => {
+    stubApi({ signedIn: true });
+    await renderWith(
+      <AiPausedBanner
+        tableId={TABLE}
+        fields={[
+          summary(0, null, { queued: 4, retry_at: new Date(Date.now() + 60_000).toISOString() }),
+        ]}
+        canManage
+        settingsPath={null}
+      />,
+    );
+    const banner = screen.getByTestId('ai-paused-banner');
+    expect(banner).toHaveTextContent('“Summary”: waiting for the AI provider.');
+    expect(banner).toHaveTextContent('generating goes on by itself at');
+    expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
   });
 
   it('links to the settings when AI is off (no "Resume": it would be refused)', async () => {

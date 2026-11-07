@@ -231,10 +231,12 @@ export class AiFieldService {
           )),
         ] as Id<'rec'>[];
         break;
-      case 'failed': {
-        const failed = await queue.recordIdsOf(scope, fieldId, 'failed');
+      case 'failed':
+      case 'paused': {
+        // (T1002) `paused`: "Resume" — only the cells that were queued and paused.
+        const listed = await queue.recordIdsOf(scope, fieldId, body.scope);
         ids = [
-          ...(await this.records.matchingIds(scope, field.table_id, access, failed, null)),
+          ...(await this.records.matchingIds(scope, field.table_id, access, listed, null)),
         ] as Id<'rec'>[];
         break;
       }

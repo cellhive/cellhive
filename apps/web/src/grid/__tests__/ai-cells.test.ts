@@ -49,7 +49,7 @@ function record(value: unknown, state?: string): RecordDto {
     updated_at: NOW,
     version: 2,
     fields: { [SUMMARY]: value },
-    ...(state === undefined ? {} : { meta: { ai: { [SUMMARY]: state } } }),
+    ...(state === undefined ? {} : { meta: { ai: { [SUMMARY]: { state } } } }),
   } as RecordDto;
 }
 

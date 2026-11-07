@@ -499,7 +499,12 @@ export class LlmClient {
   ): Promise<AiCompletion> {
     if (response.status < 200 || response.status > 299) {
       // A 3xx is never followed: the provider URL must be the final one.
-      throw aiProviderError('http_status', { host, status: response.status });
+      const retryAfter = response.headers['retry-after'];
+      throw aiProviderError('http_status', {
+        host,
+        status: response.status,
+        retryAfter: typeof retryAfter === 'string' ? retryAfter : (retryAfter?.[0] ?? null),
+      });
     }
     let parsed: z.infer<typeof chatResponseSchema>;
     let reasoned: boolean;

@@ -2,11 +2,15 @@ import { AI_FIELD_MAX_INPUT_LENGTH, AI_FIELD_MAX_OUTPUT_LENGTH } from '@cellhive
 import { describe, expect, it } from 'vitest';
 
 import {
+  aiBackOffMs,
+  aiCellMetaOf,
   aiFailureReason,
   aiFieldLockedFor,
   aiInvalidOutput,
   aiOptionsOf,
   aiProviderError,
+  aiProviderPauseDetailOf,
+  aiRateLimitOf,
   AiRenderError,
   aiSelectAnswerSchema,
   aiSourceFieldIds,
@@ -132,9 +136,90 @@ describe('AI field generation helpers (T910)', () => {
   it.each([
     [aiInvalidOutput(3), 'invalid_output'],
     [aiTimeout('h'), 'timeout'],
-    [aiProviderError('refused'), 'provider_error'],
+    [aiProviderError('refused'), 'refused'],
+    [aiProviderError('truncated'), 'truncated'],
+    [aiProviderError('invalid_response'), 'provider_error'],
+    [aiProviderError('http_status', { status: 400 }), 'provider_error'],
     [new AiRenderError('gone'), 'render_error'],
   ])('failure %# → %s', (error, reason) => {
     expect(aiFailureReason(error)).toBe(reason);
+  });
+});
+
+/** BACKLOG T1002: which provider errors pause the queue, back the organization off, or retry. */
+describe('AI field provider errors (T1002)', () => {
+  const status = (code: number, retryAfter?: string) =>
+    aiProviderError('http_status', {
+      host: 'h',
+      status: code,
+      ...(retryAfter === undefined ? {} : { retryAfter }),
+    });
+
+  it.each([
+    [status(401), 'unauthorized'],
+    [status(403), 'forbidden'],
+    [status(404), 'not_found'],
+    [aiProviderError('ssrf_blocked'), 'ssrf_blocked'],
+    [aiProviderError('secret_host_not_allowed'), 'secret_host_not_allowed'],
+    [aiProviderError('secret_unavailable'), 'secret_unavailable'],
+    [status(400), null],
+    [status(429), null],
+    [status(500), null],
+    [status(503), null],
+    [aiProviderError('network'), null],
+    [aiProviderError('refused'), null],
+    [aiProviderError('truncated'), null],
+    [aiProviderError('invalid_response'), null],
+    [aiTimeout('h'), null],
+    [aiInvalidOutput(3), null],
+    [new Error('boom'), null],
+  ])('configuration error %# → %s', (error, detail) => {
+    expect(aiProviderPauseDetailOf(error)).toBe(detail);
+  });
+
+  it('tells a 429 (with its Retry-After) from other statuses; never sends the header to clients', () => {
+    expect(aiRateLimitOf(status(429, '30'))).toEqual({ retryAfter: '30' });
+    expect(aiRateLimitOf(status(429))).toEqual({ retryAfter: null });
+    expect(aiRateLimitOf(status(503, '30'))).toBeNull();
+    expect(aiRateLimitOf(aiTimeout('h'))).toBeNull();
+    const error = status(429, '30');
+    expect(error.errors?.[0]?.params).toEqual({ reason: 'http_status', status: 429 });
+    expect(error.params).toMatchObject({ retry_after: '30', temporary: true });
+  });
+
+  const now = new Date('2026-11-07T00:00:00.000Z');
+  it.each([
+    ['30', 30_000],
+    [null, 60_000],
+    ['', 60_000],
+    ['soon', 60_000],
+    ['0', 1_000],
+    ['7200', 3_600_000],
+    ['Sat, 07 Nov 2026 00:02:00 GMT', 120_000],
+    ['Fri, 06 Nov 2026 23:00:00 GMT', 1_000],
+  ])('Retry-After %j → backs off %i ms', (header, ms) => {
+    expect(aiBackOffMs(header, now)).toBe(ms);
+  });
+
+  it.each([
+    [{ status: 'queued', reason: null }, { state: 'queued' }],
+    [{ status: 'queued', reason: 'backoff' }, { state: 'queued' }],
+    [{ status: 'running', reason: null }, { state: 'running' }],
+    [
+      { status: 'failed', reason: 'refused' },
+      { state: 'failed', reason: 'refused' },
+    ],
+    [{ status: 'failed', reason: 'something_else' }, { state: 'failed' }],
+    [
+      { status: 'paused', reason: 'quota' },
+      { state: 'paused', reason: 'quota' },
+    ],
+    [
+      { status: 'paused', reason: 'provider_error:unauthorized' },
+      { state: 'paused', reason: 'provider_error' },
+    ],
+    [{ status: 'paused', reason: null }, { state: 'paused' }],
+  ] as const)('cell meta of %j', (row, meta) => {
+    expect(aiCellMetaOf(row)).toEqual(meta);
   });
 });

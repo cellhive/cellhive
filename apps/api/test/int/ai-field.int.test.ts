@@ -133,7 +133,10 @@ describe('AI fields (T910)', () => {
     );
     expect(response.statusCode, response.body).toBe(200);
     return response.json<{
-      records: { fields: Record<string, unknown>; meta?: { ai?: Record<string, string> } }[];
+      records: {
+        fields: Record<string, unknown>;
+        meta?: { ai?: Record<string, { state: string; reason?: string }> };
+      }[];
     }>().records[0];
   };
   const patchRecord = (
@@ -376,7 +379,7 @@ describe('AI fields (T910)', () => {
     expect(response.statusCode, response.body).toBe(202);
     const started = aiFieldGenerateSchema.parse(response.json());
     expect(started.rows).toBe(3);
-    expect((await cell(records.r1))?.meta?.ai).toEqual({ [note.id]: 'queued' });
+    expect((await cell(records.r1))?.meta?.ai).toEqual({ [note.id]: { state: 'queued' } });
 
     const outcomes = await drain();
     expect(outcomes[0]).toMatchObject({ rows: 3, written: 3, failed: 0, calls: 3 });
@@ -465,7 +468,9 @@ describe('AI fields (T910)', () => {
     const [outcome] = await drain();
     expect(outcome).toMatchObject({ status: 'paused', pausedReason: 'quota', calls: 0 });
     expect(chats()).toEqual([]);
-    expect((await cell(records.r2))?.meta?.ai).toEqual({ [note.id]: 'paused' });
+    expect((await cell(records.r2))?.meta?.ai).toEqual({
+      [note.id]: { state: 'paused', reason: 'quota' },
+    });
     const field = await fx.call('u_admin', 'GET', `/fields/${note.id}`);
     expect(field.json()).toMatchObject({ ai_state: { paused: 1, paused_reason: 'quota' } });
     // Interactive requests answer 429 with the reset time.
@@ -568,7 +573,9 @@ describe('AI fields (T910)', () => {
       json_schema: { schema: { properties: { option: { enum: ['Thấp', 'Cao'] } } } },
     });
     expect((await cell(records.r1))?.fields[level.id]).toBeNull();
-    expect((await cell(records.r1))?.meta?.ai).toMatchObject({ [level.id]: 'failed' });
+    expect((await cell(records.r1))?.meta?.ai).toMatchObject({
+      [level.id]: { state: 'failed', reason: 'invalid_output' },
+    });
     expect((await cell(records.r2))?.fields[level.id]).toBe('Cao');
     expect(await queue().recordIdsOf(orgScope(fx.orgId), level.id, 'failed')).toEqual([records.r1]);
     // Text is stored as text: markup is never interpreted here.

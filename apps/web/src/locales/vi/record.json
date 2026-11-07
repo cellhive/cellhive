@@ -81,6 +81,20 @@
     "queued": "Đang chờ AI…",
     "running": "AI đang sinh…",
     "failed": "AI không sinh được giá trị này",
-    "paused": "AI tạm dừng: xem thông báo phía trên lưới"
+    "paused": "AI tạm dừng: xem thông báo phía trên lưới",
+    "failedReason": {
+      "invalid_output": "AI không sinh được giá trị này: câu trả lời không hợp với trường",
+      "provider_error": "AI không sinh được giá trị này: nhà cung cấp AI trả về lỗi",
+      "timeout": "AI không sinh được giá trị này: nhà cung cấp AI không trả lời kịp",
+      "render_error": "AI không sinh được giá trị này: một trường trong prompt đã bị xoá hoặc đọc bản ghi khác",
+      "refused": "AI không sinh được giá trị này: model từ chối trả lời",
+      "truncated": "AI không sinh được giá trị này: câu trả lời bị cắt vì chạm giới hạn độ dài"
+    },
+    "pausedReason": {
+      "quota": "AI tạm dừng: tổ chức đã dùng hết quota AI của hôm nay",
+      "ai_disabled": "AI tạm dừng: AI đang tắt trong tổ chức",
+      "record_data_disabled": "AI tạm dừng: AI không còn được đọc giá trị bản ghi",
+      "provider_error": "AI tạm dừng: nhà cung cấp AI từ chối cấu hình (xem thông báo phía trên lưới)"
+    }
   }
 }

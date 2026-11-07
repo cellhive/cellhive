@@ -498,6 +498,20 @@
     "runningTip": "AI đang sinh giá trị này…",
     "failedTip": "AI không sinh được giá trị này. Sinh lại các ô lỗi từ menu của cột.",
     "pausedTip": "Việc sinh đang tạm dừng: xem thông báo phía trên lưới.",
+    "failedTips": {
+      "invalid_output": "AI không sinh được giá trị này: câu trả lời không hợp với trường. Sinh lại các ô lỗi từ menu của cột.",
+      "provider_error": "AI không sinh được giá trị này: nhà cung cấp AI trả về lỗi. Sinh lại các ô lỗi từ menu của cột.",
+      "timeout": "AI không sinh được giá trị này: nhà cung cấp AI không trả lời kịp. Sinh lại các ô lỗi từ menu của cột.",
+      "render_error": "AI không sinh được giá trị này: một trường trong prompt đã bị xoá hoặc đọc bản ghi khác. Kiểm tra prompt trong cài đặt của trường.",
+      "refused": "AI không sinh được giá trị này: model từ chối trả lời. Viết lại prompt rồi sinh lại các ô lỗi.",
+      "truncated": "AI không sinh được giá trị này: câu trả lời bị cắt vì chạm giới hạn độ dài. Tăng giới hạn đầu ra trong cài đặt của trường rồi sinh lại các ô lỗi."
+    },
+    "pausedTips": {
+      "quota": "Tạm dừng: tổ chức đã dùng hết quota AI của hôm nay.",
+      "ai_disabled": "Tạm dừng: AI đang tắt trong tổ chức.",
+      "record_data_disabled": "Tạm dừng: AI không còn được đọc giá trị bản ghi trong tổ chức này.",
+      "provider_error": "Tạm dừng: nhà cung cấp AI từ chối cấu hình. Xem thông báo phía trên lưới."
+    },
     "readOnly": "AI điền trường này: không sửa tay được.",
     "readOnlyManage": "AI điền trường này. Muốn sửa tay, hãy bỏ AI trong cài đặt của trường.",
     "banner": {
@@ -505,11 +519,22 @@
       "reason": {
         "quota": "Tổ chức đã dùng hết quota AI của hôm nay; việc sinh chạy tiếp sau khi quota đặt lại.",
         "ai_disabled": "AI đang tắt trong tổ chức.",
-        "record_data_disabled": "AI không còn được đọc giá trị bản ghi trong tổ chức này."
+        "record_data_disabled": "AI không còn được đọc giá trị bản ghi trong tổ chức này.",
+        "provider_error": {
+          "unauthorized": "Nhà cung cấp AI từ chối API key. Quản trị viên tổ chức có thể cập nhật key trong Cài đặt › AI.",
+          "forbidden": "Nhà cung cấp AI không cho truy cập bằng API key này. Quản trị viên tổ chức có thể cập nhật key trong Cài đặt › AI.",
+          "not_found": "Nhà cung cấp AI không nhận ra địa chỉ hoặc model này. Quản trị viên tổ chức có thể sửa trong Cài đặt › AI.",
+          "ssrf_blocked": "Địa chỉ của nhà cung cấp AI bị chặn. Quản trị viên tổ chức có thể cho phép địa chỉ này trong danh sách HTTP được phép của tổ chức hoặc đổi nó trong Cài đặt › AI.",
+          "secret_host_not_allowed": "API key không được gửi tới host của địa chỉ nhà cung cấp. Quản trị viên tổ chức có thể nhập lại key trong Cài đặt › AI.",
+          "secret_unavailable": "API key không còn hoặc không đọc được. Quản trị viên tổ chức có thể nhập lại key trong Cài đặt › AI.",
+          "unknown": "Nhà cung cấp AI từ chối cấu hình. Quản trị viên tổ chức có thể kiểm tra trong Cài đặt › AI."
+        }
       },
       "resume": "Tiếp tục",
       "resumed": "Đang sinh tiếp “{{name}}”.",
-      "settings": "Cài đặt AI"
+      "settings": "Cài đặt AI",
+      "waitingTitle": "“{{name}}”: đang chờ nhà cung cấp AI.",
+      "waiting": "Nhà cung cấp yêu cầu chậm lại; việc sinh tự chạy tiếp lúc {{time}}."
     }
   }
 }

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { aiCellStateOf, aiConfigOf, aiPausedOf, estimateAiTokens, isAiField } from '../ai-field';
+import {
+  aiCellReasonOf,
+  aiCellStateOf,
+  aiConfigOf,
+  aiPausedOf,
+  aiRetryAtOf,
+  estimateAiTokens,
+  isAiField,
+} from '../ai-field';
 
 import type { FieldDto } from '@cellhive/contracts';
 
@@ -34,22 +42,63 @@ describe('AI fields (T915)', () => {
     });
   });
 
-  it('reads the state of a cell', () => {
-    const record = { meta: { ai: { fld_Summary000000001: 'running' as const } } };
+  it('reads the state of a cell and why (T1002: `{ state, reason? }`)', () => {
+    const record = {
+      meta: {
+        ai: {
+          fld_Summary000000001: { state: 'running' as const },
+          fld_Level00000000001: { state: 'failed' as const, reason: 'truncated' as const },
+        },
+      },
+    };
     expect(aiCellStateOf(record, 'fld_Summary000000001')).toBe('running');
+    expect(aiCellReasonOf(record, 'fld_Summary000000001')).toBeUndefined();
+    expect(aiCellStateOf(record, 'fld_Level00000000001')).toBe('failed');
+    expect(aiCellReasonOf(record, 'fld_Level00000000001')).toBe('truncated');
     expect(aiCellStateOf(record, 'fld_Other0000000001')).toBeUndefined();
     expect(aiCellStateOf({}, 'fld_Summary000000001')).toBeUndefined();
     expect(aiCellStateOf(undefined, 'fld_Summary000000001')).toBeUndefined();
   });
 
-  it('reads the paused rows of a field', () => {
+  const state = (
+    queued: number,
+    paused: number,
+    extra: Partial<NonNullable<FieldDto['ai_state']>> = {},
+  ) => ({
+    ai_state: {
+      queued,
+      failed: 0,
+      paused,
+      paused_reason: null,
+      paused_detail: null,
+      retry_at: null,
+      ...extra,
+    },
+  });
+
+  it('reads the paused rows of a field, why and what the provider rejected', () => {
     expect(aiPausedOf({})).toBeNull();
+    expect(aiPausedOf(state(3, 0))).toBeNull();
+    expect(aiPausedOf(state(0, 4, { paused_reason: 'quota' }))).toEqual({
+      count: 4,
+      reason: 'quota',
+      detail: null,
+    });
     expect(
-      aiPausedOf({ ai_state: { queued: 3, failed: 0, paused: 0, paused_reason: null } }),
-    ).toBeNull();
-    expect(
-      aiPausedOf({ ai_state: { queued: 0, failed: 1, paused: 4, paused_reason: 'quota' } }),
-    ).toEqual({ count: 4, reason: 'quota' });
+      aiPausedOf(state(0, 4, { paused_reason: 'provider_error', paused_detail: 'unauthorized' })),
+    ).toEqual({ count: 4, reason: 'provider_error', detail: 'unauthorized' });
+  });
+
+  it('reads when queued rows go on while the provider asked to wait', () => {
+    const at = '2026-11-07T10:00:30.000Z';
+    const before = Date.parse('2026-11-07T10:00:00.000Z');
+    expect(aiRetryAtOf({}, before)).toBeNull();
+    expect(aiRetryAtOf(state(3, 0), before)).toBeNull();
+    expect(aiRetryAtOf(state(3, 0, { retry_at: at }), before)).toBe(at);
+    // Past: the rows go on already.
+    expect(aiRetryAtOf(state(3, 0, { retry_at: at }), Date.parse(at))).toBeNull();
+    // Paused cells say more: the banner shows those.
+    expect(aiRetryAtOf(state(3, 1, { retry_at: at, paused_reason: 'quota' }), before)).toBeNull();
   });
 
   it.each([

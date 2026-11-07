@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { AI_CELL_STATES } from './ai-fields.js';
+import { aiCellMetaSchema } from './ai-fields.js';
 import { idOf } from './ids.js';
 
 // Kept apart from `records.ts` so that `realtime.ts` (part of light entries)
@@ -28,13 +28,14 @@ export const recordMetaSchema = z
   .strictObject({
     color: recordColorSchema.optional(),
     ai: z
-      .record(idOf('fld'), z.enum(AI_CELL_STATES))
+      .record(idOf('fld'), aiCellMetaSchema)
       .optional()
       .meta({
         description:
-          'AI field id → state of its cell when it is not simply its value (T910): `queued`, ' +
-          '`running`, `failed`, `paused`. Present on every record of a table with AI fields ' +
-          'the reader sees (and is not locked out of); `{}` = every AI value is current',
+          'AI field id → `{ state, reason? }` of its cell when it is not simply its value ' +
+          '(T910): `queued`, `running`, `failed` (`reason`: a failure code) or `paused` ' +
+          '(`reason`: why). Present on every record of a table with AI fields the reader sees ' +
+          '(and is not locked out of); `{}` = every AI value is current',
       }),
   })
   .meta({
