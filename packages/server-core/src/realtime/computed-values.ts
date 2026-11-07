@@ -177,7 +177,8 @@ class ComputedMetaReader {
       ...(result.resultOptions === undefined ? {} : { result_options: result.resultOptions }),
       ...(result.resultIsList === undefined ? {} : { result_is_list: result.resultIsList }),
       tables: [...references.tables].sort() as Id<'tbl'>[],
-      cross_fields: pairs(references.crossFields),
+      // Fields flowing in through an AI field lock whatever `strict` (always strict, QA S8).
+      cross_fields: pairs(new Set([...references.crossFields, ...references.strictFields])),
       same_row_fields: pairs(references.sameRowFields),
       strict: this.strict,
     };

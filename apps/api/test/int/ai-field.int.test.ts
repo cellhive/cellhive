@@ -733,6 +733,70 @@ describe('AI fields (T910)', () => {
     expect((await cell(records.r1))?.fields[field.id]).toBeNull();
   });
 
+  it('a formula over an AI field locks with it; a manager locked out of it cannot preview it (QA S8)', async () => {
+    const aiCost = await addField({
+      name: 'ai_cost_note',
+      type: 'text',
+      options: { ai: { task: 'custom', prompt: 'Cost {{ [cost] }}', auto_update: false } },
+    });
+    const copy = await addField({
+      name: 'ai_cost_copy',
+      type: 'formula',
+      options: { expression: '[ai_cost_note]' },
+    });
+    await fx.call('u_admin', 'POST', `/fields/${aiCost.id}/ai/generate`, {
+      scope: 'records',
+      record_ids: [records.r1],
+    });
+    await drain(aiCost.id);
+    // The base is not strict: a formula over `cost` would show to u_sales1, one over an AI
+    // field made from `cost` must not (AI values are always strict).
+    const forSales = await fx.call('u_sales1', 'GET', `/fields/${copy.id}`);
+    expect(forSales.json()).toMatchObject({ locked: true });
+    expect((await cell(records.r1, 'u_sales1'))?.fields[copy.id] ?? null).toBeNull();
+    expect((await fx.call('u_admin', 'GET', `/fields/${copy.id}`)).json()).toMatchObject({
+      locked: false,
+    });
+
+    // A table manager who cannot read `cost`: the AI field is one they cannot read in formulas.
+    const role = await fx.call('u_admin', 'POST', `/bases/${fx.baseId}/roles`, {
+      name: 'Orders manager without cost',
+      config: {
+        tables: {
+          [fx.orders.id]: {
+            perm: 'manage',
+            field_rule: {
+              mode: 'specify',
+              fields: { [fld('cost')]: 'no_perm' },
+              option_edit_fields: [],
+              file_download_fields: [],
+            },
+          },
+        },
+        base_rule: { copy: false, download: false, share_link: false },
+      },
+    });
+    expect(role.statusCode, role.body).toBe(201);
+    const assigned = await fx.call('u_admin', 'PUT', `/bases/${fx.baseId}/role-assignments`, {
+      principal_type: 'user',
+      principal_id: fx.users.u_out.id,
+      role_id: role.json<{ id: string }>().id,
+    });
+    expect(assigned.statusCode, assigned.body).toBe(200);
+    // Exactly like `[cost]` itself: a field that does not exist for them.
+    for (const expression of ['[cost]', '[ai_cost_note]', '[ai_cost_copy]']) {
+      const preview = await fx.call('u_out', 'POST', `/tables/${fx.orders.id}/computed-preview`, {
+        type: 'formula',
+        options: { expression },
+        record_ids: [records.r1],
+      });
+      expectProblem(preview, 422, 'FORMULA_SYNTAX_ERROR');
+      expect(preview.json<{ errors: { code: string }[] }>().errors).toMatchObject([
+        { code: 'UNKNOWN_FIELD' },
+      ]);
+    }
+  });
+
   it('refuses a link or a parent as a prompt source; a field converted to a link fails the row (QA S8)', async () => {
     // A link cell is rendered as the titles of the linked records, read with the worker's
     // system access: readers who see the link without the linked table would read them.

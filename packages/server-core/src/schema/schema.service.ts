@@ -36,6 +36,7 @@ import { sql, type RawBuilder } from 'kysely';
 import { prepareAiOptions, type AiFieldContext } from '../ai/generation/definition.js';
 import { aiOptionsOf, isAiField } from '../ai/generation/options.js';
 import { AiGenerationQueueRepository } from '../ai/generation/queue.repository.js';
+import { withoutLockedAiFields } from '../ai/generation/sources.js';
 import { AuditLogsRepository } from '../audit/audit-logs.repository.js';
 import { AuditWriter } from '../audit/audit-writer.js';
 import {
@@ -5941,7 +5942,10 @@ function computedContextOf(
     rows,
     tableId,
     timeZone: computed?.timeZone ?? 'UTC',
-    ...(computed?.readable === undefined ? {} : { readable: computed.readable }),
+    // An AI field the saver is locked out of is no source of theirs (always strict, QA S8).
+    ...(computed?.readable === undefined
+      ? {}
+      : { readable: withoutLockedAiFields(computed.readable, rows) }),
   };
 }
 

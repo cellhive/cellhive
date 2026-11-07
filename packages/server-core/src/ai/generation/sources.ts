@@ -3,9 +3,9 @@ import { isComputedRow } from '../../computed/definition/definition.js';
 import { loadBaseSchemaRows } from '../../computed/definition/schema-rows.js';
 import { computedReferences, type AnalysisOf } from '../../records/computed/read/references.js';
 
-import { aiOptionsOf, aiSourceFieldIds } from './options.js';
+import { aiOptionsOf, aiSourceFieldIds, isAiField } from './options.js';
 
-import type { BaseSchemaRows } from '../../computed/definition/schema-rows.js';
+import type { BaseSchemaRows, SchemaReadability } from '../../computed/definition/schema-rows.js';
 import type { Db } from '../../db/create-db.js';
 import type { OrgScope } from '../../db/repository.js';
 import type { FieldRow } from '../../db/schema.js';
@@ -46,7 +46,9 @@ export function aiReadFieldIds(
     out.add(id);
     const source = byId.get(id);
     if (source === undefined || !isComputedRow(source)) continue;
-    for (const read of computedReferences(source, rows, analysisOf).sameRowFields) out.add(read);
+    const references = computedReferences(source, rows, analysisOf);
+    for (const read of references.sameRowFields) out.add(read);
+    for (const read of references.strictFields) out.add(read);
   }
   return [...out].sort() as Id<'fld'>[];
 }
@@ -122,4 +124,47 @@ export async function loadAiLockRule(
   const analysisOf = aiAnalysisOf(rows);
   return (field, isReadable) =>
     aiReadFieldIds(field, rows, analysisOf).some((id) => !isReadable(id));
+}
+
+/**
+ * `readable` without the AI fields its reader is locked out of, nor the
+ * formulas/lookups of the same record built on one (QA S8): a formula or
+ * lookup checked for them (save, preview, AI formula) treats such a field
+ * like one they cannot read — a field that does not exist (`UNKNOWN_FIELD`)
+ * — so AI values never reach them through a formula, whatever
+ * `strict_computed_permissions` (AI values are always strict).
+ */
+export function withoutLockedAiFields(
+  readable: SchemaReadability,
+  rows: BaseSchemaRows,
+): SchemaReadability {
+  const byId = new Map<string, FieldRow>(rows.fields.map((row) => [row.id, row]));
+  const analysisOf = aiAnalysisOf(rows);
+  const unreadable = (owner: FieldRow) => (id: string) =>
+    !readable.field(byId.get(id)?.table_id ?? owner.table_id, id as Id<'fld'>);
+  const locked = new Map<string, boolean>();
+  const lockedOut = (field: FieldRow): boolean => {
+    let found = locked.get(field.id);
+    if (found === undefined) {
+      if (isAiField(field)) {
+        found = aiReadFieldIds(field, rows, analysisOf).some(unreadable(field));
+      } else if (isComputedRow(field)) {
+        found = [...computedReferences(field, rows, analysisOf).strictFields].some(
+          unreadable(field),
+        );
+      } else {
+        found = false;
+      }
+      locked.set(field.id, found);
+    }
+    return found;
+  };
+  return {
+    table: (tableId) => readable.table(tableId),
+    field: (tableId, fieldId) => {
+      if (!readable.field(tableId, fieldId)) return false;
+      const field = byId.get(fieldId);
+      return field === undefined || !lockedOut(field);
+    },
+  };
 }

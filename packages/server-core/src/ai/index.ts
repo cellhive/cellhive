@@ -180,6 +180,7 @@ export { AiGenerationQueueRepository, type TakenAiRow } from './generation/queue
 export {
   aiAnalysisOf,
   aiCrossRecordSources,
+  withoutLockedAiFields,
   aiFieldLockedFor,
   aiReadFieldIds,
   loadAiLockRule,
