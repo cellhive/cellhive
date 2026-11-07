@@ -1,3 +1,4 @@
+import { lockedAiFieldIds } from '../../ai/generation/sources.js';
 import { isComputedRow } from '../../computed/definition/definition.js';
 import { loadBaseSchemaRows, type BaseSchemaRows } from '../../computed/definition/schema-rows.js';
 import {
@@ -36,16 +37,18 @@ export function automationSchemaOf(
   baseSettings: unknown,
 ): AutomationValidationContext {
   const locked = new Set<string>();
+  const readable = {
+    table: (tableId: Id<'tbl'>) => access.tables[tableId] !== undefined,
+    field: (tableId: Id<'tbl'>, fieldId: Id<'fld'>) =>
+      access.tables[tableId]?.fields[fieldId] !== undefined,
+  };
   if (rows.fields.some(isComputedRow)) {
-    const readable = {
-      table: (tableId: Id<'tbl'>) => access.tables[tableId] !== undefined,
-      field: (tableId: Id<'tbl'>, fieldId: Id<'fld'>) =>
-        access.tables[tableId]?.fields[fieldId] !== undefined,
-    };
     const strict = strictComputedPermissionsOf(baseSettings);
     for (const table of rows.tables) {
       for (const id of lockedComputedFieldIds(rows, table.id, readable, strict)) locked.add(id);
     }
   }
+  // AI fields the person is locked out of (always strict, QA S8).
+  for (const id of lockedAiFieldIds(rows, readable)) locked.add(id);
   return { tables: rows.tables, fields: rows.fields, access, lockedFieldIds: locked };
 }

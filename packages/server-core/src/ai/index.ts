@@ -181,6 +181,7 @@ export {
   aiAnalysisOf,
   aiCrossRecordSources,
   withoutLockedAiFields,
+  lockedAiFieldIds,
   aiFieldLockedFor,
   aiReadFieldIds,
   loadAiLockRule,

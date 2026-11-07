@@ -24,6 +24,7 @@ import {
 } from '@cellhive/contracts';
 import {
   aiCrossRecordSources,
+  lockedAiFieldIds,
   AiSettingsRepository,
   automationSnapshot,
   AutomationRunsRepository,
@@ -939,13 +940,15 @@ export class AutomationService {
     const scope = base.org.scope;
     const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
     const locked = new Set<string>();
+    const readable = readabilityOf(base.access);
     if (rows.fields.some(isComputedRow)) {
-      const readable = readabilityOf(base.access);
       const strict = strictComputedPermissionsOf(base.base.settings);
       for (const table of rows.tables) {
         for (const id of lockedComputedFieldIds(rows, table.id, readable, strict)) locked.add(id);
       }
     }
+    // AI fields the caller is locked out of (always strict, QA S8).
+    for (const id of lockedAiFieldIds(rows, readable)) locked.add(id);
     return {
       tables: rows.tables,
       fields: rows.fields,
