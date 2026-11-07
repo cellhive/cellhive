@@ -10,9 +10,10 @@ import { animationsSettled, api, apiSignIn, expectNoSeriousA11yViolations, ok } 
  * toán: lỗi và tính lại", "S4b · Trình soạn công thức - popover") on the
  * demo Orders table:
  * - "Gấp đôi" = [amount] * 2 and "Cộng một" = [Gấp đôi] + 1; deleting
- *   "Gấp đôi" puts `#REF!` on the header of "Cộng một" in another tab within
- *   1 s, its cells show the grey token; "Restore field" from the error
- *   details (keyboard: Shift+F10) brings the values back;
+ *   "Gấp đôi" puts `#REF!` on the header of "Cộng một" in another tab, its
+ *   cells show the grey token; "Restore field" from the error details
+ *   (keyboard: Shift+F10) brings the values back. How fast the other tab
+ *   sees it is measured by the nightly `@perf` run (`t468-computed-perf`);
  * - "Edit formula" of the header menu opens the popover under the header,
  *   the new formula is saved and the cells follow;
  * - pasting into a computed column skips the cells and says so;
@@ -210,7 +211,7 @@ test.describe.serial('T468 computed cells, headers and panel', () => {
     await context.close();
   });
 
-  test('deleting a referenced field shows #REF! in another tab < 1 s; restoring brings values back', async ({
+  test('deleting a referenced field shows #REF! in another tab; restoring brings values back', async ({
     browser,
   }) => {
     test.setTimeout(180_000);
@@ -224,13 +225,8 @@ test.describe.serial('T468 computed cells, headers and panel', () => {
     await expect(cell(b.page, column)).toHaveText(String(amount * 2 + 1));
 
     await ok(a.page, 'DELETE', `/fields/${ids.double}`);
-    // From the answer of the delete (committed) to the header of the other tab.
-    // T470 (H4): the first schema message of a burst refetches at once (leading edge).
-    const started = Date.now();
-    await expect(plusOne).toHaveAttribute('aria-label', /error #REF!/u, { timeout: 5_000 });
-    const elapsed = Date.now() - started;
-    process.stdout.write(`[t468] #REF on the other tab after ${String(elapsed)} ms\n`);
-    expect(elapsed).toBeLessThan(1_000);
+    // The other tab follows without a reload (the time it takes: @perf, FRONTEND §11.1).
+    await expect(plusOne).toHaveAttribute('aria-label', /error #REF!/u);
     await expect(await cellOf(b.page, names.plusOne)).toHaveText('#REF!');
     await b.page.screenshot({ path: test.info().outputPath('ref-header.png') });
 

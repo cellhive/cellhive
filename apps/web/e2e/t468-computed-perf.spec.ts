@@ -13,7 +13,11 @@ import { apiSignIn, ok } from './support';
  *   then the cells get their values;
  * - first data of the grid < 1.5 s (cold cache), frames > 32 ms < 5 %
  *   (product budgets; `PERF_BUDGETS` holds both profiles, the runner records
- *   this steady scroll's frames only).
+ *   this steady scroll's frames only);
+ * - deleting a field another formula reads: the header of that formula says
+ *   `#REF!` in another tab < 1 s after the delete answered (T1001: the
+ *   timing of `t468-computed-cells`, whose E2E test now checks the
+ *   behaviour only).
  *
  * Frames are sampled only once the page has settled after its first data and the move to
  * the computed columns
@@ -23,6 +27,8 @@ import { apiSignIn, ok } from './support';
  */
 
 const FIRST_DATA_MARK = 'app:grid:first-data';
+/** Plain integers: the cells read the same in every locale. */
+const PLAIN = { type: 'plain', precision: 0 };
 const RUN = String(Date.now()).slice(-6);
 const STORED = `Gấp đôi ${RUN}`;
 const VIRTUAL = `Quá hạn ${RUN}`;
@@ -186,5 +192,72 @@ test.describe('T468 computed columns @perf', () => {
     );
     expectBudgets(frames);
     await page.context().close();
+  });
+
+  test('#REF! in another tab < 1 s after deleting a field a formula reads', async ({ browser }) => {
+    test.setTimeout(300_000);
+    // Names of their own on every run (`repeat`): fields of earlier runs stay behind.
+    const run = `${RUN}.${String(test.info().repeatEachIndex)}`;
+    const source = `Nguồn ${run}`;
+    const dependant = `Cộng một ${run}`;
+    const admin = await signedInPage(browser);
+    // Both virtual (`TODAY()`, then a virtual source): no backfill of 200 000 rows.
+    const created = await ok<{ id: string }>(admin, 'POST', `/tables/${tableId}/fields`, {
+      name: source,
+      type: 'formula',
+      options: { expression: 'IF(TODAY() > [Hạn], [Số tiền], [Số tiền]) * 2', style: PLAIN },
+    });
+    await ok(admin, 'POST', `/tables/${tableId}/fields`, {
+      name: dependant,
+      type: 'formula',
+      options: { expression: `[${source}] + 1`, style: PLAIN },
+    });
+    const watcher = await signedInPage(browser);
+    await watcher.goto(gridPath);
+    await watcher.waitForFunction(
+      (mark) => performance.getEntriesByName(mark).length > 0,
+      FIRST_DATA_MARK,
+    );
+    await revealColumn(watcher, dependant);
+    await expect(header(watcher, dependant)).not.toHaveAttribute('aria-label', /#REF!/u);
+    await settle(watcher, 'before the delete');
+    // The watcher notes the first frame whose header of `dependant` says #REF! (Playwright's
+    // polling would add its own interval to the number).
+    await watcher.evaluate((name) => {
+      const root = document.documentElement;
+      delete root.dataset['refAt'];
+      const check = () => {
+        const headers = document.querySelectorAll('table[role="grid"] th[role="columnheader"]');
+        for (const cell of headers) {
+          if (
+            cell.textContent.includes(name) &&
+            /#REF!/u.test(cell.getAttribute('aria-label') ?? '')
+          ) {
+            root.dataset['refAt'] = String(Date.now());
+            return;
+          }
+        }
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    }, dependant);
+    await ok(admin, 'DELETE', `/fields/${created.id}`);
+    // From the answer of the delete (committed) to the header of the other tab.
+    const deleted = Date.now();
+    await expect
+      .poll(() => watcher.evaluate(() => document.documentElement.dataset['refAt'] ?? null), {
+        timeout: 30_000,
+      })
+      .not.toBeNull();
+    const seenAt = Number(
+      await watcher.evaluate(() => document.documentElement.dataset['refAt'] ?? ''),
+    );
+    const elapsed = Math.max(0, seenAt - deleted);
+    process.stdout.write(`[perf] #REF! in the other tab after ${String(elapsed)} ms\n`);
+    const metrics = { '#REF! in another tab': budgeted('t468 #REF! in another tab', elapsed) };
+    await recordPerf(browser, metrics);
+    expectBudgets(metrics);
+    await admin.context().close();
+    await watcher.context().close();
   });
 });
