@@ -87,7 +87,7 @@ Per suite, on the same runs (latency is the whole request as the person waits fo
 | Model | Suite | Repair rounds | Latency p50 / p95 | Tokens (prompt + answer) | Failures |
 | --- | --- | --- | --- | --- | --- |
 | DeepSeek-V4.1-Flash | Automation draft | 1 (1 case) | 3.3 s / 5.4 s | 84,705 + 9,444 | none |
-| DeepSeek-V4.1-Flash | Ask AI | 0 | 1.9 s / 3.7 s | 37,995 + 3,954 | 1 `truncated` (reasoning used the 600-token limit, §2.8) |
+| DeepSeek-V4.1-Flash | Ask AI | 0 | 1.9 s / 3.7 s | 37,995 + 3,954 | 1 `truncated` (thinking used the 600-token limit, §2.8) |
 | DeepSeek-V4.1-Flash | Formula | 9 (9 cases) | 3.8 s / 5.2 s | 133,533 + 6,584 | 1 `truncated` |
 
 What this means for choosing a model:
@@ -192,7 +192,7 @@ The Cellhive project measured DeepSeek's API with the eval kit (§1.2).
 
 - Base URL `https://api.deepseek.com/v1`, a DeepSeek key, and a model id as `GET /models` lists it (`deepseek-flash`, `deepseek-v4-pro`). The key is bound to `api.deepseek.com`; no allowlist entry is needed. The default token parameter (`max_tokens`) is the right one.
 - **Answer format.** DeepSeek answers `400` to `json_schema` ("This response_format type is unavailable now") and accepts `json_object`, so **Test connection** finds **JSON mode** and **Automatic** starts there.
-- **Reasoning.** These models reason before they answer. The reasoning comes back apart from the answer (Cellhive reads only the answer), but it counts against the answer token limit and is billed. Ask AI plans and formulas have a fixed limit of 600 tokens, and in the eval about 1 request in 20 used it up on reasoning and failed with `AI_PROVIDER_ERROR` / `truncated`.
+- **Thinking.** `deepseek-flash` thinks before it answers by default. The thinking comes back apart from the answer (Cellhive reads only the answer), but its tokens count against the answer token limit and are billed. Ask AI plans and formulas have a fixed limit of 600 tokens: a request whose thinking uses it up fails with `AI_PROVIDER_ERROR` / `truncated`, which is how the two misses of §1.2 failed.
 
 ---
 
@@ -493,7 +493,7 @@ The same applies to members' MCP clients, with more at stake because those clien
 | `AI_PROVIDER_ERROR` / `secret_unavailable` | The key's secret is gone or cannot be decrypted (for example after `APP_MASTER_KEY` changed): enter the key again. |
 | `AI_PROVIDER_ERROR` / `invalid_response` or `response_too_large` | The URL is not an OpenAI-compatible Chat Completions API, or the answer exceeds 1 MiB. |
 | `AI_PROVIDER_ERROR` / `refused` | The model declined to answer: try another model. |
-| `AI_PROVIDER_ERROR` / `truncated` | The answer hit its token limit: check the **Output token parameter**; reasoning models spend part of the limit on reasoning (DeepSeek §2.8, Ollama thinking models §2.4); for AI fields and steps, raise **Longest answer**. |
+| `AI_PROVIDER_ERROR` / `truncated` | The answer hit its token limit: check the **Output token parameter**; reasoning models spend part of the limit on thinking (DeepSeek §2.8, Ollama thinking models §2.4); for AI fields and steps, raise **Longest answer**. |
 | `504 AI_TIMEOUT` | The request passed 90 seconds, a call passed the request timeout, or connecting took more than 5 seconds. A local model may still be loading: try again, or raise the **Request timeout** (§5.3). |
 | `504` from your reverse proxy before Cellhive answers | Its read timeout is under 90 seconds (nginx defaults to 60): raise it. |
 | `422 AI_INVALID_OUTPUT` | The model's answer was still wrong after 2 repair rounds. Rephrase (name the table and fields), or use a larger or instruction-tuned model (§1.2). |
