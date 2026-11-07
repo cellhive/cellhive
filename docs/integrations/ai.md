@@ -8,7 +8,7 @@ Cellhive's AI features are optional. While AI is off or not set up, no AI button
 - fill a field with AI, record by record (summarize, classify, extract, translate);
 - add AI steps to automations (generate a text, pick an option).
 
-Cellhive talks to any server that speaks the OpenAI **Chat Completions** API. It therefore runs entirely on a model you host yourself (Ollama, vLLM, llama.cpp, or a gateway such as LiteLLM), as well as on hosted APIs (OpenAI, Anthropic, OpenRouter). Cellhive never ships, downloads or starts a model.
+Cellhive talks to any server that speaks the OpenAI **Chat Completions** API. It therefore runs entirely on a model you host yourself (Ollama, vLLM, llama.cpp, or a gateway such as LiteLLM), as well as on hosted APIs (OpenAI, Anthropic, OpenRouter, DeepSeek). Cellhive never ships, downloads or starts a model.
 
 This guide is for self-hosters and organization owners and admins:
 
@@ -72,20 +72,30 @@ The formula, the draft and Ask AI store nothing: the person checks the result an
 
 ### 1.2 Which model
 
-<!-- PLACEHOLDER (BACKLOG T917): no real model has been evaluated yet. Run the eval kit
-     (`apps/api/test/ai-eval/README.md`: `S8_AI_EVAL=1 S8_AI_BASE_URL=… S8_AI_MODEL=…
-     S8_AI_REPORT=<dir> pnpm --filter @cellhive/api test:int test/ai-eval`) with at least one
-     local model (open-weight 7–9B instruct, 8 GB GPU) and one hosted model, then replace this
-     block with a table: model and version, quantization, hardware, and per suite (automation
-     draft, Ask AI, formula) the score out of 20, repair rounds and p50/p95 latency. A local
-     model under 12/20 on a suite: name the minimum model for that feature here instead. -->
+The Cellhive project measures models with an eval kit on the demo data ([`apps/api/test/ai-eval/README.md`](../../apps/api/test/ai-eval/README.md)): 20 automation sentences, 20 Ask AI questions and 20 Vietnamese formula descriptions, each sent through the real route as the demo admin. A case counts when the result is right: the draft does what the sentence asks (or warns where drafts cannot), the answer's numbers equal those of a reference widget, the formula computes the same values as a reference formula. To measure your own model the same way, run the kit against it.
 
-> **Evaluated models: to be added.** The Cellhive project is measuring local models (open-weight 7–9B instruction-tuned models that fit an 8 GB GPU) and a hosted model on 20 automation sentences, 20 Ask AI questions and 20 formula descriptions on the demo data. The models, their quantization, the hardware and the results will be listed here. To measure a model of your own the same way, see [`apps/api/test/ai-eval/README.md`](../../apps/api/test/ai-eval/README.md).
+Measured on 2026-11-07:
 
-Until then:
+| Model | Served by | Answer format (§2.1) | Automation draft | Ask AI | Formula |
+| --- | --- | --- | --- | --- | --- |
+| DeepSeek-V4.1-Flash (`deepseek-flash`) | DeepSeek API (§2.8) | JSON mode | **20/20** | **19/20** | **19/20** |
+| Qwen2.5 7B Instruct (`qwen2.5:7b-instruct`, Q4_K_M) | Ollama 0.40.15 on an Apple M3 laptop (24 GB unified memory, Metal), context 16,384 | JSON schema | **5 of the first 13** (run cut short) | not measured yet | not measured yet |
 
-- Use an **instruction-tuned** model. A base (completion) model rarely answers with the JSON Cellhive asks for.
-- The automation draft is the hardest task (several tables, triggers and actions at once). A small local model may fail it more often than the formula, Ask AI or AI fields; Cellhive then answers `AI_INVALID_OUTPUT` rather than a wrong draft.
+Per suite, on the same runs (latency is the whole request as the person waits for it, repair rounds included; tokens are the sum over the cases as the provider counted them):
+
+| Model | Suite | Repair rounds | Latency p50 / p95 | Tokens (prompt + answer) | Failures |
+| --- | --- | --- | --- | --- | --- |
+| DeepSeek-V4.1-Flash | Automation draft | 1 (1 case) | 3.3 s / 5.4 s | 84,705 + 9,444 | none |
+| DeepSeek-V4.1-Flash | Ask AI | 0 | 1.9 s / 3.7 s | 37,995 + 3,954 | 1 `truncated` (reasoning used the 600-token limit, §2.8) |
+| DeepSeek-V4.1-Flash | Formula | 9 (9 cases) | 3.8 s / 5.2 s | 133,533 + 6,584 | 1 `truncated` |
+| Qwen2.5 7B Instruct | Automation draft (13 cases) | 11 (6 cases) | 63.2 s / 90.1 s | 55,961 + 7,855 | 5 `AI_INVALID_OUTPUT` after 3 tries, 3 `AI_TIMEOUT` at 90 s |
+
+What this means for choosing a model:
+
+- **A hosted model of the DeepSeek-V4.1-Flash class does every AI feature**, including the sentence of the Cellhive milestone ("khi ticket chuyển DONE thì gửi Telegram cho người phụ trách", drafted as a notification to the person in charge and saved turned off).
+- **Automation drafts need a hosted model or a large local model.** A 7–8B local model is not enough: Qwen2.5 7B Instruct failed 8 of the first 13 sentences, the milestone sentence among them, and a laptop GPU writes a draft slowly (about 10 answer tokens a second under a JSON schema, so drafts took 30–90 seconds and three hit the 90-second limit). The project has not measured a larger local model yet; plan for one of about 30B parameters or more on a GPU, or use a hosted model for this feature.
+- **Ask AI, formulas and AI fields** ask for much shorter answers. Their results with a 7–8B local model are not measured yet.
+- Use an **instruction-tuned** model, preferably one that does not think before answering (§2.4). A base (completion) model rarely answers with the JSON Cellhive asks for.
 - Every answer is checked by Cellhive (§2.1), so a weaker model costs more repair rounds and failed requests, never unchecked output.
 
 ---
@@ -103,6 +113,7 @@ What every provider must offer: `POST {base URL}/chat/completions` without strea
 | llama.cpp (`llama-server`) | `http://<host>:8080/v1` | When started with `--api-key` | `<host>:8080` | §2.5 |
 | LiteLLM proxy | `http://<host>:4000/v1` | A LiteLLM key | `<host>:4000` | Gateway in front of other providers (§2.6) |
 | OpenRouter | `https://openrouter.ai/api/v1` | Required | None | Structured output depends on the model (§2.7) |
+| DeepSeek | `https://api.deepseek.com/v1` | Required | None | JSON mode, not JSON schema; reasons before answering (§2.8) |
 
 The ports are the servers' defaults; use the ones you run them on.
 
@@ -141,7 +152,8 @@ Anthropic offers an OpenAI-compatible endpoint (`https://api.anthropic.com/v1`).
 - **Listen address.** Ollama listens on `127.0.0.1:11434` by default, which a Cellhive container or another machine cannot reach. Start it with `OLLAMA_HOST=0.0.0.0:11434` and keep port 11434 away from the internet: Ollama has no authentication.
 - **Base URL** `http://<host>:11434/v1`, **no key**, and the model name as `ollama list` prints it (for example `llama3.1:8b`). Pull the model first (`ollama pull <model>`).
 - **Allowlist entry** `<host>:11434` (§3). The **Allow** button of a blocked test adds it.
-- **Context length.** Ollama uses a context window of 4,096 tokens unless told otherwise. Cellhive's prompts list the tables and fields the person can read, so on a large base a formula or draft request can need more; set `OLLAMA_CONTEXT_LENGTH` when starting Ollama (for example `OLLAMA_CONTEXT_LENGTH=16384`, if your GPU has the memory). **Usage** shows how many prompt tokens your requests take.
+- **Context length.** Ollama uses a context window of 4,096 tokens unless told otherwise. Cellhive's prompts list the tables and fields the person can read, so on a large base a formula or draft request can need more; set `OLLAMA_CONTEXT_LENGTH` when starting Ollama (for example `OLLAMA_CONTEXT_LENGTH=16384`, if your GPU has the memory). Ollama 0.40 still started models with 4,096 tokens on a 24 GB Apple M3. On the small demo base an automation draft took about 1,900–2,900 prompt tokens a call at the **JSON schema** rung; the lower rungs add the schema to the prompt, and repair rounds add the previous answer. **Usage** shows how many prompt tokens your requests take.
+- **Thinking models.** Some models think before they answer by default (Ollama's `ollama show <model>` lists `thinking` under **Capabilities**; `qwen3` is one). Ollama returns the thinking apart from the answer, and Cellhive reads only the answer, but the thinking counts against the answer token limit and takes time: `qwen3:8b` spent about 300 tokens thinking about a one-line sum, while Ask AI plans and formulas allow 600. Ollama's OpenAI-compatible endpoint turns thinking off when a request sends `reasoning_effort: "none"`, which Cellhive's fixed request does not, so prefer a model without thinking for Cellhive.
 - **First request.** Ollama loads a model on first use, which can take longer than a test allows. If **Test connection** times out, test again, or raise the **Request timeout** under **Advanced** (10–120 seconds, default 60).
 - **Token parameter.** Ollama reads `max_tokens`, which is the default for every host other than `api.openai.com`.
 
@@ -174,6 +186,14 @@ The [LiteLLM](https://github.com/BerriAI/litellm) proxy is a gateway you run you
 
 - Base URL `https://openrouter.ai/api/v1`, an OpenRouter key, and a model id such as `openai/gpt-5-mini`.
 - Structured output depends on the model and on the provider endpoint OpenRouter routes the request to: some ignore `response_format`. OpenRouter's `provider.require_parameters: true` sends a request only to endpoints that support all of its parameters, but Cellhive's request body is fixed and cannot carry it. Cellhive still checks and repairs every answer (§2.1); to avoid the extra rounds, OpenRouter **presets** can hold provider routing preferences and apply them when the model is written `@preset/<slug>` (or `<model>@preset/<slug>`). This is OpenRouter's feature, not tested by the Cellhive project: check that your preset offers the preference.
+
+### 2.8 DeepSeek
+
+The Cellhive project measured DeepSeek's API with the eval kit (§1.2).
+
+- Base URL `https://api.deepseek.com/v1`, a DeepSeek key, and a model id as `GET /models` lists it (`deepseek-flash`, `deepseek-v4-pro`). The key is bound to `api.deepseek.com`; no allowlist entry is needed. The default token parameter (`max_tokens`) is the right one.
+- **Answer format.** DeepSeek answers `400` to `json_schema` ("This response_format type is unavailable now") and accepts `json_object`, so **Test connection** finds **JSON mode** and **Automatic** starts there.
+- **Reasoning.** These models reason before they answer. The reasoning comes back apart from the answer (Cellhive reads only the answer), but it counts against the answer token limit and is billed. Ask AI plans and formulas have a fixed limit of 600 tokens, and in the eval about 1 request in 20 used it up on reasoning and failed with `AI_PROVIDER_ERROR` / `truncated`.
 
 ---
 
@@ -474,7 +494,7 @@ The same applies to members' MCP clients, with more at stake because those clien
 | `AI_PROVIDER_ERROR` / `secret_unavailable` | The key's secret is gone or cannot be decrypted (for example after `APP_MASTER_KEY` changed): enter the key again. |
 | `AI_PROVIDER_ERROR` / `invalid_response` or `response_too_large` | The URL is not an OpenAI-compatible Chat Completions API, or the answer exceeds 1 MiB. |
 | `AI_PROVIDER_ERROR` / `refused` | The model declined to answer: try another model. |
-| `AI_PROVIDER_ERROR` / `truncated` | The answer hit its token limit: check the **Output token parameter**; reasoning models spend part of the limit on reasoning; for AI fields and steps, raise **Longest answer**. |
+| `AI_PROVIDER_ERROR` / `truncated` | The answer hit its token limit: check the **Output token parameter**; reasoning models spend part of the limit on reasoning (DeepSeek §2.8, Ollama thinking models §2.4); for AI fields and steps, raise **Longest answer**. |
 | `504 AI_TIMEOUT` | The request passed 90 seconds, a call passed the request timeout, or connecting took more than 5 seconds. A local model may still be loading: try again, or raise the **Request timeout** (§5.3). |
 | `504` from your reverse proxy before Cellhive answers | Its read timeout is under 90 seconds (nginx defaults to 60): raise it. |
 | `422 AI_INVALID_OUTPUT` | The model's answer was still wrong after 2 repair rounds. Rephrase (name the table and fields), or use a larger or instruction-tuned model (§1.2). |
