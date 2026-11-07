@@ -4,6 +4,7 @@
  *
  * Usage: pnpm verify:push [--dry-run] [upstream]   (upstream defaults to origin/main)
  * Changed files = `git diff --name-only <upstream>...HEAD`, so commit before running it.
+ * It also warns, without failing, about the version lines of `VERSIONED_DOCS`.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { matchesGlob } from 'node:path';
@@ -114,6 +115,72 @@ export function planSteps(files) {
   }));
 }
 
+/**
+ * Docs whose line 3 is their version line (AGENTS.md "Workflow"): a change adds an entry
+ * there in the same commit, and resolving a conflict on that line keeps every entry.
+ */
+export const VERSIONED_DOCS = ['docs/SPEC.md', 'docs/CONTRACTS.md', 'docs/FRONTEND.md'];
+
+/**
+ * An entry of a version line: `1.42 — 2026-11-08 (…)`, `Version: 1.64 (…)`, `Trước đó: 1.41
+ * (…)`. Section references (`§11.1 (`, `F§4.10 (`) and `v1.7` are not entries.
+ */
+const VERSION_ENTRY = /(?:^|[^0-9§.v])(\d+\.\d+)(?= — \d{4}-\d{2}-\d{2}| \()/gu;
+
+/**
+ * @param {string} line a version line
+ * @returns {string[]} the versions it names, once each, in order
+ */
+export function versionEntries(line) {
+  return [...new Set([...line.matchAll(VERSION_ENTRY)].map((match) => match[1] ?? ''))];
+}
+
+/**
+ * Warnings about the version lines of the changed docs; never a failure.
+ *
+ * @param {readonly string[]} files paths changed since the upstream
+ * @param {(file: string) => { base: string | null, upstream: string | null, head: string | null }} line3
+ *   line 3 of a doc at the merge base, at the upstream's tip and at HEAD (`null`: no such file)
+ * @returns {string[]}
+ */
+export function versionLineWarnings(files, line3) {
+  /** @type {string[]} */
+  const warnings = [];
+  for (const file of VERSIONED_DOCS) {
+    if (!files.includes(file)) continue;
+    const { base, upstream, head } = line3(file);
+    if (head === null) continue;
+    if (base !== null && base === head) {
+      warnings.push(
+        `${file} changed but its version line (line 3) did not: add an entry in the same commit.`,
+      );
+    }
+    if (upstream === null) continue;
+    const kept = new Set(versionEntries(head));
+    const lost = versionEntries(upstream).filter((version) => !kept.has(version));
+    if (lost.length > 0) {
+      warnings.push(
+        `${file}: line 3 lost ${lost.length === 1 ? 'the entry' : 'the entries'} ${lost.join(', ')} of the upstream: put ${lost.length === 1 ? 'it' : 'them'} back after yours.`,
+      );
+    }
+  }
+  return warnings;
+}
+
+/** Line 3 of `file` at `rev`, `null` when the file is not there. */
+function lineThreeAt(/** @type {string} */ rev, /** @type {string} */ file) {
+  try {
+    const text = execFileSync('git', ['show', `${rev}:${file}`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return text.split('\n')[2] ?? '';
+  } catch {
+    return null;
+  }
+}
+
 /** @param {{ step: string, files: string[] }[]} plan */
 function formatPlan(plan) {
   return plan
@@ -153,6 +220,13 @@ function main() {
   process.stdout.write(
     `verify:push: ${String(files.length)} files changed in ${range}\n${formatPlan(plan)}\n`,
   );
+  const base = execFileSync('git', ['merge-base', upstream, 'HEAD'], { encoding: 'utf8' }).trim();
+  const warnings = versionLineWarnings(files, (file) => ({
+    base: lineThreeAt(base, file),
+    upstream: lineThreeAt(upstream, file),
+    head: lineThreeAt('HEAD', file),
+  }));
+  for (const warning of warnings) process.stderr.write(`verify:push: warning: ${warning}\n`);
   if (values['dry-run']) return;
 
   for (const { step } of plan) {
