@@ -35,6 +35,8 @@ import { WidgetMessage } from '../widgets/WidgetMessage';
 
 import { DashboardGrid } from './DashboardGrid';
 import { DashboardSurface } from './DashboardSurface';
+import { DashboardDataSourceContext } from './data-source';
+import { memberDataSource } from './member-data-source';
 import { useDashboardRealtime } from './use-dashboard-realtime';
 import { WidgetActionsContext, type RecordsRequest, type WidgetActions } from './widget-actions';
 
@@ -92,11 +94,16 @@ function PageSkeleton() {
  * chunk); anyone else stays in view mode. The dashboard's theme (mode,
  * palette, density) applies in both.
  */
-export function DashboardPage({
-  FilterEditor,
-  RecordDetail,
-  ShareAction,
-}: DashboardPageProps = {}) {
+export function DashboardPage(props: DashboardPageProps = {}) {
+  // Widgets read through the member routes (a share link provides its own source).
+  return (
+    <DashboardDataSourceContext.Provider value={memberDataSource}>
+      <MemberDashboard {...props} />
+    </DashboardDataSourceContext.Provider>
+  );
+}
+
+function MemberDashboard({ FilterEditor, RecordDetail, ShareAction }: DashboardPageProps) {
   const { t } = useTranslation('dashboard');
   const { baseId = '', dashboardId = '' } = useParams();
   const [params, setParams] = useSearchParams();

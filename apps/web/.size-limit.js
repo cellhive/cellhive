@@ -222,9 +222,10 @@ checks.push({
  * renderer (`features/dashboard/share`, the dashboard grid and widgets) plus
  * the ECharts chunk, outside the initial JS of the share entry — its own
  * chunks, so a shared grid or board does not carry them. The same 300 KB
- * working cap as the member route; 310 KB since zod and the
- * realtime client left the initial JS of the share entry (−34.6 KB there) and
- * now count here, plus T816 color rules: 301.73 KB measured.
+ * working cap as the member route (310 KB from the S7 CI fix to T1000, while
+ * zod counted here): since T1000 the shared dashboard loads no zod — the
+ * member data source and the date ranges of the filter controls are modules
+ * without schemas — 303.13 → 269.14 KB.
  */
 checks.push({
   name: 'Shared dashboard with charts (/s/:token, page + ECharts)',
@@ -233,7 +234,7 @@ checks.push({
     'src/features/dashboard/share/SharedDashboardView.tsx',
     'src/features/dashboard/charts/EChart.tsx',
   ]).filter((file) => !shareInitial.includes(file)),
-  limit: '310 KB',
+  limit: '300 KB',
   gzip: true,
 });
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { RELATIVE_DATE_RANGES } from './client-constants.js';
 import { isoDateTimeSchema } from './common.js';
 import {
   DASHBOARD_GRID_COLUMNS,
@@ -440,19 +441,8 @@ export const FILTER_CONTROL_KINDS = [
 export const filterControlKindSchema = z.enum(FILTER_CONTROL_KINDS);
 export type FilterControlKind = z.infer<typeof filterControlKindSchema>;
 
-export const RELATIVE_DATE_RANGES = [
-  'today',
-  'yesterday',
-  'last_7_days',
-  'last_30_days',
-  'this_week',
-  'last_week',
-  'this_month',
-  'last_month',
-  'this_quarter',
-  'this_year',
-  'last_year',
-] as const;
+// Zod-free, so the shared dashboard's filter controls do not pull these schemas (T1000).
+export { RELATIVE_DATE_RANGES } from './client-constants.js';
 
 const controlValueSchema = z.union([z.string().max(1000), z.number(), z.boolean()]);
 
