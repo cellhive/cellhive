@@ -63,7 +63,9 @@ const FormulaPopover = lazyOverlay(() => import('../features/formula/components/
  * (`features/automation/template-editor`, field chips), a chunk loaded when
  * an AI field is configured.
  */
-const AiPromptEditor = lazy(() => import('../features/automation/template-editor/AiPromptEditor'));
+const AiPromptEditor = lazyPanel(
+  () => import('../features/automation/template-editor/AiPromptEditor'),
+);
 
 /**
  * "Ask AI" of a table (T914, FRONTEND §20): the panel (`features/ai-ask`) is

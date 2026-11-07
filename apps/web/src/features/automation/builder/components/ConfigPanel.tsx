@@ -37,14 +37,12 @@ const RunN8nWorkflowEditor = lazyPanel(
   () => import('../actions/run-n8n-workflow/RunN8nWorkflowEditor'),
 );
 // (T915) The AI steps' panels load with the first AI step opened.
-const AiGenerateTextPanel = lazyPanel(() =>
-  import('../actions/ai/AiActionPanels').then((module) => ({
-    default: module.AiGenerateTextPanel,
-  })),
-);
-const AiClassifyPanel = lazyPanel(() =>
-  import('../actions/ai/AiActionPanels').then((module) => ({ default: module.AiClassifyPanel })),
-);
+const AiGenerateTextPanel = lazyPanel(async () => ({
+  default: (await import('../actions/ai/AiActionPanels')).AiGenerateTextPanel,
+}));
+const AiClassifyPanel = lazyPanel(async () => ({
+  default: (await import('../actions/ai/AiActionPanels')).AiClassifyPanel,
+}));
 
 export interface ConfigPanelProps {
   readonly step: StepKey;

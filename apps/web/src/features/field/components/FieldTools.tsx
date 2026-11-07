@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../../lib/api/client';
+import { lazyOverlay } from '../../../lib/lazy/chunk-error';
 import { tableQuery } from '../../../lib/query/queries';
 import { showErrorToast, showToast } from '../../../lib/toast/toast';
 import { RevertConversionDialog } from '../convert/RevertConversionDialog';
@@ -22,7 +23,7 @@ import type {
 import type { FieldDto } from '@cellhive/contracts';
 
 // (T915) "Generate for N existing rows?" after saving an AI field: loaded when asked.
-const AiGenerateDialog = lazy(() => import('../../../lib/ai/AiGenerateDialog'));
+const AiGenerateDialog = lazyOverlay(() => import('../../../lib/ai/AiGenerateDialog'));
 
 /**
  * (T468) "Edit formula" of the column header: the formula popover saves

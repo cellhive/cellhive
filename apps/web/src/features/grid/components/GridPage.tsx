@@ -2,7 +2,6 @@ import { Button, DropdownMenuItem, Tooltip } from '@cellhive/ui';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Info, Keyboard, Plus, Redo2, RefreshCw, Undo2, X } from 'lucide-react';
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -39,6 +38,7 @@ import { tableUndo, useGridUndo } from '../../../grid/undo/table-undo';
 import { aiConfigOf, aiPausedOf, isAiField } from '../../../lib/ai/ai-field';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
 import { useFormatters } from '../../../lib/i18n/format';
+import { lazyOverlay, lazyPanel } from '../../../lib/lazy/chunk-error';
 import { prefetchLinkCandidates } from '../../../lib/links/candidates';
 import {
   linkDisplayValue,
@@ -126,9 +126,9 @@ import type { ViewToolbarComponents } from '../../../lib/views/toolbar';
 import type { ViewDto } from '@cellhive/contracts';
 
 /** (T915) "Regenerate" of an AI column: confirmed in a dialog loaded when asked. */
-const AiGenerateDialog = lazy(() => import('../../../lib/ai/AiGenerateDialog'));
+const AiGenerateDialog = lazyOverlay(() => import('../../../lib/ai/AiGenerateDialog'));
 /** (T915) Paused AI fields: the banner loads only when one is paused. */
-const AiPausedBanner = lazy(() => import('../ai/AiPausedBanner'));
+const AiPausedBanner = lazyPanel(() => import('../ai/AiPausedBanner'));
 
 /** Skeleton rows shown until the first block answers. */
 const LOADING_ROWS = 12;
