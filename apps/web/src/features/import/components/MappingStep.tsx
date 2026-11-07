@@ -8,11 +8,12 @@ import {
 } from '@cellhive/contracts';
 import { Alert, Checkbox, FormField, Input, Select, Skeleton } from '@cellhive/ui';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../../lib/api/client';
 import { ErrorAlert } from '../../../lib/errors/ErrorAlert';
+import { useFormatters } from '../../../lib/i18n/format';
 import { baseQuery, fieldsQuery, tablesQuery } from '../../../lib/query/queries';
 import { importsApi } from '../api';
 import { tableNameFromFile } from '../file';
@@ -35,6 +36,8 @@ import {
   type NewColumnDraft,
   type TitleColumn,
 } from '../mapping';
+
+import { FieldMapper, FieldMapperRow, TargetCombobox, type TargetGroup } from './FieldMapper';
 
 import type { ImportTarget } from './types';
 import type { TFunction } from 'i18next';
@@ -63,13 +66,47 @@ function useStart(
   });
 }
 
+/** Values shown under a column's name. */
+const SAMPLE_COUNT = 3;
+
 /**
- * Step 3: what becomes of each column. New table: its name, then a field
- * name and type per column (guessed from the file; the first imported column
- * is the primary field, always text), or skip it. Append: a writable field
- * per column (read-only, computed, system and attachment fields are not
- * offered; link and parent fields take record titles, T411),
- * columns without a field are flagged, required fields must be filled.
+ * The first different non-empty values of each column in the preview, as
+ * the preview table writes them (numbers for the language, Yes/No).
+ */
+function useSamples(preview: ImportPreview): (column: number) => readonly string[] {
+  const { t } = useTranslation('import');
+  const format = useFormatters();
+  return useMemo(() => {
+    const byColumn = new Map<number, string[]>();
+    for (const column of preview.columns) {
+      const values: string[] = [];
+      for (const row of preview.rows) {
+        const value = row[column.index] ?? null;
+        if (value === null || (typeof value === 'string' && value.trim() === '')) continue;
+        const text =
+          typeof value === 'boolean'
+            ? t(value ? 'preview.true' : 'preview.false')
+            : typeof value === 'number'
+              ? format.number(value)
+              : value;
+        if (!values.includes(text)) values.push(text);
+        if (values.length === SAMPLE_COUNT) break;
+      }
+      byColumn.set(column.index, values);
+    }
+    return (column: number) => byColumn.get(column) ?? [];
+  }, [preview, t, format]);
+}
+
+/**
+ * Step 3: what becomes of each column, one row per column of the file (its
+ * name and sample values → what it becomes; Lucian #130, FieldMapper.tsx).
+ * New table: its name, then a field name and type per column (guessed from
+ * the file; the first imported column is the primary field, always text), or
+ * skip it. Append: a writable field per column (read-only, computed, system
+ * and attachment fields are not offered; link and parent fields take record
+ * titles, T411), columns without a field are flagged, required fields must
+ * be filled, a field filled twice is named under the rows.
  */
 export function MappingStep(props: MappingStepProps) {
   return props.target.mode === 'create_table' ? (
@@ -93,6 +130,7 @@ function NewTableMapping({
   const [drafts, setDrafts] = useState<NewColumnDraft[]>(() => initialNewColumns(preview));
   const [touched, setTouched] = useState(false);
   const start = useStart(baseId, onStarted, startImport);
+  const samplesOf = useSamples(preview);
 
   const existing = useMemo(
     () => (tables.data?.items ?? []).map((table) => table.name),
@@ -138,132 +176,103 @@ function NewTableMapping({
         )}
       </FormField>
       <p className="text-label font-normal text-fg-muted">{t('mapping.createHint')}</p>
-      <div
-        role="region"
-        aria-label={t('mapping.columnsRegion')}
-        tabIndex={0}
-        className="max-h-80 overflow-auto rounded-md border border-line"
-      >
-        <table className="w-full border-collapse text-body">
-          <thead className="sticky top-0 z-10 bg-surface-sunken text-left text-label">
-            <tr>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.column')}
-              </th>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.import')}
-              </th>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.fieldName')}
-              </th>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.fieldType')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {drafts.map((draft) => {
-              const column = preview.columns.find((item) => item.index === draft.column);
-              const isPrimary = draft.column === primary;
-              const issue = issues.columns.get(draft.column);
-              const type = effectiveType(draft, primary);
-              const columnLabel = column?.name ?? '';
-              return (
-                <tr
-                  key={draft.column}
-                  className="border-t border-line align-top"
-                  data-testid="import-column-row"
+      <FieldMapper label={t('mapping.columnsRegion')} warning={null}>
+        {drafts.map((draft) => {
+          const column = preview.columns.find((item) => item.index === draft.column);
+          const isPrimary = draft.column === primary;
+          const issue = draft.include ? issues.columns.get(draft.column) : undefined;
+          const type = effectiveType(draft, primary);
+          const columnLabel = column?.name ?? '';
+          return (
+            <FieldMapperRow
+              key={draft.column}
+              name={columnLabel}
+              samples={samplesOf(draft.column)}
+              state={!draft.include ? 'skipped' : issue === undefined ? 'mapped' : 'invalid'}
+              target={draft.include ? type : ''}
+              leading={
+                <Checkbox
+                  className="gap-0"
+                  label={
+                    <span className="sr-only">
+                      {t('mapping.importColumn', { column: columnLabel })}
+                    </span>
+                  }
+                  checked={draft.include}
+                  onChange={(event) => {
+                    update(draft.column, { include: event.target.checked });
+                  }}
+                />
+              }
+              badge={isPrimary ? <span className="badge">{t('mapping.primary')}</span> : null}
+            >
+              <div className="pair">
+                <FormField
+                  label={
+                    <span className="sr-only">
+                      {t('mapping.fieldNameOf', { column: columnLabel })}
+                    </span>
+                  }
+                  error={
+                    issue === undefined
+                      ? undefined
+                      : t(
+                          issue === 'nameRequired'
+                            ? 'mapping.fieldNameRequired'
+                            : 'mapping.fieldNameDuplicate',
+                        )
+                  }
                 >
-                  <th scope="row" className="max-w-48 truncate px-2 py-1.5 text-left font-medium">
-                    {columnLabel}
-                    {isPrimary ? (
-                      <span className="ml-2 rounded-sm bg-accent-soft px-1 text-label font-normal text-accent">
-                        {t('mapping.primary')}
-                      </span>
-                    ) : null}
-                  </th>
-                  <td className="px-2 py-1.5">
-                    <Checkbox
-                      label={
-                        <span className="sr-only">
-                          {t('mapping.importColumn', { column: columnLabel })}
-                        </span>
-                      }
-                      checked={draft.include}
+                  {(control) => (
+                    <Input
+                      {...control}
+                      value={draft.name}
+                      maxLength={255}
+                      disabled={!draft.include}
                       onChange={(event) => {
-                        update(draft.column, { include: event.target.checked });
+                        update(draft.column, { name: event.target.value });
                       }}
                     />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <FormField
-                      label={
-                        <span className="sr-only">
-                          {t('mapping.fieldNameOf', { column: columnLabel })}
-                        </span>
-                      }
-                      error={
-                        draft.include && issue !== undefined
-                          ? t(
-                              issue === 'nameRequired'
-                                ? 'mapping.fieldNameRequired'
-                                : 'mapping.fieldNameDuplicate',
-                            )
+                  )}
+                </FormField>
+                <FormField
+                  label={
+                    <span className="sr-only">
+                      {t('mapping.fieldTypeOf', { column: columnLabel })}
+                    </span>
+                  }
+                  hint={
+                    !draft.include
+                      ? undefined
+                      : isPrimary
+                        ? t('mapping.primaryText')
+                        : column !== undefined && column.type === type
+                          ? t('mapping.guessed')
                           : undefined
-                      }
+                  }
+                >
+                  {(control) => (
+                    <Select
+                      {...control}
+                      value={type}
+                      disabled={!draft.include || isPrimary}
+                      onChange={(event) => {
+                        update(draft.column, { type: event.target.value as ImportFieldType });
+                      }}
                     >
-                      {(control) => (
-                        <Input
-                          {...control}
-                          value={draft.name}
-                          maxLength={255}
-                          disabled={!draft.include}
-                          onChange={(event) => {
-                            update(draft.column, { name: event.target.value });
-                          }}
-                        />
-                      )}
-                    </FormField>
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <FormField
-                      label={
-                        <span className="sr-only">
-                          {t('mapping.fieldTypeOf', { column: columnLabel })}
-                        </span>
-                      }
-                      hint={
-                        isPrimary
-                          ? t('mapping.primaryText')
-                          : column !== undefined && column.type === type
-                            ? t('mapping.guessed')
-                            : undefined
-                      }
-                    >
-                      {(control) => (
-                        <Select
-                          {...control}
-                          value={type}
-                          disabled={!draft.include || isPrimary}
-                          onChange={(event) => {
-                            update(draft.column, { type: event.target.value as ImportFieldType });
-                          }}
-                        >
-                          {IMPORT_FIELD_TYPES.map((option) => (
-                            <option key={option} value={option}>
-                              {t(`types.${option}`)}
-                            </option>
-                          ))}
-                        </Select>
-                      )}
-                    </FormField>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                      {IMPORT_FIELD_TYPES.map((option) => (
+                        <option key={option} value={option}>
+                          {t(`types.${option}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </FormField>
+              </div>
+            </FieldMapperRow>
+          );
+        })}
+      </FieldMapper>
       {issues.noColumns ? (
         <Alert variant="danger">
           <p>{t('mapping.noColumns')}</p>
@@ -336,9 +345,50 @@ function AppendMappingStep({
   const analysis = analyzeAppend(preview.columns, mapping, targets, visible);
   const titled = titleColumns(preview.columns, mapping, byId, tableId);
   const start = useStart(baseId, onStarted, startImport);
+  const samplesOf = useSamples(preview);
+  const statusPrefix = useId();
+  const targetGroups = useMemo<TargetGroup[]>(
+    () => [
+      {
+        key: 'fields',
+        options: targets.map((field) => ({
+          id: field.id,
+          type: field.type,
+          label: field.required ? t('mapping.requiredField', { name: field.name }) : field.name,
+        })),
+      },
+      ...(unsupported.length === 0
+        ? []
+        : [
+            {
+              key: 'files',
+              label: t('mapping.unsupportedGroup'),
+              options: unsupported.map((field) => ({
+                id: field.id,
+                type: field.type,
+                label: t('mapping.attachmentOption', { name: field.name }),
+                disabled: true,
+              })),
+            },
+          ]),
+    ],
+    [targets, unsupported, t],
+  );
 
   if (fields.isPending || base.isPending) return <Skeleton className="h-40" />;
   if (fields.isError) return <ErrorAlert error={fields.error} />;
+
+  // One line under the rows names every field filled twice; each row says it too.
+  const duplicateNames = visible
+    .filter((field) => analysis.duplicates.has(field.id))
+    .map((field) => field.name);
+  const duplicateWarning =
+    duplicateNames.length === 0
+      ? null
+      : t('mapping.duplicates', {
+          count: duplicateNames.length,
+          fields: duplicateNames.join(', '),
+        });
 
   const choose = (column: number, fieldId: string | null) => {
     const next = new Map(mapping);
@@ -353,97 +403,47 @@ function AppendMappingStep({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-label font-normal text-fg-muted">{t('mapping.appendHint')}</p>
-      <div
-        role="region"
-        aria-label={t('mapping.columnsRegion')}
-        tabIndex={0}
-        className="max-h-80 overflow-auto rounded-md border border-line"
-      >
-        <table className="w-full border-collapse text-body">
-          <thead className="sticky top-0 z-10 bg-surface-sunken text-left text-label">
-            <tr>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.column')}
-              </th>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.targetField')}
-              </th>
-              <th scope="col" className="px-2 py-1.5">
-                {t('mapping.statusHeading')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {preview.columns.map((column) => {
-              const fieldId = mapping.get(column.index) ?? null;
-              const status = analysis.statuses.get(column.index);
-              const duplicate = fieldId !== null && analysis.duplicates.has(fieldId);
-              const flagged =
-                status?.kind === 'readOnly' ||
-                status?.kind === 'unsupported' ||
-                status?.kind === 'computed' ||
-                status?.kind === 'noMatch';
-              return (
-                <tr
-                  key={column.index}
-                  className="border-t border-line align-top"
-                  data-testid="import-column-row"
-                >
-                  <th scope="row" className="max-w-48 truncate px-2 py-1.5 text-left font-medium">
-                    {column.name}
-                  </th>
-                  <td className="px-2 py-1.5">
-                    <FormField
-                      label={
-                        <span className="sr-only">
-                          {t('mapping.targetOf', { column: column.name })}
-                        </span>
-                      }
-                      error={duplicate ? t('mapping.duplicateField') : undefined}
-                    >
-                      {(control) => (
-                        <Select
-                          {...control}
-                          value={fieldId ?? ''}
-                          onChange={(event) => {
-                            choose(
-                              column.index,
-                              event.target.value === '' ? null : event.target.value,
-                            );
-                          }}
-                        >
-                          <option value="">{t('mapping.skip')}</option>
-                          {targets.map((field) => (
-                            <option key={field.id} value={field.id}>
-                              {field.required
-                                ? t('mapping.requiredField', { name: field.name })
-                                : field.name}
-                            </option>
-                          ))}
-                          {unsupported.length === 0 ? null : (
-                            <optgroup label={t('mapping.unsupportedGroup')}>
-                              {unsupported.map((field) => (
-                                <option key={field.id} value={field.id} disabled>
-                                  {t('mapping.attachmentOption', { name: field.name })}
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                        </Select>
-                      )}
-                    </FormField>
-                  </td>
-                  <td
-                    className={flagged ? 'px-2 py-1.5 text-warning' : 'px-2 py-1.5 text-fg-muted'}
-                  >
-                    {statusText(t, status, byId)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <FieldMapper label={t('mapping.columnsRegion')} warning={duplicateWarning}>
+        {preview.columns.map((column) => {
+          const fieldId = mapping.get(column.index) ?? null;
+          const status = analysis.statuses.get(column.index);
+          const duplicate = fieldId !== null && analysis.duplicates.has(fieldId);
+          const flagged =
+            status?.kind === 'readOnly' ||
+            status?.kind === 'unsupported' ||
+            status?.kind === 'computed' ||
+            status?.kind === 'noMatch';
+          const statusId = `${statusPrefix}-${String(column.index)}`;
+          return (
+            <FieldMapperRow
+              key={column.index}
+              name={column.name}
+              samples={samplesOf(column.index)}
+              state={duplicate ? 'invalid' : status?.kind === 'mapped' ? 'mapped' : 'skipped'}
+              target={fieldId ?? ''}
+            >
+              <TargetCombobox
+                label={t('mapping.targetOf', { column: column.name })}
+                value={fieldId}
+                skipLabel={t('mapping.skip')}
+                groups={targetGroups}
+                invalid={duplicate}
+                describedBy={statusId}
+                onChange={(next) => {
+                  choose(column.index, next);
+                }}
+              />
+              <p
+                id={statusId}
+                className="status"
+                data-tone={duplicate ? 'danger' : flagged ? 'warning' : undefined}
+              >
+                {duplicate ? t('mapping.duplicateField') : statusText(t, status, byId)}
+              </p>
+            </FieldMapperRow>
+          );
+        })}
+      </FieldMapper>
       {titled.length === 0 ? null : (
         <TitleColumnsHint
           columns={titled}

@@ -41,12 +41,14 @@ COPY packages/permissions packages/permissions
 COPY packages/ui packages/ui
 COPY apps/web apps/web
 # Topological order: the workspace packages (tsc) first, then the web app (vite).
-# The OFL-1.1 texts travel with the self-hosted font files (THIRD_PARTY_NOTICES.md).
+# The OFL-1.1 texts travel with the self-hosted font files, the MIT text with the UI
+# elements adapted from Lucian UX/UI Prompt (THIRD_PARTY_NOTICES.md).
 RUN pnpm --filter "@cellhive/web..." run build \
  && rm -rf apps/web/dist/.vite \
  && mkdir -p apps/web/dist/licenses \
  && cp apps/web/node_modules/@fontsource/be-vietnam-pro/LICENSE apps/web/dist/licenses/be-vietnam-pro-OFL-1.1.txt \
- && cp apps/web/node_modules/@fontsource/jetbrains-mono/LICENSE apps/web/dist/licenses/jetbrains-mono-OFL-1.1.txt
+ && cp apps/web/node_modules/@fontsource/jetbrains-mono/LICENSE apps/web/dist/licenses/jetbrains-mono-OFL-1.1.txt \
+ && cp apps/web/licenses/lucian-uxui-prompt-MIT.txt apps/web/dist/licenses/lucian-uxui-prompt-MIT.txt
 
 FROM ${NGINX_IMAGE} AS runtime
 # STORAGE_PUBLIC_ORIGIN: origin of S3_PUBLIC_ENDPOINT (object storage the browser

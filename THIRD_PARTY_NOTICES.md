@@ -22,6 +22,39 @@ Cellhive bundles the following third-party data. Source code dependencies are li
 
 `apps/web` bundles [PDF.js](https://github.com/mozilla/pdf.js) (`pdfjs-dist`, the library and its worker), licensed under the Apache License 2.0, loaded only when a PDF attachment is opened in the viewer.
 
+## Lucian UX/UI Prompt (UI elements)
+
+`apps/web` contains code adapted from [Lucian UX/UI Prompt](https://lucianlabs.dev/uxui-prompt/) by Seokwoooo, licensed under the MIT License. It is copied source, not a package, so the dependency license check does not see it: each adapted file starts with the line `/*! Lucian UX/UI Prompt #ID · MIT License (c) 2026 Seokwoooo · … */` (`apps/web/test/lucian-license.test.ts` checks it). The build may drop such comments, so the web image also serves the license text under `/licenses/lucian-uxui-prompt-MIT.txt` (from `apps/web/licenses/`). Elements were fetched with the `lucian-uxui` skill 1.2.0 (catalog `34c4b3e61d`) and adapted to Cellhive's design tokens (`docs/FRONTEND.md` §9.3).
+
+| Element                           | Id   | Element hash | Adapted in                                                                   |
+| --------------------------------- | ---- | ------------ | ---------------------------------------------------------------------------- |
+| Theme tokens and `.ux` base rules | —    | —            | `apps/web/src/styles/lucian.css`                                             |
+| CSV field mapper                  | #130 | `a0a6df398c` | `apps/web/src/features/import/components/FieldMapper.tsx`, `FieldMapper.css` |
+
+```text
+MIT License
+
+Copyright (c) 2026 Seokwoooo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## CodeMirror (formula editor)
 
 `apps/web` bundles [CodeMirror 6](https://codemirror.net/) (`@codemirror/state`, `@codemirror/view`, `@codemirror/autocomplete`, `@codemirror/commands` and their dependencies `@codemirror/language`, `@lezer/*`, `style-mod`, `w3c-keyname`, `crelt`, `@marijn/find-cluster-break`), all licensed under the MIT License, loaded only when the formula editor is opened (BACKLOG S4b open question #9).

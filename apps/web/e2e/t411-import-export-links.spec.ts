@@ -163,20 +163,30 @@ test.describe('T411 export/import of link and attachment cells', () => {
     });
     await wizard(page).getByRole('button', { name: 'Next' }).click();
 
-    const linkSelect = wizard(page).getByLabel('Field for column Khách');
-    await expect(linkSelect).toHaveValue(ids.link);
+    const linkTarget = wizard(page).getByRole('combobox', {
+      name: 'Field for column Khách',
+      exact: true,
+    });
+    await expect(linkTarget).toHaveText('Khách');
     await expect(
       wizard(page).getByText(
         'Fills Khách by record title; separate several titles with commas, quote a title that has a comma',
       ),
     ).toBeVisible();
-    const filesSelect = wizard(page).getByLabel('Field for column Tệp');
-    await expect(filesSelect).toHaveValue('');
+    const filesTarget = wizard(page).getByRole('combobox', {
+      name: 'Field for column Tệp',
+      exact: true,
+    });
+    await expect(filesTarget).toHaveText('Do not import');
     // T419: listed, disabled, with the reason — never selectable.
-    await expect(filesSelect.locator('option', { hasText: 'Tệp' })).toHaveText(
-      'Tệp (files cannot be imported)',
-    );
-    await expect(filesSelect.locator('option', { hasText: 'Tệp' })).toBeDisabled();
+    await filesTarget.click();
+    const filesOption = wizard(page).getByRole('option', { name: /^Tệp/u });
+    await expect(filesOption).toHaveText('Tệp (files cannot be imported)');
+    await expect(filesOption).toBeDisabled();
+    await expectNoSeriousA11yViolations(page, 'import mapping with the field list open');
+    await page.keyboard.press('Escape');
+    await expect(wizard(page).getByRole('listbox')).toBeHidden();
+    await expect(filesTarget).toHaveText('Do not import');
     await expect(
       wizard(page).getByText('Not imported: Tệp holds files, which cannot be imported'),
     ).toBeVisible();

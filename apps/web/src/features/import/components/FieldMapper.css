@@ -1,0 +1,301 @@
+/*! Lucian UX/UI Prompt #130 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#130 */
+/*
+ * #130 "CSV field mapper" (element a0a6df398c, catalog 34c4b3e61d), ported
+ * to the import wizard's column step (FRONTEND §4.4, §9.3 "Lucian UX/UI").
+ * Kept: the row (source → arrow → target button), the list under the
+ * target, the one-line warning, the 4 px / 220 ms nudge (FieldMapper.tsx).
+ * Adapted to FRONTEND §9.3: Cellhive tokens through `--ux-*`
+ * (styles/lucian.css), body text 13 px, the 4 px grid, the app font (raw
+ * values in the code font), buttons/inputs/selects from `@cellhive/ui` (the
+ * pattern's own control styles are dropped), a shadow on the list only.
+ */
+
+/* Fluid: the pattern's 370 px cap is its gallery card; here it fills the step. */
+.u130 {
+  width: 100%;
+  font-size: var(--font-size-body);
+  line-height: 20px;
+  color: var(--ux-ink);
+}
+
+/* The rows scroll inside the step, so the footer stays in reach. */
+.u130 .scroll {
+  max-height: min(416px, 50dvh);
+  overflow-y: auto;
+  border: 1px solid var(--ux-line);
+  border-radius: var(--radius-frame);
+}
+
+.u130 .list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 20 px rows and a 10 px gap → 12 px (4 px grid); dividers use `--border`. */
+.u130 .map {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ux-line);
+}
+.u130 .map:last-of-type {
+  border-bottom: 0;
+}
+
+.u130 .source {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.u130 .source input[type='checkbox'] {
+  margin-top: 2px;
+}
+.u130 .source-text {
+  min-width: 0;
+  flex: 1;
+}
+.u130 .source-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 500;
+}
+.u130 .source-name > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Sample values: the code font, one line. */
+.u130 .source small {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--ux-ink-2);
+  font-family: var(--font-code);
+  font-size: var(--font-size-mono);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u130 .source small[data-empty] {
+  font-family: inherit;
+  font-style: italic;
+}
+.u130 .badge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: var(--radius-chip);
+  background: var(--ux-accent-soft);
+  color: var(--ux-accent);
+  font-size: var(--font-size-label);
+  font-weight: 400;
+}
+
+/* The arrow: accent while the column is imported, muted when it is not. */
+.u130 .link {
+  display: flex;
+  justify-content: center;
+  color: var(--ux-accent);
+  transition: color 220ms var(--ux-ease);
+}
+.u130 .link svg {
+  width: 20px;
+  height: 20px;
+}
+.u130 .map[data-state='skipped'] .link {
+  color: var(--ux-ink-3);
+}
+.u130 .map[data-state='invalid'] .link {
+  color: var(--ux-danger);
+}
+
+.u130 .target {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.u130 .field {
+  position: relative;
+}
+
+/* The target button (`[data-col]`): full width, left aligned, accent border. */
+.u130 [data-col] {
+  width: 100%;
+  justify-content: space-between;
+  border-color: var(--ux-accent);
+  text-align: left;
+  font-weight: 400;
+}
+.u130 [data-col][data-empty] {
+  border-color: var(--ux-line-2);
+  color: var(--ux-ink-2);
+}
+.u130 [data-col][aria-invalid='true'] {
+  border-color: var(--ux-danger);
+}
+.u130 [data-col] .value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.u130 [data-col] .value > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.u130 [data-col] svg {
+  color: var(--ux-ink-2);
+}
+/* The pattern's "⌄" after the label: the chevron of `@cellhive/ui`'s select. */
+.u130 [data-col] .chevron {
+  transition: transform var(--motion-enter) var(--ux-ease);
+}
+.u130 [data-col][aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+.u130 .status {
+  margin: 0;
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+  line-height: 16px;
+}
+.u130 .status[data-tone='warning'] {
+  color: var(--ux-warn);
+}
+.u130 .status[data-tone='danger'] {
+  color: var(--ux-danger);
+}
+
+/* New table: field name and type side by side. */
+.u130 .pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 10rem);
+  align-items: start;
+  gap: 8px;
+}
+
+/*
+ * The list of fields (`.choices`). Fixed to the viewport where the pattern
+ * hangs it 48 px under the button: the rows scroll, and an absolute list
+ * would be cut off at the bottom of that region (FieldMapper.tsx places it).
+ * The only shadow of the element (FRONTEND §9.3: popovers, toasts, panels).
+ */
+.u130 .choices {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--ux-line);
+  border-radius: var(--radius-frame);
+  background: var(--ux-surface);
+  box-shadow: var(--elevation-popover);
+  transform-origin: top center;
+}
+.u130 .choices[data-side='top'] {
+  transform-origin: bottom center;
+}
+.u130 .choices .search {
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid var(--ux-line);
+  margin-bottom: 4px;
+}
+.u130 .choices [role='listbox'] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.u130 .choices .group-label {
+  padding: 8px 8px 4px;
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+  line-height: 16px;
+}
+.u130 .choices .empty {
+  padding: 8px;
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+}
+
+/* An option (the pattern's borderless full-width `.choices button`). */
+.u130 .choices [role='option'] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: 0 8px;
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  user-select: none;
+}
+.u130 .choices [role='option'] > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u130 .choices [role='option'] svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--ux-ink-2);
+}
+.u130 .choices [role='option'] svg.check {
+  color: var(--ux-accent);
+}
+.u130 .choices [role='option'][aria-selected='true'] {
+  background: var(--ux-surface-2);
+}
+.u130 .choices [role='option'][data-current] {
+  font-weight: 500;
+}
+.u130 .choices [role='option'][aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* The one-line warning under the rows (`role=status`); empty: no room taken. */
+.u130 .error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  color: var(--ux-danger);
+  font-size: var(--font-size-label);
+  line-height: 16px;
+}
+.u130 .error:empty {
+  margin: 0;
+}
+.u130 .error svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Phones: each row stacks, the source above its target; the arrow points down. */
+@media (max-width: 639.98px) {
+  .u130 .map {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .u130 .link {
+    justify-content: flex-start;
+    padding-left: 2px;
+  }
+  .u130 .link svg {
+    transform: rotate(90deg);
+  }
+  .u130 .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
