@@ -65,7 +65,7 @@ Field AI là field `text` hoặc `select` một lựa chọn có `options.ai` (g
 
 ## Hệ quả
 
-- Không dependency mới, không dịch vụ mới; một env mới `AI_CONCURRENCY` (T910); migration `0055_ai_settings`, `0056` hàng đợi (T906, T910).
+- Không dependency mới, không dịch vụ mới; một env mới `AI_CONCURRENCY` (T910); migration `0054_ai_settings`, `0056` hàng đợi (T906, T910).
 - Lớp tương thích Anthropic chỉ có bậc `prompt` (nó bỏ qua `response_format`); muốn đầu ra có cấu trúc thật thì đi qua gateway (LiteLLM, OpenRouter). Thang đọc JSON giống nhau ở mọi bậc nên provider "im lặng bỏ qua" vẫn dùng được.
 - Ràng buộc bị bỏ khỏi JSON Schema (độ dài chuỗi, pattern) chỉ được zod kiểm sau khi sinh → có thể tốn một vòng sửa; đổi lấy việc không mất bậc vì provider từ chối từ khoá lạ.
 - Chất lượng phụ thuộc model: model local nhỏ có thể không đạt bản nháp automation dù có enum + 2 vòng sửa — đo bằng bộ eval tay (T908, T917), thu hẹp tập trigger/action hoặc ghi model tối thiểu thay vì nới nghiệm thu.
