@@ -8554,7 +8554,8 @@
           "AI_PROVIDER_ERROR",
           "DEPENDENCY_UNAVAILABLE",
           "QUERY_TIMEOUT",
-          "AI_TIMEOUT"
+          "AI_TIMEOUT",
+          "AI_GENERATION_RUNNING"
         ],
         "type": "string"
       },
@@ -31989,7 +31990,7 @@
     },
     "/api/v1/fields/{fieldId}/ai/generate": {
       "post": {
-        "description": "Needs schema rights on the table of the AI field and every field of its prompt readable (`403` otherwise for a reader of the field, `404` for anyone else), before anything about AI; AI and record data on (`422`). Queues the `empty` cells, the `failed` ones, `all` (overwriting: old values stay in the record history) or the `records` listed, among the records the caller reads; paused rows of the field resume. The AI worker generates them in the background (`job_id`: `GET /jobs/{jobId}`, `job.progress`); cells show their state in `record.meta.ai` (CONTRACTS §29.5). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "description": "Needs schema rights on the table of the AI field and every field of its prompt readable (`403` otherwise for a reader of the field, `404` for anyone else), before anything about AI; AI and record data on (`422`); then the AI rate limit and the quota of the day (`429`, nothing queued). Queues the `empty` cells, the `failed` ones, `all` (overwriting: old values stay in the record history), the `records` listed or the `paused` ones, among the records the caller reads — at most 200000 rows, whatever the scope (more is refused, never cut short); paused rows of the field resume. Cells that failed with `invalid_output` are queued again only by `failed` and `all`. One generate request of a field at a time: while one has rows queued or being generated, another is `409`. The AI worker generates them in the background (`job_id`: `GET /jobs/{jobId}`, `job.progress`); cells show their state in `record.meta.ai` (CONTRACTS §29.5). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
         "operationId": "generateAiFieldValues",
         "parameters": [
           {
@@ -32077,7 +32078,7 @@
                 }
               }
             },
-            "description": "`IDEMPOTENCY_KEY_REUSED`"
+            "description": "`AI_GENERATION_RUNNING`: a generate request of the field still runs (`errors[0].params.job_id`); or `IDEMPOTENCY_KEY_REUSED`"
           },
           "422": {
             "content": {
@@ -32087,7 +32088,7 @@
                 }
               }
             },
-            "description": "`VALIDATION_FAILED`: not an AI field, or `record_ids` without `scope: records`; `AI_NOT_CONFIGURED`; `AI_RECORD_DATA_DISABLED`"
+            "description": "`VALIDATION_FAILED`: not an AI field, `record_ids` without `scope: records`, or `TOO_MANY_ROWS` (path `scope`, `params.rows`, `params.limit`); `AI_NOT_CONFIGURED`; `AI_RECORD_DATA_DISABLED`"
           },
           "429": {
             "content": {
@@ -32097,7 +32098,7 @@
                 }
               }
             },
-            "description": "`RATE_LIMITED` with `Retry-After`: more than 60 requests/s by the user, or 20 requests/s by the user on one base"
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 10 AI requests a minute by the user; `AI_QUOTA_EXCEEDED` with `Retry-After` and `errors[0].params.reset_at`: the daily token quota is used up"
           }
         },
         "security": [

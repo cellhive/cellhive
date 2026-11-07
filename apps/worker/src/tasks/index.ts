@@ -362,6 +362,7 @@ export function buildTaskList(deps: TaskDeps): TaskList {
       db: deps.db,
       generator: aiGenerator,
       logger: deps.logger.child({ task: 'ai.generation_rescue' }),
+      defaultTimeZone: deps.config.defaults.timezone,
       ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
     }),
     'attachments.cleanup': createAttachmentsCleanupTask({

@@ -3518,30 +3518,59 @@ export class RecordQueryService implements ButtonRecordMatcher {
   }
 
   /**
-   * Ids of the live records the reader reads that match `filter` (Filter DSL
-   * with field ids, `null` = every one), in `__auto` order, at most `limit`
-   * (T910: the rows `POST /fields/:id/ai/generate` queues).
+   * How many live records the reader reads match `filter` (Filter DSL with
+   * field ids, `null` = every one): what `POST /fields/:id/ai/generate`
+   * would queue, checked against its cap before any id is read (T1003).
    */
-  async allMatchingIds(
+  async countMatching(
     scope: OrgScope,
     tableId: Id<'tbl'>,
     access: RecordAccessContext,
     filter: unknown,
-    limit: number,
-  ): Promise<Id<'rec'>[]> {
+  ): Promise<number> {
     this.assertScope(scope);
     const tableAccess = this.tableAccess(tableId, access);
     const input = parseRequest(readOptionsSchema, { field_key_type: 'id' });
     return this.read(scope, tableId, async (txScope, tx) => {
       const plan = await this.plan(txScope, tableId, access, tableAccess, input);
       const conditions = [...plan.baseConditions, ...this.filterConditions(plan, filter)];
+      const { rows } = await sql<{ n: string }>`
+        SELECT count(*)::text AS n FROM ${this.from(plan.model.table)} WHERE ${and(conditions)}
+      `.execute(tx);
+      return Number(rows[0]?.n ?? 0);
+    });
+  }
+
+  /**
+   * One keyset batch of the ids of the live records the reader reads that
+   * match `filter` (Filter DSL with field ids, `null` = every one): at most
+   * `limit` ids after `after` (`null`: from the first) in id order — the
+   * primary key, so each batch reads only its own rows. `next` is the
+   * `after` of the following batch, `null` after the last one (T1003: the
+   * rows `POST /fields/:id/ai/generate` queues, read batch by batch).
+   */
+  async matchingIdBatch(
+    scope: OrgScope,
+    tableId: Id<'tbl'>,
+    access: RecordAccessContext,
+    filter: unknown,
+    options: { readonly after: Id<'rec'> | null; readonly limit: number },
+  ): Promise<{ ids: Id<'rec'>[]; next: Id<'rec'> | null }> {
+    this.assertScope(scope);
+    const tableAccess = this.tableAccess(tableId, access);
+    const input = parseRequest(readOptionsSchema, { field_key_type: 'id' });
+    return this.read(scope, tableId, async (txScope, tx) => {
+      const plan = await this.plan(txScope, tableId, access, tableAccess, input);
+      const conditions = [...plan.baseConditions, ...this.filterConditions(plan, filter)];
+      if (options.after !== null) conditions.push(sql<SqlBool>`${col('__id')} > ${options.after}`);
       const { rows } = await sql<{ id: Id<'rec'> }>`
         SELECT ${col('__id')} AS id FROM ${this.from(plan.model.table)}
          WHERE ${and(conditions)}
-         ORDER BY ${col('__auto')}
-         LIMIT ${limit}
+         ORDER BY ${col('__id')}
+         LIMIT ${options.limit}
       `.execute(tx);
-      return rows.map((row) => row.id);
+      const ids = rows.map((row) => row.id);
+      return { ids, next: ids.length < options.limit ? null : (ids.at(-1) ?? null) };
     });
   }
 

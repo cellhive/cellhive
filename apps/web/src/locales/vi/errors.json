@@ -63,7 +63,8 @@
     "AI_TIMEOUT": "AI trả lời quá lâu. Hãy thử lại.",
     "AI_NOT_CONFIGURED": "AI chưa được cài đặt hoặc đang tắt cho tổ chức này.",
     "AI_RECORD_DATA_DISABLED": "Tổ chức này không cho AI xem giá trị bản ghi.",
-    "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay."
+    "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay.",
+    "AI_GENERATION_RUNNING": "Field AI này đang được sinh. Chờ lượt hiện tại xong rồi thử lại."
   },
   "client": {
     "NETWORK_ERROR": "Không kết nối được tới máy chủ. Hãy kiểm tra mạng rồi thử lại.",
@@ -164,7 +165,7 @@
     "REQUIRES_LOGIN": "Giới hạn số lần gửi chỉ dùng được khi biểu mẫu yêu cầu đăng nhập.",
     "SUBMISSION_LIMIT_REACHED": "Bạn đã điền biểu mẫu này.",
     "UNLOCK_REQUIRED": "Hãy nhập mật khẩu của link trước.",
-    "TOO_MANY_ROWS": "Tệp có nhiều hơn {{limit}} dòng.",
+    "TOO_MANY_ROWS": "Quá nhiều dòng một lần: tối đa {{limit, number}}.",
     "TOO_MANY_COLUMNS": "Quá nhiều cột: một bảng có tối đa {{limit}} trường.",
     "INVALID_FILE": "Không đọc được tệp dạng CSV hoặc XLSX.",
     "ARCHIVE_LIMIT_EXCEEDED": "Bảng tính quá lớn sau khi giải nén.",
@@ -351,7 +352,8 @@
     "AI_QUOTA_EXCEEDED": "Tổ chức đã dùng hết hạn mức AI của hôm nay. Hạn mức đặt lại lúc nửa đêm theo múi giờ của tổ chức.",
     "AI_NOT_CONFIGURED": "AI chưa được cài đặt hoặc đang tắt ở tổ chức này.",
     "AI_RECORD_DATA_DISABLED": "Tổ chức này không cho AI xem giá trị bản ghi.",
-    "RECORD_DATA_NOT_CONFIRMED": "Hãy xác nhận cho phép gửi giá trị bản ghi tới nhà cung cấp AI."
+    "RECORD_DATA_NOT_CONFIRMED": "Hãy xác nhận cho phép gửi giá trị bản ghi tới nhà cung cấp AI.",
+    "AI_GENERATION_RUNNING": "Một yêu cầu khác đang sinh field này. Các ô của nó hiện tiến độ."
   },
   "retryAfter_other": "Hãy thử lại sau {{count, number}} giây.",
   "retryAfterMinutes_other": "Hãy thử lại sau {{count, number}} phút.",

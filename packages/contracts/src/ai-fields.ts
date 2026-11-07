@@ -47,6 +47,11 @@ export const AI_FIELD_PREVIEW_ROWS = 5;
 export const AI_FIELD_PREVIEW_INPUT_LENGTH = 300;
 /** Most records of `POST /fields/{fieldId}/ai/generate` with `scope: records`. */
 export const AI_FIELD_GENERATE_MAX_RECORDS = 1_000;
+/**
+ * Most rows one `POST /fields/{fieldId}/ai/generate` queues, whatever its
+ * scope: more is `422 VALIDATION_FAILED` `TOO_MANY_ROWS` (never cut).
+ */
+export const AI_FIELD_GENERATE_MAX_ROWS = 200_000;
 /** Default of `AI_CONCURRENCY`: `ai.*` jobs a worker process runs at once. */
 export const AI_DEFAULT_CONCURRENCY = 2;
 

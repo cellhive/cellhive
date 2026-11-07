@@ -337,7 +337,7 @@ describe('ImportWizard: new table', () => {
       }),
     );
     chooseFile('many.csv');
-    expect(await screen.findByText('The file has more than 50000 rows.')).toBeInTheDocument();
+    expect(await screen.findByText('Too many rows at once: at most 50,000.')).toBeInTheDocument();
 
     vi.mocked(uploadImportFile).mockRejectedValue(
       new ApiError({ status: 413, code: 'UNEXPECTED_RESPONSE' }),

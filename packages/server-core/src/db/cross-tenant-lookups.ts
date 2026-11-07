@@ -1260,28 +1260,86 @@ export async function measureAiGenerationQueue(db: Db): Promise<Record<AiCellSta
 }
 
 /**
- * Organizations whose AI field queue the per-minute cron
- * `ai.generation_rescue` must look at (T910, the "watchdog" of research S8
- * §4.5): a `running` row past its lease (its worker died), `paused` rows
- * (quota reset or AI turned back on), or `queued` rows of a field with no
- * `ai.generate` job (the job was lost). At most `limit`, by id.
+ * Organizations whose AI field queue has work the per-minute cron
+ * `ai.generation_rescue` can move now (T910, the "watchdog" of research S8
+ * §4.5; T1003): a `running` row past its lease (its worker died); and, where
+ * AI is on with record data (`meta.ai_settings`, like `requireAi`), `paused`
+ * rows whose reason is gone — `ai_disabled` / `record_data_disabled`, or
+ * `quota` once today's tokens (the day in the organization's zone: a valid
+ * `settings.timezone`, else `defaultTimeZone`) are under the limit again —,
+ * or `queued` rows of an AI field with no `ai.generate` job (the job was
+ * lost). Never `provider_error` rows (they resume when the settings or the
+ * key change), nor organizations with AI off: they take no place in the
+ * list. At most `limit`, by id after `after` (the last organization of the
+ * previous run), then from the first one: a rotating cursor, so an
+ * organization the rescue cannot fix does not keep the others out.
  *
  * Why: lost jobs and expired leases are not a tenant's write, so which
  * organizations have one is only known by looking at all of them. Called by
  * that cron only, never a request; returns organization ids only — each is
- * then handled in its own scope (`AiFieldGenerator.rescue`).
+ * then handled in its own scope (`AiFieldGenerator.rescue`). Every part
+ * reads an index (`ai_generation_queue_rescue_idx`, `_paused_idx`, `_field_idx`;
+ * the AI fields of the organizations with AI on), never every queued row.
  */
 export async function listAiGenerationRescueOrganizations(
   executor: DbExecutor | Tx,
-  options: { readonly now: Date; readonly limit: number },
+  options: {
+    readonly now: Date;
+    readonly limit: number;
+    readonly after?: Id<'org'> | null;
+    readonly defaultTimeZone: string;
+  },
 ): Promise<Id<'org'>[]> {
+  const now = options.now.toISOString();
   const { rows } = await sql<{ organization_id: Id<'org'> }>`
-    SELECT DISTINCT q.organization_id FROM meta.ai_generation_queue AS q
-     WHERE (q.status = 'running' AND q.lease_until < ${options.now})
-        OR q.status = 'paused'
-        OR (q.status = 'queued' AND NOT EXISTS (
-              SELECT 1 FROM graphile_worker.jobs j WHERE j.key = ${'ai.generate:'} || q.field_id))
-     ORDER BY q.organization_id
+    WITH zones AS MATERIALIZED (SELECT name FROM pg_timezone_names),
+    ready AS (
+      -- A zone the database does not know falls back (never an error for every organization).
+      SELECT s.organization_id, s.daily_token_limit,
+             CASE WHEN o.settings ->> 'timezone' IN (SELECT name FROM zones)
+                    THEN o.settings ->> 'timezone'
+                  WHEN ${options.defaultTimeZone}::text IN (SELECT name FROM zones)
+                    THEN ${options.defaultTimeZone}::text
+                  ELSE 'UTC' END AS zone
+        FROM meta.ai_settings AS s
+        JOIN meta.organizations AS o ON o.id = s.organization_id
+       WHERE s.enabled AND s.provider_base_url IS NOT NULL AND s.model IS NOT NULL
+         AND s.allow_record_data
+    ),
+    due AS (
+      SELECT q.organization_id FROM meta.ai_generation_queue AS q
+       WHERE q.status = 'running' AND q.lease_until < ${now}::timestamptz
+      UNION
+      SELECT r.organization_id FROM ready AS r
+       WHERE EXISTS (
+               SELECT 1 FROM meta.ai_generation_queue AS q
+                WHERE q.organization_id = r.organization_id AND q.status = 'paused'
+                  AND q.reason IN ('ai_disabled', 'record_data_disabled'))
+          OR (EXISTS (
+                SELECT 1 FROM meta.ai_generation_queue AS q
+                 WHERE q.organization_id = r.organization_id AND q.status = 'paused'
+                   AND q.reason = 'quota')
+              AND (r.daily_token_limit IS NULL
+                   OR coalesce((
+                        SELECT sum(u.prompt_tokens + u.completion_tokens)
+                          FROM meta.ai_usage_daily AS u
+                         WHERE u.organization_id = r.organization_id
+                           AND u.day = (${now}::timestamptz AT TIME ZONE r.zone)::date), 0)
+                      < r.daily_token_limit))
+          OR EXISTS (
+               SELECT 1 FROM meta.fields AS f
+                WHERE f.organization_id = r.organization_id
+                  AND jsonb_typeof(f.options -> 'ai') = 'object'
+                  AND EXISTS (
+                        SELECT 1 FROM meta.ai_generation_queue AS q
+                         WHERE q.organization_id = f.organization_id AND q.field_id = f.id
+                           AND q.status = 'queued')
+                  AND NOT EXISTS (
+                        SELECT 1 FROM graphile_worker.jobs AS j
+                         WHERE j.key = ${'ai.generate:'} || f.id))
+    )
+    SELECT organization_id FROM due
+     ORDER BY coalesce(organization_id <= ${options.after ?? null}::text, false), organization_id
      LIMIT ${options.limit}
   `.execute(executor);
   return rows.map((row) => row.organization_id);

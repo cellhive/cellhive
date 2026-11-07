@@ -749,6 +749,76 @@ describe('RecordQueryService (PostgreSQL 18)', () => {
     });
   });
 
+  describe('matching ids in batches (T1003: the rows an AI generate request queues)', () => {
+    it('counts and pages by id the live records the reader reads, with a filter', async () => {
+      const filter = { op: 'and', items: [{ field: fx.fld.title.id, operator: 'is_empty' }] };
+      for (const user of ['u_reader', 'u_sales1'] as const) {
+        const access = accessOf(fx, user);
+        for (const where of [null, filter]) {
+          const expected = ids(
+            await service.query(scope, fx.orders.id, access, {
+              ...(where === null ? {} : { filter: where }),
+              field_key_type: 'id',
+            }),
+          );
+          expect(await service.countMatching(scope, fx.orders.id, access, where)).toBe(
+            expected.length,
+          );
+          const seen: Id<'rec'>[] = [];
+          let after: Id<'rec'> | null = null;
+          do {
+            const batch: { ids: Id<'rec'>[]; next: Id<'rec'> | null } =
+              await service.matchingIdBatch(scope, fx.orders.id, access, where, {
+                after,
+                limit: 2,
+              });
+            expect(batch.ids.length).toBeLessThanOrEqual(2);
+            seen.push(...batch.ids);
+            after = batch.next;
+          } while (after !== null);
+          expect(seen).toHaveLength(new Set(seen).size);
+          expect([...seen].sort()).toEqual([...expected].sort());
+        }
+      }
+      // Never a record in the trash; a hidden field filters like a missing one.
+      const all = await service.matchingIdBatch(
+        scope,
+        fx.orders.id,
+        accessOf(fx, 'u_reader'),
+        null,
+        {
+          after: null,
+          limit: 100,
+        },
+      );
+      expect(all.ids).not.toContain(rDeleted);
+      expect(all.next).toBeNull();
+      const hidden = { op: 'and', items: [{ field: fx.fld.cost.id, operator: 'is_empty' }] };
+      expect(
+        (
+          await appError(
+            service.countMatching(scope, fx.orders.id, accessOf(fx, 'u_sales1'), hidden),
+          )
+        ).code,
+      ).toBe('INVALID_FILTER');
+    });
+
+    it("another organization's scope reads nothing of A's table", async () => {
+      const scopeB = orgScope(ORG_B);
+      const access = accessOf(fx, 'u_admin');
+      expect((await appError(service.countMatching(scopeB, fx.orders.id, access, null))).code).toBe(
+        'NOT_FOUND',
+      );
+      expect(
+        (
+          await appError(
+            service.matchingIdBatch(scopeB, fx.orders.id, access, null, { after: null, limit: 10 }),
+          )
+        ).code,
+      ).toBe('NOT_FOUND');
+    });
+  });
+
   describe('tenant isolation', () => {
     let tenantB: Awaited<ReturnType<typeof seedTenant>>;
 

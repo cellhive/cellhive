@@ -142,6 +142,19 @@ export class AiAccess {
     return this.ledger.usedToday(this.quotaContextOf(org));
   }
 
+  /**
+   * The checks of {@link run} for a request whose calls the AI worker makes
+   * later (`POST /fields/:id/ai/generate`, BACKLOG T1003), after the route's
+   * own `404`/`403`/`422` checks: `429 RATE_LIMITED` (10 a minute per
+   * person), then `429 AI_QUOTA_EXCEEDED` when today's tokens are used up —
+   * before anything is queued.
+   */
+  async admit(principal: Principal, org: OrgAccess, state: AiSettingsState): Promise<void> {
+    await this.limits.hitAi(principal.userId);
+    const limit = state.daily_token_limit === null ? null : Number(state.daily_token_limit);
+    await this.ledger.check(this.quotaContextOf(org), limit);
+  }
+
   /** One AI request with the saved settings (every AI feature route). */
   async run<T>(
     principal: Principal,

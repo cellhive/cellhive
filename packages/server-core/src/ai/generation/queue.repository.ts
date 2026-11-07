@@ -37,7 +37,8 @@ const ENQUEUE_CHUNK = 5_000;
 /**
  * `reason` of a `queued` row whose wait comes from the organization backing
  * off (a `429`, or temporary errors in a row): while such a row waits, no
- * row of the organization is taken.
+ * row of the organization is taken. Also written out in `backOffEnd` and in
+ * the index of migration 0057.
  */
 const BACKOFF = 'backoff';
 
@@ -84,6 +85,19 @@ function instant(now: Date | undefined): RawBuilder<unknown> {
 }
 
 /**
+ * When the organization's back-off ends, `NULL` when it does not back off
+ * at `at`. The condition is written out (not a parameter) so that it reads
+ * only the waiting rows (`ai_generation_queue_backoff_idx`, migration 0057),
+ * never every queued row of the organization.
+ */
+function backOffEnd(scope: OrgScope, at: RawBuilder<unknown>): RawBuilder<Date | null> {
+  return sql<Date | null>`(
+    SELECT max(b.lease_until) FROM meta.ai_generation_queue AS b
+     WHERE b.organization_id = ${scope.organizationId}
+       AND b.status = 'queued' AND b.reason = 'backoff' AND b.lease_until > ${at})`;
+}
+
+/**
  * `meta.ai_generation_queue` (BACKLOG T910, migration 0056): (AI field,
  * record) pairs to generate. Queueing merges with the row of the same pair
  * (back to `queued`, tries reset), so editing a source five times before the
@@ -103,15 +117,28 @@ export class AiGenerationQueueRepository
     super(db, 'ai_generation_queue');
   }
 
-  /** Queues `recordIds` of `fieldId` (merged); returns how many rows were written. */
+  /**
+   * Queues `recordIds` of `fieldId` (merged); returns how many rows were
+   * written. `retryInvalidOutput: false` (a generate request of a scope
+   * other than `failed` or `all`) leaves rows that failed with
+   * `invalid_output` as they are: failed, tries kept.
+   */
   async enqueue(
     scope: OrgScope,
     fieldId: Id<'fld'>,
     recordIds: readonly string[],
-    options: { readonly causation?: JsonValue | null; readonly jobId?: Id<'job'> | null } = {},
+    options: {
+      readonly causation?: JsonValue | null;
+      readonly jobId?: Id<'job'> | null;
+      readonly retryInvalidOutput?: boolean;
+    } = {},
   ): Promise<number> {
     const ids = [...new Set(recordIds)];
     const causation = options.causation == null ? null : JSON.stringify(options.causation);
+    const keep =
+      options.retryInvalidOutput === false
+        ? sql`AND NOT (q.status = 'failed' AND q.reason = 'invalid_output')`
+        : sql``;
     let count = 0;
     for (let index = 0; index < ids.length; index += ENQUEUE_CHUNK) {
       const chunk = ids.slice(index, index + ENQUEUE_CHUNK);
@@ -125,7 +152,7 @@ export class AiGenerationQueueRepository
            SET status = 'queued', reason = NULL, attempts = 0, enqueued_at = now(),
                lease_until = NULL, causation = EXCLUDED.causation,
                job_id = coalesce(EXCLUDED.job_id, q.job_id)
-         WHERE q.organization_id = ${scope.organizationId}
+         WHERE q.organization_id = ${scope.organizationId} ${keep}
       `.execute(this.executor(scope));
       count += Number(result.numAffectedRows ?? 0);
     }
@@ -160,10 +187,7 @@ export class AiGenerationQueueRepository
           SELECT field_id, record_id FROM meta.ai_generation_queue
            WHERE organization_id = ${scope.organizationId} AND field_id = ${fieldId}
              AND status = 'queued' AND (lease_until IS NULL OR lease_until <= ${at})
-             AND NOT EXISTS (
-               SELECT 1 FROM meta.ai_generation_queue AS b
-                WHERE b.organization_id = ${scope.organizationId} AND b.status = 'queued'
-                  AND b.reason = ${BACKOFF} AND b.lease_until > ${at})
+             AND ${backOffEnd(scope, at)} IS NULL
            ORDER BY enqueued_at, record_id
            LIMIT ${limit}
              FOR UPDATE SKIP LOCKED
@@ -307,9 +331,7 @@ export class AiGenerationQueueRepository
   /** When the organization's back-off ends, `null` when it does not back off at `now`. */
   async backOffUntil(scope: OrgScope, now?: Date): Promise<Date | null> {
     const { rows } = await sql<{ until: Date | null }>`
-      SELECT max(lease_until) AS until FROM meta.ai_generation_queue
-       WHERE organization_id = ${scope.organizationId} AND status = 'queued'
-         AND reason = ${BACKOFF} AND lease_until > ${instant(now)}
+      SELECT ${backOffEnd(scope, instant(now))} AS until
     `.execute(this.executor(scope));
     return rows[0]?.until ?? null;
   }
@@ -348,15 +370,30 @@ export class AiGenerationQueueRepository
     const at = instant(now);
     const { rows } = await sql<{ field_id: Id<'fld'>; due_at: Date }>`
       SELECT field_id,
-             greatest(min(coalesce(lease_until, ${at})),
-                      (SELECT max(b.lease_until) FROM meta.ai_generation_queue AS b
-                        WHERE b.organization_id = ${scope.organizationId} AND b.status = 'queued'
-                          AND b.reason = ${BACKOFF} AND b.lease_until > ${at})) AS due_at
+             greatest(min(coalesce(lease_until, ${at})), ${backOffEnd(scope, at)}) AS due_at
         FROM meta.ai_generation_queue
        WHERE organization_id = ${scope.organizationId} AND status = 'queued'
        GROUP BY field_id ORDER BY field_id
     `.execute(this.executor(scope));
     return rows.map((row) => ({ fieldId: row.field_id, dueAt: row.due_at }));
+  }
+
+  /**
+   * When the first queued row of `fieldId` is due (not before the
+   * organization's back-off ends), compared with `now` (default: the
+   * database's clock); `null` when none is queued. Reads the field's rows
+   * only (the batch's next run).
+   */
+  async dueAt(scope: OrgScope, fieldId: Id<'fld'>, now?: Date): Promise<Date | null> {
+    const at = instant(now);
+    const { rows } = await sql<{ due_at: Date }>`
+      SELECT greatest(min(coalesce(lease_until, ${at})), ${backOffEnd(scope, at)}) AS due_at
+        FROM meta.ai_generation_queue
+       WHERE organization_id = ${scope.organizationId} AND field_id = ${fieldId}
+         AND status = 'queued'
+      HAVING count(*) > 0
+    `.execute(this.executor(scope));
+    return rows[0]?.due_at ?? null;
   }
 
   /**
@@ -438,6 +475,75 @@ export class AiGenerationQueueRepository
       .orderBy('record_id')
       .execute();
     return rows.map((row) => row.record_id);
+  }
+
+  /** Rows of `fieldId` whose row has `status` (the cap of a generate request of `failed`/`paused`). */
+  async countOf(scope: OrgScope, fieldId: Id<'fld'>, status: AiCellState): Promise<number> {
+    const row = await this.executor(scope)
+      .selectFrom('meta.ai_generation_queue')
+      .select(sql<string>`count(*)::text`.as('n'))
+      .where('organization_id', '=', scope.organizationId)
+      .where('field_id', '=', fieldId)
+      .where('status', '=', status)
+      .executeTakeFirstOrThrow();
+    return Number(row.n);
+  }
+
+  /**
+   * One keyset page of {@link recordIdsOf}: at most `limit` records after
+   * `after` (`null`: from the first), in record id order.
+   */
+  async recordIdPage(
+    scope: OrgScope,
+    fieldId: Id<'fld'>,
+    status: AiCellState,
+    after: Id<'rec'> | null,
+    limit: number,
+  ): Promise<Id<'rec'>[]> {
+    let query = this.executor(scope)
+      .selectFrom('meta.ai_generation_queue')
+      .select('record_id')
+      .where('organization_id', '=', scope.organizationId)
+      .where('field_id', '=', fieldId)
+      .where('status', '=', status);
+    if (after !== null) query = query.where('record_id', '>', after);
+    const rows = await query.orderBy('record_id').limit(limit).execute();
+    return rows.map((row) => row.record_id);
+  }
+
+  /**
+   * In the caller's transaction, until it ends: one generate request of
+   * `fieldId` at a time — a second one waits here, then sees the first one's
+   * job ({@link runningJobOf}).
+   */
+  async lockGenerate(scope: OrgScope, fieldId: Id<'fld'>): Promise<void> {
+    if (scope.tx === undefined) {
+      throw new TypeError('AiGenerationQueueRepository.lockGenerate needs a transaction');
+    }
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`ai.generate:${scope.organizationId}:${fieldId}`}, 0))`.execute(
+      this.executor(scope),
+    );
+  }
+
+  /**
+   * The generate request of `fieldId` still running: the oldest `running`
+   * `ai.generate` job of the field with rows queued or being generated —
+   * one whose rows are all paused or failed does not count. `null` when
+   * there is none.
+   */
+  async runningJobOf(scope: OrgScope, fieldId: Id<'fld'>): Promise<Id<'job'> | null> {
+    const { rows } = await sql<{ id: Id<'job'> }>`
+      SELECT j.id FROM meta.jobs AS j
+       WHERE j.organization_id = ${scope.organizationId} AND j.type = 'ai.generate'
+         AND j.status = 'running' AND j.result ->> 'field_id' = ${fieldId}
+         AND EXISTS (
+           SELECT 1 FROM meta.ai_generation_queue AS q
+            WHERE q.organization_id = ${scope.organizationId} AND q.job_id = j.id
+              AND q.status IN ('queued', 'running'))
+       ORDER BY j.created_at, j.id
+       LIMIT 1
+    `.execute(this.executor(scope));
+    return rows[0]?.id ?? null;
   }
 
   /** Rows of a generate request still to do (queued, running or paused). */

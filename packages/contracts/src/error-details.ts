@@ -659,6 +659,15 @@ export const AI_SETTINGS_DETAIL_CODES = [
 ] as const;
 
 /**
+ * Generating the values of an AI field (CONTRACTS §29.5, T1003):
+ * `errors[0]` of `409 AI_GENERATION_RUNNING` (path `""`, `params.job_id` =
+ * the generate request of the field still running), and `TOO_MANY_ROWS`
+ * under `422 VALIDATION_FAILED` (path `scope`, `params.rows` = the rows the
+ * request names, `params.limit` = `AI_FIELD_GENERATE_MAX_ROWS`).
+ */
+export const AI_FIELD_GENERATE_DETAIL_CODES = ['AI_GENERATION_RUNNING', 'TOO_MANY_ROWS'] as const;
+
+/**
  * Why a call to the AI provider failed (`params.reason` of
  * `AI_PROVIDER_ERROR`): `http_status` (an error status, or a `3xx` — never
  * followed), `network`, `ssrf_blocked` (the base URL may not be called; no
@@ -720,6 +729,7 @@ export const ERROR_DETAIL_CODES = [
     ...REQUEST_DETAIL_CODES,
     ...AI_DETAIL_CODES,
     ...AI_SETTINGS_DETAIL_CODES,
+    ...AI_FIELD_GENERATE_DETAIL_CODES,
   ]),
 ] as readonly ErrorDetailCode[];
 
@@ -758,4 +768,5 @@ export type ErrorDetailCode =
   | (typeof HEALTH_DETAIL_CODES)[number]
   | (typeof REQUEST_DETAIL_CODES)[number]
   | (typeof AI_DETAIL_CODES)[number]
-  | (typeof AI_SETTINGS_DETAIL_CODES)[number];
+  | (typeof AI_SETTINGS_DETAIL_CODES)[number]
+  | (typeof AI_FIELD_GENERATE_DETAIL_CODES)[number];
