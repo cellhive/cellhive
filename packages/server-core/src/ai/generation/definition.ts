@@ -34,6 +34,12 @@ import type { AnalysisOf } from '../../records/computed/read/references.js';
 export interface AiFieldContext {
   /** Tables and fields the saver can read; absent: every one (the system). */
   readonly readable?: SchemaReadability;
+  /**
+   * How the prompt is written: `display` (`{{ [Field name] }}`, the API,
+   * default) or `stored` (`{{ [fld_…] }}`, a `.chbase` import, whose
+   * prompts carry the ids of the new base — T1019).
+   */
+  readonly expressionForm?: 'display' | 'stored';
 }
 
 /** Field types a prompt may not read: no text value (attachment, button) or another AI field. */
@@ -110,7 +116,8 @@ export function aiPromptSourceProblems(
 
 /**
  * `options.ai` of a `text`/`select` field being saved (BACKLOG T910,
- * CONTRACTS §29.5): its prompt, typed with names (display form), checked
+ * CONTRACTS §29.5): its prompt, typed with names (display form; ids for a
+ * `.chbase` import, `context.expressionForm = 'stored'`), checked
  * like an automation template against what the saver reads — a field they
  * cannot read is a field that does not exist (`UNKNOWN_FIELD`, like a
  * formula, C§13) — then stored with field ids. Only fields of the same
@@ -146,7 +153,7 @@ export function prepareAiOptions(
   }
   const snapshot = snapshotOfBase(rows, field.tableId, context.readable);
   const check = checkTemplate(parsed.data.prompt, snapshot, {
-    form: 'display',
+    form: context.expressionForm ?? 'display',
     allowTables: false,
     disallow: AUTOMATION_DISALLOWED_FUNCTIONS,
   });
