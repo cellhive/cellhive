@@ -42,6 +42,8 @@ export {
   type AutomationRunPayload,
   type AutomationScheduleTickPayload,
   type AutomationRunsCleanupPayload,
+  type BaseExportPayload,
+  type BaseImportPayload,
   type EventsDispatchPayload,
   type ExportsCleanupPayload,
   type FieldConversionCleanupPayload,

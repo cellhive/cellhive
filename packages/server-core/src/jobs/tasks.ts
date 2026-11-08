@@ -248,6 +248,21 @@ export interface BaseExportPayload {
 }
 
 /**
+ * Payload of `base.import` (CONTRACTS §12.2): imports the package stored
+ * under `{org}/base-import-{job}.chbase` as a new base of `workspace_id`,
+ * for the creator of the `base.import` job row `job_id` (`POST
+ * /workspaces/:id/bases/import` or `cellhive base import`). One import per
+ * organization runs at a time.
+ */
+export interface BaseImportPayload {
+  readonly organization_id: Id<'org'>;
+  readonly job_id: Id<'job'>;
+  readonly workspace_id: Id<'wsp'>;
+  /** The API token the import was started with (`via.api_token_id` of its audit entries). */
+  readonly api_token_id?: Id<'tok'>;
+}
+
+/**
  * Payload of `auth.password_reset_email` (`POST /auth/forgot-password`):
  * the address as typed and the client context of the request for the
  * audit entry. Never a token or link: the task creates the link.
@@ -336,6 +351,7 @@ declare global {
       'automation.schedule_tick': AutomationScheduleTickPayload;
       'automation.runs_cleanup': AutomationRunsCleanupPayload;
       'base.export': BaseExportPayload;
+      'base.import': BaseImportPayload;
       'computed.backfill': ComputedBackfillPayload;
       'computed.recompute': ComputedRecomputePayload;
       'auth.password_reset_email': PasswordResetEmailPayload;
