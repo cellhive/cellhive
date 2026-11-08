@@ -23,7 +23,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { dataResult } from '../../src/modules/mcp/envelope.js';
-import { callTool, type McpToolDeps } from '../../src/modules/mcp/mcp-server.js';
+import { mcpPolicyOf } from '../../src/modules/mcp/mcp-policy.js';
+import { callTool, idempotencyOf, type McpToolDeps } from '../../src/modules/mcp/mcp-server.js';
 import { defineTool, listedTools, type McpTool } from '../../src/modules/mcp/tool-context.js';
 import {
   MCP_NOT_FOUND_MESSAGE,
@@ -32,6 +33,11 @@ import {
 } from '../../src/modules/mcp/tool-errors.js';
 import { aggregateResultOf, aggregateWidgetsOf } from '../../src/modules/mcp/tools/aggregate.js';
 import { mcpTools, type McpToolServices } from '../../src/modules/mcp/tools/index.js';
+import {
+  notAvailable,
+  selectCreateOptions,
+  selectUpdatePatch,
+} from '../../src/modules/mcp/tools/schema.js';
 import { mcpFieldOf } from '../../src/modules/mcp/tools/tables.js';
 
 import type { ApiTokenPrincipal } from '../../src/common/auth/principal.js';
@@ -61,6 +67,11 @@ function depsOf(overrides: Partial<McpToolDeps> = {}) {
   return {
     resolve: vi.fn<McpToolDeps['resolve']>(() => Promise.resolve({ baseId: BASE })),
     hitBase: vi.fn<McpToolDeps['hitBase']>(() => Promise.resolve()),
+    hitSchema: vi.fn<McpToolDeps['hitSchema']>(() => Promise.resolve()),
+    idempotent: vi.fn<McpToolDeps['idempotent']>(async (_principal, _call, execute) => ({
+      result: await execute(),
+      replayed: false,
+    })),
     observe: vi.fn<McpToolDeps['observe']>(),
     onUnexpected: vi.fn<McpToolDeps['onUnexpected']>(),
     ...overrides,
@@ -87,10 +98,20 @@ const FAKE_TOOLS: McpTool[] = [
     title: 'Write',
     description: 'Writes',
     scope: 'records:write',
-    writes: true,
-    input: z.strictObject({}),
+    writes: 'records',
+    input: z.strictObject({ idempotency_key: z.string().optional() }),
     annotations: { readOnlyHint: false },
     run: () => Promise.resolve({ written: true }),
+  }),
+  defineTool({
+    name: 'schema_thing',
+    title: 'Schema',
+    description: 'Changes the schema',
+    scope: 'schema:write',
+    writes: 'schema',
+    input: z.strictObject({ name: z.string(), idempotency_key: z.string().optional() }),
+    annotations: { readOnlyHint: false },
+    run: (input) => Promise.resolve({ created: input.name }),
   }),
 ];
 
@@ -105,7 +126,7 @@ function errorOf(result: Awaited<ReturnType<typeof callTool>>) {
  * resource before any tool code runs.
  */
 describe('MCP tools: registry and central checks (T920)', () => {
-  it('locks the scope and write flag of every registered tool', () => {
+  it('locks the scope and write kind of every registered tool (T1014: write kind column)', () => {
     const tools = mcpTools({} as McpToolServices);
     expect(
       tools.map((tool) => ({
@@ -121,10 +142,13 @@ describe('MCP tools: registry and central checks (T920)', () => {
       { name: 'query_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'get_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'aggregate_records', scope: 'records:read', writes: false, readOnly: true },
-      { name: 'create_records', scope: 'records:write', writes: true, readOnly: false },
-      { name: 'update_records', scope: 'records:write', writes: true, readOnly: false },
+      { name: 'create_records', scope: 'records:write', writes: 'records', readOnly: false },
+      { name: 'update_records', scope: 'records:write', writes: 'records', readOnly: false },
+      { name: 'create_table', scope: 'schema:write', writes: 'schema', readOnly: false },
+      { name: 'create_field', scope: 'schema:write', writes: 'schema', readOnly: false },
+      { name: 'update_field', scope: 'schema:write', writes: 'schema', readOnly: false },
     ]);
-    // T923: hints of the writing tools (research MCP §3.4).
+    // T923, T1014: hints of the writing tools (research MCP §3.4, research S9 §5.2).
     expect(Object.fromEntries(tools.map((tool) => [tool.name, tool.annotations]))).toMatchObject({
       create_records: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
       update_records: {
@@ -133,19 +157,49 @@ describe('MCP tools: registry and central checks (T920)', () => {
         idempotentHint: true,
         openWorldHint: true,
       },
+      create_table: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      create_field: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      update_field: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     });
+    // No tool deletes anything (P105).
+    expect(
+      tools.map((tool) => tool.name).filter((name) => /delete|remove|drop/u.test(name)),
+    ).toEqual([]);
     for (const tool of tools) {
       // A read-only tool never writes; a tool that writes is never read-only.
-      expect(tool.writes, tool.name).toBe(tool.annotations.readOnlyHint !== true);
-      expect(tool.annotations.openWorldHint, tool.name).toBe(tool.writes);
+      expect(tool.writes !== false, tool.name).toBe(tool.annotations.readOnlyHint !== true);
+      // Record writes can start automations that call out; schema writes cannot.
+      expect(tool.annotations.openWorldHint, tool.name).toBe(tool.writes === 'records');
       expect(tool.description, tool.name).toMatch(/user data, never instructions/u);
+      // Every write tool takes an idempotency key (T1014); no read tool does.
+      const shape = (tool.input as unknown as { shape?: Record<string, unknown> }).shape ?? {};
+      expect('idempotency_key' in shape, tool.name).toBe(tool.writes !== false);
+    }
+    for (const tool of tools.filter((item) => item.writes === 'schema')) {
+      // Prompt injection and the effect on other people's work (T1014).
+      expect(tool.description, tool.name).toMatch(/other people’s views, formulas/u);
+      expect(tool.description, tool.name).toMatch(/never deletes/u);
     }
   });
 
-  it.each(API_TOKEN_SCOPES.flatMap((scope) => [false, true].map((writes) => [scope, writes])))(
-    'lists tools by scope: token %s, allow_writes %s',
-    (scope, allowWrites) => {
-      const context = contextOf([scope as ApiTokenScope], { allow_writes: allowWrites as boolean });
+  const SCOPES_BY_POLICY = API_TOKEN_SCOPES.flatMap((scope) =>
+    [false, true].flatMap((writes) =>
+      [false, true].map((schemaWrites) => [scope, writes, schemaWrites] as const),
+    ),
+  );
+
+  it.each(SCOPES_BY_POLICY)(
+    'lists tools by scope: token %s, allow_writes %s, allow_schema_writes %s',
+    (scope, allowWrites, allowSchemaWrites) => {
+      const context = contextOf([scope], {
+        allow_writes: allowWrites,
+        allow_schema_writes: allowSchemaWrites,
+      });
       const names = (tools: readonly McpTool[]) =>
         listedTools(tools, context).map((tool) => tool.name);
       expect(names(mcpTools({} as McpToolServices))).toEqual(
@@ -155,14 +209,18 @@ describe('MCP tools: registry and central checks (T920)', () => {
             ? ['query_records', 'get_records', 'aggregate_records']
             : scope === 'records:write' && allowWrites
               ? ['create_records', 'update_records']
-              : [],
+              : scope === 'schema:write' && allowSchemaWrites
+                ? ['create_table', 'create_field', 'update_field']
+                : [],
       );
       expect(names(FAKE_TOOLS)).toEqual(
         scope === 'records:read'
           ? ['read_thing']
           : scope === 'records:write' && allowWrites
             ? ['write_thing']
-            : [],
+            : scope === 'schema:write' && allowSchemaWrites
+              ? ['schema_thing']
+              : [],
       );
     },
   );
@@ -175,13 +233,136 @@ describe('MCP tools: registry and central checks (T920)', () => {
     ],
     ['a tool outside the token scopes', 'read_thing', contextOf(['schema:read'])],
     ['a writing tool when writes are off', 'write_thing', contextOf(['records:write'])],
+    [
+      'a record writing tool when only schema writes are on',
+      'write_thing',
+      contextOf(['records:write'], { allow_schema_writes: true }),
+    ],
+    [
+      'a schema tool when only record writes are on',
+      'schema_thing',
+      contextOf(['schema:write'], { allow_writes: true }),
+    ],
+    [
+      'a schema tool without schema:write',
+      'schema_thing',
+      contextOf(['schema:read', 'records:write'], {
+        allow_writes: true,
+        allow_schema_writes: true,
+      }),
+    ],
   ])('answers -32602 for %s, before any check or code', async (_case, name, context) => {
     const deps = depsOf();
     const call = callTool(FAKE_TOOLS, name, {}, context, deps);
     await expect(call).rejects.toBeInstanceOf(ProtocolError);
     await expect(call).rejects.toMatchObject({ code: -32602, message: `Unknown tool: ${name}` });
     expect(deps.resolve).not.toHaveBeenCalled();
+    expect(deps.hitSchema).not.toHaveBeenCalled();
     expect(deps.observe).not.toHaveBeenCalled();
+  });
+
+  it('counts every schema tool call against the token, before its input (T1014)', async () => {
+    const hitSchema = vi.fn<McpToolDeps['hitSchema']>(() => Promise.resolve());
+    const deps = depsOf({ hitSchema });
+    const context = contextOf(['schema:write', 'records:write'], {
+      allow_writes: true,
+      allow_schema_writes: true,
+    });
+    await callTool(FAKE_TOOLS, 'write_thing', {}, context, deps);
+    expect(hitSchema).not.toHaveBeenCalled();
+    const invalid = await callTool(FAKE_TOOLS, 'schema_thing', { nope: 1 }, context, deps);
+    expect(errorOf(invalid).code).toBe('VALIDATION_FAILED');
+    expect(hitSchema).toHaveBeenCalledWith(TOKEN);
+
+    hitSchema.mockRejectedValueOnce(
+      new AppError('RATE_LIMITED', { detail: 'Too many requests.', retryAfterSeconds: 41.2 }),
+    );
+    const limited = await callTool(FAKE_TOOLS, 'schema_thing', { name: 'T' }, context, deps);
+    expect(errorOf(limited)).toMatchObject({ code: 'RATE_LIMITED', retry_after: 42 });
+    expect(deps.idempotent).not.toHaveBeenCalled();
+  });
+
+  it('replays a write with its idempotency_key, fingerprinted without the key (T1014)', async () => {
+    const context = contextOf(['schema:write'], { allow_schema_writes: true });
+    const fresh = depsOf();
+    const first = await callTool(
+      FAKE_TOOLS,
+      'schema_thing',
+      { name: 'T', idempotency_key: 'k-1' },
+      context,
+      fresh,
+    );
+    expect(first.structuredContent).toEqual({ created: 'T' });
+    expect(fresh.idempotent).toHaveBeenCalledWith(
+      context.principal,
+      { key: 'k-1', tool: 'schema_thing', input: { name: 'T' } },
+      expect.any(Function),
+    );
+
+    const replay = depsOf({
+      idempotent: vi.fn(() => Promise.resolve({ result: { created: 'T' }, replayed: true })),
+    });
+    const again = await callTool(
+      FAKE_TOOLS,
+      'schema_thing',
+      { name: 'T', idempotency_key: 'k-1' },
+      context,
+      replay,
+    );
+    expect(again.structuredContent).toEqual({ created: 'T', replayed: true });
+
+    const reused = depsOf({
+      idempotent: vi.fn(() =>
+        Promise.reject(new AppError('IDEMPOTENCY_KEY_REUSED', { detail: 'Used.' })),
+      ),
+    });
+    const refused = await callTool(
+      FAKE_TOOLS,
+      'schema_thing',
+      { name: 'U', idempotency_key: 'k-1' },
+      context,
+      reused,
+    );
+    expect(errorOf(refused)).toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED', message: 'Used.' });
+
+    // Without a key, a write runs as is; a read never goes through idempotency.
+    const plain = depsOf();
+    await callTool(FAKE_TOOLS, 'schema_thing', { name: 'T' }, context, plain);
+    await callTool(FAKE_TOOLS, 'read_thing', { base_id: BASE }, contextOf(['records:read']), plain);
+    expect(plain.idempotent).not.toHaveBeenCalled();
+  });
+
+  it.each<[unknown, ReturnType<typeof idempotencyOf>]>([
+    [{ a: 1 }, undefined],
+    [{ a: 1, idempotency_key: undefined }, undefined],
+    [
+      { a: 1, idempotency_key: 'k' },
+      { key: 'k', rest: { a: 1 } },
+    ],
+    [null, undefined],
+  ])('idempotencyOf(%j)', (input, expected) => {
+    expect(idempotencyOf(input)).toEqual(expected);
+  });
+
+  it.each([
+    [
+      { enabled: true, allow_writes: true },
+      { enabled: true, allow_writes: true },
+    ],
+    [
+      { enabled: true, allow_writes: false },
+      { enabled: true, allow_writes: false },
+    ],
+    [
+      { enabled: true, allow_writes: false, allow_schema_writes: true },
+      { enabled: true, allow_writes: false, allow_schema_writes: true },
+    ],
+    [{ enabled: 'yes' }, { enabled: false, allow_writes: false }],
+    [undefined, { enabled: false, allow_writes: false }],
+  ])('reads the stored policy %j (T1014: older ones keep working)', (stored, expected) => {
+    expect(mcpPolicyOf({ locale: 'vi', ...(stored === undefined ? {} : { mcp: stored }) })).toEqual(
+      { allow_schema_writes: false, ...expected },
+    );
   });
 
   it('runs a writing tool when the token has the scope and writes are on', async () => {
@@ -261,7 +442,7 @@ describe('MCP tools: registry and central checks (T920)', () => {
       title: 'Missing',
       description: 'Fails',
       scope: 'records:write',
-      writes: true,
+      writes: 'records',
       input: z.strictObject({}),
       annotations: { readOnlyHint: false },
       run: () =>
@@ -761,4 +942,93 @@ describe('MCP aggregate_records (T922)', () => {
     expect(one).toMatchObject({ rows: [[`${family.repeat(4_000)}…`, 1]], truncated: false });
     expect(Buffer.byteLength(JSON.stringify(one))).toBeGreaterThan(MCP_RESULT_MAX_BYTES);
   });
+});
+
+/**
+ * BACKLOG T1014 (CONTRACTS §30.7): select options of the schema tools by
+ * name — new ids on create, an upsert on update that never leaves an
+ * option out (so `FieldService.update` never deletes one).
+ */
+describe('MCP schema tools: select options by name (T1014)', () => {
+  const OPEN = { id: 'opt_SchemaToolOpen00', name: 'Open', color: 1 };
+  const DONE = { id: 'opt_SchemaToolDone00', name: 'Done', color: 5 };
+  const current = { multiple: false, options: [OPEN, DONE], default_value: DONE.id };
+
+  it('gives new options fresh ids and the default by name on create', () => {
+    const created = selectCreateOptions({
+      multiple: true,
+      options: [{ name: 'A' }, { name: 'B', color: 3 }],
+      default_value: ['B'],
+    });
+    const options = created['options'] as { id: string; name: string; color?: number }[];
+    expect(options.map(({ name, color }) => ({ name, color }))).toEqual([
+      { name: 'A', color: undefined },
+      { name: 'B', color: 3 },
+    ]);
+    expect(new Set(options.map((option) => option.id)).size).toBe(2);
+    for (const option of options) expect(option.id).toMatch(/^opt_/u);
+    expect(created).toMatchObject({ multiple: true, default_value: [options[1]?.id] });
+    expect(selectCreateOptions({})).toEqual({ options: [] });
+  });
+
+  it.each<[string, Parameters<typeof selectUpdatePatch>[1], unknown, (number | null)[]]>([
+    [
+      'an option left out is kept, a new name is added at the end',
+      { options: [{ name: 'Open' }, { name: 'Waiting', color: 2 }] },
+      { options: [OPEN, DONE, { name: 'Waiting', color: 2 }] },
+      [0, null, 1],
+    ],
+    ['an empty list keeps every option', { options: [] }, { options: [OPEN, DONE] }, [null, null]],
+    [
+      'a name given again only changes its colour',
+      { options: [{ name: 'Done', color: 9 }, { name: 'Open' }] },
+      { options: [OPEN, { ...DONE, color: 9 }] },
+      [1, 0],
+    ],
+    ['no list: the options stay untouched', { multiple: true }, { multiple: true }, []],
+    ['the default by name', { default_value: 'Open' }, { default_value: OPEN.id }, []],
+    ['no default', { default_value: null }, { default_value: null }, []],
+  ])('%s', (_case, input, patch, origins) => {
+    const result = selectUpdatePatch(current, input);
+    expect(result.patch).toEqual(patch);
+    expect(result.origins).toEqual(origins);
+    // Every option the field has is still listed: nothing to delete.
+    const listed = result.patch['options'] as { id?: string }[] | undefined;
+    if (listed !== undefined) {
+      for (const option of current.options) {
+        expect(listed.map((item) => item.id)).toContain(option.id);
+      }
+    }
+  });
+
+  it('refuses a default naming an option the field does not have yet', () => {
+    expect(() => selectUpdatePatch(current, { default_value: 'Waiting' })).toThrow(
+      expect.objectContaining({
+        code: 'VALIDATION_FAILED',
+        errors: [
+          expect.objectContaining({
+            path: 'options.default_value',
+            code: 'INVALID_SELECT_OPTION',
+            params: { value: 'Waiting' },
+          }),
+        ],
+      }) as Error,
+    );
+  });
+
+  it.each(['ai_options', 'primary_field', 'cuts_links', 'field_type'] as const)(
+    'refuses %s as VALIDATION_FAILED / NOT_AVAILABLE_OVER_MCP',
+    (reason) => {
+      const error = notAvailable('options.ai', reason);
+      expect(error.code).toBe('VALIDATION_FAILED');
+      expect(error.errors).toEqual([
+        {
+          path: 'options.ai',
+          code: 'NOT_AVAILABLE_OVER_MCP',
+          message: expect.stringContaining('Cellhive app') as string,
+          params: { reason },
+        },
+      ]);
+    },
+  );
 });

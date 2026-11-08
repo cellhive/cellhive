@@ -9,11 +9,13 @@ import {
   type FieldDto,
   type ListTablesResult,
   type McpField,
+  Id,
 } from '@cellhive/contracts';
 
 import { defineTool, type McpTool } from '../tool-context.js';
 
 import type { AccessService } from '../../../common/access/access.service.js';
+import type { Principal } from '../../../common/auth/principal.js';
 import type { FieldService } from '../../field/field.service.js';
 import type { TableService } from '../../table/table.service.js';
 import type { ViewService } from '../../view/view.service.js';
@@ -99,17 +101,48 @@ export function listTablesTool(access: AccessService, tables: TableService): Mcp
   });
 }
 
+/** What `describe_table` reads through (the services of its REST routes). */
+export interface DescribeServices {
+  readonly access: AccessService;
+  readonly tables: TableService;
+  readonly fields: FieldService;
+  readonly views: ViewService;
+}
+
 /**
- * `describe_table` (CONTRACTS §30.2): `GET /tables/:id`, `GET /tables/:id/fields`
- * and `GET /tables/:id/views` through their services — fields the caller
- * cannot read are absent (P93), views outside `visible_views` too.
+ * A table as `describe_table` gives it (CONTRACTS §30.2): `GET /tables/:id`,
+ * `GET /tables/:id/fields` and `GET /tables/:id/views` through their
+ * services — fields the caller cannot read are absent (P93), views outside
+ * `visible_views` too. Also the result of the schema tools (§30.7).
  */
-export function describeTableTool(
-  access: AccessService,
-  tables: TableService,
-  fields: FieldService,
-  views: ViewService,
-): McpTool {
+export async function describeTableOf(
+  services: DescribeServices,
+  principal: Principal,
+  tableId: Id<'tbl'>,
+): Promise<DescribeTableResult> {
+  const table = await services.tables.get(principal, tableId);
+  const base = await services.access.requireBase(principal, table.base_id, 'read');
+  const fieldPage = await services.fields.list(principal, table.id, {
+    offset: 0,
+    limit: MCP_DESCRIBE_FIELDS_LIMIT,
+    include_deleted: false,
+  });
+  const viewPage = await services.views.list(principal, table.id, {
+    offset: 0,
+    limit: MAX_LIST_LIMIT,
+  });
+  return {
+    id: table.id,
+    name: table.name,
+    description: table.description,
+    fields: fieldPage.items.map((field) => mcpFieldOf(field, base.access)),
+    truncated: fieldPage.total > fieldPage.items.length,
+    views: viewPage.items.map((view) => ({ id: view.id, name: view.name, type: view.type })),
+  };
+}
+
+/** `describe_table` (CONTRACTS §30.2): {@link describeTableOf}. */
+export function describeTableTool(services: DescribeServices): McpTool {
   return defineTool({
     name: 'describe_table',
     title: 'Describe a table',
@@ -122,24 +155,6 @@ export function describeTableTool(
     input: describeTableInputSchema,
     annotations: { readOnlyHint: true, openWorldHint: false },
     resource: (input) => ({ tableId: input.table_id }),
-    async run(input, { principal }) {
-      const table = await tables.get(principal, input.table_id);
-      const base = await access.requireBase(principal, table.base_id, 'read');
-      const fieldPage = await fields.list(principal, table.id, {
-        offset: 0,
-        limit: MCP_DESCRIBE_FIELDS_LIMIT,
-        include_deleted: false,
-      });
-      const viewPage = await views.list(principal, table.id, { offset: 0, limit: MAX_LIST_LIMIT });
-      const result: DescribeTableResult = {
-        id: table.id,
-        name: table.name,
-        description: table.description,
-        fields: fieldPage.items.map((field) => mcpFieldOf(field, base.access)),
-        truncated: fieldPage.total > fieldPage.items.length,
-        views: viewPage.items.map((view) => ({ id: view.id, name: view.name, type: view.type })),
-      };
-      return result;
-    },
+    run: (input, { principal }) => describeTableOf(services, principal, input.table_id),
   });
 }

@@ -1,6 +1,7 @@
 import {
   AI_REQUESTS_PER_MINUTE,
   API_TOKEN_BEARER_FAILURES_PER_IP,
+  MCP_SCHEMA_CALLS_PER_MINUTE,
   type Id,
 } from '@cellhive/contracts';
 import { hashApiToken, parseApiToken } from '@cellhive/server-core';
@@ -45,6 +46,12 @@ export class ApiRateLimits {
   bearerFailures: RateLimitRule = API_TOKEN_BEARER_FAILURES_PER_IP;
   /** Interactive AI requests per person (CONTRACTS §29.1, T906), whatever the credential. */
   ai: RateLimitRule = { limit: AI_REQUESTS_PER_MINUTE, windowSeconds: 60 };
+  /**
+   * Calls of the MCP schema tools per API token (CONTRACTS §30.6, T1014), on
+   * top of the per-token and per-base limits: an agent cannot create schema
+   * in bulk.
+   */
+  mcpSchema: RateLimitRule = { limit: MCP_SCHEMA_CALLS_PER_MINUTE, windowSeconds: 60 };
 
   /** Token hash (hex) → when this process last marked it recently valid. */
   readonly #marked = new Map<string, number>();
@@ -123,6 +130,12 @@ export class ApiRateLimits {
   hitAi(userId: Id<'usr'>): Promise<void> {
     const rule = this.ai;
     return this.limiter.hit(`ai:${String(rule.windowSeconds)}:${userId}`, rule);
+  }
+
+  /** Counts a call of an MCP schema tool by `tokenId` (`429 RATE_LIMITED` past 30 a minute). */
+  hitMcpSchema(tokenId: Id<'tok'>): Promise<void> {
+    const rule = this.mcpSchema;
+    return this.limiter.hit(`mcp_schema:${String(rule.windowSeconds)}:${tokenId}`, rule);
   }
 
   /** Counts a request of `principalKey` on `baseId`. */
