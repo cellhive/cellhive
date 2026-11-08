@@ -522,7 +522,18 @@
     "warning": {
       "unsupported_action": "Chưa làm được:",
       "unsupported_trigger": "Không hỗ trợ trigger:",
-      "ambiguous": "AI đã đoán:"
+      "ambiguous": "AI đã đoán:",
+      "literal_chat_id": "Chat Telegram ghi sẵn trong bản nháp:"
+    },
+    "literalChat": "bước {{step, number}} gửi tới {{chat}}, được ghi sẵn trong bản nháp thay vì lấy từ một trường. Chỉ lưu nếu nhóm hoặc kênh này là của bạn."
+  },
+  "mcp": {
+    "banner": "Bản nháp từ client MCP — kiểm tra trước khi lưu",
+    "warnings_other": "{{count, number}} lưu ý về bản nháp",
+    "loading": "Đang tải bản nháp",
+    "notFound": {
+      "title": "Bản nháp này không tồn tại hoặc đã hết hạn",
+      "description": "Bản nháp từ client MCP được giữ 24 giờ và chỉ người tạo mới mở được. Hãy nhờ client tạo bản nháp mới."
     }
   },
   "aiStep": {

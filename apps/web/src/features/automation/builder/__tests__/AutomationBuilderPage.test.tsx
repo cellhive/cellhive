@@ -92,6 +92,7 @@ function serve(
   kind: 'admin' | 'editor',
   current: ReturnType<typeof automation>,
   save?: (body: Record<string, unknown>) => Response,
+  extra: Record<string, (init: RequestInit | undefined) => Response> = {},
 ) {
   const calls: Call[] = [];
   const record = (method: string, init: RequestInit | undefined) => {
@@ -158,6 +159,7 @@ function serve(
         const body = JSON.parse(init?.body as string) as Record<string, unknown>;
         return json({ ...current, ...body }, 201);
       },
+      ...extra,
     },
   });
   return calls;
@@ -427,5 +429,110 @@ describe('AutomationBuilderPage (T521)', () => {
     expect(await screen.findByTestId('builder-message')).toHaveTextContent(
       'You don’t manage any automation in this base',
     );
+  });
+});
+
+/**
+ * T1015 (CONTRACTS §30.8, FRONTEND §13.2): `?draft=mdr_…` opens the draft of
+ * an MCP client, read with the session from `GET /bases/:baseId/automation-drafts/:id`
+ * — unsaved, off, its own label, the Telegram chat written in the draft
+ * named with its step; saved like any new automation, turned off. A draft
+ * that is gone (someone else's, expired) is one message.
+ */
+describe('AutomationBuilderPage: a draft of an MCP client (T1015)', () => {
+  const DRAFT_ID = 'mdr_McpDraft00000001';
+  const DRAFT_PAGE = `/b/${BASE_ID}/automations/new?draft=${DRAFT_ID}`;
+  const SECRET_ID = 'sec_TelegramBot00001';
+  const definition = {
+    trigger: {
+      type: 'record.updated',
+      table_id: TABLE_ID,
+      watch_fields: [FIELD.status],
+      skip_bulk: false,
+    },
+    condition: null,
+    actions: [
+      {
+        id: 'act_1',
+        type: 'send_telegram',
+        config: {
+          secret_id: SECRET_ID,
+          chat_id: { literal: '-1001234567890' },
+          text: { template: 'Done', digest: null },
+        },
+      },
+    ],
+  };
+  const draft = {
+    id: DRAFT_ID,
+    base_id: BASE_ID,
+    name: 'Tell the team',
+    definition,
+    explanation: 'Posts to the team group when an order is done.',
+    warnings: [
+      {
+        code: 'literal_chat_id',
+        message: 'Step act_1 posts to the Telegram chat -1001234567890 written in the draft.',
+        action_id: 'act_1',
+      },
+    ],
+    expires_at: NOW,
+  };
+  const draftRoute = `GET /bases/${BASE_ID}/automation-drafts/${DRAFT_ID}`;
+
+  it('opens the draft unsaved and off with its label and the chat written in it; saves it off', async () => {
+    const calls = serve('admin', automation(), undefined, { [draftRoute]: () => json(draft) });
+    await renderApp(DRAFT_PAGE);
+    const banner = await screen.findByTestId('ai-draft-banner', {}, { timeout: 5000 });
+    expect(banner).toHaveAttribute('data-source', 'mcp');
+    expect(within(banner).getByRole('heading')).toHaveTextContent(
+      'Draft from an MCP client — check before saving',
+    );
+    expect(within(banner).queryByTestId('ai-draft-request')).toBeNull();
+    expect(within(banner).getByTestId('ai-draft-explanation')).toHaveTextContent(draft.explanation);
+    expect(within(banner).getByRole('list', { name: '1 note on this draft' })).toBeVisible();
+    expect(within(banner).getByTestId('ai-draft-warning-literal_chat_id')).toHaveTextContent(
+      'Telegram chat written in the draft: step 1 posts to -1001234567890, written into the ' +
+        'draft rather than taken from a field. Save it only if this group or channel is yours.',
+    );
+    expect(screen.getByTestId('builder-title')).toHaveTextContent(draft.name);
+    expect(await screen.findByTestId('step-act_1')).toHaveTextContent('Telegram');
+    const enabled = screen.getByTestId('builder-enabled');
+    expect(enabled).not.toBeChecked();
+    expect(enabled).toBeDisabled();
+    expect(await axeViolations(document.body)).toEqual([]);
+
+    await userEvent.click(screen.getByTestId('builder-save'));
+    await waitFor(() => {
+      expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+    });
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
+      name: draft.name,
+      definition,
+      enabled: false,
+    });
+  });
+
+  it('says a draft that is gone does not exist, and never loads the builder', async () => {
+    serve('admin', automation(), undefined, {
+      [draftRoute]: () => problem('NOT_FOUND', 404),
+    });
+    await renderApp(DRAFT_PAGE);
+    const message = await screen.findByTestId('builder-message');
+    expect(message).toHaveTextContent('This draft does not exist or has expired');
+    expect(message).toHaveTextContent('lasts 24 hours and opens only for the person who made it');
+    expect(
+      within(message).getByRole('link', { name: 'Back to the automation list' }),
+    ).toHaveAttribute('href', `/b/${BASE_ID}/automations`);
+    expect(screen.queryByTestId('ai-draft-banner')).toBeNull();
+    expect(screen.queryByTestId('builder-save')).toBeNull();
+  });
+
+  it('ignores a draft parameter that is not a draft id', async () => {
+    const fetchCalls = serve('admin', automation());
+    await renderApp(`/b/${BASE_ID}/automations/new?draft=../../secrets`);
+    expect(await screen.findByTestId('builder-save')).toBeVisible();
+    expect(screen.queryByTestId('ai-draft-banner')).toBeNull();
+    expect(fetchCalls).toEqual([]);
   });
 });

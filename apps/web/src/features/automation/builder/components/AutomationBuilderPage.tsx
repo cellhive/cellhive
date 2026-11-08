@@ -1,6 +1,5 @@
 import {
   AUTOMATION_TRIGGER_TYPES,
-  type AiAutomationDraft,
   type AutomationAction,
   type AutomationDefinition,
   type AutomationDto,
@@ -45,7 +44,7 @@ import { PageHeader } from '../../../../lib/layout/page-header';
 import { lazyOverlay, lazyPanel } from '../../../../lib/lazy/chunk-error';
 import { canManageAutomations, isBaseAdmin } from '../../../../lib/permissions/access';
 import { isOrgAdmin } from '../../../../lib/permissions/org';
-import { automationQuery } from '../../../../lib/query/automations';
+import { automationQuery, mcpAutomationDraftQuery } from '../../../../lib/query/automations';
 import { incomingWebhooksQuery } from '../../../../lib/query/incoming-webhooks';
 import { keys } from '../../../../lib/query/keys';
 import {
@@ -57,7 +56,12 @@ import {
 } from '../../../../lib/query/queries';
 import { meQuery } from '../../../../lib/session/session';
 import { showErrorToast, showToast } from '../../../../lib/toast/toast';
-import { aiDraftOf } from '../../list/model/ai-draft';
+import {
+  aiDraftOf,
+  builderDraftOfMcp,
+  mcpDraftIdOf,
+  type BuilderDraft,
+} from '../../list/model/ai-draft';
 import { useDuplicateAutomation } from '../../list/use-duplicate-automation';
 import { AutomationTabs } from '../../runs/components/AutomationTabs';
 import { baseEmailIdentitiesQuery, builderEmailSettingsQuery } from '../actions/send-email/queries';
@@ -206,14 +210,23 @@ export function AutomationBuilderPage({ ConditionEditor, webhookKit }: Automatio
   const [search] = useSearchParams();
   // (T913) A draft of "Create with AI": opened unsaved, off.
   const aiDraft = aiDraftOf(useLocation().state);
+  // (T1015) A draft of an MCP client: `?draft=mdr_…`, read with the creator's session.
+  const draftId = automationId === undefined && aiDraft === null ? mcpDraftIdOf(search) : null;
   const { data: base } = useSuspenseQuery(baseQuery(baseId));
   const manages = canManageAutomations(base.access);
+  const notRetried = (count: number, error: Error) =>
+    !(isApiError(error) && (error.status === 403 || error.status === 404)) && count < 2;
   const existing = useQuery({
     ...automationQuery(baseId, automationId ?? ''),
     enabled: manages && automationId !== undefined,
-    retry: (count, error) =>
-      !(isApiError(error) && (error.status === 403 || error.status === 404)) && count < 2,
+    retry: notRetried,
     // The builder keeps its own draft: no refetch under the user's feet.
+    refetchOnWindowFocus: false,
+  });
+  const mcpDraft = useQuery({
+    ...mcpAutomationDraftQuery(baseId, draftId ?? ''),
+    enabled: manages && draftId !== null,
+    retry: notRetried,
     refetchOnWindowFocus: false,
   });
   const spec = useMemo(() => newSpecOf(search), [search]);
@@ -223,7 +236,10 @@ export function AutomationBuilderPage({ ConditionEditor, webhookKit }: Automatio
     enabled: manages && automationId === undefined,
   });
 
-  if (!manages || (isApiError(existing.error) && existing.error.status === 403)) {
+  const forbidden = [existing.error, mcpDraft.error].some(
+    (error) => isApiError(error) && error.status === 403,
+  );
+  if (!manages || forbidden) {
     return (
       <Message title={t('automation:forbidden.title')}>
         <p className="max-w-[60ch] text-body text-fg-muted">
@@ -250,15 +266,36 @@ export function AutomationBuilderPage({ ConditionEditor, webhookKit }: Automatio
       );
     }
   }
+  if (draftId !== null) {
+    // (T1015) Someone else's draft, another base's, an expired or unknown one: one message.
+    if (isApiError(mcpDraft.error) && mcpDraft.error.status === 404) {
+      return (
+        <Message title={t('mcp.notFound.title')} icon={Info}>
+          <p className="max-w-[60ch] text-body text-fg-muted">{t('mcp.notFound.description')}</p>
+          <Link to={`/b/${baseId}/automations`} className="text-body text-accent underline">
+            {t('page.backToList')}
+          </Link>
+        </Message>
+      );
+    }
+    if (mcpDraft.isError) {
+      return (
+        <div className="p-6">
+          <ErrorAlert error={mcpDraft.error} />
+        </div>
+      );
+    }
+  }
   if (
     (automationId !== undefined && existing.data === undefined) ||
+    (draftId !== null && mcpDraft.data === undefined) ||
     (automationId === undefined && tables.data === undefined && !tables.isError)
   ) {
     return (
       <div
         role="status"
         aria-busy="true"
-        aria-label={t('page.loading')}
+        aria-label={t(draftId === null ? 'page.loading' : 'mcp.loading')}
         className="flex flex-col items-center gap-3 p-6"
       >
         <Skeleton className="h-20 w-full max-w-[600px]" />
@@ -271,11 +308,15 @@ export function AutomationBuilderPage({ ConditionEditor, webhookKit }: Automatio
     tables.data?.items.find((table) => canManageAutomations(base.access, table.id))?.id ?? NO_TABLE;
   return (
     <Builder
-      key={existing.data?.id ?? 'new'}
+      key={existing.data?.id ?? draftId ?? 'new'}
       baseId={baseId}
       automation={existing.data ?? null}
       spec={spec}
-      aiDraft={automationId === undefined ? aiDraft : null}
+      aiDraft={
+        automationId === undefined
+          ? (aiDraft ?? (mcpDraft.data === undefined ? null : builderDraftOfMcp(mcpDraft.data)))
+          : null
+      }
       firstTable={firstManaged}
       ConditionEditor={ConditionEditor}
       webhookKit={webhookKit}
@@ -289,8 +330,11 @@ interface BuilderProps {
   readonly baseId: string;
   readonly automation: AutomationDto | null;
   readonly spec: NewSpec;
-  /** (T913) A new automation from "Create with AI": name, definition, the sentence, notes. */
-  readonly aiDraft: AiAutomationDraft | null;
+  /**
+   * (T913) A new automation from "Create with AI" — name, definition, the
+   * sentence, notes — or (T1015) from an MCP client.
+   */
+  readonly aiDraft: BuilderDraft | null;
   /** Table a new automation starts on (the first the caller manages). */
   readonly firstTable: TableId;
   readonly ConditionEditor: AutomationBuilderPageProps['ConditionEditor'];
@@ -499,7 +543,9 @@ function Builder({
         return automationsApi.create(baseId, {
           name: trimmed,
           // (T913) The sentence of an AI draft is its description.
-          ...(aiDraft === null ? {} : { description: aiDraft.description }),
+          ...(aiDraft === null || aiDraft.description === null
+            ? {}
+            : { description: aiDraft.description }),
           definition,
           enabled: false,
         });

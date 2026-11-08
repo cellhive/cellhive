@@ -1,64 +1,84 @@
 import { Button, Dialog, Spinner } from '@cellhive/ui';
-import { AlertTriangle, CircleAlert, Sparkles, UserRound } from 'lucide-react';
+import { AlertTriangle, Bot, CircleAlert, Sparkles, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { literalChatOf, type BuilderDraft } from '../../list/model/ai-draft';
 import { automationScope } from '../../list/model/scope';
 import { stepOrder, type BuilderIssue, type StepKey } from '../model/issues';
 
 import { useBuilderEnv } from './env';
 import { useIssueText } from './issue-text';
 
-import type { AiAutomationDraft, AutomationDefinition, AutomationDto } from '@cellhive/contracts';
+import type { AutomationDefinition, AutomationDto } from '@cellhive/contracts';
 
 /**
- * (T913, research S8 §5.3) The band of a draft from "Create with AI": check
- * every step before saving and turning it on, the sentence it came from, the
- * model's explanation and its warnings (what it left out or guessed — they
- * carry no step, CONTRACTS §29.3) — all model text as plain text. Gone once
- * saved (the automation is then an ordinary one, off).
+ * (T913, research S8 §5.3) The band of a draft opened unsaved: check every
+ * step before saving and turning it on. A draft from "Create with AI" shows
+ * the sentence it came from; one from an MCP client (T1015, `?draft=`) its
+ * own label. Then the explanation and the warnings — what the model left
+ * out or guessed (no step, CONTRACTS §29.3), and a Telegram chat written in
+ * the draft (`literal_chat_id`, its step and chat named here in the
+ * person's language) — all draft text as plain text. Gone once saved (the
+ * automation is then an ordinary one, off).
  */
-export function AiDraftBanner({ draft }: { readonly draft: AiAutomationDraft }) {
+export function AiDraftBanner({ draft }: { readonly draft: BuilderDraft }) {
   const { t } = useTranslation('automationBuilder');
+  const mcp = draft.source === 'mcp';
+  const Icon = mcp ? Bot : Sparkles;
   return (
     <section
       aria-labelledby="ai-draft-banner-title"
       data-testid="ai-draft-banner"
+      data-source={draft.source}
       className="flex flex-col gap-2 border-b border-line bg-accent-soft px-4 py-2.5 text-label font-normal text-fg motion-safe:animate-reveal"
     >
       <h2 id="ai-draft-banner-title" className="flex items-start gap-2 text-body font-semibold">
-        <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent" />
-        {t('ai.banner')}
+        <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent" />
+        {t(mcp ? 'mcp.banner' : 'ai.banner')}
       </h2>
-      <dl className="grid max-w-[90ch] gap-x-3 gap-y-1 pl-6 sm:grid-cols-[auto_minmax(0,1fr)]">
-        <dt className="text-fg-muted">{t('ai.request')}</dt>
-        <dd className="break-words whitespace-pre-line" data-testid="ai-draft-request">
-          {draft.description}
-        </dd>
-        {draft.explanation === '' ? null : (
-          <>
-            <dt className="text-fg-muted">{t('ai.explanation')}</dt>
-            <dd className="break-words whitespace-pre-line" data-testid="ai-draft-explanation">
-              {draft.explanation}
-            </dd>
-          </>
-        )}
-      </dl>
+      {draft.description === null && draft.explanation === '' ? null : (
+        <dl className="grid max-w-[90ch] gap-x-3 gap-y-1 pl-6 sm:grid-cols-[auto_minmax(0,1fr)]">
+          {draft.description === null ? null : (
+            <>
+              <dt className="text-fg-muted">{t('ai.request')}</dt>
+              <dd className="break-words whitespace-pre-line" data-testid="ai-draft-request">
+                {draft.description}
+              </dd>
+            </>
+          )}
+          {draft.explanation === '' ? null : (
+            <>
+              <dt className="text-fg-muted">{t('ai.explanation')}</dt>
+              <dd className="break-words whitespace-pre-line" data-testid="ai-draft-explanation">
+                {draft.explanation}
+              </dd>
+            </>
+          )}
+        </dl>
+      )}
       {draft.warnings.length === 0 ? null : (
         <ul
-          aria-label={t('ai.warnings', { count: draft.warnings.length })}
+          aria-label={t(mcp ? 'mcp.warnings' : 'ai.warnings', { count: draft.warnings.length })}
           className="ml-6 flex max-w-[90ch] flex-col gap-1 rounded-md border border-option-3 bg-option-3 px-3 py-2 text-on-option-3"
           data-testid="ai-draft-warnings"
         >
-          {draft.warnings.map((warning, index) => (
-            <li key={index} className="flex items-start gap-2">
-              <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-              <span className="min-w-0 break-words">
-                <strong className="font-semibold">{t(`ai.warning.${warning.code}`)}</strong>{' '}
-                {warning.message}
-              </span>
-            </li>
-          ))}
+          {draft.warnings.map((warning, index) => {
+            const literal = literalChatOf(draft.definition, warning);
+            return (
+              <li
+                key={index}
+                className="flex items-start gap-2"
+                data-testid={`ai-draft-warning-${warning.code}`}
+              >
+                <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                <span className="min-w-0 break-words">
+                  <strong className="font-semibold">{t(`ai.warning.${warning.code}`)}</strong>{' '}
+                  {literal === null ? warning.message : t('ai.literalChat', literal)}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
