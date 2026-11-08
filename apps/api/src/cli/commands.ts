@@ -1,16 +1,23 @@
-import { createWriteStream } from 'node:fs';
-import { access, constants, rm } from 'node:fs/promises';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { access, constants, rm, stat } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 
+import { BASE_PACKAGE_MEDIA_TYPE, newId } from '@cellhive/contracts';
 import {
   AuditWriter,
+  basePackageImportKey,
   basePackageKey,
   createStorageDriver,
   findBaseOrganization,
   JOB_QUEUE_SCHEMA,
   JobsRepository,
+  listMembershipsOfUser,
+  mayCreateBaseIn,
   orgScope,
   systemAuditContext,
+  WorkspacesRepository,
+  type JobRecord,
+  type OrgScope,
   type Tx,
   type User,
 } from '@cellhive/server-core';
@@ -20,6 +27,7 @@ import { runMigrations } from '../migrate.js';
 import { revokeUserApiTokens } from '../modules/api-token/revoke-user-tokens.js';
 import { PasswordResetLinks, type ResetLink } from '../modules/auth/password-reset-links.js';
 import { startBaseExport } from '../modules/base-package/base-export.service.js';
+import { startBaseImport } from '../modules/base-package/base-import.service.js';
 import {
   lockSetup,
   OrganizationProvisioner,
@@ -301,31 +309,8 @@ export async function baseExportCommand(
   ctx.io.err(`Export started (job ${jobId}); the worker writes the package.`);
   ctx.io.out(jobId);
 
+  await waitForJob(ctx, scope, jobId, 'export', options);
   const jobs = new JobsRepository(ctx.db);
-  const pollMs = options.pollMs ?? BASE_EXPORT_POLL_MS;
-  const sleep =
-    options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const started = Date.now();
-  let hinted = false;
-  for (;;) {
-    const job = await jobs.getById(scope, jobId);
-    if (job === undefined) throw new CliError('The export job is gone.');
-    if (job.status === 'succeeded') break;
-    if (job.status === 'failed' || job.status === 'cancelled') {
-      const error = job.error as { code?: unknown; detail?: unknown } | null;
-      const code = typeof error?.code === 'string' ? error.code : job.status;
-      const detail = typeof error?.detail === 'string' ? ` ${error.detail}` : '';
-      throw new CliError(`The export ${job.status} (${code}).${detail}`);
-    }
-    if (!hinted && job.status === 'queued' && Date.now() - started > BASE_EXPORT_QUEUED_HINT_MS) {
-      hinted = true;
-      ctx.io.err(
-        'Still queued: is the worker running? (another export of the organization waits too)',
-      );
-    }
-    await sleep(pollMs);
-  }
-
   const storage = createStorageDriver(ctx.config);
   const key = basePackageKey(organizationId, jobId);
   try {
@@ -352,4 +337,119 @@ export async function baseExportCommand(
   delete result['file_deleted'];
   ctx.io.err(`Package written to ${input.out}.`);
   ctx.io.out(JSON.stringify({ path: input.out, ...result }));
+}
+
+/**
+ * Waits for a `base.export`/`base.import` job to end (the worker runs it):
+ * the finished row, or a `CliError` with the job's error code when it did
+ * not succeed. Says on stderr when the job is still queued after 30 s.
+ */
+async function waitForJob(
+  ctx: CliContext,
+  scope: OrgScope,
+  jobId: Id<'job'>,
+  what: 'export' | 'import',
+  options: { readonly pollMs?: number; readonly sleep?: (ms: number) => Promise<void> },
+): Promise<JobRecord> {
+  const jobs = new JobsRepository(ctx.db);
+  const pollMs = options.pollMs ?? BASE_EXPORT_POLL_MS;
+  const sleep =
+    options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const started = Date.now();
+  let hinted = false;
+  for (;;) {
+    const job = await jobs.getById(scope, jobId);
+    if (job === undefined) throw new CliError(`The ${what} job is gone.`);
+    if (job.status === 'succeeded') return job;
+    if (job.status === 'failed' || job.status === 'cancelled') {
+      const error = job.error as { code?: unknown; detail?: unknown } | null;
+      const code = typeof error?.code === 'string' ? error.code : job.status;
+      const detail = typeof error?.detail === 'string' ? ` ${error.detail}` : '';
+      throw new CliError(`The ${what} ${job.status} (${code}).${detail}`);
+    }
+    if (!hinted && job.status === 'queued' && Date.now() - started > BASE_EXPORT_QUEUED_HINT_MS) {
+      hinted = true;
+      ctx.io.err(
+        `Still queued: is the worker running? (another ${what} of the organization waits too)`,
+      );
+    }
+    await sleep(pollMs);
+  }
+}
+
+/**
+ * `cellhive base import --workspace <wsp_…> --file <file.chbase> --as <email>`
+ * (CONTRACTS §12.2): stores the file in object storage and starts the same
+ * `base.import` job as `POST /workspaces/:id/bases/import`, for the user of
+ * `--as` (a member who may create bases in the workspace: the owner of the
+ * new base), then waits for the worker to finish it. Prints the job id,
+ * then the result (`{ base_id, report }`) as JSON. The caps of
+ * `BASE_PACKAGE_MAX_BYTES` apply as to any import.
+ */
+export async function baseImportCommand(
+  ctx: CliContext,
+  input: { readonly workspaceId: Id<'wsp'>; readonly file: string; readonly as: string },
+  options: { readonly pollMs?: number; readonly sleep?: (ms: number) => Promise<void> } = {},
+): Promise<void> {
+  let size: number;
+  try {
+    const info = await stat(input.file);
+    if (!info.isFile()) throw new CliError(`${input.file} is not a file.`);
+    size = info.size;
+  } catch (error) {
+    if (error instanceof CliError) throw error;
+    throw new CliError(`${input.file} cannot be read.`);
+  }
+  const limit = ctx.config.limits.basePackageMaxBytes;
+  if (size > limit) {
+    throw new CliError(
+      `${input.file} is larger than BASE_PACKAGE_MAX_BYTES (${String(limit)} bytes).`,
+    );
+  }
+  const user = await ctx.users.findByEmail(input.as);
+  if (user === undefined) throw new CliError('No user has the email of --as.');
+  let scope: OrgScope | undefined;
+  for (const membership of await listMembershipsOfUser(ctx.db.kysely, user.id)) {
+    const candidate = orgScope(membership.organizationId);
+    if (
+      (await new WorkspacesRepository(ctx.db).getById(candidate, input.workspaceId)) !== undefined
+    ) {
+      scope = candidate;
+      break;
+    }
+  }
+  if (scope === undefined) {
+    throw new CliError('No workspace with this id in an organization of the --as user.');
+  }
+  if (!(await mayCreateBaseIn(ctx.db, scope, user.id, input.workspaceId))) {
+    throw new CliError('The --as user may not create bases in this workspace.');
+  }
+
+  const jobId = newId('job');
+  const key = basePackageImportKey(scope.organizationId, jobId);
+  const storage = createStorageDriver(ctx.config);
+  try {
+    await storage.putStream(key, createReadStream(input.file), {
+      contentType: BASE_PACKAGE_MEDIA_TYPE,
+      contentLength: size,
+    });
+    try {
+      await startBaseImport(ctx.db, {
+        scope,
+        jobId,
+        workspaceId: input.workspaceId,
+        createdBy: user.id,
+      });
+    } catch (error) {
+      await storage.delete(key);
+      throw error;
+    }
+  } finally {
+    await storage.close();
+  }
+  ctx.io.err(`Import started (job ${jobId}); the worker builds the base.`);
+  ctx.io.out(jobId);
+  const job = await waitForJob(ctx, scope, jobId, 'import', options);
+  ctx.io.err('Base imported.');
+  ctx.io.out(JSON.stringify(job.result ?? {}));
 }

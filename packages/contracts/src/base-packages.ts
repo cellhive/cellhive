@@ -68,6 +68,14 @@ export const BASE_IMPORT_JOB_TYPE = 'base.import';
 export const BASE_EXPORT_REQUEST_SCOPES = ['schema:read', 'automations:read'] as const;
 
 /**
+ * Scopes an API token needs for `POST /workspaces/{workspaceId}/bases/import`
+ * besides the route's `schema:write` (CONTRACTS §26.3, "scope per request"):
+ * an import writes records and automations too. A token lacking some gets
+ * `403 INSUFFICIENT_SCOPE` listing them.
+ */
+export const BASE_IMPORT_REQUEST_SCOPES = ['records:write', 'automations:write'] as const;
+
+/**
  * Which cap `ARCHIVE_LIMIT_EXCEEDED` names (`params.reason`, with
  * `params.limit`): the package size, its number of entries, its total
  * uncompressed size (or an entry inflating past its declared size), the
