@@ -4,6 +4,7 @@
 # selected with MODE (api | worker | all | migrate, SPEC §20).
 #
 #   docker build -f infra/docker/api.Dockerfile -t cellhive-api .
+#   docker build -f infra/docker/api.Dockerfile --build-arg CELLHIVE_VERSION=0.1.0 -t cellhive-api .
 #
 # Stages: `build` installs the workspace and compiles the api with its
 # workspace dependencies (including `@cellhive/worker`, which MODE=worker and
@@ -60,6 +61,20 @@ RUN mkdir -p /data/files && chown node:node /data/files \
  && printf '#!/bin/sh\nexec node /app/dist/cli.js "$@"\n' > /usr/local/bin/cellhive \
  && chmod 0755 /usr/local/bin/cellhive
 COPY --from=build --chown=node:node /out ./
+# Version of this build, last so that a new version reuses every layer above: the
+# release workflow (.github/workflows/release.yml, docs/releasing.md) passes the
+# tag without its `v` and the commit. CELLHIVE_BUILD_VERSION is what /healthz,
+# the start-up log and `.chbase` exports report (SPEC §20); `dev` when unset.
+ARG CELLHIVE_VERSION=dev
+ARG CELLHIVE_REVISION=unknown
+LABEL org.opencontainers.image.title="cellhive-api" \
+      org.opencontainers.image.description="Cellhive server: API, worker and migrations (MODE=api|worker|all|migrate)" \
+      org.opencontainers.image.version="${CELLHIVE_VERSION}" \
+      org.opencontainers.image.revision="${CELLHIVE_REVISION}" \
+      org.opencontainers.image.source="https://github.com/cellhive/cellhive" \
+      org.opencontainers.image.url="https://github.com/cellhive/cellhive" \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
+ENV CELLHIVE_BUILD_VERSION=${CELLHIVE_VERSION}
 USER node
 EXPOSE 3000
 # Node handles SIGTERM itself (graceful shutdown in src/main.ts).
