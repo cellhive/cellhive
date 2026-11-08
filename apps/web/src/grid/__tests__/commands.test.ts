@@ -141,6 +141,33 @@ describe('UndoHistory (FRONTEND §6.1)', () => {
     expect(history.redoStack).toEqual([]);
   });
 
+  it('undoes a given change below later ones (T1011 dock), redo only for the last one', async () => {
+    const history = new UndoHistory();
+    const deleted: EditCommand = { kind: 'delete', tableId: TABLE, recordIds: ['rec_1'] };
+    const later = update('rec_2', 2);
+    history.push(deleted);
+    history.push(later);
+    const replayed: EditCommand[] = [];
+    const run = (command: EditCommand) => {
+      replayed.push(command);
+      return Promise.resolve(inverseOf({ kind: 'create', tableId: TABLE, recordIds: ['rec_1'] }));
+    };
+    expect(await history.undoCommand(deleted, run)).toMatchObject({ status: 'done' });
+    expect(replayed).toEqual([deleted]);
+    expect(history.undoStack).toEqual([later]);
+    // Not the last change: redoing it would delete again under the later edit.
+    expect(history.redoStack).toEqual([]);
+    // Gone from the stack (undone already): nothing runs.
+    expect(await history.undoCommand(deleted, run)).toBeNull();
+    expect(replayed).toHaveLength(1);
+
+    // The last change: redo as with Ctrl/⌘+Z.
+    const last: EditCommand = { kind: 'delete', tableId: TABLE, recordIds: ['rec_3'] };
+    history.push(last);
+    await history.undoCommand(last, run);
+    expect(history.redoStack).toHaveLength(1);
+  });
+
   it('rebases older commands on the version a replay produced', async () => {
     const history = new UndoHistory();
     // Two edits of one record: v1 → v2, then v2 → v3.
