@@ -18,7 +18,7 @@ import {
 const CONTRACT_PREFIXES = [
   'org', 'usr', 'grp', 'wsp', 'bse', 'tbl', 'fld', 'rec', 'opt', 'tok', 'sec', 'req', 'ses', 'inv',
   'hal', 'viw', 'rol', 'dsh', 'wgt', 'aut', 'run', 'stp', 'evt', 'att', 'shl', 'hok', 'job', 'aud',
-  'idn', 'pwr', 'imp', 'ntf', 'eid', 'uch', 'whr', 'hdl', 'clr',
+  'idn', 'pwr', 'imp', 'ntf', 'eid', 'uch', 'whr', 'hdl', 'clr', 'mdr',
 ] as const;
 
 describe('ID prefixes', () => {

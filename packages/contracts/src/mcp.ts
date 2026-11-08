@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 import { aggregatePlanDimensionSchema, aggregatePlanMetricSchema } from './aggregate-plan.js';
+import { aiAutomationWarningSchema } from './ai-automation.js';
 import { timeZoneSchema } from './auth.js';
+import { automationDefinitionSchema, MAX_AUTOMATION_NAME_LENGTH } from './automations.js';
+import { isoDateTimeSchema } from './common.js';
 import { computedResultTypeSchema, lookupFieldOptionsSchema } from './computed-fields.js';
 import {
   dateBucketSchema,
@@ -707,3 +710,29 @@ export const mcpFieldResultSchema = z.object({
   replayed: replayedSchema,
 });
 export type McpFieldResult = z.infer<typeof mcpFieldResultSchema>;
+
+// --- Automation drafts (CONTRACTS §30.8, T1015) --------------------------------------
+
+/** How long a draft of `draft_automation` is kept (Valkey), in seconds: 24 hours. */
+export const MCP_AUTOMATION_DRAFT_TTL_SECONDS = 86_400;
+/**
+ * Most drafts kept per user: a new one past it drops the oldest (its
+ * `open_url` then answers `404`), so that drafts never fill Valkey.
+ */
+export const MCP_AUTOMATION_DRAFTS_PER_USER = 20;
+
+/**
+ * `draft_automation` result: the checked draft, kept 24 hours for its
+ * creator, and the builder link that opens it unsaved. Nothing is saved
+ * in the base, nothing runs.
+ */
+export const draftAutomationResultSchema = z.object({
+  name: z.string().max(MAX_AUTOMATION_NAME_LENGTH),
+  definition: automationDefinitionSchema,
+  warnings: z.array(aiAutomationWarningSchema),
+  open_url: z.url().meta({
+    description: 'The builder with the draft, for its creator signed in to Cellhive',
+  }),
+  expires_at: isoDateTimeSchema,
+});
+export type DraftAutomationResult = z.infer<typeof draftAutomationResultSchema>;

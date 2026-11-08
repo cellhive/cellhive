@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { mcpAutomationDraftSchema } from '../../ai-automation.js';
 import {
   automationListSchema,
   automationRunDetailSchema,
@@ -44,6 +45,7 @@ import { register, type RouteSpec } from './route-spec.js';
 const baseParams = z.object({ baseId: idOf('bse') });
 const automationParams = z.object({ automationId: idOf('aut') });
 const runParams = z.object({ runId: idOf('run') });
+const draftParams = z.object({ baseId: idOf('bse'), draftId: idOf('mdr') });
 
 const RUN_LOG =
   'Run history is for people who manage the automation (ADR-25 §3); anyone else — also ' +
@@ -253,6 +255,24 @@ export const registerAutomationRoutes: RouteRegistrar = (registry, components) =
     body: validateAutomationTemplateRequestSchema,
     status: 200,
     response: validateAutomationTemplateResponseSchema,
+  });
+  add({
+    method: 'get',
+    path: '/api/v1/bases/{baseId}/automation-drafts/{draftId}',
+    operationId: 'getMcpAutomationDraft',
+    tag: 'automations',
+    summary: 'A draft of the MCP tool `draft_automation`, for the builder',
+    description:
+      'BACKLOG T1015 (CONTRACTS §30.8): the draft an MCP client made with `draft_automation` ' +
+      "and the server checked with its creator's permissions, kept 24 hours. Signed-in " +
+      'session only (`403 INSUFFICIENT_SCOPE` with `required: ["session"]` for an API token). ' +
+      'Only its creator, in the base it was made for, reads it: anyone else, another base, ' +
+      'another organization, an expired or unknown draft → `404`; the creator who can no ' +
+      'longer manage an automation of the base → `403`. Nothing is stored in the base: the ' +
+      'builder opens the draft unsaved and creates it with `enabled: false`.',
+    params: draftParams,
+    status: 200,
+    response: mcpAutomationDraftSchema,
   });
   add({
     method: 'post',

@@ -1,20 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AI_AUTOMATION_MODEL_WARNING_CODES,
+  AI_AUTOMATION_WARNING_CODES,
+  aiAutomationWarningSchema,
+  API_TOKEN_ROUTE_SCOPES,
   AUDIT_VIA_KINDS,
   aggregateRecordsResultSchema,
   createFieldInputSchema,
   createRecordsInputSchema,
   createTableInputSchema,
   DEFAULT_MCP_POLICY,
+  draftAutomationResultSchema,
   ERROR_DETAIL_CODES,
   eventViaSchema,
   FIELD_TYPE_NAMES,
   listBasesInputSchema,
+  MCP_AUTOMATION_DRAFT_DETAIL_CODES,
+  MCP_AUTOMATION_DRAFT_TTL_SECONDS,
+  MCP_AUTOMATION_DRAFTS_PER_USER,
   MCP_CREATABLE_FIELD_TYPES,
   MCP_CREATE_TABLE_FIELDS_MAX,
   MCP_REQUEST_MAX_BYTES,
   MCP_WRITE_RECORDS_MAX,
+  mcpAutomationDraftSchema,
   mcpPolicySchema,
   mcpSelectOptionsInputSchema,
   mcpToolErrorSchema,
@@ -252,5 +261,78 @@ describe('MCP schema tools (CONTRACTS §30.7, T1014)', () => {
 
   it('lists its detail code with every documented one', () => {
     expect(ERROR_DETAIL_CODES).toContain(NOT_AVAILABLE_OVER_MCP);
+  });
+});
+
+describe('MCP automation drafts (CONTRACTS §30.8, T1015)', () => {
+  const definition = {
+    trigger: { type: 'record.created', table_id: 'tbl_A1b2C3d4E5f6G7h8', skip_bulk: false },
+    condition: null,
+    actions: [],
+  };
+  const warning = {
+    code: 'literal_chat_id',
+    message: 'Step act_1 posts to a chat id written in the draft.',
+    action_id: 'act_1',
+  };
+
+  it('keeps a draft 24 hours, at most 20 per user', () => {
+    expect(MCP_AUTOMATION_DRAFT_TTL_SECONDS).toBe(86_400);
+    expect(MCP_AUTOMATION_DRAFTS_PER_USER).toBe(20);
+  });
+
+  it('adds the server warning literal_chat_id to the codes the model writes', () => {
+    expect(AI_AUTOMATION_MODEL_WARNING_CODES).toEqual([
+      'unsupported_action',
+      'unsupported_trigger',
+      'ambiguous',
+    ]);
+    expect(AI_AUTOMATION_WARNING_CODES).toEqual([
+      ...AI_AUTOMATION_MODEL_WARNING_CODES,
+      'literal_chat_id',
+    ]);
+    expect(aiAutomationWarningSchema.safeParse(warning).success).toBe(true);
+    // Model warnings name no step.
+    expect(
+      aiAutomationWarningSchema.safeParse({ code: 'ambiguous', message: 'Two fields' }).success,
+    ).toBe(true);
+    expect(aiAutomationWarningSchema.safeParse({ ...warning, action_id: 'x' }).success).toBe(false);
+  });
+
+  it('answers the draft with its builder link, and gives it back by id for the builder', () => {
+    const result = {
+      name: 'Notify',
+      definition,
+      warnings: [warning],
+      open_url:
+        'https://cellhive.example.com/b/bse_A1b2C3d4E5f6G7h8/automations/new?draft=mdr_A1b2C3d4E5f6G7h8',
+      expires_at: '2026-11-09T10:00:00.000Z',
+    };
+    expect(draftAutomationResultSchema.parse(result)).toMatchObject({ warnings: [warning] });
+    expect(
+      mcpAutomationDraftSchema.safeParse({
+        id: 'mdr_A1b2C3d4E5f6G7h8',
+        base_id: 'bse_A1b2C3d4E5f6G7h8',
+        name: 'Notify',
+        definition,
+        explanation: '',
+        warnings: [],
+        expires_at: '2026-11-09T10:00:00.000Z',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('reads a draft through a session only, and lists its detail code', () => {
+    expect(API_TOKEN_ROUTE_SCOPES.getMcpAutomationDraft).toEqual({
+      method: 'GET',
+      path: '/api/v1/bases/{baseId}/automation-drafts/{draftId}',
+      scope: 'session',
+    });
+    const operation =
+      generateOpenApiDocument().paths?.['/api/v1/bases/{baseId}/automation-drafts/{draftId}']?.get;
+    expect(operation?.operationId).toBe('getMcpAutomationDraft');
+    expect(operation?.security).toEqual([{ sessionCookie: [] }]);
+    expect(MCP_AUTOMATION_DRAFT_DETAIL_CODES).toEqual(['UNSUPPORTED_ACTION']);
+    expect(ERROR_DETAIL_CODES).toContain('UNSUPPORTED_ACTION');
   });
 });

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
+import { automationActionIdSchema } from './automation-values.js';
 import { automationDefinitionSchema, MAX_AUTOMATION_NAME_LENGTH } from './automations.js';
+import { isoDateTimeSchema } from './common.js';
 import { idOf } from './ids.js';
 
 /**
@@ -23,14 +25,26 @@ export const AI_AUTOMATION_MAX_WARNING_LENGTH = 500;
 export const AI_AUTOMATION_MAX_WARNINGS = 10;
 
 /**
- * What the draft could not do: a part of the sentence that needs an action
+ * Warnings the model writes: a part of the sentence that needs an action
  * or a trigger drafts do not have (calling an outside API, deleting
  * records…), or a guess between several tables, fields or options.
  */
-export const AI_AUTOMATION_WARNING_CODES = [
+export const AI_AUTOMATION_MODEL_WARNING_CODES = [
   'unsupported_action',
   'unsupported_trigger',
   'ambiguous',
+] as const;
+
+/**
+ * Every warning of a draft: the model's, and those the server adds after
+ * the check (T1015) — `literal_chat_id`: a `send_telegram` step posts to a
+ * chat id written in the draft rather than taken from a field (`action_id`
+ * names the step), so the person checks the group or channel is theirs
+ * before saving.
+ */
+export const AI_AUTOMATION_WARNING_CODES = [
+  ...AI_AUTOMATION_MODEL_WARNING_CODES,
+  'literal_chat_id',
 ] as const;
 export type AiAutomationWarningCode = (typeof AI_AUTOMATION_WARNING_CODES)[number];
 
@@ -55,7 +69,12 @@ export type AiAutomationDraftRequest = z.output<typeof aiAutomationDraftRequestS
 export const aiAutomationWarningSchema = z
   .strictObject({
     code: z.enum(AI_AUTOMATION_WARNING_CODES),
-    message: z.string().meta({ description: 'Written by the model: plain text' }),
+    message: z.string().meta({
+      description: 'Plain text: written by the model, or by the server for `literal_chat_id`',
+    }),
+    action_id: automationActionIdSchema.optional().meta({
+      description: 'The step of the definition the warning is about (`literal_chat_id`)',
+    }),
   })
   .meta({ id: 'AiAutomationWarning' });
 export type AiAutomationWarning = z.infer<typeof aiAutomationWarningSchema>;
@@ -77,3 +96,29 @@ export const aiAutomationDraftSchema = z
   })
   .meta({ id: 'AiAutomationDraft' });
 export type AiAutomationDraft = z.infer<typeof aiAutomationDraftSchema>;
+
+/**
+ * `GET /bases/{baseId}/automation-drafts/{draftId}` (CONTRACTS §30.8,
+ * BACKLOG T1015): a draft the MCP tool `draft_automation` checked and kept
+ * for 24 hours, read by the builder of its creator (session only) to open
+ * it unsaved. Nothing is stored in the base until the person saves it,
+ * turned off.
+ */
+export const mcpAutomationDraftSchema = z
+  .strictObject({
+    id: idOf('mdr'),
+    base_id: idOf('bse'),
+    name: z.string().max(MAX_AUTOMATION_NAME_LENGTH).meta({ description: 'Written by the client' }),
+    definition: automationDefinitionSchema.meta({
+      description:
+        'Checked like `POST /bases/{baseId}/automations` would check it for the creator when ' +
+        'the draft was made; checked again when saved',
+    }),
+    explanation: z.string().meta({ description: 'Written by the client: plain text' }),
+    warnings: z.array(aiAutomationWarningSchema),
+    expires_at: isoDateTimeSchema.meta({
+      description: 'When the draft is deleted (24 hours after it was made)',
+    }),
+  })
+  .meta({ id: 'McpAutomationDraft' });
+export type McpAutomationDraft = z.infer<typeof mcpAutomationDraftSchema>;
