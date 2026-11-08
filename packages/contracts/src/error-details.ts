@@ -727,6 +727,13 @@ export const BASE_PACKAGE_DETAIL_CODES = [
  */
 export const BASE_PACKAGE_SIZE_DETAIL_CODES = ['PACKAGE_TOO_LARGE'] as const;
 
+/**
+ * MCP schema tools (CONTRACTS §30.7, T1014): `errors[].code` of
+ * `VALIDATION_FAILED` for a change the tools never make, whatever the
+ * caller's rights (`params.reason` ∈ `MCP_SCHEMA_REFUSALS` of `mcp.ts`).
+ */
+export const MCP_SCHEMA_DETAIL_CODES = ['NOT_AVAILABLE_OVER_MCP'] as const;
+
 /** Every documented detail code, once. */
 export const ERROR_DETAIL_CODES = [
   ...new Set([
@@ -768,6 +775,7 @@ export const ERROR_DETAIL_CODES = [
     ...AI_FIELD_GENERATE_DETAIL_CODES,
     ...BASE_PACKAGE_DETAIL_CODES,
     ...BASE_PACKAGE_SIZE_DETAIL_CODES,
+    ...MCP_SCHEMA_DETAIL_CODES,
   ]),
 ] as readonly ErrorDetailCode[];
 
@@ -809,4 +817,5 @@ export type ErrorDetailCode =
   | (typeof AI_SETTINGS_DETAIL_CODES)[number]
   | (typeof AI_FIELD_GENERATE_DETAIL_CODES)[number]
   | (typeof BASE_PACKAGE_DETAIL_CODES)[number]
-  | (typeof BASE_PACKAGE_SIZE_DETAIL_CODES)[number];
+  | (typeof BASE_PACKAGE_SIZE_DETAIL_CODES)[number]
+  | (typeof MCP_SCHEMA_DETAIL_CODES)[number];

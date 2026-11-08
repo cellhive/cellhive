@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { aggregatePlanDimensionSchema, aggregatePlanMetricSchema } from './aggregate-plan.js';
 import { timeZoneSchema } from './auth.js';
-import { computedResultTypeSchema } from './computed-fields.js';
+import { computedResultTypeSchema, lookupFieldOptionsSchema } from './computed-fields.js';
 import {
   dateBucketSchema,
   DEFAULT_WIDGET_LIMIT,
@@ -13,8 +13,12 @@ import {
 } from './dashboard-widgets.js';
 import { errorCodeSchema, problemErrorItemSchema } from './errors.js';
 import { idOf } from './ids.js';
-import { MAX_RECORD_SEARCH_LENGTH } from './records.js';
-import { fieldTypeNameSchema } from './tables.js';
+import { idempotencyKeySchema, MAX_RECORD_SEARCH_LENGTH } from './records.js';
+import {
+  fieldTypeNameSchema,
+  MAX_SCHEMA_DESCRIPTION_LENGTH,
+  MAX_SCHEMA_NAME_LENGTH,
+} from './tables.js';
 import { viewTypeSchema } from './views.js';
 
 /**
@@ -415,6 +419,29 @@ export const aggregateRecordsResultSchema = z.object({
 });
 export type AggregateRecordsResult = z.infer<typeof aggregateRecordsResultSchema>;
 
+// --- Every write tool (CONTRACTS §30.5, §30.7, T1014) -------------------------------
+
+/**
+ * `idempotency_key` of a write tool (T1014): the same key with the same
+ * arguments within 24 hours answers the stored result again (`replayed:
+ * true`) without writing; with other arguments, or while the first call
+ * still runs → `IDEMPOTENCY_KEY_REUSED`. Per API token, like the
+ * `Idempotency-Key` header of the REST API (CONTRACTS §1.1).
+ */
+export const mcpIdempotencyKeySchema = idempotencyKeySchema.meta({
+  description:
+    'Optional, 1–255 printable ASCII characters. Send a new random key with each change and the ' +
+    'same key when you resend it (lost connection): within 24 hours the stored result comes back ' +
+    'with `replayed: true` and nothing is written twice. The same key with other arguments → ' +
+    '`IDEMPOTENCY_KEY_REUSED`',
+});
+
+/** `replayed: true` on a result given again for an `idempotency_key`; absent otherwise. */
+const replayedSchema = z
+  .literal(true)
+  .optional()
+  .meta({ description: 'The stored result of an earlier call with this `idempotency_key`' });
+
 // --- Record writes (CONTRACTS §30.5, T923) -----------------------------------------
 
 /** Most records of one `create_records` / `update_records` call. */
@@ -434,6 +461,7 @@ export const createRecordsInputSchema = z.strictObject({
     .array(z.strictObject({ fields: writeFieldsSchema }))
     .min(1)
     .max(MCP_WRITE_RECORDS_MAX),
+  idempotency_key: mcpIdempotencyKeySchema.optional(),
 });
 export type CreateRecordsInput = z.infer<typeof createRecordsInputSchema>;
 
@@ -444,6 +472,7 @@ export const updateRecordsInputSchema = z.strictObject({
     .array(z.strictObject({ id: idOf('rec'), fields: writeFieldsSchema }))
     .min(1)
     .max(MCP_WRITE_RECORDS_MAX),
+  idempotency_key: mcpIdempotencyKeySchema.optional(),
 });
 export type UpdateRecordsInput = z.infer<typeof updateRecordsInputSchema>;
 
@@ -457,5 +486,224 @@ export const writeRecordsResultSchema = z.object({
     description: 'Every written record the caller reads, also those left out of `records`',
   }),
   ...recordsPartSchema,
+  replayed: replayedSchema,
 });
 export type WriteRecordsResult = z.infer<typeof writeRecordsResultSchema>;
+
+// --- Schema writes (CONTRACTS §30.7, T1014) ----------------------------------------
+
+/** Most calls of the schema tools per API token and minute (`RATE_LIMITED` + `retry_after` past it). */
+export const MCP_SCHEMA_CALLS_PER_MINUTE = 30;
+/** Most fields of one `create_table` call (besides its primary field). */
+export const MCP_CREATE_TABLE_FIELDS_MAX = 50;
+
+/**
+ * Field types the schema tools create: every type a person fills in, plus
+ * links, lookups and formulas — never `button` (needs an automation),
+ * `parent` (turns the table into a tree) nor the system types
+ * (`created_at`, `updated_at`, `created_by`, `updated_by`, `auto_number`).
+ */
+export const MCP_CREATABLE_FIELD_TYPES = [
+  'text',
+  'number',
+  'select',
+  'datetime',
+  'checkbox',
+  'user',
+  'attachment',
+  'link',
+  'lookup',
+  'formula',
+] as const;
+export type McpCreatableFieldType = (typeof MCP_CREATABLE_FIELD_TYPES)[number];
+
+/**
+ * Detail code (`VALIDATION_FAILED`, `MCP_SCHEMA_DETAIL_CODES`): a schema
+ * change MCP never makes (`params.reason`).
+ */
+export const NOT_AVAILABLE_OVER_MCP = 'NOT_AVAILABLE_OVER_MCP';
+/**
+ * `params.reason` of `NOT_AVAILABLE_OVER_MCP`: AI settings of a field
+ * (`options.ai`, set or removed), the primary field, a link going from
+ * several records to one (it would cut links), the options of a field type
+ * MCP does not create (`button`, `parent`, system fields).
+ */
+export const MCP_SCHEMA_REFUSALS = [
+  'ai_options',
+  'primary_field',
+  'cuts_links',
+  'field_type',
+] as const;
+export type McpSchemaRefusal = (typeof MCP_SCHEMA_REFUSALS)[number];
+
+const schemaNameSchema = z.string().trim().min(1).max(MAX_SCHEMA_NAME_LENGTH);
+const schemaDescriptionSchema = z.string().max(MAX_SCHEMA_DESCRIPTION_LENGTH).nullable();
+
+/** One select option of a schema tool, by name: an option is never named by id. */
+export const mcpSelectOptionInputSchema = z.strictObject({
+  name: schemaNameSchema,
+  color: z.int().min(0).max(54).optional().meta({ description: 'Colour index 0–54' }),
+});
+
+/**
+ * `options` of a `select` field in the schema tools: option names; on
+ * `update_field` the list is merged by name — named options are added or
+ * recoloured, options left out are kept (an option is never deleted).
+ * `default_value` takes option names too.
+ */
+export const mcpSelectOptionsInputSchema = z
+  .strictObject({
+    multiple: z.boolean().optional(),
+    options: z
+      .array(mcpSelectOptionInputSchema)
+      .max(1000)
+      .optional()
+      .superRefine((options, ctx) => {
+        const seen = new Set<string>();
+        options?.forEach((option, index) => {
+          if (seen.has(option.name)) {
+            ctx.addIssue({
+              code: 'custom',
+              path: [index, 'name'],
+              message: 'Duplicate option name',
+            });
+          }
+          seen.add(option.name);
+        });
+      }),
+    default_value: z
+      .union([schemaNameSchema, z.array(schemaNameSchema)])
+      .nullable()
+      .optional()
+      .meta({ description: 'Option name (names for a multiple select), or `null`' }),
+  })
+  .meta({ id: 'McpSelectOptionsInput' });
+export type McpSelectOptionsInput = z.infer<typeof mcpSelectOptionsInputSchema>;
+
+/** `options` of a new `link` field: the linked table by id (`list_tables`). */
+export const mcpLinkOptionsInputSchema = z
+  .strictObject({
+    link_table_id: idOf('tbl').meta({ description: 'The linked table, from `list_tables`' }),
+    allow_multiple: z.boolean().optional().meta({ description: 'Default `true`' }),
+    bidirectional: z.boolean().optional().meta({
+      description: 'Also add a link field to the linked table (needs schema rights there)',
+    }),
+    bidirectional_link_field_name: schemaNameSchema
+      .optional()
+      .meta({ description: 'Name of the field added to the linked table' }),
+  })
+  .meta({ id: 'McpLinkOptionsInput' });
+export type McpLinkOptionsInput = z.infer<typeof mcpLinkOptionsInputSchema>;
+
+/** `options` of a `link` field in `update_field`: only from one record to several. */
+export const mcpLinkOptionsUpdateSchema = z.strictObject({
+  allow_multiple: z.boolean(),
+});
+
+/** `options` of a `lookup` field: the values of `field` in the records `link_field` links to. */
+export const mcpLookupOptionsInputSchema = z
+  .strictObject({
+    link_field: schemaNameSchema.meta({ description: 'A link field of this table, by name' }),
+    field: schemaNameSchema.meta({ description: 'A field of the linked table, by name' }),
+    aggregate: lookupFieldOptionsSchema.shape.aggregate,
+    style: lookupFieldOptionsSchema.shape.style,
+  })
+  .meta({ id: 'McpLookupOptionsInput' });
+export type McpLookupOptionsInput = z.infer<typeof mcpLookupOptionsInputSchema>;
+
+const fieldOptionsDescription =
+  'Options of the type, as the REST API takes them (CONTRACTS §13) except: `select` — ' +
+  '`{ multiple?, options?: [{ name, color? }], default_value?: name | names }` (names, never ' +
+  'ids); `link` — `{ link_table_id, allow_multiple?, bidirectional?, ' +
+  'bidirectional_link_field_name? }`; `lookup` — `{ link_field, field, aggregate?, style? }` ' +
+  '(names); `formula` — `{ expression, style? }`, fields as `[name]`. Never `ai`: AI fields are ' +
+  'set up in the app';
+
+/** `options` of a schema tool: an object whose shape the field type decides. */
+export const mcpFieldOptionsInputSchema = z
+  .record(z.string(), z.unknown())
+  .meta({ description: fieldOptionsDescription });
+
+const fieldPartsSchema = {
+  options: mcpFieldOptionsInputSchema.optional(),
+  description: schemaDescriptionSchema.optional(),
+  required: z.boolean().optional(),
+  unique_values: z.boolean().optional(),
+};
+
+/** A field to create (`create_table`, `create_field`): by name, of a creatable type. */
+export const mcpFieldInputSchema = z
+  .strictObject({
+    name: schemaNameSchema,
+    type: z.enum(MCP_CREATABLE_FIELD_TYPES),
+    ...fieldPartsSchema,
+  })
+  .meta({ id: 'McpFieldInput' });
+export type McpFieldInput = z.infer<typeof mcpFieldInputSchema>;
+
+/** `create_table`: like `POST /bases/:id/tables`, then each field like `POST /tables/:id/fields`. */
+export const createTableInputSchema = z.strictObject({
+  base_id: idOf('bse').meta({ description: 'A base id from `list_bases`' }),
+  name: schemaNameSchema,
+  description: schemaDescriptionSchema.optional(),
+  primary_field_name: schemaNameSchema
+    .optional()
+    .meta({ description: 'Name of the primary text field (default `Name`)' }),
+  fields: z
+    .array(mcpFieldInputSchema)
+    .max(MCP_CREATE_TABLE_FIELDS_MAX)
+    .optional()
+    .meta({ description: 'Created in order: a lookup or formula may use the fields before it' }),
+  idempotency_key: mcpIdempotencyKeySchema.optional(),
+});
+export type CreateTableInput = z.infer<typeof createTableInputSchema>;
+
+/** `create_field`: like `POST /tables/:id/fields`. */
+export const createFieldInputSchema = z.strictObject({
+  table_id: idOf('tbl').meta({ description: 'A table id from `list_tables`' }),
+  name: schemaNameSchema,
+  type: z.enum(MCP_CREATABLE_FIELD_TYPES),
+  ...fieldPartsSchema,
+  idempotency_key: mcpIdempotencyKeySchema.optional(),
+});
+export type CreateFieldInput = z.infer<typeof createFieldInputSchema>;
+
+/**
+ * `update_field`: like `PATCH /fields/:id`, the field by name; never its
+ * type, never the primary field, never deleting a select option.
+ */
+export const updateFieldInputSchema = z
+  .strictObject({
+    table_id: idOf('tbl').meta({ description: 'A table id from `list_tables`' }),
+    field: schemaNameSchema.meta({
+      description: 'The field to change, by name (`describe_table`)',
+    }),
+    name: schemaNameSchema.optional().meta({ description: 'A new name' }),
+    ...fieldPartsSchema,
+    idempotency_key: mcpIdempotencyKeySchema.optional(),
+  })
+  .refine(
+    (input) =>
+      [input.name, input.options, input.description, input.required, input.unique_values].some(
+        (value) => value !== undefined,
+      ),
+    {
+      message:
+        'At least one change is required (name, description, options, required, unique_values)',
+    },
+  );
+export type UpdateFieldInput = z.infer<typeof updateFieldInputSchema>;
+
+/** `create_table` result: the new table as `describe_table` gives it. */
+export const createTableResultSchema = describeTableResultSchema.extend({
+  replayed: replayedSchema,
+});
+export type CreateTableResult = z.infer<typeof createTableResultSchema>;
+
+/** `create_field` / `update_field` result: the field as `describe_table` gives it. */
+export const mcpFieldResultSchema = z.object({
+  table_id: idOf('tbl'),
+  field: mcpFieldSchema,
+  replayed: replayedSchema,
+});
+export type McpFieldResult = z.infer<typeof mcpFieldResultSchema>;
