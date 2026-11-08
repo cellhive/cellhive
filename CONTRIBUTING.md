@@ -73,6 +73,10 @@ Working in several checkouts or worktrees at once? Give each its own `COMPOSE_PR
 - UI strings go through i18n with both `en` and `vi`.
 - Fill in the pull request template, including security and permission impact.
 
+## Releases
+
+Maintainers release with a git tag `v<version>`: [`docs/releasing.md`](docs/releasing.md) describes the release workflow, release candidates, and how anyone can verify the signed multi-arch images and their SBOMs.
+
 ## Reporting security issues
 
 Do not open a public issue. Follow [SECURITY.md](SECURITY.md).
