@@ -217,10 +217,11 @@ export class JobsRepository
   /**
    * The base a job works on, when the job is tied to one: an import
    * (`meta.imports.job_id`), a field conversion (`meta.field_conversions`
-   * → its table) or a base export (`base_id` of the `base.exported` audit
-   * entry written with the job, CONTRACTS §12.2). `null` when the job names
-   * no base (BACKLOG T704: API tokens limited to bases only see jobs of
-   * those bases).
+   * → its table), a base export (`base_id` of the `base.exported` audit
+   * entry written with the job, CONTRACTS §12.2) or a finished base import
+   * (`base_id` of its `base.imported` entry: the new base). `null` when the
+   * job names no base — an import still running included (BACKLOG T704: API
+   * tokens limited to bases only see jobs of those bases).
    */
   async baseIdOf(scope: OrgScope, id: Id<'job'>): Promise<Id<'bse'> | null> {
     const row = await this.executor(scope)
@@ -243,7 +244,7 @@ export class JobsRepository
           .whereRef('a.organization_id', '=', 'j.organization_id')
           .where('a.entity_type', '=', 'job')
           .whereRef('a.entity_id', '=', 'j.id')
-          .where('a.action', '=', 'base.exported')
+          .where('a.action', 'in', ['base.exported', 'base.imported'])
           .limit(1)
           .as('export_base_id'),
       ])
