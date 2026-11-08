@@ -80,6 +80,33 @@ export class FormCoversRepository
       .executeTakeFirstOrThrow();
   }
 
+  /**
+   * The cover of a form view of a `.chbase` import (T1019), `pending_upload`
+   * under the id the import gave it (`markReady` once its object is
+   * stored). Only the `base.import` job calls it, for its hidden base.
+   */
+  async insertImported(
+    scope: OrgScope,
+    input: CreateFormCoverInput & { readonly id: Id<'att'> },
+  ): Promise<FormCoverRow> {
+    return this.executor(scope)
+      .insertInto('meta.form_covers')
+      .values({
+        id: input.id,
+        organization_id: scope.organizationId,
+        base_id: input.baseId,
+        table_id: input.tableId,
+        view_id: input.viewId,
+        object_key: formCoverObjectKey(scope.organizationId, input.id),
+        filename: input.filename,
+        mime: input.mime,
+        size: input.size,
+        created_by: input.createdBy,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
+
   async getById(scope: OrgScope, id: Id<'att'>): Promise<FormCoverRow | undefined> {
     return this.executor(scope)
       .selectFrom('meta.form_covers')

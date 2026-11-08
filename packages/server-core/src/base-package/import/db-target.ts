@@ -1,12 +1,21 @@
 import {
   ATTACHMENT_THUMBNAIL_SIZES,
   attachmentHasThumbnail,
+  COMPUTED_BACKFILL_BATCH_SIZE,
   type BaseImportResult,
   type Id,
 } from '@cellhive/contracts';
 
 import { AuditWriter } from '../../audit/audit-writer.js';
+import { AutomationsRepository } from '../../automation/repository/automations.repository.js';
 import { createBaseRecord, finishImportedBase } from '../../bases/create-base.js';
+import { loadBaseSchemaRows } from '../../computed/definition/schema-rows.js';
+import { DashboardWidgetsRepository } from '../../dashboards/dashboard-widgets.repository.js';
+import { DashboardsRepository } from '../../dashboards/dashboards.repository.js';
+import { JOB_STATEMENT_TIMEOUT_MS } from '../../db/create-db.js';
+import { jsonb } from '../../db/json.js';
+import { sqlStateOf } from '../../db/pg-errors.js';
+import { BaseRolesRepository } from '../../db/repositories/base-roles.repository.js';
 import { BasesRepository } from '../../db/repositories/bases.repository.js';
 import { OrgMembersRepository } from '../../db/repositories/org-members.repository.js';
 import { withTxScope, type OrgScope } from '../../db/repository.js';
@@ -18,19 +27,28 @@ import {
   attachmentThumbnailKey,
   AttachmentsRepository,
 } from '../../records/attachments/attachments.repository.js';
+import { TablesRepository } from '../../schema/tables.repository.js';
 import { FormCoversRepository } from '../../views/form-covers.repository.js';
+import { ViewsRepository } from '../../views/views.repository.js';
 
 import { BaseImportStopped } from './target.js';
 
 import type {
   BaseImportTarget,
   ImportAuditCounts,
+  ImportAutomationInput,
   ImportBaseInput,
+  ImportDashboardInput,
+  ImportRoleInput,
+  ImportStoredCover,
+  ImportStoredEmailAsset,
   ImportStoredFile,
+  ImportViewInput,
 } from './target.js';
 import type { AuditContext } from '../../audit/audit-entry.js';
+import type { BaseSchemaRows } from '../../computed/definition/schema-rows.js';
 import type { Db } from '../../db/create-db.js';
-import type { JsonObject } from '../../db/schema.js';
+import type { DashboardWidgetKind, JsonObject, JsonValue } from '../../db/schema.js';
 import type {
   PackageLoadBatch,
   RecordMutationService,
@@ -42,15 +60,27 @@ import type { Readable } from 'node:stream';
 
 /** Members read per statement. */
 const PAGE = 1_000;
+/** SQLSTATE of a unique violation. */
+const UNIQUE_VIOLATION = '23505';
 /** Attempts of the thumbnail job of an imported image (like an upload's). */
 const THUMBNAIL_MAX_ATTEMPTS = 3;
 
+/** What an import uses of `SchemaService` (T1018, T1019). */
+export type BaseImportSchemaMethods =
+  | 'importTable'
+  | 'importLinkField'
+  | 'importComputedField'
+  | 'markImportedComputedReady'
+  | 'importFieldAi'
+  | 'importLinkRecordFilter'
+  | 'purgeBase';
+
 export interface DbBaseImportTargetDeps {
   readonly db: Db;
-  /** DDL of the hidden base (AGENTS.md rule 1). */
-  readonly schema: Pick<SchemaService, 'importTable' | 'importLinkField' | 'purgeBase'>;
+  /** DDL and fields of the hidden base (AGENTS.md rule 1). */
+  readonly schema: Pick<SchemaService, BaseImportSchemaMethods>;
   /** Records of the hidden base (AGENTS.md rule 1); a job statement timeout suits. */
-  readonly records: Pick<RecordMutationService, 'loadPackageBatch'>;
+  readonly records: Pick<RecordMutationService, 'loadPackageBatch' | 'backfillComputedBatch'>;
   readonly storage: Pick<StorageDriver, 'putStream' | 'delete'>;
 }
 
@@ -172,6 +202,248 @@ export class DbBaseImportTarget implements BaseImportTarget {
 
   load(baseId: Id<'bse'>, batch: PackageLoadBatch): Promise<number> {
     return this.deps.records.loadPackageBatch(this.scope, this.base(baseId), batch);
+  }
+
+  schemaRows(baseId: Id<'bse'>): Promise<BaseSchemaRows> {
+    return loadBaseSchemaRows(this.deps.db, this.scope, baseId);
+  }
+
+  async createComputedField(
+    baseId: Id<'bse'>,
+    input: Parameters<BaseImportTarget['createComputedField']>[1],
+  ): Promise<boolean> {
+    const field = await this.deps.schema.importComputedField(this.scope, this.base(baseId), input);
+    return field.compute_mode === 'stored' && field.compute_state === 'backfilling';
+  }
+
+  async backfillComputed(baseId: Id<'bse'>, fieldId: Id<'fld'>): Promise<void> {
+    let cursor = 0n;
+    for (;;) {
+      const result = await this.deps.records.backfillComputedBatch(this.scope, {
+        fieldId,
+        afterAuto: cursor,
+        limit: COMPUTED_BACKFILL_BATCH_SIZE,
+        statementTimeoutMs: JOB_STATEMENT_TIMEOUT_MS,
+      });
+      if (result.status === 'skipped' || result.status === 'superseded') {
+        throw new AppError('NOT_FOUND', { detail: 'A field of the base being imported is gone.' });
+      }
+      if (result.status === 'done') break;
+      cursor = result.cursor;
+      await this.checkpoint();
+    }
+    await this.deps.schema.markImportedComputedReady(this.scope, this.base(baseId), fieldId);
+  }
+
+  async setFieldAi(
+    baseId: Id<'bse'>,
+    input: Parameters<BaseImportTarget['setFieldAi']>[1],
+  ): Promise<void> {
+    await this.deps.schema.importFieldAi(this.scope, this.base(baseId), input);
+  }
+
+  async setLinkFilter(
+    baseId: Id<'bse'>,
+    input: Parameters<BaseImportTarget['setLinkFilter']>[1],
+  ): Promise<void> {
+    await this.deps.schema.importLinkRecordFilter(this.scope, this.base(baseId), input);
+  }
+
+  async createViews(
+    baseId: Id<'bse'>,
+    tableId: Id<'tbl'>,
+    views: readonly ImportViewInput[],
+  ): Promise<void> {
+    if (views.length === 0) return;
+    await this.inImportingBase(baseId, async (txScope) => {
+      const table = await new TablesRepository(this.deps.db).getById(txScope, tableId);
+      if (table?.base_id !== baseId) {
+        throw new AppError('NOT_FOUND', { detail: 'A table of the base being imported is gone.' });
+      }
+      const repository = new ViewsRepository(this.deps.db);
+      await repository.lockTable(txScope, tableId);
+      // The default view `importTable` gave the table makes way for the package's.
+      await repository.deleteByTable(txScope, tableId);
+      for (const view of views) {
+        await repository.insert(txScope, {
+          id: view.id,
+          tableId,
+          type: view.type,
+          name: view.name,
+          config: view.config,
+          position: view.position,
+          ownerId: null,
+        });
+        if (view.locked) await repository.update(txScope, view.id, { locked: true });
+      }
+    });
+  }
+
+  async storeFormCover(
+    baseId: Id<'bse'>,
+    file: ImportStoredCover,
+    content: Readable,
+  ): Promise<void> {
+    const covers = new FormCoversRepository(this.deps.db);
+    const row = await this.inImportingBase(baseId, (txScope) =>
+      covers.insertImported(txScope, {
+        id: file.id,
+        baseId,
+        tableId: file.tableId,
+        viewId: file.viewId,
+        createdBy: this.job.importerId,
+        filename: file.filename,
+        mime: file.mime,
+        size: file.size,
+      }),
+    );
+    await this.deps.storage.putStream(row.object_key, content, {
+      contentType: file.mime,
+      contentLength: file.size,
+    });
+    const ready = await this.inImportingBase(baseId, (txScope) =>
+      covers.markReady(txScope, row.id, { size: file.size, sha256: file.sha256 }),
+    );
+    if (ready === undefined) throw new AppError('NOT_FOUND', { detail: 'A cover row is gone.' });
+  }
+
+  async createDashboard(baseId: Id<'bse'>, input: ImportDashboardInput): Promise<void> {
+    await this.inImportingBase(baseId, async (txScope) => {
+      const dashboard = await new DashboardsRepository(this.deps.db).insert(txScope, {
+        id: input.id,
+        baseId,
+        name: input.name,
+        icon: input.icon,
+        description: input.description,
+        theme: input.theme,
+        globalFilters: jsonb(input.globalFilters as JsonValue),
+        position: input.position,
+        createdBy: this.job.importerId,
+      });
+      const widgets = new DashboardWidgetsRepository(this.deps.db);
+      for (const widget of input.widgets) {
+        await widgets.insert(txScope, {
+          id: widget.id,
+          dashboardId: dashboard.id,
+          type: widget.type as DashboardWidgetKind,
+          title: widget.title,
+          config: widget.config,
+          layout: widget.layout,
+        });
+      }
+    });
+  }
+
+  async createRole(baseId: Id<'bse'>, input: ImportRoleInput): Promise<void> {
+    await this.inImportingBase(baseId, async (txScope) => {
+      const roles = new BaseRolesRepository(this.deps.db);
+      if ((await roles.findByName(txScope, baseId, input.name)) !== undefined) {
+        throw new AppError('NAME_CONFLICT', { detail: 'Another role of the base has this name.' });
+      }
+      await roles.create(txScope, {
+        id: input.id,
+        baseId,
+        name: input.name,
+        kind: 'custom',
+        config: input.config,
+        position: await roles.nextPosition(txScope, baseId),
+      });
+    });
+  }
+
+  async createAutomation(baseId: Id<'bse'>, input: ImportAutomationInput): Promise<void> {
+    try {
+      await this.inImportingBase(baseId, async (txScope) => {
+        await new AutomationsRepository(this.deps.db).insert(txScope, {
+          id: input.id,
+          baseId,
+          name: input.name,
+          description: input.description,
+          // Off, whatever the package says (CONTRACTS §12.2): `run_as` = `created_by` = the importer.
+          enabled: false,
+          definition: input.definition,
+          triggerType: input.triggerType,
+          triggerTableId: input.triggerTableId,
+          createdBy: this.job.importerId,
+        });
+      });
+    } catch (error) {
+      // Two automations of the package on one button (`automations_button_field_key`).
+      if (sqlStateOf(error) === UNIQUE_VIOLATION) {
+        throw new AppError('VALIDATION_FAILED', {
+          detail: 'Another automation of the package is attached to this button.',
+          errors: [
+            {
+              path: 'definition.trigger.field_id',
+              code: 'BUTTON_IN_USE',
+              message: 'Another automation is attached to the button',
+            },
+          ],
+        });
+      }
+      throw error;
+    }
+  }
+
+  async storeEmailAsset(
+    baseId: Id<'bse'>,
+    file: ImportStoredEmailAsset,
+    content: Readable,
+  ): Promise<void> {
+    const assets = new EmailAssetsRepository(this.deps.db);
+    const row = await this.inImportingBase(baseId, async (txScope) => {
+      const automation = await new AutomationsRepository(this.deps.db).get(
+        txScope,
+        file.automationId,
+      );
+      if (automation?.base_id !== baseId) {
+        throw new AppError('NOT_FOUND', { detail: 'An automation of the import is gone.' });
+      }
+      return assets.insertImported(txScope, {
+        id: file.id,
+        automationId: file.automationId,
+        createdBy: this.job.importerId,
+        filename: file.filename,
+        mime: file.mime,
+        size: file.size,
+      });
+    });
+    await this.deps.storage.putStream(row.object_key, content, {
+      contentType: file.mime,
+      contentLength: file.size,
+    });
+    const ready = await this.inImportingBase(baseId, (txScope) =>
+      assets.markReady(txScope, row.id, {
+        mime: file.mime,
+        size: file.size,
+        sha256: file.sha256,
+        width: file.width,
+        height: file.height,
+      }),
+    );
+    if (ready === undefined) throw new AppError('NOT_FOUND', { detail: 'An image row is gone.' });
+  }
+
+  /**
+   * `step` in one transaction holding the row of the hidden base (`FOR
+   * UPDATE`): `404` when it is no longer the job's hidden base.
+   */
+  private async inImportingBase<T>(
+    baseId: Id<'bse'>,
+    step: (scope: OrgScope) => Promise<T>,
+  ): Promise<T> {
+    return this.deps.db.withTx(async (tx) => {
+      const txScope = withTxScope(this.scope, tx);
+      const base = await new BasesRepository(this.deps.db).findImporting(
+        txScope,
+        this.job.jobId,
+        baseId,
+      );
+      if (base === undefined) {
+        throw new AppError('NOT_FOUND', { detail: 'The base being imported is gone.' });
+      }
+      return step(txScope);
+    });
   }
 
   async checkpoint(): Promise<void> {

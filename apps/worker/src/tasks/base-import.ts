@@ -14,6 +14,7 @@ import {
 import {
   acquireOrgSlot,
   AppError,
+  BASE_IMPORT_STEPS,
   BaseImportStopped,
   basePackageImportKey,
   countRunningJobsOf,
@@ -27,6 +28,7 @@ import {
   WorkspacesRepository,
   type AuditContext,
   type BaseImportExtension,
+  type BaseImportSchemaMethods,
   type BaseImportTarget,
   type BasePackageLimits,
   type Db,
@@ -57,9 +59,9 @@ export interface BaseImportDeps {
   readonly jobs: JobsRepository;
   readonly storage: Pick<StorageDriver, 'getStream' | 'putStream' | 'delete'>;
   /** Builds and purges the hidden base. */
-  readonly schema: Pick<SchemaService, 'importTable' | 'importLinkField' | 'purgeBase'>;
-  /** Loads its records (with a job statement timeout). */
-  readonly records: Pick<RecordMutationService, 'loadPackageBatch'>;
+  readonly schema: Pick<SchemaService, BaseImportSchemaMethods>;
+  /** Loads its records and computes its formula/lookup columns (with a job statement timeout). */
+  readonly records: Pick<RecordMutationService, 'loadPackageBatch' | 'backfillComputedBatch'>;
   readonly logger: Logger;
   /** Caps of `BASE_PACKAGE_MAX_BYTES` (`basePackageLimits(config.limits.basePackageMaxBytes)`). */
   readonly limits: BasePackageLimits;
@@ -69,7 +71,11 @@ export interface BaseImportDeps {
   readonly maxFileBytes: number;
   /** Where the package is copied before it is read (default: the OS temporary directory). */
   readonly tempRoot?: string;
-  /** Steps of later tasks (computed fields, views…: T1019). */
+  /**
+   * What the import creates once the records are loaded (computed fields,
+   * AI options, views, dashboards, roles, automations…; default:
+   * `BASE_IMPORT_STEPS`, T1019). Tests may replace them.
+   */
   readonly extensions?: readonly BaseImportExtension[];
   /** Tests only: wraps the target (to fail at a chosen step). */
   readonly target?: (target: BaseImportTarget) => BaseImportTarget;
@@ -125,8 +131,11 @@ function internal(detail: string): JobProblem {
  * The package is copied into a temporary directory of the job and read
  * there by the bounded reader; the importer (the job's creator) must still
  * be able to create a base in the workspace. `importBasePackage` checks the
- * whole package, builds the base hidden, then makes it visible with the
- * job's success in one transaction. Any failure — an invalid package
+ * whole package, builds the base hidden — tables, fields, links, files,
+ * records, then (`BASE_IMPORT_STEPS`) formula and lookup fields with their
+ * values, AI options, shared views, form covers, dashboards, custom roles
+ * and automations, all off — then makes it visible with the job's success
+ * in one transaction. Any failure — an invalid package
  * (`INVALID_PACKAGE`), a cancelled job, anything else (`INTERNAL`) — purges
  * the hidden base (data tables, meta rows, stored files) and marks the job
  * `failed` (a cancelled job keeps its status); nothing is retried or
@@ -241,7 +250,7 @@ export function createBaseImportTask(deps: BaseImportDeps): Task<'base.import'> 
         const result = await importBasePackage(reader, deps.target?.(own) ?? own, {
           maxFieldsPerTable: deps.maxFieldsPerTable,
           maxFileBytes: deps.maxFileBytes,
-          ...(deps.extensions === undefined ? {} : { extensions: deps.extensions }),
+          extensions: deps.extensions ?? BASE_IMPORT_STEPS,
         });
         deps.logger.info(
           {
@@ -252,6 +261,10 @@ export function createBaseImportTask(deps: BaseImportDeps): Task<'base.import'> 
             records: result.report.records,
             links: result.report.links,
             attachments: result.report.attachments,
+            views: result.report.views,
+            dashboards: result.report.dashboards,
+            roles: result.report.roles,
+            automations: result.report.automations,
             files_skipped: result.report.files_skipped.length,
             unmatched_users: result.report.unmatched_users,
             duration_ms: Date.now() - started,

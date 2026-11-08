@@ -4,9 +4,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   AttachmentsRepository,
+  AutomationsRepository,
   BasesRepository,
   createBaseRecord,
   EmailAssetsRepository,
+  FieldsRepository,
   FormCoversRepository,
   migrateToLatest,
   OrgMembersRepository,
@@ -427,6 +429,329 @@ describe('base import writes (T1018)', () => {
           },
         ),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+  });
+
+  describe('what pass 1 deferred (T1019): computed fields, AI options, link filters, covers, images', () => {
+    const jobC: Id<'job'> = 'job_T1019ImportJobC1';
+    let hidden: ImportingBase;
+    const t = {
+      things: newId('tbl'),
+      name: newId('fld'),
+      amount: newId('fld'),
+      summary: newId('fld'),
+      files: newId('fld'),
+      others: newId('tbl'),
+      label: newId('fld'),
+      link: newId('fld'),
+      double: newId('fld'),
+      broken: newId('fld'),
+      phantom: newId('fld'),
+    };
+    const rec = { one: newId('rec'), two: newId('rec'), other: newId('rec') };
+    const at = '2025-05-06T07:08:09.000Z';
+    const dependsOn = async (fieldId: Id<'fld'>) =>
+      (
+        await db.kysely
+          .selectFrom('meta.field_dependencies')
+          .select('depends_on_field_id')
+          .where('field_id', '=', fieldId)
+          .execute()
+      ).map((row) => row.depends_on_field_id);
+
+    beforeAll(async () => {
+      await db.kysely
+        .insertInto('meta.jobs')
+        .values({ id: jobC, organization_id: ORG_A, type: 'base.import', status: 'running' })
+        .execute();
+      hidden = await hiddenBase(a, jobC);
+      await schema.importTable(scopeA, hidden, {
+        id: t.things,
+        name: 'Things',
+        description: null,
+        position: 0,
+        primary: plain(t.name, 'Name', 'text', 0),
+        fields: [
+          plain(t.amount, 'Amount', 'number', 1),
+          plain(t.summary, 'Summary', 'text', 2),
+          plain(t.files, 'Files', 'attachment', 3),
+        ],
+      });
+      await schema.importTable(scopeA, hidden, {
+        id: t.others,
+        name: 'Others',
+        description: null,
+        position: 1,
+        primary: plain(t.label, 'Label', 'text', 0),
+        fields: [],
+      });
+      await schema.importLinkField(scopeA, hidden, {
+        tableId: t.others,
+        field: plain(t.link, 'Things', 'link', 1, {
+          link_table: t.things,
+          bidirectional: false,
+          allow_multiple: true,
+          record_filter: null,
+          symmetric_field_id: null,
+        }),
+        reverse: null,
+      });
+      const row = (id: Id<'rec'>, auto: number, fields: Record<string, unknown>) => ({
+        id,
+        auto,
+        fields,
+        createdAt: at,
+        updatedAt: at,
+        createdBy: null,
+        updatedBy: null,
+      });
+      await records.loadPackageBatch(scopeA, hidden, {
+        kind: 'records',
+        tableId: t.things,
+        records: [
+          row(rec.one, 1, { [t.name]: 'One', [t.amount]: 2 }),
+          row(rec.two, 2, { [t.name]: 'Two', [t.amount]: 5 }),
+        ],
+      });
+    });
+
+    it('creates a stored formula with its id and position, computed by the backfill; nothing recorded', async () => {
+      const audit = await count('meta.audit_logs');
+      const events = await count('meta.events');
+      const jobs = await count('graphile_worker._private_jobs');
+      const field = await schema.importComputedField(scopeA, hidden, {
+        tableId: t.things,
+        field: plain(t.double, 'Double', 'formula', 4, {
+          expression: `[${t.amount}] * 2`,
+          style: null,
+        }),
+        timeZone: 'UTC',
+        broken: null,
+      });
+      expect(field).toMatchObject({
+        id: t.double,
+        position: 4,
+        compute_mode: 'stored',
+        compute_state: 'backfilling',
+      });
+      expect(await dependsOn(t.double)).toEqual([t.amount]);
+      const batch = await records.backfillComputedBatch(scopeA, {
+        fieldId: t.double,
+        afterAuto: 0n,
+        limit: 1000,
+        statementTimeoutMs: 30_000,
+      });
+      expect(batch).toMatchObject({ status: 'done', rows: 2 });
+      expect(await schema.markImportedComputedReady(scopeA, hidden, t.double)).toBe(true);
+      expect(await schema.markImportedComputedReady(scopeA, hidden, t.double)).toBe(false);
+      const table = await new TablesRepository(db).getById(scopeA, t.things);
+      const ready = await new FieldsRepository(db).getById(scopeA, t.double);
+      const { rows } = await sql<{ value: string }>`
+        SELECT ${sql.id(ready?.db_column_name ?? '')}::text AS value
+          FROM ${sql.table(`data.${table?.db_table_name ?? ''}`)} ORDER BY __auto
+      `.execute(db.kysely);
+      expect(rows.map((item) => Number(item.value))).toEqual([4, 10]);
+      expect(ready?.compute_state).toBe('ready');
+      expect(await count('meta.audit_logs')).toBe(audit);
+      expect(await count('meta.events')).toBe(events);
+      // No `computed.backfill` job: the import computes the column itself.
+      expect(await count('graphile_worker._private_jobs')).toBe(jobs);
+    });
+
+    it('creates a formula naming a field the package does not hold broken, as at its source', async () => {
+      const field = await schema.importComputedField(scopeA, hidden, {
+        tableId: t.things,
+        field: plain(t.broken, 'Broken', 'formula', 5, {
+          expression: `[${t.phantom}] + 1`,
+          style: null,
+        }),
+        timeZone: 'UTC',
+        broken: { refs: [{ kind: 'field', id: t.phantom }], resultType: { kind: 'number' } },
+      });
+      expect(field).toMatchObject({
+        compute_mode: 'virtual',
+        compute_state: 'error',
+        db_column_name: null,
+        result_type: { kind: 'number' },
+        compute_error: { code: 'REF', refs: [{ kind: 'field', id: t.phantom }] },
+      });
+      expect(await dependsOn(t.broken)).toEqual([]);
+    });
+
+    it('refuses a definition that does not check, and never reaches another base or organization', async () => {
+      const input = {
+        tableId: t.things,
+        field: plain(newId('fld'), 'Bad', 'formula', 6, {
+          expression: `[${t.name}] * 2`,
+          style: null,
+        }),
+        timeZone: 'UTC',
+        broken: null,
+      };
+      await expect(schema.importComputedField(scopeA, hidden, input)).rejects.toMatchObject({
+        code: 'FORMULA_TYPE_ERROR',
+      });
+      const fine = {
+        ...input,
+        field: { ...input.field, options: { expression: '1', style: null } },
+      };
+      for (const [scope, base] of [
+        [scopeB, hidden],
+        [scopeA, { ...hidden, importJobId: jobA }],
+        [scopeA, { baseId: a.baseId, importJobId: jobC }],
+      ] as const) {
+        await expect(schema.importComputedField(scope, base, fine)).rejects.toMatchObject({
+          code: 'NOT_FOUND',
+        });
+      }
+    });
+
+    it('sets options.ai with its stored prompt and same-record edge; refuses a prompt reading itself', async () => {
+      const updated = await schema.importFieldAi(scopeA, hidden, {
+        tableId: t.things,
+        fieldId: t.summary,
+        ai: { task: 'summarize', prompt: `Summarize {{ [${t.name}] }}` },
+        broken: false,
+      });
+      expect((updated.options as { ai: { prompt: string } }).ai.prompt).toBe(
+        `Summarize {{ [${t.name}] }}`,
+      );
+      expect(await dependsOn(t.summary)).toEqual([t.name]);
+      expect(await count('meta.ai_generation_queue')).toBe(0);
+      await expect(
+        schema.importFieldAi(scopeA, hidden, {
+          tableId: t.things,
+          fieldId: t.summary,
+          ai: { task: 'summarize', prompt: `Summarize {{ [${t.summary}] }}` },
+          broken: false,
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+      await expect(
+        schema.importFieldAi(scopeB, hidden, {
+          tableId: t.things,
+          fieldId: t.summary,
+          ai: { task: 'summarize', prompt: `Summarize {{ [${t.name}] }}` },
+          broken: false,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it('sets a link record_filter checked against the linked table, a broken one as it is', async () => {
+      const filter = { op: 'and', items: [{ field: t.amount, operator: 'gt', value: 3 }] };
+      const updated = await schema.importLinkRecordFilter(scopeA, hidden, {
+        tableId: t.others,
+        fieldId: t.link,
+        filter,
+        broken: false,
+      });
+      expect((updated.options as { record_filter: unknown }).record_filter).toEqual(filter);
+      const stale = { op: 'and', items: [{ field: t.phantom, operator: 'is_not_empty' }] };
+      await expect(
+        schema.importLinkRecordFilter(scopeA, hidden, {
+          tableId: t.others,
+          fieldId: t.link,
+          filter: stale,
+          broken: false,
+        }),
+      ).rejects.toMatchObject({ code: 'INVALID_FILTER' });
+      const kept = await schema.importLinkRecordFilter(scopeA, hidden, {
+        tableId: t.others,
+        fieldId: t.link,
+        filter: stale,
+        broken: true,
+      });
+      expect((kept.options as { record_filter: unknown }).record_filter).toEqual(stale);
+      await expect(
+        schema.importLinkRecordFilter(scopeB, hidden, {
+          tableId: t.others,
+          fieldId: t.link,
+          filter,
+          broken: false,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it('stores a form cover and an email image under the id of the import, in its organization only', async () => {
+      const covers = new FormCoversRepository(db);
+      const assets = new EmailAssetsRepository(db);
+      const coverId = newId('att');
+      const cover = await covers.insertImported(scopeA, {
+        id: coverId,
+        baseId: hidden.baseId,
+        tableId: t.things,
+        viewId: newId('viw'),
+        createdBy: a.userId,
+        filename: 'cover.png',
+        mime: 'image/png',
+        size: 10,
+      });
+      expect(cover).toMatchObject({
+        id: coverId,
+        organization_id: ORG_A,
+        object_key: `${ORG_A}/${coverId}`,
+        status: 'pending_upload',
+      });
+      expect(await covers.objectKeysOfImportingBase(scopeA, hidden.baseId, jobC)).toEqual([
+        cover.object_key,
+      ]);
+      expect(await covers.getById(scopeB, coverId)).toBeUndefined();
+      const automation = await new AutomationsRepository(db).insert(scopeA, {
+        id: newId('aut'),
+        baseId: hidden.baseId,
+        name: 'Imported',
+        description: '',
+        enabled: false,
+        definition: {},
+        triggerType: 'record.created',
+        triggerTableId: t.things,
+        createdBy: a.userId,
+      });
+      const imageId = newId('att');
+      const image = await assets.insertImported(scopeA, {
+        id: imageId,
+        automationId: automation.id,
+        createdBy: a.userId,
+        filename: 'logo.png',
+        mime: 'image/png',
+        size: 10,
+      });
+      expect(image).toMatchObject({
+        id: imageId,
+        kind: 'automation',
+        automation_id: automation.id,
+        object_key: `${ORG_A}/${imageId}`,
+      });
+      expect(await assets.objectKeysOfImportingBase(scopeA, hidden.baseId, jobC)).toEqual([
+        image.object_key,
+      ]);
+      expect(await assets.getById(scopeB, imageId)).toBeUndefined();
+      // An automation of another organization is never the owner of an image.
+      await expect(
+        assets.insertImported(scopeB, {
+          id: newId('att'),
+          automationId: automation.id,
+          createdBy: b.userId,
+          filename: 'x.png',
+          mime: 'image/png',
+          size: 10,
+        }),
+      ).rejects.toMatchObject({ code: '23503' });
+    });
+
+    it('purges the computed fields, their edges, covers, images and automations with the base', async () => {
+      expect(await schema.purgeBase(scopeA, hidden)).toEqual({ tables: 2, junctions: 1 });
+      for (const [table, column, id] of [
+        ['meta.fields', 'id', t.double],
+        ['meta.field_dependencies', 'base_id', hidden.baseId],
+        ['meta.form_covers', 'base_id', hidden.baseId],
+        ['meta.automations', 'base_id', hidden.baseId],
+      ] as const) {
+        const { rows } = await sql<{ n: string }>`
+          SELECT count(*)::text AS n FROM ${sql.table(table)} WHERE ${sql.ref(column)} = ${id}
+        `.execute(db.kysely);
+        expect(Number(rows[0]?.n), table).toBe(0);
+      }
+      expect(await count('meta.email_assets')).toBe(0);
     });
   });
 
