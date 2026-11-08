@@ -682,7 +682,7 @@ describe('AI fields (T910)', () => {
     expect(forAdmin.body).toContain(summary.id);
   });
 
-  it('refuses a prompt reading a formula over a lookup; a source edited later fails the row', async () => {
+  it('P113: refuses a prompt reading a formula over a lookup; a source edited later fails the row', async () => {
     const link = await addField({
       name: 'customer',
       type: 'link',
@@ -774,7 +774,7 @@ describe('AI fields (T910)', () => {
     managerReady = true;
   };
 
-  it('a formula over an AI field locks with it; a manager locked out of it cannot preview it (QA S8)', async () => {
+  it('P114: a formula over an AI field locks with it; a manager locked out of it cannot preview it', async () => {
     const aiCost = await addField({
       name: 'ai_cost_note',
       type: 'text',
@@ -815,7 +815,7 @@ describe('AI fields (T910)', () => {
     }
   });
 
-  it('a manager locked out of an AI field cannot drop, change or convert it; a stale prompt writes nothing (QA S8)', async () => {
+  it('P115: a manager locked out of an AI field cannot drop, change or convert it; a stale prompt writes nothing', async () => {
     const secret = await addField({
       name: 'ai_cost_secret',
       type: 'text',
@@ -872,7 +872,7 @@ describe('AI fields (T910)', () => {
     expect(plain.statusCode, plain.body).toBe(200);
   });
 
-  it('an automation of a manager locked out of an AI field cannot watch or test it (QA S8)', async () => {
+  it('P116: an automation of a manager locked out of an AI field cannot watch or test it', async () => {
     const band = await addField({
       name: 'ai_cost_band',
       type: 'select',
@@ -921,7 +921,7 @@ describe('AI fields (T910)', () => {
     expect(saved.statusCode, saved.body).toBe(201);
   });
 
-  it('refuses a link or a parent as a prompt source; a field converted to a link fails the row (QA S8)', async () => {
+  it('P113: refuses a link or a parent as a prompt source; a field converted to a link fails the row', async () => {
     // A link cell is rendered as the titles of the linked records, read with the worker's
     // system access: readers who see the link without the linked table would read them.
     const link = await addField({
