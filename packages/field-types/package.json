@@ -1,9 +1,18 @@
 {
   "name": "@cellhive/field-types",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Field type registry for Cellhive: options schemas, PostgreSQL types, validation, typecast, storage mapping and text formatting",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cellhive/cellhive.git",
+    "directory": "packages/field-types"
+  },
+  "homepage": "https://github.com/cellhive/cellhive#readme",
+  "bugs": {
+    "url": "https://github.com/cellhive/cellhive/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

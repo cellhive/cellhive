@@ -1,9 +1,18 @@
 {
   "name": "@cellhive/formula-engine",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Formula engine for Cellhive: lexer, Pratt parser, AST, name/ID resolution, type system, function catalogue, dependency analysis and TS evaluator",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cellhive/cellhive.git",
+    "directory": "packages/formula-engine"
+  },
+  "homepage": "https://github.com/cellhive/cellhive#readme",
+  "bugs": {
+    "url": "https://github.com/cellhive/cellhive/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

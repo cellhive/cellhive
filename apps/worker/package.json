@@ -1,9 +1,18 @@
 {
   "name": "@cellhive/worker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Cellhive background worker (graphile-worker in a NestJS application context)",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cellhive/cellhive.git",
+    "directory": "apps/worker"
+  },
+  "homepage": "https://github.com/cellhive/cellhive#readme",
+  "bugs": {
+    "url": "https://github.com/cellhive/cellhive/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
