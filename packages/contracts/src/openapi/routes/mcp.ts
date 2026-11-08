@@ -1,4 +1,10 @@
-import { MCP_PATH, mcpRequestSchema, mcpResponseSchema } from '../../mcp.js';
+import {
+  MCP_PATH,
+  MCP_REQUEST_MAX_BYTES,
+  MCP_TOOL_ERRORS_MAX,
+  mcpRequestSchema,
+  mcpResponseSchema,
+} from '../../mcp.js';
 import { problemResponse, type RouteRegistrar } from '../types.js';
 
 /**
@@ -22,8 +28,9 @@ export const registerMcpRoutes: RouteRegistrar = (registry, components) => {
       '`application/json`, never `Mcp-Session-Id`. `Authorization: Bearer cht_…` only: the ' +
       'session cookie is ignored. Tools are listed by the scopes of the token and ' +
       '`settings.mcp.allow_writes`; calling an unlisted tool is JSON-RPC `-32602`; a failed ' +
-      'tool call is a result with `isError` and `{ code, message, errors }`. `GET` and `DELETE` ' +
-      'answer `405`. Not idempotent (`Idempotency-Key` is ignored).',
+      'tool call is a result with `isError` and `{ code, message, errors, total }` (at most ' +
+      `${String(MCP_TOOL_ERRORS_MAX)} \`errors\`, \`total\` counts them all). \`GET\` and ` +
+      '`DELETE` answer `405`. Not idempotent (`Idempotency-Key` is ignored).',
     security: [],
     request: { body: { content: { 'application/json': { schema: mcpRequestSchema } } } },
     responses: {
@@ -51,7 +58,9 @@ export const registerMcpRoutes: RouteRegistrar = (registry, components) => {
         description:
           'A 2025-era request whose `Accept` lacks `application/json` or `text/event-stream`',
       },
-      413: problem('`PAYLOAD_TOO_LARGE`: body over 10 MiB'),
+      413: problem(
+        `\`PAYLOAD_TOO_LARGE\`: body over ${String(MCP_REQUEST_MAX_BYTES / 1024 / 1024)} MiB`,
+      ),
       415: problem('`UNSUPPORTED_MEDIA_TYPE`: send `application/json`'),
       429: problem(
         '`RATE_LIMITED` with `Retry-After`: more than 60 requests/s by the token (a tool call ' +

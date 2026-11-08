@@ -245,6 +245,7 @@ describe('time zones: UTC offsets refused, legacy names stored by primary name (
             params: { hint: TIME_ZONE_HINT },
           },
         ],
+        total: 1,
       });
     });
   });

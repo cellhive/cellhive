@@ -3,6 +3,10 @@
 - Trạng thái: Accepted (viết ở BACKLOG T920, có hiệu lực khi T920 merge)
 - Ngày: 2026-10-31
 - Thay thế / sửa: SPEC §2 (dòng ADR-40), §13.1 (mục MCP); CONTRACTS §30 (mới), §26.3, §26.4, §6 (`MCP_DISABLED`), §5 (P93–P102). Sửa BACKLOG "Quyết định S8" #23 ("không dependency mới") theo ngoại lệ đã nêu ở #28. Nguồn: BACKLOG "Quyết định S8" #25–#28; `docs/reviews/S8-mcp-research.md` §2.1, §3.2–§3.9, §6.
+- Sửa đổi (2026-11-08, T1009 — giới hạn của endpoint và của kết quả tool; thắng câu tương ứng bên dưới khi khác nhau; chi tiết C§30.1, §30.4, §30.6):
+  - §1, §7 — body của `POST /api/v1/mcp` ≤ **2 MiB** (`MCP_REQUEST_MAX_BYTES`): giới hạn riêng của route, đặt khi Fastify đăng ký route (`onRoute` trong `app.factory.ts`), quá → `413 PAYLOAD_TOO_LARGE`; mọi route JSON khác giữ 10 MiB. Thay cho "giới hạn JSON 10 MiB của API" ở bảng §7.
+  - §5 — kết quả lỗi đi qua cùng khối dữ liệu với kết quả thành công (câu dẫn + thẻ ngẫu nhiên trong `content[0].text`); chỉ `content[0].text` được bọc, `structuredContent` là JSON trơn. `McpToolError` thêm `total`; `errors` ≤ 100 mục, ≤ 20 khoá lạ (`UNKNOWN_FIELD`, `UNRECOGNIZED_KEY`) mỗi record của tool ghi và 20 ở phần còn lại của input; chuỗi ≤ 500 ký tự; cả kết quả ≤ 64 KB JSON.
+  - §4 — `aggregate_records` chiếm một chỗ của hàng đợi truy vấn widget mỗi lời gọi (KPI chạy lần lượt trong chỗ đó); hàng đợi có trần 60 truy vấn đang chờ mỗi user, thêm → `QUERY_TIMEOUT` ngay; nhãn nhóm cắt 4.000 ký tự, kết quả ≤ 32 KB (`truncated`) như tool đọc record.
 
 ## Bối cảnh
 
@@ -60,6 +64,8 @@ Spike (~2 giờ, 2026-10-31; tiêu chí research §3.9) — **đạt**, chọn S
 | Guard/`Origin` của ta chạy trước | Có: controller Nest gọi `fetch`-style handler **sau** `AuthGuard`/`ScopeGuard`/interceptor, đưa body Fastify đã parse (`parsedBody`, giới hạn JSON 10 MiB của API); không dùng adapter `@modelcontextprotocol/fastify`/`node` (sẽ đi vòng guard) |
 | Hai thời kỳ với client thật | `@modelcontextprotocol/client` 2.4.0 (ghim `2026-07-28` và `auto`) và `@modelcontextprotocol/sdk` 1.32.2 (`2025-11-25`): `tools/list`, `tools/call`, `-32602`, `isError`, `405`, không `Mcp-Session-Id`, mọi câu trả lời `application/json` — nay là `apps/api/test/int/mcp.int.test.ts` (hai instance API xen kẽ) |
 | Cỡ, ESM, Node 24 | `server` 2.4.0 + `core` 2.4.0: 7,0 MB + 1,4 MB unpacked (cjs + esm + `.d.ts` + map); JS ESM nạp ≈ 0,95 MB (gồm Ajv đóng gói sẵn 0,29 MB); import 38 ms, +12 MB heap trên Node 24.22 |
+
+> **Sửa đổi (2026-11-08, T1009)**: body của route MCP ≤ 2 MiB (giới hạn riêng của route, `MCP_REQUEST_MAX_BYTES`), không còn theo giới hạn JSON 10 MiB chung — xem dòng Sửa đổi cùng ngày đầu ADR.
 
 - **Dependency** (kiểm registry npm 2026-10-31): runtime `@modelcontextprotocol/server` 2.4.0 — **Apache-2.0**, phụ thuộc `zod ^4.2.0` (dùng chung `zod` 4.6.5 của repo) + `@modelcontextprotocol/core` 2.4.0 (Apache-2.0, chỉ `zod`) → +2 gói. Dev (chỉ test tương thích): `@modelcontextprotocol/client` 2.4.0 (Apache-2.0; `jose`, `cross-spawn`, `eventsource`, `eventsource-parser`, `pkce-challenge` — MIT), `@modelcontextprotocol/sdk` 1.32.2 (MIT; express, hono, ajv…). Lockfile +73 gói (2 runtime, 71 chỉ cho test), đều MIT/ISC/BSD/Apache-2.0; `pnpm licenses:check` xanh. Apache-2.0 tương thích một chiều với AGPL-3.0 (SPEC §1A).
 - **Lý do**: SDK do nhóm viết spec duy trì, theo kịp hai bản spec/năm (`server/discover`, `_meta`, `-32020`/`-32022`, `resultType`, `ttlMs`/`cacheScope`, header `Mcp-*`) — tự viết ước 400–600 dòng giao thức + test tương thích và rủi ro lệch spec âm thầm; phần nối của ta ≈ 200 dòng (`mcp-server.ts`).

@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import { MCP_RESULT_MAX_BYTES, MCP_TEXT_CELL_MAX_CHARS, type McpRecord } from '@cellhive/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { cutText, shapeRecords } from '../../src/modules/mcp/shape.js';
+import { cutText, fittingCount, shapeRecords } from '../../src/modules/mcp/shape.js';
 
 const MAX = MCP_TEXT_CELL_MAX_CHARS;
 const graphemes = (text: string) =>
@@ -110,5 +110,18 @@ describe('MCP record results (T921)', () => {
     );
     expect(shaped.records.map((record) => record.id)).toEqual([id(1)]);
     expect(shaped.dropped).toBe(1);
+  });
+});
+
+describe('MCP result arrays (T1009)', () => {
+  const row = (bytes: number) => ['x'.repeat(bytes - 5)]; // `["…"]` plus a comma
+  it.each<[string, unknown[], number, number, number]>([
+    ['none', [], 10, 100, 0],
+    ['all fit', [row(10), row(10)], 10, 100, 2],
+    ['up to the limit, commas counted', [row(10), row(10), row(10)], 70, 100, 3],
+    ['one byte over', [row(10), row(10), row(10)], 71, 100, 2],
+    ['the first item always', [row(500), row(10)], 10, 100, 1],
+  ])('%s', (_case, items, rest, max, count) => {
+    expect(fittingCount(items, rest, max)).toBe(count);
   });
 });

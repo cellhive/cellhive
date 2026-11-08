@@ -1,6 +1,11 @@
 import 'reflect-metadata';
 
-import { IDEMPOTENT_REPLAYED_HEADER, newId } from '@cellhive/contracts';
+import {
+  IDEMPOTENT_REPLAYED_HEADER,
+  MCP_PATH,
+  MCP_REQUEST_MAX_BYTES,
+  newId,
+} from '@cellhive/contracts';
 import { formatCidr, type AppConfig } from '@cellhive/server-core';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
@@ -25,6 +30,11 @@ export const API_PREFIX = 'api/v1';
 export const ROOT_ROUTES = ['healthz', 'readyz', 'metrics'] as const;
 /** Largest JSON request body; larger bodies get `413 PAYLOAD_TOO_LARGE`. */
 export const JSON_BODY_LIMIT_BYTES = 10 * 1024 * 1024;
+/** Routes with a smaller body limit than `JSON_BODY_LIMIT_BYTES`, by URL (every method). */
+const ROUTE_BODY_LIMITS: ReadonlyMap<string, number> = new Map([
+  // The MCP endpoint (CONTRACTS §30.6).
+  [MCP_PATH, MCP_REQUEST_MAX_BYTES],
+]);
 
 /**
  * Nest converts Fastify errors (`FST_ERR_CTP_*`) into bare `HttpException`s,
@@ -75,6 +85,11 @@ export async function createApp(
   });
   const fastify = adapter.getInstance();
   registerRawUploadSupport(fastify);
+  // Before Nest registers the routes (`app.init()`).
+  fastify.addHook('onRoute', (route) => {
+    const limit = ROUTE_BODY_LIMITS.get(route.url);
+    if (limit !== undefined) route.bodyLimit = limit;
+  });
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.register({

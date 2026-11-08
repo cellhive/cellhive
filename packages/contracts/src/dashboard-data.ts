@@ -27,6 +27,11 @@ export const WIDGET_QUERY_TIMEOUT_MS = 10_000;
 /** Widget queries running at once per user, and per api instance (the rest wait in line). */
 export const MAX_WIDGET_QUERIES_PER_USER = 4;
 export const MAX_WIDGET_QUERIES_PER_INSTANCE = 20;
+/**
+ * Widget queries of one user (or share link) waiting in line at once, per api
+ * instance — the widgets of two full dashboards; one more → `QUERY_TIMEOUT` at once.
+ */
+export const MAX_WIDGET_WAITERS_PER_USER = 60;
 /** Seconds a client should wait before retrying a timed-out widget (`Retry-After`). */
 export const WIDGET_RETRY_AFTER_SECONDS = 5;
 

@@ -22,6 +22,7 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
 describe('WidgetQueryLimiter (T806)', () => {
   it('runs at most 4 queries per user and 20 per instance, the rest in arrival order', async () => {
     const limiter = new WidgetQueryLimiter();
+    expect(limiter.waitingPerUser).toBe(60);
     const gates = Array.from({ length: 6 }, gate);
     const started: number[] = [];
     const runs = gates.map((item, index) =>
@@ -61,6 +62,41 @@ describe('WidgetQueryLimiter (T806)', () => {
     limiter.perUser = 1;
     await expect(limiter.run('u', () => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
     expect(await limiter.run('u', () => Promise.resolve(1))).toBe(1);
+  });
+
+  it('turns a waiter past the per-user cap away at once; another user still waits (T1009)', async () => {
+    const limiter = new WidgetQueryLimiter();
+    limiter.perUser = 1;
+    limiter.waitingPerUser = 2;
+    const hold = gate();
+    const running = limiter.run('u', () => hold.done);
+    const waiting = [1, 2].map(() => limiter.run('u', () => Promise.resolve('waited')));
+    const started = Date.now();
+    const error: unknown = await limiter
+      .run('u', () => Promise.resolve('never'))
+      .catch((caught: unknown) => caught);
+    expect(Date.now() - started).toBeLessThan(limiter.waitMs);
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({ code: 'QUERY_TIMEOUT', retryAfterSeconds: 5 });
+    // The cap counts waiters of one user only.
+    const other = limiter.run('v', () => Promise.resolve('other'));
+    expect(await other).toBe('other');
+    hold.finish();
+    expect(await Promise.all(waiting)).toEqual(['waited', 'waited']);
+    await running;
+    // Waiters that started or timed out leave the line.
+    const held = gate();
+    const first = limiter.run('u', () => held.done);
+    limiter.waitMs = 10;
+    await expect(limiter.run('u', () => Promise.resolve())).rejects.toMatchObject({
+      code: 'QUERY_TIMEOUT',
+    });
+    limiter.waitMs = 10_000;
+    const again = [1, 2].map(() => limiter.run('u', () => Promise.resolve('again')));
+    held.finish();
+    await first;
+    expect(await Promise.all(again)).toEqual(['again', 'again']);
+    expect(limiter.active).toBe(0);
   });
 
   it('gives up after the wait limit with QUERY_TIMEOUT and Retry-After', async () => {

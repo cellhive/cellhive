@@ -1,6 +1,7 @@
 import {
   MAX_WIDGET_QUERIES_PER_INSTANCE,
   MAX_WIDGET_QUERIES_PER_USER,
+  MAX_WIDGET_WAITERS_PER_USER,
   WIDGET_QUERY_TIMEOUT_MS,
   WIDGET_RETRY_AFTER_SECONDS,
 } from '@cellhive/contracts';
@@ -28,24 +29,33 @@ export function withRetryAfter(error: unknown): unknown {
   });
 }
 
+const lineFull = () =>
+  new AppError('QUERY_TIMEOUT', {
+    detail: 'Too many widget queries are running; try again shortly.',
+    retryAfterSeconds: WIDGET_RETRY_AFTER_SECONDS,
+  });
+
 /**
  * In-process line of widget queries (BACKLOG T806, CONTRACTS §28.7): at
  * most `perUser` running at once per user and `total` per api instance;
  * the others wait in arrival order (a waiter whose user is at their limit
- * lets the next one pass). A query that waited longer than the widget
- * timeout gives up with `504 QUERY_TIMEOUT` and `Retry-After`, as one that
- * ran too long. Several instances each keep their own line (S7 research
- * §4.6: a shared semaphore in Valkey when that is not enough).
+ * lets the next one pass), at most `waitingPerUser` per user — one more
+ * gives up at once. A query that waited longer than the widget timeout
+ * gives up with `504 QUERY_TIMEOUT` and `Retry-After`, as one that ran too
+ * long. Several instances each keep their own line (S7 research §4.6: a
+ * shared semaphore in Valkey when that is not enough).
  */
 @Injectable()
 export class WidgetQueryLimiter {
   perUser = MAX_WIDGET_QUERIES_PER_USER;
   total = MAX_WIDGET_QUERIES_PER_INSTANCE;
+  waitingPerUser = MAX_WIDGET_WAITERS_PER_USER;
   waitMs = WIDGET_QUERY_TIMEOUT_MS;
 
   private running = 0;
   private readonly byKey = new Map<string, number>();
   private readonly waiting: Waiter[] = [];
+  private readonly waitingByKey = new Map<string, number>();
 
   /** Queries running now (for tests and metrics). */
   get active(): number {
@@ -72,10 +82,13 @@ export class WidgetQueryLimiter {
   }
 
   private acquire(key: string): Promise<void> {
-    if (this.canStart(key) && !this.waiting.some((waiter) => waiter.key === key)) {
+    const waiting = this.waitingByKey.get(key) ?? 0;
+    if (this.canStart(key) && waiting === 0) {
       this.take(key);
       return Promise.resolve();
     }
+    if (waiting >= this.waitingPerUser) return Promise.reject(lineFull());
+    this.waitingByKey.set(key, waiting + 1);
     return new Promise<void>((resolve, reject) => {
       const waiter: Waiter = {
         key,
@@ -87,17 +100,21 @@ export class WidgetQueryLimiter {
       };
       const timer = setTimeout(() => {
         const index = this.waiting.indexOf(waiter);
-        if (index >= 0) this.waiting.splice(index, 1);
-        reject(
-          new AppError('QUERY_TIMEOUT', {
-            detail: 'Too many widget queries are running; try again shortly.',
-            retryAfterSeconds: WIDGET_RETRY_AFTER_SECONDS,
-          }),
-        );
+        if (index >= 0) {
+          this.waiting.splice(index, 1);
+          this.leaveLine(key);
+        }
+        reject(lineFull());
       }, this.waitMs);
       timer.unref();
       this.waiting.push(waiter);
     });
+  }
+
+  private leaveLine(key: string): void {
+    const left = (this.waitingByKey.get(key) ?? 1) - 1;
+    if (left <= 0) this.waitingByKey.delete(key);
+    else this.waitingByKey.set(key, left);
   }
 
   private release(key: string): void {
@@ -110,6 +127,7 @@ export class WidgetQueryLimiter {
       const waiter = this.waiting[index] as Waiter;
       if (this.canStart(waiter.key)) {
         this.waiting.splice(index, 1);
+        this.leaveLine(waiter.key);
         waiter.start();
       } else {
         index += 1;
