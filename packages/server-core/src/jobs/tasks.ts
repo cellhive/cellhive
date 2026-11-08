@@ -236,6 +236,18 @@ export interface AuditExportPayload {
 }
 
 /**
+ * Payload of `base.export` (CONTRACTS §12.2): writes the base `base_id` as a
+ * `.chbase` package into object storage and records the download link in
+ * `meta.jobs.result` of `job_id` (a `base.export` job, created with its
+ * `base.exported` audit entry). One export per organization runs at a time.
+ */
+export interface BaseExportPayload {
+  readonly organization_id: Id<'org'>;
+  readonly job_id: Id<'job'>;
+  readonly base_id: Id<'bse'>;
+}
+
+/**
  * Payload of `auth.password_reset_email` (`POST /auth/forgot-password`):
  * the address as typed and the client context of the request for the
  * audit entry. Never a token or link: the task creates the link.
@@ -323,6 +335,7 @@ declare global {
       'automation.run': AutomationRunPayload;
       'automation.schedule_tick': AutomationScheduleTickPayload;
       'automation.runs_cleanup': AutomationRunsCleanupPayload;
+      'base.export': BaseExportPayload;
       'computed.backfill': ComputedBackfillPayload;
       'computed.recompute': ComputedRecomputePayload;
       'auth.password_reset_email': PasswordResetEmailPayload;

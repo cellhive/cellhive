@@ -41,6 +41,7 @@ export {
   createMonthlyPartition,
   dropMonthlyPartitionsBefore,
   findApiTokenByHash,
+  findBaseOrganization,
   findIncomingWebhookByTokenHash,
   findInvitationOrganization,
   findShareLinkOrganization,

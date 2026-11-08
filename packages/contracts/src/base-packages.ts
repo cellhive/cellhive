@@ -51,6 +51,14 @@ export const BASE_EXPORT_JOB_TYPE = 'base.export';
 export const BASE_IMPORT_JOB_TYPE = 'base.import';
 
 /**
+ * Scopes an API token needs for `POST /bases/{baseId}/export` besides the
+ * route's `records:read` (CONTRACTS §26.3, "scope per request"): a package
+ * holds the schema and the automations too. A token lacking some gets `403
+ * INSUFFICIENT_SCOPE` listing them.
+ */
+export const BASE_EXPORT_REQUEST_SCOPES = ['schema:read', 'automations:read'] as const;
+
+/**
  * Which cap `ARCHIVE_LIMIT_EXCEEDED` names (`params.reason`, with
  * `params.limit`): the package size, its number of entries, its total
  * uncompressed size (or an entry inflating past its declared size), one

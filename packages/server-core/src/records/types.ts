@@ -1,3 +1,4 @@
+import type { JsonValue } from '../db/schema.js';
 import type { AiCellMetaDto, Id, SummaryFunction } from '@cellhive/contracts';
 import type { ResolvedBaseAccess } from '@cellhive/permissions';
 
@@ -426,6 +427,49 @@ export interface RecordStreamOptions {
    * while date filter operands keep the zone of the link's creator).
    */
   readonly display?: { readonly locale: string; readonly timeZone: string };
+  /**
+   * `api` (default): records as reads return them (`cell_format`).
+   * `stored` (whole-base export, CONTRACTS §12.2): storage-form values and
+   * the system columns of each row ({@link StoredRecordOutput}); formula,
+   * lookup and button fields are not read.
+   */
+  readonly form?: 'api' | 'stored';
+}
+
+/**
+ * A record in storage form (`form: 'stored'` of `RecordQueryService.openStream`):
+ * what the row holds, not what a reader is shown.
+ */
+export interface StoredRecordOutput {
+  readonly id: Id<'rec'>;
+  readonly created_at: string;
+  readonly updated_at: string;
+  /** `__created_by` / `__updated_by`: user ids, `null` for the system. */
+  readonly created_by: string | null;
+  readonly updated_by: string | null;
+  /** `__auto`: creation order. */
+  readonly auto: number;
+  /**
+   * The live parent (`__parent_id`) of a table with a `parent` field the
+   * reader reads; `null` for a root or a parent in the trash. Absent
+   * without such a field.
+   */
+  readonly parent_id?: Id<'rec'> | null;
+  /**
+   * By field id: storage-form values of the column fields (option ids,
+   * user ids, ISO instants, numbers, attachment refs — `storedValueToJson`),
+   * and the ids of the live linked records of each link cell, in cell order.
+   */
+  readonly fields: Readonly<Record<string, JsonValue>>;
+}
+
+/** {@link RecordStream} of `form: 'stored'`. */
+export interface StoredRecordStream extends RecordStreamTarget {
+  /** Column, link and `parent` fields read, fixed when the stream opens. */
+  readonly fields: readonly RecordStreamField[];
+  readonly rowCount: number;
+  readonly exceedsMaxRows: boolean;
+  records(): AsyncGenerator<StoredRecordOutput[], void, undefined>;
 }
 
 export interface RecordStreamTarget {
