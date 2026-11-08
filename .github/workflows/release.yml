@@ -325,8 +325,8 @@ jobs:
         run: |
           set -uo pipefail
           corepack enable
-          pnpm audit --prod --audit-level high > pnpm-audit.txt 2>&1
-          status=$?
+          status=0
+          pnpm audit --prod --audit-level high > pnpm-audit.txt 2>&1 || status=$?
           cat pnpm-audit.txt
           {
             echo '### pnpm audit --prod --audit-level high'
