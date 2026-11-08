@@ -170,6 +170,8 @@ export interface AppConfig {
     readonly exportMaxRows: number;
     /** `ATTACHMENT_MAX_FILE_BYTES`: largest attachment upload (SPEC §14.2, T406). */
     readonly attachmentMaxFileBytes: number;
+    /** `BASE_PACKAGE_MAX_BYTES`: largest `.chbase` package (CONTRACTS §12.2, T1016). */
+    readonly basePackageMaxBytes: number;
     readonly automationMaxRunningPerOrg: number;
     /** `AUTOMATION_MAX_RUNS_PER_BATCH`: runs per automation per `batch.id` (ADR-26 §4). */
     readonly automationMaxRunsPerBatch: number;
@@ -382,6 +384,7 @@ function toConfig(env: ParsedEnv, oidcProviders: readonly OidcProviderConfig[]):
       notificationRetentionDays: env.NOTIFICATION_RETENTION_DAYS,
       exportMaxRows: env.EXPORT_MAX_ROWS,
       attachmentMaxFileBytes: env.ATTACHMENT_MAX_FILE_BYTES,
+      basePackageMaxBytes: env.BASE_PACKAGE_MAX_BYTES,
       automationMaxRunningPerOrg: env.AUTOMATION_MAX_RUNNING_PER_ORG,
       automationMaxRunsPerBatch: env.AUTOMATION_MAX_RUNS_PER_BATCH,
       automationRunRetentionDays: env.AUTOMATION_RUN_RETENTION_DAYS,

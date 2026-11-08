@@ -177,6 +177,16 @@ describe('loadConfig: rejects invalid environments and names the variables', () 
       variables: ['MAX_FIELDS_PER_TABLE'],
     },
     {
+      name: 'BASE_PACKAGE_MAX_BYTES above one S3 PUT (T1016)',
+      env: { ...BASE, BASE_PACKAGE_MAX_BYTES: String(5 * 1024 ** 3) },
+      variables: ['BASE_PACKAGE_MAX_BYTES'],
+    },
+    {
+      name: 'BASE_PACKAGE_MAX_BYTES below 1 MiB (T1016)',
+      env: { ...BASE, BASE_PACKAGE_MAX_BYTES: '1000' },
+      variables: ['BASE_PACKAGE_MAX_BYTES'],
+    },
+    {
       name: 'short METRICS_TOKEN',
       env: { ...BASE, METRICS_TOKEN: 'short' },
       variables: ['METRICS_TOKEN'],
@@ -280,6 +290,7 @@ describe('loadConfig: defaults and parsing', () => {
         notificationRetentionDays: 90,
         exportMaxRows: 1_000_000,
         attachmentMaxFileBytes: 104_857_600,
+        basePackageMaxBytes: 2 * 1024 ** 3,
         automationMaxRunningPerOrg: 5,
         workerConcurrency: 5,
         aiConcurrency: 2,
