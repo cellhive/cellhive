@@ -95,6 +95,12 @@ const DEFINITION_CODES: ReadonlySet<string> = new Set([
   'NAME_CONFLICT',
   'FIELD_LIMIT_EXCEEDED',
   'INVALID_FILTER',
+  // Formula and lookup fields, AI prompts, automations (T1019).
+  'FORMULA_SYNTAX_ERROR',
+  'FORMULA_TYPE_ERROR',
+  'FORMULA_CYCLE',
+  'FORMULA_LIMIT_EXCEEDED',
+  'AUTOMATION_INVALID',
 ]);
 
 /** Error codes of a load that mean "this row of the package is not acceptable here". */
@@ -149,7 +155,7 @@ function tableInput(table: PlannedTable): ImportTableInput {
 }
 
 /** A refusal of the target as `INVALID_PACKAGE` `INVALID_DEFINITION` at `path`. */
-async function asDefinition<T>(path: string, step: () => Promise<T>): Promise<T> {
+export async function asDefinition<T>(path: string, step: () => Promise<T>): Promise<T> {
   try {
     return await step();
   } catch (error) {
@@ -161,6 +167,31 @@ async function asDefinition<T>(path: string, step: () => Promise<T>): Promise<T>
       collation
         ? 'The collation of the base does not exist in this database.'
         : 'This instance does not accept an object of the package.',
+      { code: error.code },
+    );
+  }
+}
+
+/**
+ * A check of an object of the package (T1019: a view config, a widget, a
+ * role…) as `INVALID_PACKAGE` `INVALID_DEFINITION` at `path` when it
+ * refuses it — an `AppError` of {@link DEFINITION_CODES}, or a shape it
+ * cannot read (a `TypeError`); its value otherwise.
+ */
+export function checkDefinition<T>(path: string, check: () => T): T {
+  try {
+    return check();
+  } catch (error) {
+    if (error instanceof TypeError || error instanceof RangeError) {
+      throw packageProblem('INVALID_DEFINITION', path, 'An object of the package is malformed.', {
+        code: 'VALIDATION_FAILED',
+      });
+    }
+    if (!(error instanceof AppError) || !DEFINITION_CODES.has(error.code)) throw error;
+    throw packageProblem(
+      'INVALID_DEFINITION',
+      path,
+      'This instance does not accept an object of the package.',
       { code: error.code },
     );
   }
@@ -419,13 +450,15 @@ export async function importBasePackage(
   const unmatched = plan.users.unmatchedEmails(BASE_IMPORT_REPORT_MAX_ITEMS);
   report.unmatched_user_emails = unmatched.emails;
   report.unmatched_users = unmatched.total;
-  report.files_skipped = plan.files
-    .flatMap((file) =>
+  // Cell files first, then the covers and email images later steps left out.
+  report.files_skipped = [
+    ...plan.files.flatMap((file) =>
       file.decision === null || file.decision.ok
         ? []
         : [{ filename: file.decision.filename, reason: file.decision.reason }],
-    )
-    .slice(0, BASE_IMPORT_REPORT_MAX_ITEMS);
+    ),
+    ...report.files_skipped,
+  ].slice(0, BASE_IMPORT_REPORT_MAX_ITEMS);
   await progress.at('finish', 0, 1);
   const result: BaseImportResult = { base_id: baseId, report };
   await target.finish(baseId, result, {

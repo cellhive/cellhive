@@ -737,6 +737,22 @@ describe('checkImportedFile (T1018)', () => {
   }
 });
 
+const unused = () => Promise.reject(new Error('not a write of this test'));
+/** The writes of T1019, never called without its steps. */
+const UNUSED_DEFERRED_WRITES = {
+  schemaRows: unused,
+  createComputedField: unused,
+  backfillComputed: unused,
+  setFieldAi: unused,
+  setLinkFilter: unused,
+  createViews: unused,
+  storeFormCover: unused,
+  createDashboard: unused,
+  createRole: unused,
+  createAutomation: unused,
+  storeEmailAsset: unused,
+} satisfies Partial<BaseImportTarget>;
+
 describe('importBasePackage (T1018): the order of the writes and the seam of later steps', () => {
   it(
     'checks, creates the base, tables, links, files, records, junctions, parents, runs extensions, finishes',
@@ -775,6 +791,8 @@ describe('importBasePackage (T1018): the order of the writes and the seam of lat
           return Promise.resolve();
         },
         purge: () => Promise.resolve(),
+        // The steps of T1019 are not in `extensions` here.
+        ...UNUSED_DEFERRED_WRITES,
       };
       const reader = await openBasePackage(await writePackage(validSpec()));
       try {

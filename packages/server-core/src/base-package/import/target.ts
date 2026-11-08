@@ -1,5 +1,13 @@
+import type { BaseSchemaRows } from '../../computed/definition/schema-rows.js';
+import type { JsonObject } from '../../db/schema.js';
 import type { PackageLoadBatch } from '../../records/record-mutation.service.js';
-import type { ImportLinkFieldInput, ImportTableInput } from '../../schema/schema.service.js';
+import type {
+  ImportComputedFieldInput,
+  ImportFieldAiInput,
+  ImportLinkFieldInput,
+  ImportLinkRecordFilterInput,
+  ImportTableInput,
+} from '../../schema/schema.service.js';
 import type { PackageMember } from '../users.js';
 import type { BaseImportPhase, BaseImportResult, Id } from '@cellhive/contracts';
 import type { Readable } from 'node:stream';
@@ -25,6 +33,44 @@ export interface BaseImportTarget {
   storeFile(baseId: Id<'bse'>, file: ImportStoredFile, content: Readable): Promise<void>;
   /** One batch of records, junction rows or parents (`loadPackageBatch`). */
   load(baseId: Id<'bse'>, batch: PackageLoadBatch): Promise<number>;
+
+  // --- What pass 1 deferred (T1019): every object checked by the step that creates it ---
+
+  /** Tables and active fields of the hidden base as they are now (the checks of later steps). */
+  schemaRows(baseId: Id<'bse'>): Promise<BaseSchemaRows>;
+  /** A formula or lookup field (`SchemaService.importComputedField`); whether it is stored. */
+  createComputedField(baseId: Id<'bse'>, input: ImportComputedFieldInput): Promise<boolean>;
+  /** Computes the column of a stored formula/lookup field on every record, then `ready`. */
+  backfillComputed(baseId: Id<'bse'>, fieldId: Id<'fld'>): Promise<void>;
+  /** `options.ai` of a text/select field (`SchemaService.importFieldAi`); nothing queued. */
+  setFieldAi(baseId: Id<'bse'>, input: ImportFieldAiInput): Promise<void>;
+  /** A link `record_filter` naming a field created later (`SchemaService.importLinkRecordFilter`). */
+  setLinkFilter(baseId: Id<'bse'>, input: ImportLinkRecordFilterInput): Promise<void>;
+  /**
+   * The shared views of a table (configs checked), in place of the default
+   * view `importTable` gave it; nothing when `views` is empty (the default
+   * view stays).
+   */
+  createViews(
+    baseId: Id<'bse'>,
+    tableId: Id<'tbl'>,
+    views: readonly ImportViewInput[],
+  ): Promise<void>;
+  /** The cover image of a form view (its row first, then the object, then `ready`). */
+  storeFormCover(baseId: Id<'bse'>, file: ImportStoredCover, content: Readable): Promise<void>;
+  /** A dashboard and its widgets (configs checked). */
+  createDashboard(baseId: Id<'bse'>, input: ImportDashboardInput): Promise<void>;
+  /** A custom role (config checked), assigned to nobody. */
+  createRole(baseId: Id<'bse'>, input: ImportRoleInput): Promise<void>;
+  /** An automation, off, `run_as` and `created_by` the importer. */
+  createAutomation(baseId: Id<'bse'>, input: ImportAutomationInput): Promise<void>;
+  /** An image of the body of an imported automation's email (row, object, `ready`). */
+  storeEmailAsset(
+    baseId: Id<'bse'>,
+    file: ImportStoredEmailAsset,
+    content: Readable,
+  ): Promise<void>;
+
   /** Throws {@link BaseImportStopped} when the job no longer runs (cancelled meanwhile). */
   checkpoint(): Promise<void>;
   progress(progress: number, phase: BaseImportPhase): Promise<void>;
@@ -55,6 +101,76 @@ export interface ImportStoredFile {
   readonly mime: string;
   readonly size: number;
   readonly sha256: string;
+}
+
+/** A shared view of a package, its config checked (`StoredViewConfig`). */
+export interface ImportViewInput {
+  readonly id: Id<'viw'>;
+  readonly type: 'grid' | 'kanban' | 'form';
+  readonly name: string;
+  /** Rank among the shared views of the table. */
+  readonly position: number;
+  readonly locked: boolean;
+  readonly config: JsonObject;
+}
+
+/** The cover image of a form view, with the ids of the new base. */
+export interface ImportStoredCover {
+  readonly id: Id<'att'>;
+  readonly tableId: Id<'tbl'>;
+  readonly viewId: Id<'viw'>;
+  readonly filename: string;
+  readonly mime: string;
+  readonly size: number;
+  readonly sha256: string;
+}
+
+/** A dashboard of a package, checked, with its widgets. */
+export interface ImportDashboardInput {
+  readonly id: Id<'dsh'>;
+  readonly name: string;
+  readonly icon: string | null;
+  readonly description: string | null;
+  readonly theme: JsonObject;
+  readonly globalFilters: readonly JsonObject[];
+  /** Rank among the dashboards of the base. */
+  readonly position: number;
+  readonly widgets: readonly {
+    readonly id: Id<'wgt'>;
+    readonly type: string;
+    readonly title: string;
+    readonly config: JsonObject;
+    readonly layout: JsonObject;
+  }[];
+}
+
+/** A custom role of a package, its config checked. */
+export interface ImportRoleInput {
+  readonly id: Id<'rol'>;
+  readonly name: string;
+  readonly config: JsonObject;
+}
+
+/** An automation of a package: its definition parsed, every detached slot `null`. */
+export interface ImportAutomationInput {
+  readonly id: Id<'aut'>;
+  readonly name: string;
+  readonly description: string;
+  readonly definition: JsonObject;
+  readonly triggerType: string;
+  readonly triggerTableId: Id<'tbl'> | null;
+}
+
+/** An image of an automation's email body, with the ids of the new base. */
+export interface ImportStoredEmailAsset {
+  readonly id: Id<'att'>;
+  readonly automationId: Id<'aut'>;
+  readonly filename: string;
+  readonly mime: string;
+  readonly size: number;
+  readonly sha256: string;
+  readonly width: number;
+  readonly height: number;
 }
 
 /** What `base.imported` records (counts only, never a value). */

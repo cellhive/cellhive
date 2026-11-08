@@ -100,6 +100,36 @@ export class EmailAssetsRepository
   }
 
   /**
+   * An image of the email body of an automation of a `.chbase` import
+   * (T1019), `pending_upload` under the id the import gave it, attached to
+   * that automation (`markReady` once its object is stored). Only the
+   * `base.import` job calls it, for the automations of its hidden base.
+   */
+  async insertImported(
+    scope: OrgScope,
+    input: Omit<CreateEmailAssetInput, 'kind' | 'automationId'> & {
+      readonly id: Id<'att'>;
+      readonly automationId: Id<'aut'>;
+    },
+  ): Promise<EmailAssetRow> {
+    return this.executor(scope)
+      .insertInto('meta.email_assets')
+      .values({
+        id: input.id,
+        organization_id: scope.organizationId,
+        kind: 'automation',
+        automation_id: input.automationId,
+        object_key: emailAssetObjectKey(scope.organizationId, input.id),
+        filename: input.filename,
+        mime: input.mime,
+        size: input.size,
+        created_by: input.createdBy,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
+
+  /**
    * A `ready` copy of `source` under its own id and key, not attached to any
    * automation yet (`automation_id = NULL`): what duplicating an automation
    * stages before its object is copied (BACKLOG T551). Nothing references a
