@@ -620,7 +620,7 @@ describe('ImportMenu', () => {
 
   it('lets an editor with "add" append only, with the reason for the rest', async () => {
     const user = userEvent.setup();
-    await renderMenu('sales', { id: TABLE, name: 'Orders' });
+    const { container } = await renderMenu('sales', { id: TABLE, name: 'Orders' });
     await user.click(screen.getByRole('button', { name: 'Import' }));
     expect(
       screen.getByRole('menuitem', {
@@ -628,7 +628,10 @@ describe('ImportMenu', () => {
       }),
     ).toHaveAttribute('aria-disabled', 'true');
     await user.click(screen.getByRole('menuitem', { name: 'Import into Orders…' }));
-    expect(await screen.findByRole('dialog', { name: 'Import into Orders' })).toBeInTheDocument();
+    const wizard = await screen.findByRole('dialog', { name: 'Import into Orders' });
+    // Outside the actions bar (T1010): its phone rules hide the text of the buttons in it.
+    expect(container).not.toContainElement(wizard);
+    expect(wizard.parentElement).toBe(document.body);
   });
 
   it('is hidden from readers, and on a base only admins see it', async () => {

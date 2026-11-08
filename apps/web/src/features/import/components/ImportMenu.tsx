@@ -8,6 +8,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { FilePlus2, TableProperties, Upload } from 'lucide-react';
 import { Suspense, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import { lazyOverlay } from '../../../lib/lazy/chunk-error';
@@ -47,18 +48,24 @@ export function ImportMenu({ baseId, table }: ImportMenuProps) {
   const appendAllowed =
     table !== undefined && canAppendTo(access, table.id, fields.data?.items ?? []);
 
+  // Out of the actions bar's DOM, like the share dialog (T322b): the bar's phone rules
+  // (icon-only buttons, `[&_button]:text-[0px]` below 640 px) must not reach the
+  // wizard's buttons, whose labels vanished at 375 px (T1010).
   const wizard =
-    target === null ? null : (
-      <Suspense fallback={null}>
-        <ImportWizard
-          baseId={baseId}
-          target={target}
-          onClose={() => {
-            setTarget(null);
-          }}
-        />
-      </Suspense>
-    );
+    target === null
+      ? null
+      : createPortal(
+          <Suspense fallback={null}>
+            <ImportWizard
+              baseId={baseId}
+              target={target}
+              onClose={() => {
+                setTarget(null);
+              }}
+            />
+          </Suspense>,
+          document.body,
+        );
 
   if (table === undefined) {
     if (!createAllowed) return null;

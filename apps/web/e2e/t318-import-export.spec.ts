@@ -564,4 +564,35 @@ test.describe('T318 import and export', () => {
     await expect(page.getByRole('button', { name: 'Xuất', exact: true })).toBeVisible();
     await expectNoSeriousA11yViolations(page, 'import wizard (vi)');
   });
+
+  test('on a phone the wizard keeps its button labels; the bar keeps icon-only buttons (T1010)', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const page = await context.newPage();
+    await signIn(page, ADMIN.email, ADMIN.password);
+    await page.goto(tablePath(ids.productsId));
+    // The table's actions bar shows icons only below 640 px; its buttons keep their names.
+    const trigger = page.getByRole('button', { name: 'Import', exact: true });
+    await expect(trigger).toHaveCSS('font-size', '0px');
+    await trigger.click();
+    await page.getByRole('menuitem', { name: 'Import into Sản phẩm…' }).click();
+    await page.getByTestId('import-file-input').setInputFiles({
+      name: 'san-pham.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('Name,Giá\r\nBàn gỗ,1500000\r\n', 'utf8'),
+    });
+    const next = wizard(page).getByRole('button', { name: 'Next' });
+    await expect(next).not.toHaveCSS('font-size', '0px');
+    await next.click();
+    await expect(wizard(page).getByTestId('import-column-row').first()).toBeVisible();
+    // The wizard is not part of the bar: its footer buttons show their text.
+    for (const name of ['Back', 'Import 1 row']) {
+      const button = wizard(page).getByRole('button', { name, exact: true });
+      await expect(button).toBeVisible();
+      await expect(button).not.toHaveCSS('font-size', '0px');
+      expect((await button.boundingBox())?.width ?? 0).toBeGreaterThan(56);
+    }
+    await context.close();
+  });
 });
