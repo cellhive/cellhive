@@ -1,5 +1,6 @@
 import { sql } from 'kysely';
 
+import { importingBaseIdQuery } from '../db/repositories/bases.repository.js';
 import {
   TenantRepository,
   type OrgScope,
@@ -116,6 +117,45 @@ export class TablesRepository
       .orderBy('position')
       .orderBy('id')
       .execute();
+  }
+
+  /**
+   * Every table of the hidden base `baseId` that `importJobId` is building
+   * (whatever their state), in id order — what its purge drops; `[]` for a
+   * base that is not being imported by that job.
+   */
+  async listOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<TableRow[]> {
+    const executor = this.executor(scope);
+    return executor
+      .selectFrom('meta.tables')
+      .selectAll()
+      .where('organization_id', '=', scope.organizationId)
+      .where('base_id', 'in', importingBaseIdQuery(executor, scope, baseId, importJobId))
+      .orderBy('id')
+      .execute();
+  }
+
+  /**
+   * Deletes the rows of every table of the hidden base `baseId` that
+   * `importJobId` is building (their fields, views… by cascade): the purge of
+   * an import, once their data tables are dropped. Returns the count.
+   */
+  async deleteOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<number> {
+    const executor = this.executor(scope);
+    const result = await executor
+      .deleteFrom('meta.tables')
+      .where('organization_id', '=', scope.organizationId)
+      .where('base_id', 'in', importingBaseIdQuery(executor, scope, baseId, importJobId))
+      .executeTakeFirst();
+    return Number(result.numDeletedRows);
   }
 
   /**

@@ -1,6 +1,7 @@
 import { newId, type EmailAssetKind, type Id } from '@cellhive/contracts';
 import { sql } from 'kysely';
 
+import { importingBaseIdQuery } from '../../db/repositories/bases.repository.js';
 import {
   TenantRepository,
   type OrgScope,
@@ -244,6 +245,57 @@ export class EmailAssetsRepository
       .where('organization_id', '=', scope.organizationId)
       .where('id', '=', id);
     return scope.tx === undefined ? query.executeTakeFirst() : query.forUpdate().executeTakeFirst();
+  }
+
+  /**
+   * Storage keys of every email image of the automations of the hidden base
+   * `baseId` that `importJobId` is building, for its purge; `[]` otherwise.
+   */
+  async objectKeysOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<string[]> {
+    const executor = this.executor(scope);
+    const rows = await executor
+      .selectFrom('meta.email_assets')
+      .select('object_key')
+      .where('organization_id', '=', scope.organizationId)
+      .where('automation_id', 'in', this.automationsOfImportingBase(scope, baseId, importJobId))
+      .orderBy('id')
+      .execute();
+    return rows.map((row) => row.object_key);
+  }
+
+  /**
+   * Deletes every email image of the automations of the hidden base
+   * `baseId` that `importJobId` is building (before the automations go:
+   * their key would be set to `NULL`).
+   */
+  async deleteOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<number> {
+    const result = await this.executor(scope)
+      .deleteFrom('meta.email_assets')
+      .where('organization_id', '=', scope.organizationId)
+      .where('automation_id', 'in', this.automationsOfImportingBase(scope, baseId, importJobId))
+      .executeTakeFirst();
+    return Number(result.numDeletedRows);
+  }
+
+  private automationsOfImportingBase(scope: OrgScope, baseId: Id<'bse'>, importJobId: Id<'job'>) {
+    const executor = this.executor(scope);
+    return executor
+      .selectFrom('meta.automations')
+      .select('meta.automations.id')
+      .where('meta.automations.organization_id', '=', scope.organizationId)
+      .where(
+        'meta.automations.base_id',
+        'in',
+        importingBaseIdQuery(executor, scope, baseId, importJobId),
+      );
   }
 
   async deleteByIds(scope: OrgScope, ids: readonly Id<'att'>[]): Promise<number> {
