@@ -1,7 +1,7 @@
 import { Button, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -19,13 +19,19 @@ const CreateBaseDialog = lazyOverlay(async () => ({
   default: (await import('./CreateBaseDialog')).CreateBaseDialog,
 }));
 
-/** Bases of one workspace as cards, with "New base" when allowed. */
+/**
+ * Bases of one workspace as cards, with "New base" when allowed — and,
+ * after it, `create`: more ways to create one (the workspace page's
+ * "Import base", T1020).
+ */
 export function WorkspaceBaseList({
   org,
   workspace,
+  create,
 }: {
   org: MeOrganization;
   workspace: WorkspaceDto;
+  create?: ReactNode;
 }) {
   const { t } = useTranslation('org');
   // `null` until first opened; then the dialog stays mounted (its close animates).
@@ -75,6 +81,7 @@ export function WorkspaceBaseList({
               </Button>
             </li>
           ) : null}
+          {allowed && create !== undefined ? <li>{create}</li> : null}
         </ul>
       )}
       {!isPending && !isError && data.items.length === 0 && !allowed ? (

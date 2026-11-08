@@ -389,6 +389,15 @@ export function createRoutes(queryClient: QueryClient): RouteObject[] {
                     ).default,
                   })),
                 },
+                // T1020: export the base as a `.chbase` package (CONTRACTS §12.2).
+                {
+                  path: 'export',
+                  errorElement: <RouteErrorPanel />,
+                  lazy: lazyRoute(async () => ({
+                    Component: (await import('../features/base-settings/data/BaseExportPage'))
+                      .default,
+                  })),
+                },
                 // T716: the audit log of the base (CONTRACTS §11.4).
                 {
                   path: 'audit',

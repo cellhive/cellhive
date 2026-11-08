@@ -22,5 +22,117 @@
     "restoreName": "Khôi phục {{name}}",
     "restored": "Đã khôi phục {{name}}.",
     "open": "Mở"
+  },
+  "import": {
+    "action": "Nhập base",
+    "actionHint": "Từ tệp .chbase",
+    "actionLabel": "Nhập base từ tệp .chbase",
+    "title": "Nhập base từ tệp .chbase",
+    "description": "Base được tạo trong {{workspace}}, bạn là chủ sở hữu.",
+    "drop": "Kéo tệp .chbase vào đây",
+    "choose": "Chọn tệp",
+    "limits": "Gói xuất từ Cellhive, tối đa {{size}} khi nhập qua trình duyệt. Gói lớn hơn: cellhive base import.",
+    "trust": "Chỉ nhập gói từ người bạn tin tưởng. Automation đến ở trạng thái tắt, và không ai khác mở được base cho tới khi bạn thêm thành viên.",
+    "change": "Chọn tệp khác",
+    "start": "Nhập",
+    "cancel": "Huỷ",
+    "close": "Đóng",
+    "problems": {
+      "extension": "{{name}} không phải gói .chbase. Xuất một base ở Cài đặt base › Xuất base để có gói.",
+      "empty": "{{name}} là tệp rỗng.",
+      "tooLarge": "{{name}} lớn hơn mức mọi máy chủ nhận ({{size}}). Hãy nhập bằng dòng lệnh: cellhive base import."
+    },
+    "tooLarge": "Gói lớn hơn mức máy chủ này nhận qua trình duyệt ({{size}}). Hãy nhập bằng dòng lệnh: cellhive base import.",
+    "phases": {
+      "upload": "Tải tệp lên",
+      "check": "Kiểm tra gói",
+      "schema": "Bảng và trường",
+      "files": "Tệp",
+      "records": "Bản ghi",
+      "links": "Liên kết và bản ghi con",
+      "computed": "Công thức, view, dashboard và automation",
+      "finish": "Hoàn tất"
+    },
+    "progress": "Tiến độ nhập",
+    "percent": "{{percent}}%",
+    "state": {
+      "done": "xong",
+      "active": "đang chạy",
+      "failed": "lỗi",
+      "pending": "chưa bắt đầu"
+    },
+    "uploading": "Hãy để cửa sổ này mở cho tới khi tệp tải lên xong.",
+    "cancelUpload": "Huỷ tải lên",
+    "queued": "Đang chờ một lần nhập khác của tổ chức này xong.",
+    "running": "Bạn có thể đóng cửa sổ này: việc nhập vẫn tiếp tục, và base sẽ hiện trong không gian làm việc khi xong.",
+    "toast": {
+      "running": "Đang nhập {{name}}…",
+      "succeeded": "Đã nhập {{name}}.",
+      "failed": "Nhập {{name}} không thành công."
+    },
+    "report": {
+      "title": "{{name}} đã sẵn sàng",
+      "subtitle": "Đã nhập vào {{workspace}}. Hãy xem những mục cần bạn xử lý trước khi chia sẻ base.",
+      "counts": {
+        "label": "Đã tạo",
+        "tables": "Bảng",
+        "fields": "Trường",
+        "records": "Bản ghi",
+        "links": "Liên kết",
+        "files": "Tệp",
+        "views": "View",
+        "dashboards": "Dashboard",
+        "automations": "Automation",
+        "roles": "Vai trò"
+      },
+      "automations": {
+        "title": "Automation đang tắt",
+        "body_other": "Đã nhập {{count, number}} automation ở trạng thái tắt. Bật từng automation khi những gì nó dùng đã được thiết lập lại."
+      },
+      "reconnect": {
+        "title": "Cần thiết lập lại",
+        "body": "Những mục này ở lại tổ chức nguồn. Hãy tạo hoặc chọn lại ở đây, rồi chọn chúng trong từng automation dùng tới.",
+        "usedBy": "Dùng bởi"
+      },
+      "kinds": {
+        "secret": "Secret",
+        "email_identity": "Danh tính gửi",
+        "group": "Nhóm",
+        "incoming_webhook": "Webhook nhận vào"
+      },
+      "unnamed": "(không tên)",
+      "people": {
+        "title": "Không tìm thấy người dùng",
+        "body": "Những người này trong gói không phải thành viên của tổ chức: ô, người tạo và người nhận nhắc hạn của họ được để trống.",
+        "more": "Và {{count, number}} người khác"
+      },
+      "ai": {
+        "title": "Trường AI",
+        "body": "Giá trị đã được nhập. Không có gì được sinh cho tới khi AI được thiết lập trong tổ chức này."
+      },
+      "views": {
+        "title": "View cá nhân bị bỏ qua",
+        "body_other": "{{count, number}} view cá nhân của base nguồn không được xuất: view cá nhân ở lại với người tạo nó."
+      },
+      "files": {
+        "title": "Tệp bị bỏ qua",
+        "body": "Các ô vẫn giữ những tệp khác.",
+        "reasons": {
+          "blocked_file_type": "loại tệp không được phép",
+          "file_too_large": "lớn hơn giới hạn tệp",
+          "content_mismatch": "nội dung không khớp loại tệp"
+        }
+      },
+      "allGood": "Không có mục nào cần bạn xử lý.",
+      "open": "Mở base"
+    },
+    "failed": {
+      "title": "Không nhập được gói này",
+      "nothingLeft": "Không có gì được tạo: không còn base, bảng hay tệp nào sót lại.",
+      "more_other": "Và {{count, number}} lỗi khác",
+      "reason": "Lý do: {{reason}}",
+      "retry": "Chọn tệp khác",
+      "cancelled": "Việc nhập đã bị huỷ. Không có gì được tạo."
+    }
   }
 }

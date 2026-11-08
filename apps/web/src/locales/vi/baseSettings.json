@@ -8,6 +8,7 @@
       "roles": "Vai trò",
       "shareLinks": "Liên kết chia sẻ",
       "webhooks": "Webhook",
+      "export": "Xuất base",
       "audit": "Nhật ký"
     },
     "groups": {
@@ -434,5 +435,81 @@
     "allDashboards": "Mọi dashboard của base.",
     "noDashboards": "Không có dashboard nào.",
     "noAccessDashboards": "Không truy cập: {{names}}"
+  },
+  "export": {
+    "title": "Xuất base",
+    "subtitle": "Lưu {{name}} thành một tệp .chbase để dựng lại ở không gian làm việc khác hoặc trên một máy chủ Cellhive khác.",
+    "holds": {
+      "title": "Gói gồm những gì",
+      "included": "Có trong gói",
+      "excluded": "Không có trong gói",
+      "items": {
+        "data": "Mọi bảng, trường và bản ghi, kể cả trường mà vai trò ẩn với thành viên khác",
+        "files": "Liên kết, bản ghi con và tệp đính kèm",
+        "views": "View dùng chung và form, dashboard, vai trò tự tạo",
+        "automations": "Automation: khi nhập sẽ ở trạng thái tắt"
+      },
+      "missing": {
+        "members": "Thành viên, nhóm và vai trò của họ",
+        "secrets": "Secret, bot, danh tính gửi và webhook nhận vào (chỉ giữ tên để thiết lập lại)",
+        "history": "Lịch sử bản ghi, nhật ký và các lần chạy automation",
+        "personal": "View cá nhân, thùng rác, liên kết chia sẻ và API token"
+      }
+    },
+    "start": "Xuất base",
+    "showProgress": "Xem tiến độ",
+    "showDetails": "Xem chi tiết",
+    "cli": {
+      "title": "Base lớn",
+      "body": "Nhập qua trình duyệt nhận gói tới giới hạn tải lên của máy chủ (mặc định 2 GB). Với base lớn hơn, hoặc để chuyển base giữa hai máy chủ, hãy xuất bằng dòng lệnh trong container API:"
+    },
+    "dialog": {
+      "title": "Xuất {{name}}",
+      "warning": "Gói chứa mọi trường của base này, kể cả trường mà vai trò ẩn với thành viên khác. Ai có tệp đều đọc được toàn bộ bản ghi.",
+      "excluded": "Thành viên, secret và lịch sử ở lại đây: chúng không có trong gói.",
+      "confirm": "Bắt đầu xuất",
+      "cancel": "Huỷ",
+      "close": "Đóng"
+    },
+    "phases": {
+      "schema": "Bảng và trường",
+      "records": "Bản ghi",
+      "links": "Liên kết",
+      "files": "Tệp",
+      "upload": "Lưu gói"
+    },
+    "progress": "Tiến độ xuất",
+    "percent": "{{percent}}%",
+    "state": {
+      "done": "xong",
+      "active": "đang chạy",
+      "failed": "lỗi",
+      "pending": "chưa bắt đầu"
+    },
+    "queued": "Đang chờ một lần xuất khác của tổ chức này xong.",
+    "running": "Bạn có thể đóng cửa sổ này: việc xuất vẫn tiếp tục, và nút tải sẽ hiện ở trang này.",
+    "ready": {
+      "title": "Gói đã sẵn sàng",
+      "expires": "Liên kết dùng được tới {{time}}. Sau đó hãy xuất lại.",
+      "download": "Tải xuống",
+      "downloadName": "Tải {{name}}",
+      "keepSafe": "Hãy giữ tệp cẩn thận: nó chứa mọi trường của base."
+    },
+    "counts": {
+      "tables": "Bảng",
+      "fields": "Trường",
+      "records": "Bản ghi",
+      "files": "Tệp"
+    },
+    "failed": "Xuất base không thành công.",
+    "retry": "Xuất lại",
+    "cancelled": "Việc xuất đã bị huỷ.",
+    "expired": "Liên kết tải đã hết hạn. Hãy xuất lại base để có tệp mới.",
+    "status": {
+      "queued": "Đang chờ bắt đầu xuất",
+      "running": "Đang xuất… {{percent}}",
+      "ready": "Sẵn sàng tải · {{size}}",
+      "failed": "Lần xuất gần nhất không thành công."
+    }
   }
 }

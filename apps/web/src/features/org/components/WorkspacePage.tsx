@@ -3,11 +3,15 @@ import { Link } from 'react-router';
 
 import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
 import { orgPath, useRouteOrg, useRouteWorkspace } from '../hooks';
+import { ImportBaseTile } from '../import-base/ImportBaseTile';
 
 import { DeletedBases, WorkspaceActions } from './WorkspaceAdmin';
 import { WorkspaceBaseList } from './WorkspaceBaseList';
 
-/** `/o/:orgSlug/w/:workspaceId`: the bases of one workspace, its "⋯" (rename, delete) and its bases in the trash. */
+/**
+ * `/o/:orgSlug/w/:workspaceId`: the bases of one workspace with "New base"
+ * and "Import base" (T1020), its "⋯" (rename, delete) and its bases in the trash.
+ */
 export function WorkspacePage() {
   const { t } = useTranslation('org');
   const org = useRouteOrg();
@@ -35,7 +39,11 @@ export function WorkspacePage() {
         </div>
         <WorkspaceActions org={org} workspace={workspace} />
       </div>
-      <WorkspaceBaseList org={org} workspace={workspace} />
+      <WorkspaceBaseList
+        org={org}
+        workspace={workspace}
+        create={<ImportBaseTile workspace={workspace} />}
+      />
       <DeletedBases workspace={workspace} />
     </div>
   );

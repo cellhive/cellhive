@@ -22,5 +22,120 @@
     "restoreName": "Restore {{name}}",
     "restored": "Restored {{name}}.",
     "open": "Open"
+  },
+  "import": {
+    "action": "Import base",
+    "actionHint": "From a .chbase file",
+    "actionLabel": "Import base from a .chbase file",
+    "title": "Import base from a .chbase file",
+    "description": "The base is created in {{workspace}}, with you as its owner.",
+    "drop": "Drag a .chbase file here",
+    "choose": "Choose a file",
+    "limits": "A package exported from Cellhive, up to {{size}} in the browser. Larger packages: cellhive base import.",
+    "trust": "Import packages only from people you trust. Automations arrive turned off, and nobody else can open the base until you add members.",
+    "change": "Choose another file",
+    "start": "Import",
+    "cancel": "Cancel",
+    "close": "Close",
+    "problems": {
+      "extension": "{{name}} is not a .chbase package. Export a base from Base settings › Export base to get one.",
+      "empty": "{{name}} is empty.",
+      "tooLarge": "{{name}} is larger than any instance accepts ({{size}}). Import it with the command line: cellhive base import."
+    },
+    "tooLarge": "The package is larger than this instance accepts in the browser ({{size}}). Import it with the command line: cellhive base import.",
+    "phases": {
+      "upload": "Uploading the file",
+      "check": "Checking the package",
+      "schema": "Tables and fields",
+      "files": "Files",
+      "records": "Records",
+      "links": "Links and sub-records",
+      "computed": "Formulas, views, dashboards and automations",
+      "finish": "Finishing"
+    },
+    "progress": "Import progress",
+    "percent": "{{percent}}%",
+    "state": {
+      "done": "done",
+      "active": "in progress",
+      "failed": "failed",
+      "pending": "not started"
+    },
+    "uploading": "Keep this window open until the file is uploaded.",
+    "cancelUpload": "Cancel upload",
+    "queued": "Waiting for another import of this organization to finish.",
+    "running": "You can close this window: the import goes on, and the base appears in this workspace when it is done.",
+    "toast": {
+      "running": "Importing {{name}}…",
+      "succeeded": "Imported {{name}}.",
+      "failed": "The import of {{name}} failed."
+    },
+    "report": {
+      "title": "{{name}} is ready",
+      "subtitle": "Imported into {{workspace}}. Check what needs your attention before you share the base.",
+      "counts": {
+        "label": "What was created",
+        "tables": "Tables",
+        "fields": "Fields",
+        "records": "Records",
+        "links": "Links",
+        "files": "Files",
+        "views": "Views",
+        "dashboards": "Dashboards",
+        "automations": "Automations",
+        "roles": "Roles"
+      },
+      "automations": {
+        "title": "Automations are off",
+        "body_one": "{{count, number}} automation was imported turned off. Turn it on once what it uses is set up again.",
+        "body_other": "{{count, number}} automations were imported turned off. Turn each one on once what it uses is set up again."
+      },
+      "reconnect": {
+        "title": "Set up again",
+        "body": "These stayed in the source organization. Create or choose them here, then pick them in each automation that uses them.",
+        "usedBy": "Used by"
+      },
+      "kinds": {
+        "secret": "Secret",
+        "email_identity": "Sending identity",
+        "group": "Group",
+        "incoming_webhook": "Incoming webhook"
+      },
+      "unnamed": "(no name)",
+      "people": {
+        "title": "People not found",
+        "body": "These people of the package are not members of this organization: their cells, creators and reminders were left empty.",
+        "more": "And {{count, number}} more"
+      },
+      "ai": {
+        "title": "AI fields",
+        "body": "Their values were imported. Nothing is generated until AI is set up in this organization."
+      },
+      "views": {
+        "title": "Personal views left out",
+        "body_one": "{{count, number}} personal view of the source base was not exported: a personal view stays with its owner.",
+        "body_other": "{{count, number}} personal views of the source base were not exported: a personal view stays with its owner."
+      },
+      "files": {
+        "title": "Files left out",
+        "body": "The cells keep their other files.",
+        "reasons": {
+          "blocked_file_type": "file type not allowed",
+          "file_too_large": "larger than the file limit",
+          "content_mismatch": "content does not match its type"
+        }
+      },
+      "allGood": "Nothing needs your attention.",
+      "open": "Open base"
+    },
+    "failed": {
+      "title": "This package cannot be imported",
+      "nothingLeft": "Nothing was created: no base, table or file was left behind.",
+      "more_one": "And {{count, number}} more problem",
+      "more_other": "And {{count, number}} more problems",
+      "reason": "Reason: {{reason}}",
+      "retry": "Choose another file",
+      "cancelled": "The import was cancelled. Nothing was created."
+    }
   }
 }
