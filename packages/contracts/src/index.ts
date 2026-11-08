@@ -11,6 +11,7 @@ export * from './attachments.js';
 export * from './audit.js';
 export * from './automation-runs.js';
 export * from './automations.js';
+export * from './base-packages.js';
 export * from './auth.js';
 export * from './buttons.js';
 export * from './common.js';

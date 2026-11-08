@@ -4906,6 +4906,278 @@
         ],
         "type": "object"
       },
+      "BaseExportResult": {
+        "additionalProperties": false,
+        "description": "`result` of a succeeded `base.export` job",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/BasePackageCounts"
+          },
+          "download_url": {
+            "description": "`/api/v1/files/exports/{jobId}`: `302` to the package (`<base name>.chbase`); left out once the file is deleted",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "One hour after the job finished; the package is deleted then",
+            "example": "2026-09-20T03:15:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "file_deleted": {
+            "description": "The package was deleted (expired); export again",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
+          "size": {
+            "description": "Bytes of the package",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "skipped_personal_views": {
+            "description": "Personal views of the base, never exported",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "size",
+          "counts",
+          "skipped_personal_views"
+        ],
+        "type": "object"
+      },
+      "BaseImportDetachedItem": {
+        "additionalProperties": false,
+        "description": "A secret, sending identity, group or incoming webhook to set up again",
+        "properties": {
+          "automations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "aut ID",
+                  "example": "aut_A1b2C3d4E5f6G7h8",
+                  "pattern": "^aut_[0-9A-Za-z]{16}$",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "type": "object"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "secret",
+              "email_identity",
+              "group",
+              "incoming_webhook"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "Name it had in the source organization",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "automations"
+        ],
+        "type": "object"
+      },
+      "BaseImportReport": {
+        "additionalProperties": false,
+        "description": "What an import created and what it left out",
+        "properties": {
+          "ai_fields": {
+            "description": "AI fields of the new base: their values were imported, nothing is generated until AI is available in the organization and a row changes or is generated again",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "field_id": {
+                  "description": "fld ID",
+                  "example": "fld_A1b2C3d4E5f6G7h8",
+                  "pattern": "^fld_[0-9A-Za-z]{16}$",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "table_id": {
+                  "description": "tbl ID",
+                  "example": "tbl_A1b2C3d4E5f6G7h8",
+                  "pattern": "^tbl_[0-9A-Za-z]{16}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "table_id",
+                "field_id",
+                "name"
+              ],
+              "type": "object"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "attachments": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "automations": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "automations_disabled": {
+            "description": "Imported automations: all are off",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "dashboards": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fields": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "files_skipped": {
+            "description": "Files of the package not imported (the cell keeps its other files): a type the default block list refuses, over `ATTACHMENT_MAX_FILE_BYTES`, or a content that is not its type",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "filename": {
+                  "type": "string"
+                },
+                "reason": {
+                  "enum": [
+                    "blocked_file_type",
+                    "file_too_large",
+                    "content_mismatch"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "filename",
+                "reason"
+              ],
+              "type": "object"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "links": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "records": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "roles": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "secrets_to_reconnect": {
+            "description": "Secrets, sending identities and groups the automations named, by name",
+            "items": {
+              "$ref": "#/components/schemas/BaseImportDetachedItem"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "skipped_personal_views": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "tables": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "unmatched_user_emails": {
+            "description": "Emails of the package with no member in the target organization (sorted, at most 1000; never an email the package does not hold)",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "unmatched_users": {
+            "description": "How many emails did not match, in all",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "views": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "webhooks_to_recreate": {
+            "description": "Incoming webhooks the `webhook.received` triggers named",
+            "items": {
+              "$ref": "#/components/schemas/BaseImportDetachedItem"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "widgets": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tables",
+          "fields",
+          "records",
+          "links",
+          "attachments",
+          "views",
+          "dashboards",
+          "widgets",
+          "automations",
+          "roles",
+          "unmatched_user_emails",
+          "unmatched_users",
+          "automations_disabled",
+          "secrets_to_reconnect",
+          "webhooks_to_recreate",
+          "ai_fields",
+          "skipped_personal_views",
+          "files_skipped"
+        ],
+        "type": "object"
+      },
+      "BaseImportResult": {
+        "additionalProperties": false,
+        "description": "`result` of a succeeded `base.import` job",
+        "properties": {
+          "base_id": {
+            "description": "bse ID",
+            "example": "bse_A1b2C3d4E5f6G7h8",
+            "pattern": "^bse_[0-9A-Za-z]{16}$",
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/BaseImportReport"
+          }
+        },
+        "required": [
+          "base_id",
+          "report"
+        ],
+        "type": "object"
+      },
       "BaseList": {
         "properties": {
           "items": {
@@ -4969,6 +5241,65 @@
         },
         "required": [
           "items"
+        ],
+        "type": "object"
+      },
+      "BasePackageCounts": {
+        "additionalProperties": false,
+        "description": "What a package holds: shared views only, custom roles only, attachments of cells, form covers and email images; `links` = rows of the junctions",
+        "properties": {
+          "attachments": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "automations": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "dashboards": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fields": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "links": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "records": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "roles": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "tables": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "views": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "widgets": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tables",
+          "fields",
+          "records",
+          "links",
+          "attachments",
+          "views",
+          "dashboards",
+          "widgets",
+          "automations",
+          "roles"
         ],
         "type": "object"
       },
@@ -11393,7 +11724,7 @@
           },
           "result": {
             "additionalProperties": {},
-            "description": "Outcome of a succeeded job, e.g. `{ \"download_url\", \"expires_at\", \"size\" }` for exports",
+            "description": "Outcome of a succeeded job, e.g. `{ \"download_url\", \"expires_at\", \"size\" }` for exports; `BaseExportResult` for `base.export`, `BaseImportResult` for `base.import`",
             "type": [
               "object",
               "null"
@@ -11419,7 +11750,7 @@
             "type": "string"
           },
           "type": {
-            "description": "e.g. `audit.export`, `base.export`",
+            "description": "e.g. `audit.export`, `table.import`, `base.export`, `base.import`",
             "type": "string"
           }
         },
