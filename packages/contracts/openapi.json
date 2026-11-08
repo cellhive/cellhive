@@ -4906,6 +4906,12 @@
         ],
         "type": "object"
       },
+      "BaseExportRequest": {
+        "additionalProperties": false,
+        "description": "No options in format version 1: send no body or `{}`",
+        "properties": {},
+        "type": "object"
+      },
       "BaseExportResult": {
         "additionalProperties": false,
         "description": "`result` of a succeeded `base.export` job",
@@ -27049,6 +27055,136 @@
         "x-api-token-scope": "session"
       }
     },
+    "/api/v1/bases/{baseId}/export": {
+      "post": {
+        "description": "Base owners/admins and organization owners/admins only: the package holds every field of every table. A base the caller cannot open (also outside the `base_ids` of an API token) is `404` before any other check; a member who is not an admin of the base gets `403 PERMISSION_DENIED`. An API token needs `schema:read` and `automations:read` besides `records:read` (`403 INSUFFICIENT_SCOPE` listing those it lacks). Starts a `base.export` job (one export per organization runs at a time, others wait) and writes `base.exported` (counts, no value). Follow it with `GET /jobs/{jobId}`: its result is a `BaseExportResult` whose `download_url` (one hour) only the job creator while still an admin of the base and organization owners/admins can use. The package holds the schema, shared views, dashboards, automations (secrets, identities, groups and webhooks only by name), custom roles, the records outside the trash in storage form with users as emails, the links and the files; never personal views, the trash, share links, tokens, secret values, members or role assignments. A package over `BASE_PACKAGE_MAX_BYTES` fails the job with `VALIDATION_FAILED` `PACKAGE_TOO_LARGE`; one over another cap of the format with `INVALID_PACKAGE` `ARCHIVE_LIMIT_EXCEEDED`. With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
+        "operationId": "exportBase",
+        "parameters": [
+          {
+            "description": "bse ID",
+            "in": "path",
+            "name": "baseId",
+            "required": true,
+            "schema": {
+              "description": "bse ID",
+              "example": "bse_A1b2C3d4E5f6G7h8",
+              "pattern": "^bse_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "description": "Replays the stored response for 24 hours (CONTRACTS §1.1)",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[\\x21-\\x7e]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaseExportRequest"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`INSUFFICIENT_SCOPE` (API token without `schema:read`/`automations:read`), `PERMISSION_DENIED` (not an admin of the base) or `CSRF_INVALID`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`IDEMPOTENCY_KEY_REUSED`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 60 requests/s by the user, or 20 requests/s by the user on one base"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiToken": [
+              "records:read"
+            ]
+          }
+        ],
+        "summary": "Export the whole base as a `.chbase` package (background job)",
+        "tags": [
+          "bases"
+        ],
+        "x-api-token-scope": "records:read"
+      }
+    },
     "/api/v1/bases/{baseId}/imports": {
       "post": {
         "description": "`create_table`: base admin only (else `403`); the table and its fields are created by the job with the confirmed types, the first column being the primary `text` field. The number of columns must fit the field budget of a new table (`TOO_MANY_COLUMNS`). `append`: the table must be visible (else `404`), with permission `edit` or more and the `add` operation (else `403`); every mapped field must be one the caller can see (`UNKNOWN_FIELD`) and write (`403 FIELD_READ_ONLY`), not an `attachment` field (`INVALID_FIELD_TYPE`), all checked before the job is queued. The upload is used up. Rows are written 1 000 per transaction with `typecast` in the base’s locale; link cells are record titles (the whole cell as one title, else a comma-separated list with `\"…\"` quoting, at most 500) and `parent` cells a title, matched exactly and uniquely among records the caller reads (row errors `LINK_TARGET_NOT_FOUND`, `LINK_TARGET_AMBIGUOUS`, `TOO_MANY_VALUES`); rows with invalid values are skipped and listed in the job result and its downloadable report (CONTRACTS §19). With an `Idempotency-Key` header the response is stored for 24 hours per user: sending the same key again returns the stored response (header `Idempotent-Replayed: true`); the same key with another request, or while the first request is still running, is `409 IDEMPOTENCY_KEY_REUSED`. Failed requests are not stored; a request that left its key in progress for more than 60 seconds is considered dead and the key can be reused. Requires the `x-csrf-token` header (value of the `ob_csrf` cookie) when authenticated by the session cookie.",
@@ -33235,7 +33371,7 @@
     },
     "/api/v1/files/exports/{jobId}": {
       "get": {
-        "description": "The `download_url` of a succeeded export job, or of an import job with skipped rows (CSV error report, CONTRACTS §19). Only the job creator and organization owners/admins (audit exports: whoever `GET /jobs/{jobId}` shows them to), until `result.expires_at`; everything else is `404`. Redirects to a short-lived signed URL of the object storage.",
+        "description": "The `download_url` of a succeeded export job (a `.chbase` package named after the base for `base.export`), or of an import job with skipped rows (CSV error report, CONTRACTS §19). Only the job creator and organization owners/admins (audit exports and base packages: whoever `GET /jobs/{jobId}` shows them to), until `result.expires_at`; everything else is `404`. Redirects to a short-lived signed URL of the object storage.",
         "operationId": "downloadExport",
         "parameters": [
           {
@@ -35741,7 +35877,7 @@
     },
     "/api/v1/jobs/{jobId}": {
       "get": {
-        "description": "Visible to the user who started the job and to owners/admins of its organization; an `audit.export` job only to organization owners/admins, an `audit.base_export` job also to its creator while still an admin of the base; anyone else gets `404`.",
+        "description": "Visible to the user who started the job and to owners/admins of its organization; an `audit.export` job only to organization owners/admins, an `audit.base_export` or `base.export` job also to its creator while still an admin of the base; anyone else gets `404`. An API token sees only jobs its user started, of a base in its `base_ids`.",
         "operationId": "getJob",
         "parameters": [
           {

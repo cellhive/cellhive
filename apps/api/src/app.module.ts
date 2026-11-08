@@ -14,6 +14,7 @@ import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { AutomationModule } from './modules/automation/automation.module.js';
 import { BaseModule } from './modules/base/base.module.js';
+import { BasePackageModule } from './modules/base-package/base-package.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { EmailIdentityModule } from './modules/email-identity/email-identity.module.js';
 import { EmailSettingsModule } from './modules/email-settings/email-settings.module.js';
@@ -100,6 +101,7 @@ export class AppModule {
         RecordModule,
         ExportModule,
         AuditModule,
+        BasePackageModule,
         JobModule,
         ImportModule,
         McpModule,

@@ -127,8 +127,9 @@ export const registerAuditRoutes: RouteRegistrar = (registry, components) => {
     summary: 'Status of a background job',
     description:
       'Visible to the user who started the job and to owners/admins of its organization; ' +
-      'an `audit.export` job only to organization owners/admins, an `audit.base_export` job ' +
-      'also to its creator while still an admin of the base; anyone else gets `404`.',
+      'an `audit.export` job only to organization owners/admins, an `audit.base_export` or ' +
+      '`base.export` job also to its creator while still an admin of the base; anyone else ' +
+      'gets `404`. An API token sees only jobs its user started, of a base in its `base_ids`.',
     params: jobParams,
     status: 200,
     response: jobSchema,
@@ -140,11 +141,11 @@ export const registerAuditRoutes: RouteRegistrar = (registry, components) => {
     tags: ['jobs'],
     summary: 'Download the file of an export job or the error report of an import',
     description:
-      'The `download_url` of a succeeded export job, or of an import job with skipped rows ' +
-      '(CSV error report, CONTRACTS §19). Only the job creator and organization ' +
-      'owners/admins (audit exports: whoever `GET /jobs/{jobId}` shows them to), until ' +
-      '`result.expires_at`; everything else is `404`. Redirects to a ' +
-      'short-lived signed URL of the object storage.',
+      'The `download_url` of a succeeded export job (a `.chbase` package named after the base ' +
+      'for `base.export`), or of an import job with skipped rows (CSV error report, CONTRACTS ' +
+      '§19). Only the job creator and organization owners/admins (audit exports and base ' +
+      'packages: whoever `GET /jobs/{jobId}` shows them to), until `result.expires_at`; ' +
+      'everything else is `404`. Redirects to a short-lived signed URL of the object storage.',
     security: [{ [SESSION_SECURITY_SCHEME]: [] }],
     request: { params: jobParams },
     responses: {

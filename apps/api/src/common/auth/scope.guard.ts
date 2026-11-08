@@ -16,19 +16,27 @@ import type { FastifyRequest } from 'fastify';
 
 const ROUTES = apiTokenRouteIndex();
 
-/** `403 INSUFFICIENT_SCOPE` with `errors[0].params.required = [required]` (CONTRACTS §26.3). */
-function insufficientScope(required: ApiTokenScope | 'session'): AppError {
+/**
+ * `403 INSUFFICIENT_SCOPE` with `errors[0].params.required` = the scopes
+ * missing (CONTRACTS §26.3).
+ */
+function insufficientScope(
+  required: ApiTokenScope | 'session' | readonly [ApiTokenScope, ...ApiTokenScope[]],
+): AppError {
+  const list = typeof required === 'string' ? [required] : [...required];
   return new AppError('INSUFFICIENT_SCOPE', {
     detail:
       required === 'session'
         ? 'This route needs a signed-in session; API tokens cannot use it.'
-        : `This API token lacks the ${required} scope.`,
+        : list.length === 1
+          ? `This API token lacks the ${list.join('')} scope.`
+          : `This API token lacks the ${list.join(', ')} scopes.`,
     errors: [
       {
         path: '',
         code: INSUFFICIENT_SCOPE,
         message: 'The API token does not allow this route',
-        params: { required: [required] },
+        params: { required: list },
       },
     ],
   });
@@ -44,6 +52,16 @@ export function requireTokenScope(principal: Principal, scope: ApiTokenScope): v
   if (principal.kind === 'api_token' && !principal.scopes.includes(scope)) {
     throw insufficientScope(scope);
   }
+}
+
+/**
+ * Like {@link requireTokenScope} for several scopes at once: the error lists
+ * every one the token lacks (e.g. a base export, CONTRACTS §12.2).
+ */
+export function requireTokenScopes(principal: Principal, scopes: readonly ApiTokenScope[]): void {
+  if (principal.kind !== 'api_token') return;
+  const [first, ...rest] = scopes.filter((scope) => !principal.scopes.includes(scope));
+  if (first !== undefined) throw insufficientScope([first, ...rest]);
 }
 
 /**

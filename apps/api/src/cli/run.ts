@@ -1,9 +1,16 @@
 import { parseArgs } from 'node:util';
 
-import { emailSchema, localeSchema, timeZoneSchema } from '@cellhive/contracts';
+import {
+  BASE_PACKAGE_EXTENSION,
+  emailSchema,
+  idOf,
+  localeSchema,
+  timeZoneSchema,
+} from '@cellhive/contracts';
 import { ConfigError, type Env } from '@cellhive/server-core';
 
 import {
+  baseExportCommand,
   DEFAULT_STALE_LOCK_MINUTES,
   jobsUnlockStaleCommand,
   migrateCommand,
@@ -30,6 +37,8 @@ Commands:
                                             organization (--keep-tokens keeps them working)
   jobs unlock-stale [--older-than <min>]    Release job locks of dead workers (locks older
         [--dry-run]                         than ${String(DEFAULT_STALE_LOCK_MINUTES)} minutes by default)
+  base export --base <bse_…> --out <file>   Export a whole base as a .chbase package into a
+                                            new file (the worker writes it; needs it running)
 
 The environment is the server's (DATABASE_URL, PUBLIC_URL, …, SPEC §20).
 Results (links, ids) go to stdout; messages go to stderr.`;
@@ -41,6 +50,8 @@ const OPTIONS = {
   locale: { type: 'string' },
   timezone: { type: 'string' },
   'owner-email': { type: 'string' },
+  base: { type: 'string' },
+  out: { type: 'string' },
   'older-than': { type: 'string' },
   'dry-run': { type: 'boolean' },
   'keep-tokens': { type: 'boolean' },
@@ -56,7 +67,10 @@ function usageError(message: string): CliError {
   return new CliError(`${message}\n\n${USAGE}`, 2);
 }
 
-function required(values: Values, name: 'email' | 'org' | 'name' | 'owner-email'): string {
+function required(
+  values: Values,
+  name: 'email' | 'org' | 'name' | 'owner-email' | 'base' | 'out',
+): string {
   const value = values[name];
   if (value === undefined || value.trim() === '') throw usageError(`--${name} is required.`);
   return value.trim();
@@ -127,6 +141,14 @@ export function parseCommand(argv: readonly string[]): Command | 'help' {
       }
       const dryRun = values['dry-run'] === true;
       return (ctx) => jobsUnlockStaleCommand(ctx, { olderThanMinutes: minutes, dryRun });
+    }
+    case 'base export': {
+      const baseId = validated(idOf('bse'), 'base', required(values, 'base'));
+      const out = required(values, 'out');
+      if (!out.endsWith(BASE_PACKAGE_EXTENSION)) {
+        throw usageError(`--out must name a ${BASE_PACKAGE_EXTENSION} file.`);
+      }
+      return (ctx) => baseExportCommand(ctx, { baseId, out });
     }
     default:
       throw usageError(`Unknown command '${command}'.`);

@@ -1,12 +1,15 @@
-import { IMPORT_JOB_TYPE } from '@cellhive/contracts';
+import { BASE_EXPORT_JOB_TYPE, BASE_PACKAGE_EXTENSION, IMPORT_JOB_TYPE } from '@cellhive/contracts';
 import {
   AUDIT_BASE_EXPORT_JOB_TYPE,
   AUDIT_EXPORT_JOB_TYPE,
   AUDIT_EXPORT_JOB_TYPES,
   AuditLogsRepository,
   auditExportKey,
+  basePackageKey,
+  BasesRepository,
   importReportKey,
   JobsRepository,
+  orgScope,
   type JobRecord,
   type JsonValue,
   type OrgScope,
@@ -23,14 +26,37 @@ import type { Id, JobDto } from '@cellhive/contracts';
 /** Lifetime of the storage URL a download redirects to (SPEC §16: 60 seconds). */
 export const EXPORT_REDIRECT_SECONDS = 60;
 
-/** Jobs whose result links a file: its storage key and download name. */
+/**
+ * Jobs whose result links a file: its storage key and download name (CSV
+ * files by kind and date, a base package by the base's name).
+ */
 const DOWNLOADS: Readonly<
-  Record<string, { key: (org: Id<'org'>, job: Id<'job'>) => string; name: string }>
+  Record<
+    string,
+    {
+      key: (org: Id<'org'>, job: Id<'job'>) => string;
+      name: string;
+      extension: string;
+      named?: 'base';
+    }
+  >
 > = {
-  [AUDIT_EXPORT_JOB_TYPE]: { key: auditExportKey, name: 'audit-log' },
-  [AUDIT_BASE_EXPORT_JOB_TYPE]: { key: auditExportKey, name: 'audit-log' },
-  [IMPORT_JOB_TYPE]: { key: importReportKey, name: 'import-errors' },
+  [AUDIT_EXPORT_JOB_TYPE]: { key: auditExportKey, name: 'audit-log', extension: '.csv' },
+  [AUDIT_BASE_EXPORT_JOB_TYPE]: { key: auditExportKey, name: 'audit-log', extension: '.csv' },
+  [IMPORT_JOB_TYPE]: { key: importReportKey, name: 'import-errors', extension: '.csv' },
+  [BASE_EXPORT_JOB_TYPE]: {
+    key: basePackageKey,
+    name: 'base',
+    extension: BASE_PACKAGE_EXTENSION,
+    named: 'base',
+  },
 };
+
+/** Jobs only their creator while still an admin of the base (or an org owner/admin) sees. */
+const BASE_ADMIN_JOBS: ReadonlySet<string> = new Set([
+  AUDIT_BASE_EXPORT_JOB_TYPE,
+  BASE_EXPORT_JOB_TYPE,
+]);
 
 function objectOf(value: JsonValue | null): Record<string, JsonValue> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : null;
@@ -55,8 +81,9 @@ export function jobDtoOf(job: JobRecord): JobDto {
  * Audit exports hold the organization's audit log: only current
  * owners/admins see them, the creator included only while still one.
  * Other jobs: their creator and the organization's owners/admins — for a
- * base's audit export (`audit.base_export`), `JobService` also requires
- * the creator to still be an admin of that base.
+ * base's audit export (`audit.base_export`) and a base package
+ * (`base.export`, CONTRACTS §12.2), `JobService` also requires the creator
+ * to still be an admin of that base.
  */
 export function jobVisibleTo(
   job: Pick<JobRecord, 'type' | 'created_by'>,
@@ -84,6 +111,7 @@ export class JobService {
     @Inject(AccessService) private readonly access: AccessService,
     @Inject(JobsRepository) private readonly jobs: JobsRepository,
     @Inject(AuditLogsRepository) private readonly logs: AuditLogsRepository,
+    @Inject(BasesRepository) private readonly bases: BasesRepository,
     @Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
   ) {}
 
@@ -113,10 +141,20 @@ export class JobService {
       throw notFound();
     }
     const signed = await this.storage.presignGet(file.key(organizationId, job.id), {
-      filename: `${file.name}-${job.created_at.toISOString().slice(0, 10)}.csv`,
+      filename:
+        file.named === 'base'
+          ? `${await this.baseNameOf(orgScope(organizationId), job.id)}${file.extension}`
+          : `${file.name}-${job.created_at.toISOString().slice(0, 10)}${file.extension}`,
       expiresIn: EXPORT_REDIRECT_SECONDS,
     });
     return signed.url;
+  }
+
+  /** The current name of the base a job exported (`base` when it is gone). */
+  private async baseNameOf(scope: OrgScope, jobId: Id<'job'>): Promise<string> {
+    const baseId = await this.jobs.baseIdOf(scope, jobId);
+    const base = baseId === null ? undefined : await this.bases.getById(scope, baseId);
+    return base?.name ?? 'base';
   }
 
   /**
@@ -144,16 +182,20 @@ export class JobService {
   }
 
   /**
-   * A base's audit export (T709) holds that base's audit log: besides
-   * organization owners/admins, only its creator while still an admin of
-   * the base sees it (like an organization export and org admins).
+   * A base's audit export (T709) holds that base's audit log, a base
+   * package (T1017) every field of the base: besides organization
+   * owners/admins, only its creator while still an admin of the base sees
+   * it (like an organization export and org admins).
    */
   private async requireExportedBaseAdmin(
     principal: Principal,
     scope: OrgScope,
     job: JobRecord,
   ): Promise<void> {
-    const baseId = await this.logs.exportedBaseOf(scope, job.id);
+    const baseId =
+      job.type === BASE_EXPORT_JOB_TYPE
+        ? await this.jobs.baseIdOf(scope, job.id)
+        : await this.logs.exportedBaseOf(scope, job.id);
     const base = baseId === null ? undefined : await this.access.findBase(principal, baseId);
     if (base?.access.is_admin !== true) throw notFound();
   }
@@ -169,7 +211,7 @@ export class JobService {
       if (job === undefined) continue;
       if (!jobVisibleTo(job, principal.userId, org.isAdmin)) throw notFound();
       if (principal.kind === 'api_token') await this.requireTokenReach(principal, org.scope, job);
-      if (job.type === AUDIT_BASE_EXPORT_JOB_TYPE && !org.isAdmin) {
+      if (BASE_ADMIN_JOBS.has(job.type) && !org.isAdmin) {
         await this.requireExportedBaseAdmin(principal, org.scope, job);
       }
       return { job, organizationId: org.organizationId };
