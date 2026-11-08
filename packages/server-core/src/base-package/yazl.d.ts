@@ -23,8 +23,17 @@ declare module 'yazl' {
     comment?: string | Buffer;
   }
 
+  /** An entry of the archive; its sizes are known once its data is written. */
+  export interface Entry {
+    readonly utf8FileName: Buffer;
+    readonly compressedSize: number | null;
+    readonly uncompressedSize: number | null;
+  }
+
   export class ZipFile extends EventEmitter {
     readonly outputStream: Readable;
+    /** Every entry added, in order. */
+    readonly entries: readonly Entry[];
     addReadStream(readStream: Readable, metadataPath: string, options?: EntryOptions): void;
     addBuffer(buffer: Buffer, metadataPath: string, options?: EntryOptions): void;
     addEmptyDirectory(metadataPath: string, options?: Pick<EntryOptions, 'mtime' | 'mode'>): void;

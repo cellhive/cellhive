@@ -1,7 +1,11 @@
 import { once } from 'node:events';
 import { createReadStream, createWriteStream, type WriteStream } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import { Readable, Transform, type TransformCallback } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { createDeflateRaw } from 'node:zlib';
 
 import {
   BASE_EXPORT_PHASES,
@@ -18,12 +22,14 @@ import { emailAssetReferencesOf } from '../automation/duplicate/duplicate.js';
 
 import {
   ATTACHMENTS_ENTRY,
+  classifyEntry,
   dataEntry,
   fileEntry,
   isAlreadyCompressed,
   linksEntry,
   SCHEMA_ENTRIES,
 } from './entries.js';
+import { deflateStaysWithinRatio } from './limits.js';
 import { PackageLocation, PackageRewriter, PackageSchemaCatalog } from './references.js';
 import { PackageUserEmails } from './users.js';
 import { BasePackageWriter } from './writer.js';
@@ -37,7 +43,6 @@ import type {
   PackageView,
 } from './manifest.js';
 import type { StoredRecordOutput } from '../records/types.js';
-import type { Readable } from 'node:stream';
 
 /**
  * Writing a whole base into a `.chbase` package (ADR-24 §1 and its 2026-11
@@ -526,10 +531,31 @@ export async function exportBasePackage(
     const pending = [...ids.files.values()];
     for (const [index, file] of pending.entries()) {
       signal?.throwIfAborted();
+      const name = fileEntry(file.source.id);
       const content = await source.openFile(file.source.object);
-      const entry = await writer.addFile(fileEntry(file.source.id), content, {
-        compress: !isAlreadyCompressed(file.source.mime),
-      });
+      let entry;
+      if (isAlreadyCompressed(file.source.mime)) {
+        entry = await writer.addFile(name, content, { compress: false });
+      } else {
+        // Deflated unless that would pass the 20× a reader allows a file
+        // (a log, a CSV of repeated rows): then stored. The file is spooled
+        // once to measure it, so storage is read once.
+        const spool = join(options.tempDir, `file-${file.source.id}`);
+        try {
+          const measured = await spoolMeasured(content, spool);
+          entry = await writer.addFile(name, createReadStream(spool), {
+            compress: deflateStaysWithinRatio(
+              options.limits,
+              classifyEntry(name),
+              measured.deflated,
+              measured.size,
+            ),
+            size: measured.size,
+          });
+        } finally {
+          await rm(spool, { force: true });
+        }
+      }
       written(entry);
       files.push(file.meta({ size: entry.size, sha256: entry.sha256 }));
       await progress.at('files', index + 1, pending.length);
@@ -626,6 +652,45 @@ export async function exportBasePackage(
   } finally {
     for (const spool of spools.values()) spool.destroy();
   }
+}
+
+/**
+ * Copies `source` into a new file at `path` and measures what deflating it
+ * gives (zlib level 6, as the writer deflates), without holding it in memory.
+ */
+async function spoolMeasured(
+  source: Readable,
+  path: string,
+): Promise<{ readonly size: number; readonly deflated: number }> {
+  const deflater = createDeflateRaw({ level: 6 });
+  let deflated = 0;
+  deflater.on('data', (chunk: Buffer) => {
+    deflated += chunk.length;
+  });
+  const deflaterDone = once(deflater, 'end');
+  let size = 0;
+  const tee = new Transform({
+    transform(chunk: Buffer, _encoding: BufferEncoding, callback: TransformCallback) {
+      size += chunk.length;
+      if (deflater.write(chunk)) callback(null, chunk);
+      else
+        deflater.once('drain', () => {
+          callback(null, chunk);
+        });
+    },
+    flush(callback: TransformCallback) {
+      deflater.end();
+      callback();
+    },
+  });
+  try {
+    await pipeline(source, tee, createWriteStream(path, { flags: 'wx', mode: 0o600 }));
+    await deflaterDone;
+  } catch (error) {
+    deflater.destroy();
+    throw error;
+  }
+  return { size, deflated };
 }
 
 /** The value at a dotted path of a definition (`actions[0].config.secret_id`). */

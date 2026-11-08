@@ -179,6 +179,7 @@
     "ARCHIVE_LIMIT_EXCEEDED_package_bytes": "Gói lớn hơn mức cho phép: tối đa {{limit, number}} byte.",
     "ARCHIVE_LIMIT_EXCEEDED_entries": "Gói có hơn {{limit, number}} tệp bên trong.",
     "ARCHIVE_LIMIT_EXCEEDED_uncompressed_bytes": "Gói giải nén ra lớn hơn mức cho phép.",
+    "ARCHIVE_LIMIT_EXCEEDED_entry_ratio": "Một phần của gói được nén hơn {{limit, number}} lần, giải nén ra sẽ quá lớn.",
     "ARCHIVE_LIMIT_EXCEEDED_json_entry_bytes": "Một phần của gói lớn hơn {{limit, number}} byte.",
     "ARCHIVE_LIMIT_EXCEEDED_ndjson_line_bytes": "Một dòng của gói dài hơn {{limit, number}} byte.",
     "ARCHIVE_LIMIT_EXCEEDED_json_depth": "Một phần của gói lồng sâu hơn {{limit, number}} cấp.",

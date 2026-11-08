@@ -31,9 +31,18 @@ export const BASE_PACKAGE_MAX_BYTES_LIMIT = 5 * 1024 * 1024 * 1024 - 1;
 export const BASE_PACKAGE_MIN_BYTES_LIMIT = 1024 * 1024;
 /** Most entries of a package (ADR-24 §3). */
 export const BASE_PACKAGE_MAX_ENTRIES = 100_000;
-/** Total uncompressed bytes ≤ this × the package size … */
-export const BASE_PACKAGE_MAX_COMPRESSION_RATIO = 20;
-/** … and ≤ this × `BASE_PACKAGE_MAX_BYTES`. */
+/**
+ * A JSON entry or a file inflates to at most this × its compressed size
+ * (checked per entry, from the central directory and while inflating).
+ */
+export const BASE_PACKAGE_MAX_ENTRY_RATIO = 20;
+/**
+ * An NDJSON entry (`data/*`, `links/*`) inflates to at most this × its
+ * compressed size: it is read line by line, never held whole, and rows of
+ * a base repeat their keys and often their values.
+ */
+export const BASE_PACKAGE_MAX_NDJSON_ENTRY_RATIO = 200;
+/** All entries together inflate to at most this × `BASE_PACKAGE_MAX_BYTES`. */
 export const BASE_PACKAGE_MAX_UNCOMPRESSED_FACTOR = 4;
 /** Largest JSON entry (`manifest.json`, `schema/*.json`, `files/attachments.json`), uncompressed. */
 export const BASE_PACKAGE_MAX_JSON_ENTRY_BYTES = 64 * 1024 * 1024;
@@ -61,13 +70,15 @@ export const BASE_EXPORT_REQUEST_SCOPES = ['schema:read', 'automations:read'] as
 /**
  * Which cap `ARCHIVE_LIMIT_EXCEEDED` names (`params.reason`, with
  * `params.limit`): the package size, its number of entries, its total
- * uncompressed size (or an entry inflating past its declared size), one
- * JSON entry, one NDJSON line, or the nesting of a JSON value.
+ * uncompressed size (or an entry inflating past its declared size), the
+ * compression ratio of one entry (`limit` = the ratio), one JSON entry, one
+ * NDJSON line, or the nesting of a JSON value.
  */
 export const BASE_PACKAGE_LIMIT_REASONS = [
   'package_bytes',
   'entries',
   'uncompressed_bytes',
+  'entry_ratio',
   'json_entry_bytes',
   'ndjson_line_bytes',
   'json_depth',

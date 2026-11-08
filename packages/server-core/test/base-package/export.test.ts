@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
+import { deflateRawSync } from 'node:zlib';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -679,29 +680,119 @@ describe('exportBasePackage', () => {
     });
   });
 
-  it('a base of repeated text compresses past 20× and fails as the reader would', async () => {
-    const rows = (count: number) =>
-      Array.from({ length: count }, (_, index) =>
-        stored(id('rec', `R${String(index)}`), index + 1, {
-          [F.name]: 'Đơn hàng giao trong ngày, khách đã thanh toán đủ'.repeat(4),
-          [F.status]: [O.new],
-        }),
-      );
-    const repeated = () =>
-      new FakeSource(schemaOf(), { [T_ORD]: [rows(2000), rows(2000)], [T_CUS]: [] });
-    const error = await exportOf(repeated()).catch((failure: unknown) => failure);
+  /** `count` records of the same long text from `first` on (ids differ), as a repetitive base holds. */
+  const repeatedRows = (first: number, count: number) =>
+    Array.from({ length: count }, (_, offset) => {
+      const index = first + offset;
+      return stored(id('rec', `R${String(index)}`), index + 1, {
+        [F.name]: 'Đơn hàng giao trong ngày, khách đã thanh toán đủ'.repeat(4),
+        [F.status]: [O.new],
+      });
+    });
+  const repeated = () =>
+    new FakeSource(schemaOf(), {
+      [T_ORD]: [repeatedRows(0, 2000), repeatedRows(2000, 2000)],
+      [T_CUS]: [],
+    });
+
+  it('a base of repeated text (an NDJSON entry ~60×, under 200×) exports and reads back', async () => {
+    const { path, exported } = await exportOf(repeated());
+    expect(exported.counts.records).toBe(4000);
+    const reader = await openBasePackage(path);
+    try {
+      await reader.verifyAll();
+      const entry = reader.entry(dataEntry(T_ORD));
+      const ratio = (entry?.uncompressedSize ?? 0) / (entry?.compressedSize ?? 1);
+      expect(ratio).toBeGreaterThan(20);
+      expect(ratio).toBeLessThan(200);
+      // The whole package compresses past 20× too: no rule on the package as a whole.
+      expect(exported.uncompressedBytes / exported.bytes).toBeGreaterThan(20);
+      let lines = 0;
+      for await (const { value } of reader.readNdjson(dataEntry(T_ORD), packageRecordSchema)) {
+        expect(value.fields[F.name]).toBe(
+          'Đơn hàng giao trong ngày, khách đã thanh toán đủ'.repeat(4),
+        );
+        lines += 1;
+      }
+      expect(lines).toBe(4000);
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('an NDJSON entry past its ratio fails with entry_ratio, as the reader would', async () => {
+    const error = await exportOf(
+      repeated(),
+      basePackageLimits(undefined, { maxNdjsonEntryRatio: 10 }),
+    ).catch((failure: unknown) => failure);
     expect(error).toBeInstanceOf(AppError);
     expect((error as AppError).code).toBe('INVALID_PACKAGE');
     expect((error as AppError).errors?.[0]).toMatchObject({
       code: 'ARCHIVE_LIMIT_EXCEEDED',
-      params: { reason: 'uncompressed_bytes' },
+      path: dataEntry(T_ORD),
+      params: { reason: 'entry_ratio', limit: 10 },
     });
-    // Without the ratio cap, the same base: far above 20×.
-    const { exported } = await exportOf(
-      repeated(),
-      basePackageLimits(undefined, { maxCompressionRatio: 10_000 }),
-    );
-    expect(exported.uncompressedBytes / exported.bytes).toBeGreaterThan(20);
+  });
+
+  it('a text file deflating past 20× is stored; one that compresses less is deflated', async () => {
+    const LOG = id('att', 'Log');
+    const log = Buffer.from('2026-11-08 10:00:00 INFO request served\n'.repeat(20_000));
+    const csv = Buffer.from(randomBytes(3000).toString('base64').repeat(4));
+    class TextFiles extends FakeSource {
+      override cellFiles(tableId: Id<'tbl'>, ids: readonly Id<'att'>[]) {
+        return Promise.resolve(
+          [ATT.file, LOG]
+            .filter((fileId) => ids.includes(fileId) && tableId === T_ORD)
+            .map((fileId) => ({
+              id: fileId,
+              filename: fileId === LOG ? 'server.log' : 'rows.csv',
+              mime: fileId === LOG ? 'text/plain' : 'text/csv',
+              object: `org/${fileId}`,
+              tableId: T_ORD,
+              fieldId: F.files,
+              recordId: R.o1,
+            })),
+        );
+      }
+
+      override openFile(object: string) {
+        return Promise.resolve(Readable.from([object === `org/${LOG}` ? log : csv]));
+      }
+    }
+    const files = (value: unknown) => ({
+      [F.name]: 'With files',
+      [F.files]: value,
+    });
+    const source = new TextFiles(schemaOf(), {
+      [T_ORD]: [
+        [
+          stored(
+            R.o1,
+            1,
+            files([
+              { id: ATT.file, name: 'rows.csv', size: csv.length, mime: 'text/csv' },
+              { id: LOG, name: 'server.log', size: log.length, mime: 'text/plain' },
+            ]),
+          ),
+        ],
+      ],
+      [T_CUS]: [],
+    });
+    expect(log.length / deflateRawSync(log).length).toBeGreaterThan(20);
+    const { path } = await exportOf(source);
+    const reader = await openBasePackage(path);
+    try {
+      await reader.verifyAll();
+      const logEntry = reader.entry(fileEntry(LOG));
+      expect(logEntry?.compressedSize).toBe(log.length);
+      const csvEntry = reader.entry(fileEntry(ATT.file));
+      expect(csvEntry?.compressedSize).toBeLessThan(csv.length / 2);
+      const content: Buffer[] = [];
+      for await (const chunk of await reader.open(fileEntry(LOG))) content.push(chunk as Buffer);
+      expect(Buffer.concat(content).equals(log)).toBe(true);
+    } finally {
+      reader.close();
+    }
   });
 
   it('a failing source stops the export', async () => {
