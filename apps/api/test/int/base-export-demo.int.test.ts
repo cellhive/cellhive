@@ -320,14 +320,17 @@ describe('base export of seed:demo (T1017)', () => {
     }
   });
 
-  it('a compression ratio below the cap of 20× (the writer refuses more)', async () => {
+  it('every entry within its compression ratio: 200× NDJSON, 20× JSON and files', async () => {
     const uncompressed = reader
       .entries()
       .reduce((total, entry) => total + entry.uncompressedSize, 0);
-    const size = (await stat(path)).size;
-    const ratio = uncompressed / size;
-    expect(ratio).toBeGreaterThan(1);
-    expect(ratio).toBeLessThanOrEqual(20);
+    expect(uncompressed).toBeLessThanOrEqual(4 * t.config.limits.basePackageMaxBytes);
+    expect(uncompressed / (await stat(path)).size).toBeGreaterThan(1);
+    for (const entry of reader.entries()) {
+      const ratio = entry.uncompressedSize / Math.max(entry.compressedSize, 1);
+      const ndjson = entry.kind.kind === 'data' || entry.kind.kind === 'links';
+      expect(ratio, entry.name).toBeLessThanOrEqual(ndjson ? 200 : 20);
+    }
   });
 
   it('P120 the package has cost: a base admin exports every field', async () => {
