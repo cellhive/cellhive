@@ -4,7 +4,7 @@ import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { isAiField } from '../../../lib/ai/ai-field';
+import { isAiConfigHidden, isAiField } from '../../../lib/ai/ai-field';
 import { typeIconOf } from '../../../lib/schema/field-icons';
 import { CREATABLE_TYPES, type DraftFieldType } from '../draft';
 
@@ -147,7 +147,8 @@ export function TypePicker({
           {t('ai.lockedType', { type: currentName })}
         </LockedValue>
         <p id={hintId} className="text-label font-normal text-fg-muted">
-          {t('ai.lockedTypeHint')}
+          {/* (T1006) Only its managers who read every source may remove AI. */}
+          {t(isAiConfigHidden(field) ? 'ai.configHidden.typeHint' : 'ai.lockedTypeHint')}
         </p>
       </div>
     );

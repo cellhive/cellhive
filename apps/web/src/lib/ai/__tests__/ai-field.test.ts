@@ -6,7 +6,9 @@ import {
   aiConfigOf,
   aiPausedOf,
   aiRetryAtOf,
+  aiTaskOf,
   estimateAiTokens,
+  isAiConfigHidden,
   isAiField,
 } from '../ai-field';
 
@@ -29,6 +31,39 @@ describe('AI fields (T915)', () => {
     ['a formula', { type: 'formula', options: { ai: AI } }, false],
   ])('%s', (_case, field, expected) => {
     expect(isAiField(field)).toBe(expected);
+  });
+
+  // T1006: readers other than its managers get `options.ai = { task }` and no `ai_state`.
+  it.each<[string, Pick<FieldDto, 'type' | 'options'>, boolean, boolean, string | null]>([
+    ['whole configuration', { type: 'text', options: { ai: AI } }, true, false, 'translate'],
+    [
+      '{ task } only',
+      { type: 'text', options: { ai: { task: 'classify' } } },
+      true,
+      true,
+      'classify',
+    ],
+    [
+      'a select with { task } only',
+      { type: 'select', options: { multiple: false, options: [], ai: { task: 'classify' } } },
+      true,
+      true,
+      'classify',
+    ],
+    ['AI removed', { type: 'text', options: { ai: null } }, false, false, null],
+    ['an empty object', { type: 'text', options: { ai: {} } }, false, false, null],
+    [
+      'a formula with { task }',
+      { type: 'formula', options: { ai: { task: 'custom' } } },
+      false,
+      false,
+      null,
+    ],
+  ])('%s: AI field %s, configuration hidden %s, task %s', (_case, field, ai, hidden, task) => {
+    expect(isAiField(field)).toBe(ai);
+    expect(isAiConfigHidden(field)).toBe(hidden);
+    expect(aiTaskOf(field)).toBe(task);
+    if (hidden) expect(aiConfigOf(field)).toBeNull();
   });
 
   it('reads options.ai with its defaults', () => {

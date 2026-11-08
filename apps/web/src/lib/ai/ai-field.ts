@@ -13,9 +13,12 @@ import type {
  * single `select` field with `options.ai`. Pure helpers shared by the field
  * dialog, the grid, the record panel and the generate dialog — no schema
  * parse (the grid chunk stays small): the API gives `options.ai` checked.
+ * Only table managers who read every field of the prompt get the whole
+ * configuration (and `ai_state`); everyone else gets `options.ai = { task }`
+ * and no `ai_state` — still an AI field (read-only cells, icon).
  */
 
-/** `options.ai` as the field API returns it (the prompt with field names). */
+/** `options.ai` as the field API returns it to its managers (the prompt with field names). */
 export interface AiFieldConfig {
   readonly task: AiFieldTask;
   readonly prompt: string;
@@ -28,11 +31,24 @@ function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** `options.ai` of an AI field, `null` for any other field. */
-export function aiConfigOf(field: Pick<FieldDto, 'type' | 'options'>): AiFieldConfig | null {
-  if (field.type !== 'text' && field.type !== 'select') return null;
+/** `options.ai` of an AI field as given, whole or `{ task }`; `undefined` for any other field. */
+function aiOptionsOf(
+  field: Pick<FieldDto, 'type' | 'options'>,
+): Readonly<Record<string, unknown>> | undefined {
+  if (field.type !== 'text' && field.type !== 'select') return undefined;
   const ai = field.options['ai'];
-  if (!isObject(ai) || typeof ai['prompt'] !== 'string') return null;
+  return isObject(ai) && (typeof ai['task'] === 'string' || typeof ai['prompt'] === 'string')
+    ? ai
+    : undefined;
+}
+
+/**
+ * The whole `options.ai` of an AI field (`null`: any other field, or an AI
+ * field whose configuration this reader does not get — {@link isAiConfigHidden}).
+ */
+export function aiConfigOf(field: Pick<FieldDto, 'type' | 'options'>): AiFieldConfig | null {
+  const ai = aiOptionsOf(field);
+  if (ai === undefined || typeof ai['prompt'] !== 'string') return null;
   return {
     task: (typeof ai['task'] === 'string' ? ai['task'] : 'custom') as AiFieldTask,
     prompt: ai['prompt'],
@@ -45,8 +61,25 @@ export function aiConfigOf(field: Pick<FieldDto, 'type' | 'options'>): AiFieldCo
 
 const DEFAULT_OUTPUT = 300;
 
+/** Whether the field is an AI field (its cells are filled by AI), configuration given or not. */
 export function isAiField(field: Pick<FieldDto, 'type' | 'options'>): boolean {
-  return aiConfigOf(field) !== null;
+  return aiOptionsOf(field) !== undefined;
+}
+
+/**
+ * An AI field whose configuration only its managers read (`options.ai =
+ * { task }`): the reader has no schema rights on the table, or cannot read
+ * a field the prompt uses. The field dialog shows "Configured by a table
+ * manager" instead of the AI settings.
+ */
+export function isAiConfigHidden(field: Pick<FieldDto, 'type' | 'options'>): boolean {
+  return isAiField(field) && aiConfigOf(field) === null;
+}
+
+/** What the prompt of an AI field was written for (given to every reader), `null` otherwise. */
+export function aiTaskOf(field: Pick<FieldDto, 'type' | 'options'>): AiFieldTask | null {
+  const task = aiOptionsOf(field)?.['task'];
+  return typeof task === 'string' ? (task as AiFieldTask) : null;
 }
 
 /**
@@ -79,7 +112,11 @@ export function aiCellReasonOf(
   return aiCellOf(record, fieldId)?.reason;
 }
 
-/** Paused rows of an AI field, why, and what the provider rejected (`ai_state`, `schema.changed`). */
+/**
+ * Paused rows of an AI field, why, and what the provider rejected
+ * (`ai_state`, `schema.changed`); `null` without `ai_state` (readers other
+ * than its managers never get it).
+ */
 export function aiPausedOf(field: Pick<FieldDto, 'ai_state'>): {
   readonly count: number;
   readonly reason: AiFieldStateDto['paused_reason'];
@@ -92,7 +129,8 @@ export function aiPausedOf(field: Pick<FieldDto, 'ai_state'>): {
 
 /**
  * When an AI field's queued rows go on while the organization waits for its
- * provider (T1002), `null` once that time has passed (at `now`).
+ * provider (T1002), `null` once that time has passed (at `now`) or without
+ * `ai_state`.
  */
 export function aiRetryAtOf(
   field: Pick<FieldDto, 'ai_state'>,

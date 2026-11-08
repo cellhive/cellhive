@@ -446,12 +446,17 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
     () => new Set<string>(fieldList.items.filter(locksFieldValues).map((field) => field.id)),
     [fieldList],
   );
-  // (T915) AI fills an AI field: no editor opens; schema managers may remove AI.
+  // (T915) AI fills an AI field: no editor opens; schema managers may remove AI — those who get
+  // its configuration (T1006: not when it reads a field they cannot read).
   const aiFieldHint = useCallback(
     (fieldId: string) => {
       const target = fieldList.items.find((item) => item.id === fieldId);
       if (target === undefined || !isAiField(target)) return undefined;
-      return t(canManage && FieldTools !== undefined ? 'ai.readOnlyManage' : 'ai.readOnly');
+      return t(
+        canManage && FieldTools !== undefined && aiConfigOf(target) !== null
+          ? 'ai.readOnlyManage'
+          : 'ai.readOnly',
+      );
     },
     [fieldList, canManage, FieldTools, t],
   );

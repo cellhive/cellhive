@@ -5,6 +5,7 @@ import {
   CircleAlert,
   Eye,
   Languages,
+  Lock,
   ScanText,
   Sparkles,
   SquarePen,
@@ -255,6 +256,40 @@ function PreviewRow({
         </p>
       )}
     </li>
+  );
+}
+
+/**
+ * (T1006, CONTRACTS §29.5) An AI field whose configuration only its table
+ * managers who read every field of the prompt get (`options.ai = { task }`):
+ * the dialog shows what it is for and who configures it — no prompt, no
+ * settings, nothing to change.
+ */
+export function AiConfigHidden({ task }: { readonly task: AiFieldTask }) {
+  const { t } = useTranslation('field');
+  const titleId = useId();
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="flex min-w-0 items-start gap-3 rounded-lg border border-line bg-surface-sunken p-3"
+      data-testid="ai-config-hidden"
+    >
+      <span
+        aria-hidden="true"
+        className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent"
+      >
+        <Sparkles className="size-4" />
+      </span>
+      <div className="flex min-w-0 flex-col gap-1">
+        <h3 id={titleId} className="flex items-center gap-1.5 text-body font-medium text-fg">
+          {t('ai.configHidden.title')}
+          <Lock aria-hidden="true" className="size-3.5 shrink-0 text-fg-muted" />
+        </h3>
+        <p className="text-label font-normal text-fg-muted">
+          {t('ai.configHidden.body', { task: t(`ai.templates.${task}.name`) })}
+        </p>
+      </div>
+    </section>
   );
 }
 

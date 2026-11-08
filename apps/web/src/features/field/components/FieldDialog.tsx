@@ -5,6 +5,7 @@ import { History } from 'lucide-react';
 import { Suspense, useMemo, useState, type SyntheticEvent, ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { aiTaskOf, isAiConfigHidden } from '../../../lib/ai/ai-field';
 import { useAiAvailability } from '../../../lib/ai/use-ai-availability';
 import { api } from '../../../lib/api';
 import { isApiError } from '../../../lib/api/client';
@@ -18,7 +19,7 @@ import { trackJob } from '../../../lib/realtime/jobs';
 import { isFieldConverting } from '../../../lib/schema/conversion';
 import { meQuery } from '../../../lib/session/session';
 import { showToast } from '../../../lib/toast/toast';
-import { AiFieldSection } from '../ai/AiFieldSection';
+import { AiConfigHidden, AiFieldSection } from '../ai/AiFieldSection';
 import {
   aiChangedValues,
   newAiDraft,
@@ -716,25 +717,31 @@ export function FieldDialog({
 
   // (T915) An AI field (or a saved one whose AI is being removed): the AI part first.
   const savedAi = field !== undefined && field.options['ai'] != null;
-  const aiSection =
-    draft.ai !== null || savedAi ? (
-      <AiFieldSection
-        tableId={tableId}
-        field={field}
-        draft={draft}
-        onChange={change}
-        issues={aiServerIssue === undefined ? shownIssues : [...shownIssues, aiServerIssue]}
-        PromptEditor={AiPromptEditor}
-        onTemplate={aiTemplate}
-        onEstimate={setAiEstimate}
-        recordData={aiAvailability.record_data}
-        settingsPath={aiSettingsPath}
-      />
-    ) : null;
+  // (T1006) An AI field whose configuration only table managers who read every field of its
+  // prompt get (`{ task }`): who configures it, instead of the settings — nothing to edit.
+  const aiHidden = field !== undefined && isAiConfigHidden(field);
+  const aiSection = aiHidden ? (
+    <AiConfigHidden task={aiTaskOf(field) ?? 'custom'} />
+  ) : draft.ai !== null || savedAi ? (
+    <AiFieldSection
+      tableId={tableId}
+      field={field}
+      draft={draft}
+      onChange={change}
+      issues={aiServerIssue === undefined ? shownIssues : [...shownIssues, aiServerIssue]}
+      PromptEditor={AiPromptEditor}
+      onTemplate={aiTemplate}
+      onEstimate={setAiEstimate}
+      recordData={aiAvailability.record_data}
+      settingsPath={aiSettingsPath}
+    />
+  ) : null;
 
   const optionsForm = (() => {
     // The AI section edits the output (text, or the options of a single select) itself.
-    if (draft.ai !== null && (draft.type === 'text' || draft.type === 'select')) return aiSection;
+    if (aiHidden || (draft.ai !== null && (draft.type === 'text' || draft.type === 'select'))) {
+      return aiSection;
+    }
     switch (draft.type) {
       case 'text':
         return (
@@ -961,6 +968,7 @@ export function FieldDialog({
   const flags =
     !typeConversion &&
     draft.ai === null &&
+    !aiHidden &&
     (REQUIRABLE_TYPES.has(draft.type) || UNIQUE_TYPES.has(draft.type)) ? (
       <div className="flex flex-col gap-3 border-t border-line pt-4">
         {REQUIRABLE_TYPES.has(draft.type) ? (
@@ -1051,7 +1059,10 @@ export function FieldDialog({
           <div
             className={cn(
               'grid gap-6',
-              draft.type !== 'formula' && draft.ai === null && 'md:grid-cols-[minmax(0,1fr)_15rem]',
+              draft.type !== 'formula' &&
+                draft.ai === null &&
+                !aiHidden &&
+                'md:grid-cols-[minmax(0,1fr)_15rem]',
             )}
           >
             <div className="flex min-w-0 flex-col gap-4">
@@ -1060,13 +1071,13 @@ export function FieldDialog({
               <fieldset className="flex min-w-0 flex-col gap-4 border-t border-line pt-4">
                 <legend className="sr-only">{t('field:optionsLegend')}</legend>
                 {/* (T915) "Remove AI" of a saved field: its note, then the plain options. */}
-                {draft.ai === null ? aiSection : null}
+                {draft.ai === null && !aiHidden ? aiSection : null}
                 {optionsForm}
               </fieldset>
               {flags}
               {descriptionInput}
             </div>
-            {draft.type === 'formula' || draft.ai !== null ? null : (
+            {draft.type === 'formula' || draft.ai !== null || aiHidden ? null : (
               <FieldPreview
                 config={config}
                 type={draft.type}
