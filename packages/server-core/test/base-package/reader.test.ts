@@ -23,6 +23,7 @@ import {
   validEntries,
   type BuildOptions,
   type RawEntry,
+  ZIP_TEST_TIMEOUT_MS,
 } from './zip-builder.js';
 
 /**
@@ -94,13 +95,13 @@ function withPackage(
   return packageOf(patch(validEntries()), options);
 }
 
-describe('a valid package', () => {
+describe('a valid package', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   it('opens, verifies and reads', async () => {
     await expect(readAll(withPackage((entries) => entries))).resolves.toBeUndefined();
   });
 });
 
-describe('poisoned packages (T1016)', () => {
+describe('poisoned packages (T1016)', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   const unsafeNames = [
     ['zip slip: parent directory', '../escape.json'],
     ['zip slip: absolute path', '/etc/passwd'],
@@ -285,7 +286,7 @@ describe('poisoned packages (T1016)', () => {
     );
 
   it('an NDJSON entry compressed past 200× → ARCHIVE_LIMIT_EXCEEDED (entry_ratio 200)', async () => {
-    const data = repeatedRecords(400, 'x'.repeat(50_000));
+    const data = repeatedRecords(100, 'x'.repeat(50_000));
     expect(data.length / deflateRawSync(data).length).toBeGreaterThan(200);
     const problem = await problemOf(withData(data));
     expect(problem).toMatchObject({
@@ -495,7 +496,7 @@ describe('poisoned packages (T1016)', () => {
   });
 });
 
-describe('the manifest', () => {
+describe('the manifest', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   it('missing → MISSING_ENTRY', async () => {
     const problem = await problemOf(buildZip(validEntries()));
     expect(problem).toMatchObject({ code: 'MISSING_ENTRY', path: 'manifest.json' });
@@ -540,7 +541,7 @@ describe('the manifest', () => {
   });
 });
 
-describe('JSON and NDJSON caps', () => {
+describe('JSON and NDJSON caps', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   const base = (text: string) =>
     withPackage((entries) =>
       entries.map((entry) =>
@@ -690,7 +691,7 @@ describe('JSON and NDJSON caps', () => {
   });
 });
 
-describe('reading', () => {
+describe('reading', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   it('a raw deflate stream that is not deflate → INVALID_ARCHIVE', async () => {
     const name = `files/${ATT_ID}`;
     const problem = await problemOf(

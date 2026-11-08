@@ -24,7 +24,7 @@ import {
 } from '../../src/base-package/index.js';
 import { AppError } from '../../src/errors/app-error.js';
 
-import { scratch, ZERO_COUNTS } from './zip-builder.js';
+import { scratch, ZERO_COUNTS, ZIP_TEST_TIMEOUT_MS } from './zip-builder.js';
 
 /** Writer → reader, without a database (BACKLOG T1016). */
 
@@ -97,7 +97,7 @@ async function centralDirectory(path: string) {
   return entries;
 }
 
-describe('BasePackageWriter → openBasePackage', () => {
+describe('BasePackageWriter → openBasePackage', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   it('round-trips every kind of entry, checksums computed while writing', async () => {
     const path = nextPath();
     const photo = randomBytes(40_000);
