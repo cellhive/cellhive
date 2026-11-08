@@ -5,6 +5,7 @@ import {
   AutomationDispatcher,
   AutomationRunEngine,
   AutomationTimeTriggers,
+  basePackageLimits,
   createSendEmailAction,
   createSendNotificationAction,
   createAiKeySource,
@@ -75,6 +76,7 @@ import { createAutomationRevalidateRunAsTask } from './automation-revalidate-run
 import { createAutomationRunTask } from './automation-run.js';
 import { createAutomationRunsCleanupTask } from './automation-runs-cleanup.js';
 import { createAutomationScheduleTickTask } from './automation-schedule-tick.js';
+import { createBaseExportTask, type BaseExportDeps } from './base-export.js';
 import { createComputedBackfillTask } from './computed-backfill.js';
 import { createComputedRecomputeTask } from './computed-recompute.js';
 import { createEventsDispatchTask } from './events-dispatch.js';
@@ -216,6 +218,8 @@ export interface TaskDeps {
     readonly now?: () => Date;
     readonly jobBudgetMs?: number;
   };
+  /** Tests only: temporary directory, clock and source of `base.export` (T1017). */
+  readonly baseExport?: Pick<BaseExportDeps, 'tempRoot' | 'now' | 'source' | 'appVersion'>;
 }
 
 /** Every task this worker runs, by identifier (`GraphileWorker.Tasks`). */
@@ -440,6 +444,20 @@ export function buildTaskList(deps: TaskDeps): TaskList {
       jobs: new JobsRepository(deps.db),
       storage,
       logger: deps.logger.child({ task: 'audit.export' }),
+    }),
+    'base.export': createBaseExportTask({
+      db: deps.db,
+      jobs: new JobsRepository(deps.db),
+      storage,
+      // A table of a large base is read in batches longer than a request allows.
+      records: new RecordQueryService(deps.db, {
+        defaultTimeZone: deps.config.defaults.timezone,
+        statementTimeoutMs: JOB_STATEMENT_TIMEOUT_MS,
+      }),
+      logger: deps.logger.child({ task: 'base.export' }),
+      limits: basePackageLimits(deps.config.limits.basePackageMaxBytes),
+      timeZone: deps.config.defaults.timezone,
+      ...deps.baseExport,
     }),
     'auth.password_reset_email': createPasswordResetEmailTask({
       db: deps.db,
@@ -701,6 +719,13 @@ export {
   createPasswordResetEmailTask,
   type PasswordResetEmailDeps,
 } from './auth-password-reset-email.js';
+export {
+  BASE_EXPORT_ORG_CAP,
+  BASE_PACKAGE_APP_VERSION,
+  baseExportTempDir,
+  createBaseExportTask,
+  type BaseExportDeps,
+} from './base-export.js';
 export {
   COMPUTED_ANALYZE_THRESHOLD,
   COMPUTED_BACKFILL_BATCH_ATTEMPTS,

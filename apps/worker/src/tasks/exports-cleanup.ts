@@ -1,8 +1,9 @@
-import { IMPORT_JOB_TYPE, type Id } from '@cellhive/contracts';
+import { BASE_EXPORT_JOB_TYPE, IMPORT_JOB_TYPE, type Id } from '@cellhive/contracts';
 import {
   AUDIT_BASE_EXPORT_JOB_TYPE,
   AUDIT_EXPORT_JOB_TYPE,
   auditExportKey,
+  basePackageKey,
   importReportKey,
   listExpiredExportFiles,
   orgScope,
@@ -24,6 +25,8 @@ const FILE_JOBS: readonly {
   { type: AUDIT_BASE_EXPORT_JOB_TYPE, key: auditExportKey },
   // Error reports of imports (CONTRACTS §19), valid 24 hours.
   { type: IMPORT_JOB_TYPE, key: importReportKey },
+  // Whole-base packages (`.chbase`, CONTRACTS §12.2), valid one hour.
+  { type: BASE_EXPORT_JOB_TYPE, key: basePackageKey },
 ];
 
 /** Expired export files handled per batch. */
@@ -41,8 +44,9 @@ export interface ExportsCleanupDeps {
 /**
  * `exports.cleanup` (hourly cron): deletes the stored file of every
  * `audit.export` job whose download link expired (`result.expires_at`,
- * one hour, CONTRACTS §12.2) and of every `table.import` error report
- * (24 hours, CONTRACTS §19), and removes `result.download_url` from the job
+ * one hour, CONTRACTS §12.2), of every `base.export` package (one hour,
+ * §12.2) and of every `table.import` error report (24 hours, CONTRACTS
+ * §19), and removes `result.download_url` from the job
  * (`file_deleted: true`), so the link is never offered again. The file is
  * deleted first: a failure leaves the job listed for the next run. Storage
  * keys come from ids only (`auditExportKey`), never from the job result.
