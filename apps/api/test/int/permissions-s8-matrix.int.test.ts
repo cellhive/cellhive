@@ -895,10 +895,22 @@ describe('permission matrix S8 over HTTP (T917)', () => {
       const narrative = JSON.stringify(chats()[1]?.body);
       expect(chats()[1]?.body?.['response_format']).toBeUndefined();
       expect(lastUserMessage(1)).toMatch(/<<DATA result [0-9a-f]{16}>>/u);
-      expect(narrative).toContain('2026-10-01');
+      // (T1004) The month as the asker reads it (vi, datamarked: a space is ˆ), never the ISO key.
+      expect(narrative).toContain('thángˆ10/2026');
       expect(narrative).toContain('100');
       // Aggregates of what u_sales1 reads only: no record, no other group, no field value.
-      for (const absent of ['rec_', 'fld_', 'usr_', 'Máy', 'Wifi', '"200"', '"400"', '2026-08']) {
+      for (const absent of [
+        'rec_',
+        'fld_',
+        'usr_',
+        'Máy',
+        'Wifi',
+        '"200"',
+        '"400"',
+        '2026-08',
+        '2026-10-01',
+        'thángˆ8/2026',
+      ]) {
         expect(narrative).not.toContain(absent);
       }
     } finally {
