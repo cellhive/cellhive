@@ -12,7 +12,8 @@
  * P78–P102 (S8 AI and MCP, BACKLOG T917) with `permissions-s8-matrix.int.test.ts`
  * and `mcp.int.test.ts` — row numbers have two or three digits. The S9 rows
  * (P103–P127) join as their tasks land: P111, P112 (BACKLOG T1006) with
- * `permissions-s9-ai-matrix.int.test.ts`.
+ * `permissions-s9-ai-matrix.int.test.ts`; P113–P117 (BACKLOG T1007) with the
+ * same file and the regression cases of `ai-field.int.test.ts`.
  *
  * Extra arguments go to Vitest.
  */
@@ -26,6 +27,11 @@ const REQUIRED = [
   // S9 (BACKLOG "Phụ lục ma trận quyền S9"), by task.
   111,
   112,
+  113,
+  114,
+  115,
+  116,
+  117,
 ].map((n) => `P${String(n).padStart(2, '0')}`);
 
 /** Every name mentioning a row: `P07`, `P01/P19`, `P16–P18`, `P100` (ranges expanded). */
