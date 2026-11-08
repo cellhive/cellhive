@@ -202,6 +202,7 @@ import {
   type SlotThresholds,
 } from './policy.js';
 import { removeDateReminders, syncDateReminder, validateDateReminder } from './reminders.js';
+import { restoredAiOptionsOf, restoresAiField } from './restored-ai.js';
 import {
   noopSchemaChangePublisher,
   type SchemaChange,
@@ -427,6 +428,12 @@ export interface RevertConversionOptions {
   readonly mergedSince?: Date | string;
   /** Counts shown to the caller (`field.converted` event data). */
   readonly counts?: JsonObject;
+  /**
+   * An AI field coming back (its definition before the conversion had
+   * `options.ai`): what the caller may reference — its prompt is checked
+   * again like a save. Absent: every field (the system).
+   */
+  readonly ai?: AiFieldContext;
 }
 
 /** A link conversion (T404, ADR-28) as `startLinkConversion` takes it. */
@@ -2903,6 +2910,13 @@ export class SchemaService {
       const txScope = withTxScope(scope, tx);
       await this.assertNotConverting(txScope, field);
       const conversion = revertible(await this.conversions.latestForField(txScope, fieldId));
+      // An AI field coming back: its prompt passes the checks of a save, cycles included.
+      if (conversion !== undefined) {
+        await this.checkRestoredAi(tx, scope, table, field, conversion.from_definition, {
+          context: options.ai,
+          cycles: true,
+        });
+      }
       // T463: from or to a formula/lookup (no edits to merge: see the caller).
       if (
         conversion?.kind === 'column' &&
@@ -3004,6 +3018,7 @@ export class SchemaService {
     fieldId: Id<'fld'>,
     name: string,
     context: AuditContext,
+    options: { readonly ai?: AiFieldContext } = {},
   ): Promise<FieldRow> {
     this.assertScope(scope);
     const newName = normalizeSchemaName(name);
@@ -3037,6 +3052,11 @@ export class SchemaService {
           ],
         });
       }
+      // An AI field restored: its prompt passes the checks of a save (nothing reads it yet).
+      await this.checkRestoredAi(tx, scope, table, field, conversion.from_definition, {
+        context: options.ai,
+        cycles: false,
+      });
       await this.assertFieldCapacity(txScope, table.id);
       if (await this.fields.nameTaken(txScope, table.id, newName)) {
         throw nameConflict('field', newName);
@@ -3135,6 +3155,49 @@ export class SchemaService {
   private async assertNotConverting(scope: OrgScope, field: FieldRow): Promise<void> {
     const running = await this.conversions.runningFieldIds(scope, field.table_id);
     if (running.has(field.id)) throw fieldConvertingError(field.id);
+  }
+
+  /**
+   * When `definition` (the field's definition before its latest conversion)
+   * is an AI field, the checks of saving its `options.ai` (CONTRACTS §29.5),
+   * under the base's computed-graph lock: the prompt, in names, against what
+   * `context` may reference (`prepareAiOptions`: same-record sources only,
+   * no attachment, button, AI field or the field itself; a hidden or deleted
+   * field is unknown) and, for a revert, no cycle through a formula/lookup
+   * reading the field (`422`). The caller checked AI availability and the
+   * lock (`422 AI_*`, `403`).
+   */
+  private async checkRestoredAi(
+    tx: Tx,
+    scope: OrgScope,
+    table: TableRow,
+    field: FieldRow,
+    definition: JsonValue,
+    options: { readonly context: AiFieldContext | undefined; readonly cycles: boolean },
+  ): Promise<void> {
+    if (!restoresAiField(definition)) return;
+    const txScope = withTxScope(scope, tx);
+    await this.lockComputedGraph(tx, table.base_id);
+    const rows = await loadBaseSchemaRows(this.db, txScope, table.base_id);
+    const prepared = prepareAiOptions(
+      restoredAiOptionsOf(definition, rows, table.id),
+      rows,
+      { id: field.id, tableId: table.id, isPrimary: field.is_primary },
+      options.context,
+    );
+    if (!options.cycles) return;
+    const edges = [
+      ...(await this.dependencies.listByBase(txScope, table.base_id)).filter(
+        (edge) => edge.fieldId !== field.id,
+      ),
+      ...prepared.edges,
+    ];
+    const active = new Set<string>(
+      rows.fields.filter((row) => isComputedRow(row) || isAiField(row)).map((row) => row.id),
+    );
+    active.add(field.id);
+    const cycle = findCycle(field.id, edges, active);
+    if (cycle !== null) throw formulaCycleProblem(cycle, rows, options.context?.readable);
   }
 
   // -------------------------------------------------------------------------
