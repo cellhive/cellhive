@@ -1,5 +1,6 @@
 import {
   automationDefinitionSchema,
+  TIME_ZONE_HINT,
   type AutomationDefinitionInput,
   type EffectiveAccess,
   type Id,
@@ -784,8 +785,31 @@ describe('time triggers at save (BACKLOG T508)', () => {
       'Mars/Olympus',
       [{ path: 'definition.trigger.timezone', code: 'INVALID_TIME_ZONE' }],
     ],
+    ...['+07:00', '-0530', '+7', 'UTC+7', 'GMT+07:00'].map(
+      (zone) =>
+        [
+          `the UTC offset ${zone} (T1005)`,
+          '0 8 * * *',
+          zone,
+          [{ path: 'definition.trigger.timezone', code: 'INVALID_TIME_ZONE' }],
+        ] as const,
+    ),
+    ['the fixed zone Etc/GMT-7', '0 8 * * *', 'Etc/GMT-7', []],
+    ['the legacy name EST5EDT', '0 8 * * *', 'EST5EDT', []],
   ] as const)('schedule: %s', (_name, cron, timezone, expected) => {
     expect(errorsOf({ trigger: { type: 'schedule', cron, timezone } })).toEqual(expected);
+  });
+
+  it('schedule: an offset says so and hints at an IANA name (T1005)', () => {
+    const result = check({ trigger: { type: 'schedule', cron: '0 8 * * *', timezone: '+07:00' } });
+    expect(result.ok ? null : result.errors).toEqual([
+      {
+        path: 'definition.trigger.timezone',
+        code: 'INVALID_TIME_ZONE',
+        message: expect.stringContaining('UTC offset') as string,
+        params: { hint: TIME_ZONE_HINT },
+      },
+    ]);
   });
 
   it('too frequent reports the interval and the minimum', () => {

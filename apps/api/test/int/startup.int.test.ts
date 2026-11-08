@@ -311,7 +311,10 @@ describe('process startup', () => {
       expect.objectContaining({ migration: '0055_canonical_time_zones' }),
     );
     expect(first.logs).toContainEqual(
-      expect.objectContaining({ msg: 'database is up to date', applied: 57 }),
+      expect.objectContaining({ migration: '0058_time_zone_offsets' }),
+    );
+    expect(first.logs).toContainEqual(
+      expect.objectContaining({ msg: 'database is up to date', applied: 58 }),
     );
     expect(first.logs).toContainEqual(
       expect.objectContaining({ msg: 'job queue schema is up to date' }),

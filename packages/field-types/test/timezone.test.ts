@@ -21,6 +21,20 @@ describe('isValidTimeZone', () => {
     ['UTC', true],
     ['Not/AZone', false],
     ['', false],
+    // The legacy names are zones (stored by their IANA primary name, T1005).
+    ['EST5EDT', true],
+    ['SystemV/HST10', true],
+    ['Etc/GMT-7', true],
+    ['Etc/GMT+12', true],
+    ['Etc/UTC', true],
+    // A UTC offset is not a zone, though `Intl` accepts some (T1005).
+    ['+07:00', false],
+    ['-0530', false],
+    ['+07', false],
+    ['\u221207:00', false],
+    ['+7', false],
+    ['UTC+7', false],
+    ['GMT+07:00', false],
   ])('%j -> %s', (tz, expected) => {
     expect(isValidTimeZone(tz)).toBe(expected);
   });

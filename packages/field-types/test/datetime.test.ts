@@ -1,3 +1,4 @@
+import { TIME_ZONE_HINT } from '@cellhive/contracts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -74,6 +75,34 @@ describe('datetime options', () => {
     expect(datetimeOptionsSchema.parse({ timezone: 'US/Eastern' }).timezone).toBe(
       'America/New_York',
     );
+  });
+
+  it.each([
+    ['EST5EDT', 'America/New_York'],
+    ['SystemV/AST4', 'Etc/GMT+4'],
+    ['Etc/GMT-7', 'Etc/GMT-7'],
+    ['Etc/UTC', 'UTC'],
+  ])('stores the zone %s as %s (T1005)', (zone, expected) => {
+    expect(datetimeOptionsSchema.parse({ timezone: zone }).timezone).toBe(expected);
+  });
+
+  it.each(['+07:00', '-0530', '+7', 'UTC+7', 'GMT+07:00'])(
+    'refuses the UTC offset %s: INVALID_TIME_ZONE with a hint, never converted (T1005)',
+    (zone) => {
+      expect(datetimeOptionsSchema.safeParse({ timezone: zone }).error?.issues).toEqual([
+        expect.objectContaining({
+          path: ['timezone'],
+          message: expect.stringContaining('UTC offset') as string,
+          params: { code: 'INVALID_TIME_ZONE', hint: TIME_ZONE_HINT },
+        }),
+      ]);
+    },
+  );
+
+  it('refuses an unknown zone with INVALID_TIME_ZONE', () => {
+    expect(datetimeOptionsSchema.safeParse({ timezone: 'Mars/Olympus' }).error?.issues).toEqual([
+      expect.objectContaining({ params: { code: 'INVALID_TIME_ZONE', hint: TIME_ZONE_HINT } }),
+    ]);
   });
 });
 

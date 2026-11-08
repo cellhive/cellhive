@@ -75,7 +75,8 @@ describe('migration 0057_ai_generation_queue_job_idx (T1003)', () => {
   it('adds the job, back-off and paused indexes; every row is kept', async () => {
     const before = await snapshot();
     expect(before.reduce((sum, row) => sum + row.n, 0)).toBe(ROWS);
-    expect(await migrateToLatest(db.kysely)).toEqual(['0057_ai_generation_queue_job_idx']);
+    // 0057 runs first; later migrations (0058 of T1005…) follow it.
+    expect((await migrateToLatest(db.kysely))[0]).toBe('0057_ai_generation_queue_job_idx');
     expect(await snapshot()).toEqual(before);
 
     const { rows } = await sql<{ name: string; definition: string; valid: boolean }>`

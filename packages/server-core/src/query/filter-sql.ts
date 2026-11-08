@@ -1,3 +1,4 @@
+import { canonicalTimeZone } from '@cellhive/contracts';
 import { getFieldType } from '@cellhive/field-types';
 import {
   allowedOperators,
@@ -784,7 +785,8 @@ class FilterSqlCompiler {
     lookup: FilterLookupOptions,
     unsupported: () => FilterCompileError,
   ): RawBuilder<SqlBool> {
-    const zone = sql`${sql.val(lookup.timeZone ?? 'UTC')}::text`;
+    // The IANA primary name PostgreSQL knows, as the formula compiler hands to `fx.*`.
+    const zone = sql`${sql.val(canonicalTimeZone(lookup.timeZone) ?? lookup.timeZone ?? 'UTC')}::text`;
     const ref = source.ref;
     let start: RawBuilder<unknown>;
     let end: RawBuilder<unknown>;

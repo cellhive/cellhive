@@ -353,8 +353,9 @@ export const aggregateRecordsInputSchema = z.strictObject({
     .meta({ description: 'Groups returned; the rest is summed up in `other`' }),
   timezone: timeZoneSchema.optional().meta({
     description:
-      'IANA zone of date buckets and relative dates (default: the user’s, then the ' +
-      'organization’s)',
+      'IANA time zone name of date buckets and relative dates, such as Asia/Ho_Chi_Minh or ' +
+      'UTC (default: the user’s, then the organization’s). UTC offsets such as +07:00 or ' +
+      'UTC+7 are not accepted',
   }),
 });
 export type AggregateRecordsInput = z.output<typeof aggregateRecordsInputSchema>;

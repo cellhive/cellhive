@@ -108,6 +108,7 @@ describe('meta migrations on an empty PostgreSQL 18 database', () => {
       '0055_canonical_time_zones',
       '0056_ai_generation_queue',
       '0057_ai_generation_queue_job_idx',
+      '0058_time_zone_offsets',
     ]);
     expect(await migrateToLatest(db.kysely)).toEqual([]);
 
@@ -172,6 +173,7 @@ describe('meta migrations on an empty PostgreSQL 18 database', () => {
       '0055_canonical_time_zones',
       '0056_ai_generation_queue',
       '0057_ai_generation_queue_job_idx',
+      '0058_time_zone_offsets',
     ]);
   });
 

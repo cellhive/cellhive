@@ -1,4 +1,4 @@
-import { canonicalTimeZone } from '@cellhive/contracts';
+import { canonicalTimeZone, timeZoneProblem } from '@cellhive/contracts';
 
 import type { BaseAccess } from './access.service.js';
 import type { Principal } from '../auth/principal.js';
@@ -11,15 +11,9 @@ export function settingOf(settings: JsonValue, key: 'locale' | 'timezone'): unkn
     : undefined;
 }
 
-/** An IANA zone the runtime knows. */
+/** An IANA zone the runtime knows, not a UTC offset (the check of every time zone value). */
 export function validTimeZone(zone: unknown): zone is string {
-  if (typeof zone !== 'string' || zone === '') return false;
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: zone });
-    return true;
-  } catch {
-    return false;
-  }
+  return timeZoneProblem(zone) === null;
 }
 
 /**

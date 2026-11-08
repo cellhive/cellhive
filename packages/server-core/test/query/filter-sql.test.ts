@@ -344,3 +344,27 @@ describe('compileToSql: rejects what it must never receive', () => {
     expect(compiled.parameters).toEqual(['5']);
   });
 });
+
+describe('compileToSql: the zone of a date field_ref (T1005)', () => {
+  it.each([
+    ['Asia/Saigon', 'Asia/Ho_Chi_Minh'],
+    ['EST5EDT', 'America/New_York'],
+    ['Asia/Ho_Chi_Minh', 'Asia/Ho_Chi_Minh'],
+    [undefined, 'UTC'],
+  ])('%s reaches SQL as the IANA primary name %s', (timeZone, expected) => {
+    const compiled = compile(
+      compileToSql(cond(fields.due.id, 'is', { field_ref: fields.meetHcm.id }), tableMeta, {
+        tableAlias: 's',
+        lookup: {
+          refTable: tableMeta,
+          refAlias: 'ref',
+          ...(timeZone === undefined ? {} : { timeZone }),
+        },
+      }),
+    );
+    expect(compiled.parameters).toContain(expected);
+    if (timeZone !== undefined && timeZone !== expected) {
+      expect(compiled.parameters).not.toContain(timeZone);
+    }
+  });
+});
