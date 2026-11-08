@@ -262,7 +262,7 @@ export class SecretService {
       if (
         newValue === undefined &&
         isValueSentSecretKind(current.kind) &&
-        allowedHostsAddHost(current, hosts, new Date())
+        allowedHostsAddHost(current, hosts)
       ) {
         throw invalidField(
           'value',

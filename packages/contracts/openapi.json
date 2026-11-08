@@ -20605,7 +20605,7 @@
         "description": "Changing the scope does not touch automations: a step of a base left out fails with `secret_unavailable` when it runs. A new value (or `generate: true`) of a `webhook_signing` secret keeps the previous one signing for 24 hours (`previous_value_expires_at`)",
         "properties": {
           "allowed_hosts": {
-            "description": "`http_header` / `webhook_signing` / `ai_api_key` only (another kind: `UNRECOGNIZED_KEY`): replaces the list and ends the transition period of a secret stored before the list existed (`legacy_hosts_until` becomes `null`). For `http_header` and `ai_api_key`, a list that adds a host needs a new `value` in the same request (`SECRET_VALUE_REQUIRED`)",
+            "description": "`http_header` / `webhook_signing` / `ai_api_key` only (another kind: `UNRECOGNIZED_KEY`): replaces the list and ends the transition period of a secret stored before the list existed (`legacy_hosts_until` becomes `null`). For `http_header` and `ai_api_key`, a list that adds a host needs a new `value` in the same request (`SECRET_VALUE_REQUIRED`); the first list of a secret stored before lists existed does not",
             "example": [
               "api.crm.example",
               "*.hooks.example:8443"

@@ -108,31 +108,24 @@ describe('secret allowed_hosts (T701)', () => {
   });
 });
 
-const NOW = new Date('2026-11-08T10:00:00Z');
-
 /**
  * BACKLOG T1008 (CONTRACTS §24): a new `allowed_hosts` list of a secret
  * whose value is sent (`http_header`, `ai_api_key`) needs the value again
- * when it lets the secret reach a host it could not reach.
+ * when it moves the secret to a host it is not bound to.
  */
 describe('allowed hosts that add a host (T1008)', () => {
   it.each([
-    ['the same list', ['api.crm.test'], ['api.crm.test'], null, false],
-    ['the same list, reordered', ['a.test', 'b.test'], ['b.test', 'a.test'], null, false],
-    ['a host removed', ['a.test', 'b.test'], ['a.test'], null, false],
-    ['another host', ['a.test'], ['evil.test'], null, true],
-    ['a host added', ['a.test'], ['a.test', 'evil.test'], null, true],
-    ['a port added', ['a.test'], ['a.test:80'], null, true],
-    ['a wildcard instead of the host', ['api.crm.test'], ['*.crm.test'], null, true],
-    // Transition period: sent to any host until it ends, so a list only narrows it.
-    ['a list during the transition period', [], ['a.test'], '2026-11-20T00:00:00Z', false],
-    // After it, the secret reaches no host: a list adds hosts.
-    ['a list after the transition period', [], ['a.test'], '2026-11-01T00:00:00Z', true],
-    ['a list without a transition period', [], ['a.test'], null, true],
-  ] as const)('%s → %s', (_name, current, next, until, expected) => {
-    expect(
-      allowedHostsAddHost({ allowed_hosts: current, legacy_hosts_until: until }, next, NOW),
-    ).toBe(expected);
+    ['the same list', ['api.crm.test'], ['api.crm.test'], false],
+    ['the same list, reordered', ['a.test', 'b.test'], ['b.test', 'a.test'], false],
+    ['a host removed', ['a.test', 'b.test'], ['a.test'], false],
+    ['another host', ['a.test'], ['evil.test'], true],
+    ['a host added', ['a.test'], ['a.test', 'evil.test'], true],
+    ['a port added', ['a.test'], ['a.test:80'], true],
+    ['a wildcard instead of the host', ['api.crm.test'], ['*.crm.test'], true],
+    // Stored before lists existed: never bound to a host, the first list binds it.
+    ['the first list of a secret stored before lists existed', [], ['a.test'], false],
+  ] as const)('%s → %s', (_name, current, next, expected) => {
+    expect(allowedHostsAddHost({ allowed_hosts: current }, next)).toBe(expected);
   });
 
   it('applies to the kinds whose value is sent, not to signing secrets or bots', () => {

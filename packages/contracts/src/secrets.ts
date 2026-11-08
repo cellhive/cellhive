@@ -86,24 +86,18 @@ export function isValueSentSecretKind(kind: SecretKind): boolean {
 }
 
 /**
- * Whether `next` (canonical patterns, {@link canonicalAllowedHosts}) lets
- * a secret reach a host its current policy does not: a pattern that is not
- * on the current list. A secret still in its transition period (an empty
- * list, `legacy_hosts_until` ahead) is sent to any host, so any list only
- * narrows it; once that period is over it reaches none (CONTRACTS §24).
+ * Whether `next` (canonical patterns, {@link canonicalAllowedHosts}) moves
+ * a secret to a host it is not bound to: a pattern that is not on the
+ * current list. A secret stored before lists existed (an empty list) was
+ * never bound to a host — any host during its transition period — so its
+ * first list binds it rather than moving it (the way out of the transition
+ * period, CONTRACTS §24).
  */
 export function allowedHostsAddHost(
-  current: {
-    readonly allowed_hosts: readonly string[];
-    readonly legacy_hosts_until: Date | string | null;
-  },
+  current: { readonly allowed_hosts: readonly string[] },
   next: readonly string[],
-  now: Date,
 ): boolean {
-  if (current.allowed_hosts.length === 0 && current.legacy_hosts_until !== null) {
-    const until = new Date(current.legacy_hosts_until).getTime();
-    if (until > now.getTime()) return false;
-  }
+  if (current.allowed_hosts.length === 0) return false;
   return next.some((pattern) => !current.allowed_hosts.includes(pattern));
 }
 
@@ -341,7 +335,8 @@ export const updateSecretRequestSchema = z
         '`UNRECOGNIZED_KEY`): replaces ' +
         'the list and ends the transition period of a secret stored before the list existed ' +
         '(`legacy_hosts_until` becomes `null`). For `http_header` and `ai_api_key`, a list ' +
-        'that adds a host needs a new `value` in the same request (`SECRET_VALUE_REQUIRED`)',
+        'that adds a host needs a new `value` in the same request (`SECRET_VALUE_REQUIRED`); ' +
+        'the first list of a secret stored before lists existed does not',
     }),
   })
   .refine(
