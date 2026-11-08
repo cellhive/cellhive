@@ -36,9 +36,13 @@ export {
 } from './thumbnails/email-image.js';
 export { readAtMost } from './thumbnails/render-thumbnails.js';
 export {
+  BASE_PACKAGE_APP_VERSION,
+  baseExportTempDir,
   buildTaskList,
   createAttachmentsCleanupTask,
+  createBaseExportTask,
   createEventsDispatchTask,
+  createExportsCleanupTask,
   createFileThumbnailTask,
   createMaintenanceCleanupTask,
   createPartitionsMaintainTask,
@@ -46,6 +50,7 @@ export {
   maintainPartitions,
   PARTITION_MONTHS_AHEAD,
   type AttachmentsCleanupDeps,
+  type BaseExportDeps,
   type EventsDispatchDeps,
   type FileThumbnailDeps,
   type MaintenanceCleanupDeps,
