@@ -92,7 +92,11 @@ function serve(
 ) {
   let mine = options.mine ?? [MINE];
   let policy = options.policy ?? { enabled: true, max_lifetime_days: null };
-  let mcp = options.mcp ?? { enabled: false, allow_writes: false };
+  let mcp: McpPolicy = options.mcp ?? {
+    enabled: false,
+    allow_writes: false,
+    allow_schema_writes: false,
+  };
   const calls: Call[] = [];
   const body = (init: RequestInit | undefined): unknown =>
     typeof init?.body === 'string' ? JSON.parse(init.body) : null;
@@ -442,7 +446,7 @@ describe('ApiTokensPage (T714)', () => {
 });
 
 describe('MCP on the API tokens page (T924)', () => {
-  const MCP_ON = { enabled: true, allow_writes: false };
+  const MCP_ON = { enabled: true, allow_writes: false, allow_schema_writes: false };
 
   it('MCP off: no MCP preset, no "Connect via MCP"; the writes switch waits for MCP', async () => {
     const calls = serve({
@@ -469,6 +473,11 @@ describe('MCP on the API tokens page (T924)', () => {
     });
     expect(writes).toBeDisabled();
     expect(writes).toHaveAccessibleDescription('Turn on MCP clients first.');
+    const schema = within(section).getByRole('switch', {
+      name: 'Allow schema changes (create tables/fields)',
+    });
+    expect(schema).toBeDisabled();
+    expect(schema).toHaveAccessibleDescription('Turn on MCP clients first.');
     expect(await axeViolations(document.body)).toEqual([]);
     expect(calls).toEqual([]);
   });
@@ -604,7 +613,7 @@ describe('MCP on the API tokens page (T924)', () => {
   });
 
   it('offers "MCP — read & write" when writes are allowed; tokens without schema:read cannot connect', async () => {
-    const calls = serve({ mcp: { enabled: true, allow_writes: true } });
+    const calls = serve({ mcp: { enabled: true, allow_writes: true, allow_schema_writes: false } });
     await renderApp(PATH);
     // `MINE` has only `records:read`: the endpoint would refuse it.
     const row = await screen.findByTestId('token-row');
@@ -623,5 +632,84 @@ describe('MCP on the API tokens page (T924)', () => {
     const vi18n = await createTestI18n('vi');
     expect(vi18n.t('apiTokens:create.preset.mcpRead')).toBe('MCP — chỉ đọc');
     expect(vi18n.t('apiTokens:mcp.connect.action')).toBe('Kết nối MCP');
+  });
+
+  it('schema changes: their own switch and confirmation, then the "MCP — schema" preset (T1014)', async () => {
+    const calls = serve({ role: 'owner', mcp: MCP_ON });
+    await renderApp(`${PATH}?tab=policy`);
+    const section = await screen.findByTestId('mcp-policy');
+    const schema = within(section).getByRole('switch', {
+      name: 'Allow schema changes (create tables/fields)',
+    });
+    expect(schema).toBeEnabled();
+    expect(schema).not.toBeChecked();
+    expect(schema).toHaveAccessibleDescription(expect.stringContaining('never deleting'));
+
+    await userEvent.click(schema);
+    const ask = await screen.findByRole('alertdialog', {
+      name: 'Let MCP clients change the structure?',
+    });
+    expect(ask).toHaveTextContent('create many tables and fields in little time');
+    expect(ask).toHaveTextContent('take it for instructions');
+    expect(ask).toHaveTextContent('At most 30 changes a minute per token');
+    expect(await axeViolations(document.body)).toEqual([]);
+    await userEvent.click(within(ask).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    expect(calls).toEqual([]);
+
+    await userEvent.click(schema);
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByTestId('mcp-confirm'),
+    );
+    await waitFor(() => {
+      expect(calls).toContainEqual({
+        route: 'policy',
+        body: { settings: { mcp: { allow_schema_writes: true } } },
+      });
+    });
+    expect(await screen.findByText('MCP clients can now create tables and fields.')).toBeVisible();
+    await waitFor(() => {
+      expect(within(section).getByTestId('mcp-allow-schema-writes')).toBeChecked();
+    });
+    // Record writes stay off: the two switches are independent.
+    expect(within(section).getByTestId('mcp-allow-writes')).not.toBeChecked();
+
+    await userEvent.click(screen.getByTestId('api-tokens-tab-mine'));
+    await userEvent.click(await screen.findByTestId('token-create'));
+    const form = await screen.findByTestId('token-create-form');
+    expect(within(form).queryByTestId('token-preset-mcpReadWrite')).toBeNull();
+    const preset = within(form).getByTestId('token-preset-mcpSchema');
+    expect(preset).toHaveAccessibleName('MCP — schema');
+    await userEvent.click(preset);
+    expect(within(form).getByTestId('token-scope-schema:write')).toBeChecked();
+    expect(within(form).getByTestId('token-scope-records:read')).not.toBeChecked();
+    await userEvent.type(within(form).getByTestId('token-name-input'), 'Schema agent');
+    await userEvent.click(within(form).getByTestId('token-create-submit'));
+    expect(await screen.findByTestId('mcp-connect')).toBeVisible();
+    expect(calls.at(-1)).toMatchObject({
+      route: 'create',
+      body: { scopes: ['schema:read', 'schema:write'] },
+    });
+
+    // Off: at once, no question.
+    await userEvent.click(screen.getByTestId('token-reveal-confirm'));
+    await userEvent.click(screen.getByTestId('token-reveal-done'));
+    await userEvent.click(screen.getByTestId('api-tokens-tab-policy'));
+    await userEvent.click(await screen.findByTestId('mcp-allow-schema-writes'));
+    await waitFor(() => {
+      expect(calls).toContainEqual({
+        route: 'policy',
+        body: { settings: { mcp: { allow_schema_writes: false } } },
+      });
+    });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+
+    const vi18n = await createTestI18n('vi');
+    expect(vi18n.t('apiTokens:create.preset.mcpSchema')).toBe('MCP — cấu trúc');
+    expect(vi18n.t('apiTokens:mcp.policy.schemaWrites')).toBe(
+      'Cho phép sửa cấu trúc (tạo bảng/trường)',
+    );
   });
 });

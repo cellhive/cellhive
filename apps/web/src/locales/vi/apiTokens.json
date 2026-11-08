@@ -90,7 +90,9 @@
       "mcpRead": "MCP — chỉ đọc",
       "mcpReadHint": "Cho client AI như Claude Code, Cursor hay VS Code: xem bảng, tra cứu và tổng hợp bản ghi.",
       "mcpReadWrite": "MCP — đọc và ghi",
-      "mcpReadWriteHint": "Thêm tạo và sửa bản ghi: tối đa 50 mỗi lần gọi, không bao giờ xoá."
+      "mcpReadWriteHint": "Thêm tạo và sửa bản ghi: tối đa 50 mỗi lần gọi, không bao giờ xoá.",
+      "mcpSchema": "MCP — cấu trúc",
+      "mcpSchemaHint": "Cho client AI dựng bảng: đọc cấu trúc, tạo bảng và trường, sửa trường. Không đọc giá trị bản ghi."
     },
     "groups": {
       "records": "Bản ghi",
@@ -188,6 +190,8 @@
       "writes": "Cho phép client MCP tạo và sửa bản ghi",
       "writesHint": "Chỉ với token có quyền sửa bản ghi: tối đa 50 bản ghi mỗi lần gọi, không bao giờ xoá. Tắt: client MCP chỉ đọc.",
       "writesNeedsMcp": "Hãy bật client MCP trước.",
+      "schemaWrites": "Cho phép sửa cấu trúc (tạo bảng/trường)",
+      "schemaWritesHint": "Chỉ với token có quyền sửa cấu trúc: tạo bảng và trường, đổi tên trường, thêm lựa chọn — không bao giờ xoá, không đổi kiểu trường. Tắt: client MCP không bao giờ đổi cấu trúc.",
       "toast": {
         "enabled": {
           "on": "Đã cho phép client MCP.",
@@ -196,6 +200,10 @@
         "allow_writes": {
           "on": "Client MCP giờ tạo và sửa được bản ghi.",
           "off": "Client MCP giờ chỉ đọc."
+        },
+        "allow_schema_writes": {
+          "on": "Client MCP giờ tạo được bảng và trường.",
+          "off": "Client MCP không còn đổi được cấu trúc."
         }
       },
       "confirm": {
@@ -212,8 +220,16 @@
           "lead": "Client có token được sửa bản ghi sẽ tạo và sửa được bản ghi dưới tên chủ token.",
           "point1": "Tối đa 50 bản ghi mỗi lần gọi, theo quyền của chủ token; không bao giờ xoá, không đổi bảng hay trường. Automation chạy như với mọi thay đổi qua API.",
           "point2": "Bản ghi có thể chứa chữ do người khác viết, ví dụ nội dung gửi qua form. Model có thể coi đó là chỉ dẫn và ghi sai dữ liệu: hãy để client hỏi lại trước mỗi thay đổi.",
-          "point3": "Lời gọi được gửi lại sau khi mất kết nối có thể tạo trùng bản ghi.",
+          "point3": "Lời gọi được gửi lại sau khi mất kết nối có thể tạo trùng bản ghi, trừ khi client gửi kèm khoá idempotency.",
           "action": "Cho phép sửa"
+        },
+        "allow_schema_writes": {
+          "title": "Cho client MCP sửa cấu trúc?",
+          "lead": "Client có token được sửa cấu trúc sẽ tạo được bảng, trường và sửa trường dưới tên chủ token, trong phạm vi quyền schema của người đó.",
+          "point1": "Client AI có thể tạo rất nhiều bảng và trường trong thời gian ngắn, và view, công thức, lookup, automation của người khác dùng các trường nó sửa. Tối đa 30 thay đổi mỗi phút mỗi token; không bao giờ xoá, không đổi kiểu trường.",
+          "point2": "Bản ghi và tên có thể chứa chữ do người khác viết. Model có thể coi đó là chỉ dẫn và đổi cấu trúc: hãy để client hỏi lại trước mỗi thay đổi.",
+          "point3": "Mọi thay đổi được ghi vào nhật ký hoạt động là qua MCP và hiện ngay cho người đang mở bảng.",
+          "action": "Cho phép sửa cấu trúc"
         }
       }
     },

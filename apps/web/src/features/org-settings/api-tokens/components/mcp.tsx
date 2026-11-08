@@ -15,12 +15,15 @@ import type { ApiTokenDto, McpPolicy } from '@cellhive/contracts';
 type McpKey = keyof McpPolicy;
 
 /**
- * "MCP clients" of the policy tab (BACKLOG T924, CONTRACTS §30.1): two
- * switches that apply at once, like the record-data switch of the AI page
- * (F§15.8). Turning either on asks first: MCP sends what members can read to
- * the model of their own client (whatever `allow_record_data` of the AI
- * settings says), and writes open the door to prompt injection and to
- * duplicates on retry. Turning off never asks.
+ * "MCP clients" of the policy tab (BACKLOG T924, T1014, CONTRACTS §30.1):
+ * three switches that apply at once, like the record-data switch of the AI
+ * page (F§15.8) — MCP itself, then record writes and schema changes, each
+ * on its own under it. Turning any on asks first: MCP sends what members can
+ * read to the model of their own client (whatever `allow_record_data` of the
+ * AI settings says); writes open the door to prompt injection and to
+ * duplicates on retry; schema changes let a client create tables and fields
+ * in bulk, under other people's views, formulas and automations. Turning off
+ * never asks.
  */
 export function McpPolicySection({
   orgId,
@@ -82,6 +85,23 @@ export function McpPolicySection({
           onChange={(on) => {
             if (on) setConfirming('allow_writes');
             else apply('allow_writes', false);
+          }}
+        />
+        <SwitchRow
+          nested
+          label={t('mcp.policy.schemaWrites')}
+          hint={t(mcp.enabled ? 'mcp.policy.schemaWritesHint' : 'mcp.policy.writesNeedsMcp')}
+          checked={mcp.allow_schema_writes}
+          disabled={save.isPending || !mcp.enabled}
+          pending={
+            save.isPending &&
+            confirming === null &&
+            save.variables.mcp?.allow_schema_writes !== undefined
+          }
+          data-testid="mcp-allow-schema-writes"
+          onChange={(on) => {
+            if (on) setConfirming('allow_schema_writes');
+            else apply('allow_schema_writes', false);
           }}
         />
         {save.isError && confirming === null ? <ErrorAlert error={save.error} /> : null}

@@ -106,9 +106,13 @@ export function policyOf(org: Pick<OrganizationDto, 'settings'> | undefined): Ap
   );
 }
 
-/** `settings.mcp` of an organization (CONTRACTS §30.1; older payloads without it: off). */
+/**
+ * `settings.mcp` of an organization (CONTRACTS §30.1): keys an older payload
+ * lacks (`allow_schema_writes`, T1014; all of it) are off.
+ */
 export function mcpPolicyOf(org: Pick<OrganizationDto, 'settings'> | undefined): McpPolicy {
-  return (org?.settings as { mcp?: McpPolicy } | undefined)?.mcp ?? DEFAULT_MCP_POLICY;
+  const mcp = (org?.settings as { mcp?: Partial<McpPolicy> } | undefined)?.mcp;
+  return { ...DEFAULT_MCP_POLICY, ...mcp };
 }
 
 /** Revoke a token (owner, or org owner/admin): every list of the page reloads. */

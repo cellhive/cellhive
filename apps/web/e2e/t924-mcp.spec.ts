@@ -67,7 +67,10 @@ async function openAsAdmin(
   return { context, page };
 }
 
-async function setMcp(page: Page, mcp: { enabled?: boolean; allow_writes?: boolean }) {
+async function setMcp(
+  page: Page,
+  mcp: { enabled?: boolean; allow_writes?: boolean; allow_schema_writes?: boolean },
+) {
   await ok(page, 'PATCH', `/orgs/${org.id}`, { settings: { mcp } });
 }
 
@@ -114,7 +117,7 @@ test.beforeAll(async ({ browser }) => {
   const found = me.orgs.find((item) => item.name === WORKER_ORG.orgName);
   if (found === undefined) throw new Error(`The organization ${WORKER_ORG.orgName} is missing.`);
   org = found;
-  await setMcp(page, { enabled: false, allow_writes: false });
+  await setMcp(page, { enabled: false, allow_writes: false, allow_schema_writes: false });
   await revokeOurs(page);
   // A token that could connect (it reads structure), to show no MCP entry while MCP is off.
   await ok(page, 'POST', `/orgs/${org.id}/me/api-tokens`, {
@@ -129,7 +132,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async ({ browser }) => {
   const { context, page } = await openAsAdmin(browser);
   await revokeOurs(page);
-  await setMcp(page, { enabled: false, allow_writes: false });
+  await setMcp(page, { enabled: false, allow_writes: false, allow_schema_writes: false });
   await context.close();
 });
 
@@ -177,7 +180,7 @@ test('an admin turns MCP on, creates an "MCP — read only" token and gets the c
     await expect(enabled).toBeChecked();
     expect(
       (await ok<{ settings: { mcp: unknown } }>(page, 'GET', `/orgs/${org.id}`)).settings.mcp,
-    ).toEqual({ enabled: true, allow_writes: false });
+    ).toEqual({ enabled: true, allow_writes: false, allow_schema_writes: false });
   });
 
   let token = '';
