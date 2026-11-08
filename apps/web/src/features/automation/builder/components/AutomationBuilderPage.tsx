@@ -724,12 +724,16 @@ function Builder({
           aria-label={t('automation:page.breadcrumb')}
           className="flex min-w-0 shrink items-center gap-1.5"
         >
-          <span className="text-body text-fg-muted max-md:hidden">
+          {/*
+           * Below 1024 px the touch-size controls fill the bar: the way back is the ← link,
+           * and the switch says on/off by itself (its label stays for screen readers).
+           */}
+          <span className="text-body text-fg-muted max-lg:hidden">
             {t('automation:page.title')}
           </span>
           <ChevronRight
             aria-hidden="true"
-            className="size-4 shrink-0 text-fg-subtle max-md:hidden"
+            className="size-4 shrink-0 text-fg-subtle max-lg:hidden"
           />
           {renaming && !narrow ? (
             <Input
@@ -793,7 +797,7 @@ function Builder({
               else toggle.mutate(on);
             }}
           />
-          <label htmlFor={switchId} className="text-body whitespace-nowrap max-sm:sr-only">
+          <label htmlFor={switchId} className="text-body whitespace-nowrap max-lg:sr-only">
             {enabled ? t('page.on') : t('page.off')}
           </label>
           {dirty ? (
