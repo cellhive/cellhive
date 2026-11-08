@@ -834,8 +834,9 @@ function filterMetaOf(field: ViewFieldMeta): FilterFieldMeta {
  *   `card_fields` keep the stored entries the saver cannot see (fields they
  *   cannot read, deleted fields); `filter`, `sort` and `group` are replaced
  *   as sent;
- * - kanban `group_field` is a single select or single user field,
- *   `cover_field` an attachment field (`INVALID_FIELD_TYPE`);
+ * - kanban `group_field` is a single select or single user field the saver
+ *   may group by (not locked, like `group`), `cover_field` an attachment
+ *   field (`INVALID_FIELD_TYPE`);
  * - a form lists writable fields only (`FIELD_READ_ONLY` for computed
  *   ones) and every required field of the table (`REQUIRED_FIELD_MISSING`);
  *   a field required by the table is required on the form.
@@ -969,8 +970,9 @@ export function buildViewConfig(
     const previous = base.kanban ?? defaultKanban();
     const kanban: StoredKanbanSettings = { ...previous };
     if (kanbanInput.group_field !== undefined) {
+      // Grouping like `group`: a locked field answers like a hidden one.
       checkFieldOfType(
-        checker,
+        ordering,
         kanbanInput.group_field,
         'config.kanban.group_field',
         (field) => (field.type === 'select' || field.type === 'user') && isSingleValue(field),

@@ -25,8 +25,10 @@ import {
   copyViewConfig,
   FieldsRepository,
   FormCoversRepository,
+  isAiField,
   isComputedRow,
   loadBaseSchemaRows,
+  lockedAiFieldIds,
   lockedComputedFieldIds,
   orgScope,
   publishViewChanged,
@@ -586,15 +588,22 @@ export class ViewService {
       linkTargets.set(field.id, target);
     }
     // Formula/lookup fields (T457): filters/sorts follow their result type;
-    // locked ones answer like hidden fields.
-    const locked = rows.some(isComputedRow)
-      ? lockedComputedFieldIds(
-          await loadBaseSchemaRows(this.db, scope, base.base.id),
-          tableId,
-          readabilityOf(base.access),
-          strictComputedPermissionsOf(base.base.settings),
-        )
-      : new Set<string>();
+    // locked ones answer like hidden fields — and so do the AI fields the
+    // caller is locked out of (always strict, CONTRACTS §29.5).
+    const locked = new Set<string>();
+    if (rows.some((row) => isComputedRow(row) || isAiField(row))) {
+      const baseRows = await loadBaseSchemaRows(this.db, scope, base.base.id);
+      const readable = readabilityOf(base.access);
+      for (const id of lockedComputedFieldIds(
+        baseRows,
+        tableId,
+        readable,
+        strictComputedPermissionsOf(base.base.settings),
+      )) {
+        locked.add(id);
+      }
+      for (const id of lockedAiFieldIds(baseRows, readable)) locked.add(id);
+    }
     return {
       fields: rows.map((field) => ({
         id: field.id,
