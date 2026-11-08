@@ -542,7 +542,19 @@
     "warning": {
       "unsupported_action": "Not included:",
       "unsupported_trigger": "Trigger not supported:",
-      "ambiguous": "Guessed:"
+      "ambiguous": "Guessed:",
+      "literal_chat_id": "Telegram chat written in the draft:"
+    },
+    "literalChat": "step {{step, number}} posts to {{chat}}, written into the draft rather than taken from a field. Save it only if this group or channel is yours."
+  },
+  "mcp": {
+    "banner": "Draft from an MCP client — check before saving",
+    "warnings_one": "{{count, number}} note on this draft",
+    "warnings_other": "{{count, number}} notes on this draft",
+    "loading": "Loading the draft",
+    "notFound": {
+      "title": "This draft does not exist or has expired",
+      "description": "A draft from an MCP client lasts 24 hours and opens only for the person who made it. Ask your client for a new one."
     }
   },
   "aiStep": {

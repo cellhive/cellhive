@@ -5,6 +5,7 @@ import {
   automationSchema,
   baseEmailIdentityListSchema,
   MAX_LIST_LIMIT,
+  mcpAutomationDraftSchema,
   validateAutomationTemplateResponseSchema,
   type AutomationDefinitionInput,
   type SendEmailConfigInput,
@@ -67,6 +68,14 @@ export const automationsApi = {
   /** (T521) One automation, for the builder. */
   get: (automationId: string, signal?: AbortSignal) =>
     apiRequest(`/automations/${id(automationId)}`, automationSchema, { signal }),
+  /**
+   * (T1015) A draft of an MCP client, for the builder of its creator (session
+   * only, CONTRACTS §30.8); nothing is stored in the base until it is saved.
+   */
+  mcpDraft: (baseId: string, draftId: string, signal?: AbortSignal) =>
+    apiRequest(`/bases/${id(baseId)}/automation-drafts/${id(draftId)}`, mcpAutomationDraftSchema, {
+      signal,
+    }),
   /**
    * (T521) Saves the builder: only the parts that changed. A new definition
    * makes the caller `run_as` (ADR-25 §2); `version` is the one the builder

@@ -64,6 +64,9 @@ export const keys = {
   /** (T521) One automation in the builder; under the list, so list refreshes reach it. */
   automation: (baseId: string, automationId: string) =>
     ['base', baseId, 'automations', automationId] as const,
+  /** (T1015) A draft of an MCP client for the builder; under the base prefix, not the list's. */
+  mcpAutomationDraft: (baseId: string, draftId: string) =>
+    ['base', baseId, 'automation-draft', draftId] as const,
   /** (T521) A template checked by `validate-template` (names ⇄ ids of the chips). */
   automationTemplate: (baseId: string, requestHash: string) =>
     ['base', baseId, 'automation-template', requestHash] as const,

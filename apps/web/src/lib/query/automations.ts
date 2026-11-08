@@ -26,3 +26,15 @@ export const automationQuery = (baseId: string, automationId: string) =>
     queryKey: keys.automation(baseId, automationId),
     queryFn: async ({ signal }) => (await loadApi()).get(automationId, signal),
   });
+
+/**
+ * (T1015) A draft of the MCP tool `draft_automation` for its creator's
+ * builder (CONTRACTS §30.8): someone else's, expired or unknown → `404`.
+ * Read once: the builder keeps its own copy.
+ */
+export const mcpAutomationDraftQuery = (baseId: string, draftId: string) =>
+  queryOptions({
+    queryKey: keys.mcpAutomationDraft(baseId, draftId),
+    queryFn: async ({ signal }) => (await loadApi()).mcpDraft(baseId, draftId, signal),
+    staleTime: Infinity,
+  });
