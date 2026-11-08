@@ -141,7 +141,8 @@ function internal(detail: string): JobProblem {
  * `failed` (a cancelled job keeps its status); nothing is retried or
  * resumed. A job found `running` was interrupted (the worker stopped): its
  * base is purged and it fails. The temporary directory and the stored
- * package are removed when the job ends, whatever the outcome.
+ * package are removed when the job ends, whatever the outcome — before a
+ * failure is recorded.
  *
  * Logs carry ids, counts and codes, never names or values of the package.
  */
@@ -277,6 +278,8 @@ export function createBaseImportTask(deps: BaseImportDeps): Task<'base.import'> 
     } catch (err) {
       // A purge that fails throws: graphile-worker runs the job again, which purges first.
       await purgeBaseImport(deps, scope, jobId);
+      // Nothing of the job is left once it reads `failed`: the package goes first.
+      await removePackage();
       if (err instanceof BaseImportStopped) {
         deps.logger.info({ ...context, duration_ms: Date.now() - started }, 'base.import stopped');
         return;
