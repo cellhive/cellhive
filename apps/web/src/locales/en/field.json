@@ -673,6 +673,11 @@
     "recordDataOffSaved": "The AI may not read record values in this organization: nothing is generated until an owner or admin allows it.",
     "lockedType": "AI · {{type}}",
     "lockedTypeHint": "Remove AI to change the type.",
+    "configHidden": {
+      "title": "Configured by a table manager",
+      "body": "AI fills this field ({{task}}). Its prompt and settings are shown only to table managers who can read every field it uses.",
+      "typeHint": "Only a table manager who can read every field it uses can change it."
+    },
     "section": "Fill with AI",
     "remove": "Remove AI",
     "removed": "AI stops filling this field when you save. Its values stay, and you can edit them by hand.",

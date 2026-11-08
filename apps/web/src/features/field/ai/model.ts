@@ -7,7 +7,7 @@ import {
   type FieldDto,
 } from '@cellhive/contracts';
 
-import { aiConfigOf } from '../../../lib/ai/ai-field';
+import { aiConfigOf, isAiField } from '../../../lib/ai/ai-field';
 import { issueToDetail } from '../../../lib/forms/zod-form';
 
 import type { DraftIssue } from '../draft';
@@ -81,7 +81,8 @@ export function promptFields(fields: readonly FieldDto[], selfId?: string): Fiel
     (field) =>
       field.id !== selfId &&
       PROMPT_TYPES.has(field.type) &&
-      aiConfigOf(field) === null &&
+      // (T1006) Also an AI field whose configuration this reader does not get (`{ task }`).
+      !isAiField(field) &&
       field.locked !== true,
   );
 }
@@ -119,7 +120,11 @@ export function newAiDraft(task: AiFieldTask, prompt: string): AiDraft {
   };
 }
 
-/** The AI part of a saved field, `null` for a field without AI. */
+/**
+ * The AI part of a saved field, `null` for a field without AI — and for an
+ * AI field whose configuration only its managers get (`{ task }`, T1006):
+ * there is nothing to edit.
+ */
 export function aiDraftOf(field: FieldDto | undefined): AiDraft | null {
   if (field === undefined) return null;
   const config = aiConfigOf(field);

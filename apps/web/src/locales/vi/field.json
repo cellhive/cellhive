@@ -614,6 +614,11 @@
     "recordDataOffSaved": "AI chưa được đọc giá trị bản ghi trong tổ chức này: chưa sinh gì cho tới khi chủ sở hữu hoặc quản trị viên cho phép.",
     "lockedType": "AI · {{type}}",
     "lockedTypeHint": "Bỏ AI để đổi kiểu.",
+    "configHidden": {
+      "title": "Do người quản lý cấu hình",
+      "body": "AI điền trường này ({{task}}). Prompt và cài đặt chỉ hiện với người quản lý bảng đọc được mọi trường mà nó dùng.",
+      "typeHint": "Chỉ người quản lý bảng đọc được mọi trường mà nó dùng mới đổi được trường này."
+    },
     "section": "Điền bằng AI",
     "remove": "Bỏ AI",
     "removed": "Khi lưu, AI thôi điền trường này. Giá trị giữ nguyên và bạn sửa tay được.",

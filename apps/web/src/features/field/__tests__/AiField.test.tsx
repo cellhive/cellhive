@@ -78,7 +78,11 @@ function body(init: RequestInit | undefined): Record<string, unknown> {
 
 async function renderTools(
   request: FieldToolRequest,
-  { recordData = true, routes = {} }: { recordData?: boolean; routes?: Record<string, Route> } = {},
+  {
+    recordData = true,
+    routes = {},
+    fields = FIELDS,
+  }: { recordData?: boolean; routes?: Record<string, Route>; fields?: FieldDto[] } = {},
 ) {
   const queryClient = createQueryClient();
   queryClient.setQueryData(keys.tableMeta(TABLE), { id: TABLE, base_id: BASE });
@@ -89,7 +93,7 @@ async function renderTools(
       [`GET /orgs/${ORG.id}`]: () =>
         json({ ...ORG, ai: { available: true, record_data: recordData } }),
       [`GET /tables/${TABLE}/fields`]: () =>
-        json({ items: FIELDS, total: FIELDS.length, offset: 0, limit: 1000 }),
+        json({ items: fields, total: fields.length, offset: 0, limit: 1000 }),
       [`GET /tables/${TABLE}`]: () =>
         json({
           id: TABLE,
@@ -113,7 +117,7 @@ async function renderTools(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <FieldTools tableId={TABLE} fields={FIELDS} request={request} onClose={onClose} />
+          <FieldTools tableId={TABLE} fields={fields} request={request} onClose={onClose} />
         </MemoryRouter>
       </QueryClientProvider>
     </I18nextProvider>,
@@ -304,5 +308,75 @@ describe('the AI group of the types (T915)', () => {
     expect(body(calls(fetchMock, 'PATCH', `/fields/${SUMMARY.id}`)[0]?.[1])).toEqual({
       options: { style: { type: 'plain' }, default_value: null, ai: null },
     });
+  });
+});
+
+/**
+ * T1006 (CONTRACTS §29.5): a table manager who cannot read a field of the
+ * prompt gets `options.ai = { task }` and no `ai_state` — the dialog says
+ * who configures it and opens none of its settings.
+ */
+describe('an AI field configured by a table manager (T1006)', () => {
+  const HIDDEN = field('fld_Summary000000001', {
+    name: 'Summary',
+    position: 2,
+    options: { style: { type: 'plain' }, default_value: null, ai: { task: 'summarize' } },
+    locked: true,
+  });
+  const fields = [TITLE, DESCRIPTION, HIDDEN];
+
+  it('shows "Configured by a table manager", no prompt or settings, and saves the name only', async () => {
+    const { fetchMock, onClose, dialog } = await renderTools(
+      { kind: 'edit', fieldId: HIDDEN.id },
+      {
+        fields,
+        routes: {
+          [`PATCH /fields/${HIDDEN.id}`]: () =>
+            json({ ...HIDDEN, name: 'Summary 2', job_id: null }),
+        },
+      },
+    );
+    const notice = within(dialog).getByTestId('ai-config-hidden');
+    expect(
+      within(notice).getByRole('heading', { name: 'Configured by a table manager' }),
+    ).toBeVisible();
+    expect(notice).toHaveTextContent('AI fills this field (Summarize).');
+    expect(within(dialog).getByTestId('type-locked')).toHaveTextContent('AI · Text');
+    expect(
+      within(dialog).getByText(
+        'Only a table manager who can read every field it uses can change it.',
+      ),
+    ).toBeInTheDocument();
+    // None of the settings: no template, prompt, preview, "Remove AI", flags or field preview.
+    for (const id of ['ai-field-section', 'ai-prompt', 'ai-preview', 'ai-remove', 'ai-removed']) {
+      expect(within(dialog).queryByTestId(id)).toBeNull();
+    }
+    expect(within(dialog).queryByTestId('ai-template-summarize')).toBeNull();
+    expect(within(dialog).queryByRole('checkbox')).toBeNull();
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+    expect(await axeViolations(dialog)).toEqual([]);
+
+    const name = within(dialog).getByLabelText('Name');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Summary 2');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(body(calls(fetchMock, 'PATCH', `/fields/${HIDDEN.id}`)[0]?.[1])).toEqual({
+      name: 'Summary 2',
+    });
+    expect(calls(fetchMock, 'POST', `/tables/${TABLE}/ai/field-preview`)).toHaveLength(0);
+  });
+
+  it('in Vietnamese: "Do người quản lý cấu hình"', async () => {
+    const { dialog } = await renderTools({ kind: 'edit', fieldId: HIDDEN.id }, { fields });
+    expect(within(dialog).getByTestId('ai-config-hidden')).toBeInTheDocument();
+    // The harness renders `en`; the `vi` strings exist with the same keys.
+    const vi = await createTestI18n('vi');
+    expect(vi.t('field:ai.configHidden.title')).toBe('Do người quản lý cấu hình');
+    expect(
+      vi.t('field:ai.configHidden.body', { task: vi.t('field:ai.templates.summarize.name') }),
+    ).toMatch(/^AI điền trường này \(.+\)\./u);
   });
 });
