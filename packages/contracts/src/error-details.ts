@@ -734,6 +734,14 @@ export const BASE_PACKAGE_SIZE_DETAIL_CODES = ['PACKAGE_TOO_LARGE'] as const;
  */
 export const MCP_SCHEMA_DETAIL_CODES = ['NOT_AVAILABLE_OVER_MCP'] as const;
 
+/**
+ * MCP `draft_automation` (CONTRACTS §30.8, T1015): `errors[].code` of
+ * `VALIDATION_FAILED` for a step type drafts never have (`http_request`,
+ * `run_n8n_workflow`, `update_records`, `delete_record`, `find_records`,
+ * `if`, or an unknown one), path `draft.actions[i].type`; the message names the type.
+ */
+export const MCP_AUTOMATION_DRAFT_DETAIL_CODES = ['UNSUPPORTED_ACTION'] as const;
+
 /** Every documented detail code, once. */
 export const ERROR_DETAIL_CODES = [
   ...new Set([
@@ -776,6 +784,7 @@ export const ERROR_DETAIL_CODES = [
     ...BASE_PACKAGE_DETAIL_CODES,
     ...BASE_PACKAGE_SIZE_DETAIL_CODES,
     ...MCP_SCHEMA_DETAIL_CODES,
+    ...MCP_AUTOMATION_DRAFT_DETAIL_CODES,
   ]),
 ] as readonly ErrorDetailCode[];
 
@@ -818,4 +827,5 @@ export type ErrorDetailCode =
   | (typeof AI_FIELD_GENERATE_DETAIL_CODES)[number]
   | (typeof BASE_PACKAGE_DETAIL_CODES)[number]
   | (typeof BASE_PACKAGE_SIZE_DETAIL_CODES)[number]
-  | (typeof MCP_SCHEMA_DETAIL_CODES)[number];
+  | (typeof MCP_SCHEMA_DETAIL_CODES)[number]
+  | (typeof MCP_AUTOMATION_DRAFT_DETAIL_CODES)[number];

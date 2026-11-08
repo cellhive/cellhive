@@ -598,16 +598,23 @@
       "AiAutomationWarning": {
         "additionalProperties": false,
         "properties": {
+          "action_id": {
+            "description": "The step of the definition the warning is about (`literal_chat_id`)",
+            "example": "act_1",
+            "pattern": "^act_[0-9A-Za-z_]{1,32}$/u",
+            "type": "string"
+          },
           "code": {
             "enum": [
               "unsupported_action",
               "unsupported_trigger",
-              "ambiguous"
+              "ambiguous",
+              "literal_chat_id"
             ],
             "type": "string"
           },
           "message": {
-            "description": "Written by the model: plain text",
+            "description": "Plain text: written by the model, or by the server for `literal_chat_id`",
             "type": "string"
           }
         },
@@ -12160,6 +12167,88 @@
         },
         "required": [
           "updated"
+        ],
+        "type": "object"
+      },
+      "McpAutomationDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "base_id": {
+            "description": "bse ID",
+            "example": "bse_A1b2C3d4E5f6G7h8",
+            "pattern": "^bse_[0-9A-Za-z]{16}$",
+            "type": "string"
+          },
+          "definition": {
+            "additionalProperties": false,
+            "description": "Checked like `POST /bases/{baseId}/automations` would check it for the creator when the draft was made; checked again when saved",
+            "properties": {
+              "actions": {
+                "default": [],
+                "description": "At most 20 actions, `if` branches included",
+                "items": {
+                  "$ref": "#/components/schemas/AutomationAction"
+                },
+                "type": "array"
+              },
+              "condition": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AutomationFilter"
+                  },
+                  {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                ]
+              },
+              "trigger": {
+                "$ref": "#/components/schemas/AutomationTrigger"
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "type": "object"
+          },
+          "expires_at": {
+            "description": "When the draft is deleted (24 hours after it was made)",
+            "example": "2026-09-20T03:15:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "explanation": {
+            "description": "Written by the client: plain text",
+            "type": "string"
+          },
+          "id": {
+            "description": "mdr ID",
+            "example": "mdr_A1b2C3d4E5f6G7h8",
+            "pattern": "^mdr_[0-9A-Za-z]{16}$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Written by the client",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/AiAutomationWarning"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "base_id",
+          "name",
+          "definition",
+          "explanation",
+          "warnings",
+          "expires_at"
         ],
         "type": "object"
       },
@@ -26100,6 +26189,110 @@
         "summary": "Export the audit log of a base as CSV (background job)",
         "tags": [
           "audit"
+        ],
+        "x-api-token-scope": "session"
+      }
+    },
+    "/api/v1/bases/{baseId}/automation-drafts/{draftId}": {
+      "get": {
+        "description": "BACKLOG T1015 (CONTRACTS §30.8): the draft an MCP client made with `draft_automation` and the server checked with its creator's permissions, kept 24 hours. Signed-in session only (`403 INSUFFICIENT_SCOPE` with `required: [\"session\"]` for an API token). Only its creator, in the base it was made for, reads it: anyone else, another base, another organization, an expired or unknown draft → `404`; the creator who can no longer manage an automation of the base → `403`. Nothing is stored in the base: the builder opens the draft unsaved and creates it with `enabled: false`.",
+        "operationId": "getMcpAutomationDraft",
+        "parameters": [
+          {
+            "description": "bse ID",
+            "in": "path",
+            "name": "baseId",
+            "required": true,
+            "schema": {
+              "description": "bse ID",
+              "example": "bse_A1b2C3d4E5f6G7h8",
+              "pattern": "^bse_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "mdr ID",
+            "in": "path",
+            "name": "draftId",
+            "required": true,
+            "schema": {
+              "description": "mdr ID",
+              "example": "mdr_A1b2C3d4E5f6G7h8",
+              "pattern": "^mdr_[0-9A-Za-z]{16}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpAutomationDraft"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`UNAUTHENTICATED`"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`PERMISSION_DENIED`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`NOT_FOUND`: does not exist or is not visible to the caller (never `403` for something the caller cannot read)"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`VALIDATION_FAILED`"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`RATE_LIMITED` with `Retry-After`: more than 60 requests/s by the user, or 20 requests/s by the user on one base"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "A draft of the MCP tool `draft_automation`, for the builder",
+        "tags": [
+          "automations"
         ],
         "x-api-token-scope": "session"
       }

@@ -157,6 +157,7 @@
     "INVALID_FIELD_TYPE": "This field type cannot be used here.",
     "NOT_AVAILABLE_YET": "This option is not available yet.",
     "NOT_AVAILABLE_OVER_MCP": "Not available through MCP: make this change in the Cellhive app.",
+    "UNSUPPORTED_ACTION": "A draft cannot have this step: add it in the automation builder.",
     "PERSONAL_VIEW": "Personal views cannot be shared.",
     "EMBED_NOT_SUPPORTED": "Only a public link without a password can be embedded.",
     "INVALID_ORIGIN": "Enter sites as https://host[:port], without a path.",

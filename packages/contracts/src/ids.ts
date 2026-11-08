@@ -45,6 +45,7 @@ export const ID_PREFIX = {
   notification: 'ntf',
   emailIdentity: 'eid',
   userChannel: 'uch',
+  mcpAutomationDraft: 'mdr',
 } as const;
 
 export type IdPrefix = (typeof ID_PREFIX)[keyof typeof ID_PREFIX];

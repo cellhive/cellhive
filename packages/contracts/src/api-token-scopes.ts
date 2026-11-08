@@ -195,6 +195,13 @@ export const API_TOKEN_ROUTE_SCOPES = {
     path: '/api/v1/http-deliveries/{deliveryId}',
     scope: 'automations:read',
   },
+  // A draft of the MCP tool `draft_automation` (T1015): the builder of its creator only —
+  // never a token, so that a draft link cannot be read back by a client
+  getMcpAutomationDraft: {
+    method: 'GET',
+    path: '/api/v1/bases/{baseId}/automation-drafts/{draftId}',
+    scope: 'session',
+  },
   listAutomationRuns: {
     method: 'GET',
     path: '/api/v1/automations/{automationId}/runs',
