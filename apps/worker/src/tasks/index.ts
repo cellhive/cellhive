@@ -77,6 +77,7 @@ import { createAutomationRunTask } from './automation-run.js';
 import { createAutomationRunsCleanupTask } from './automation-runs-cleanup.js';
 import { createAutomationScheduleTickTask } from './automation-schedule-tick.js';
 import { createBaseExportTask, type BaseExportDeps } from './base-export.js';
+import { createBaseImportTask, type BaseImportDeps } from './base-import.js';
 import { createComputedBackfillTask } from './computed-backfill.js';
 import { createComputedRecomputeTask } from './computed-recompute.js';
 import { createEventsDispatchTask } from './events-dispatch.js';
@@ -220,6 +221,8 @@ export interface TaskDeps {
   };
   /** Tests only: temporary directory, clock and source of `base.export` (T1017). */
   readonly baseExport?: Pick<BaseExportDeps, 'tempRoot' | 'now' | 'source' | 'appVersion'>;
+  /** Temporary directory, steps of later tasks and (tests) a wrapped target of `base.import`. */
+  readonly baseImport?: Pick<BaseImportDeps, 'tempRoot' | 'target' | 'extensions'>;
 }
 
 /** Every task this worker runs, by identifier (`GraphileWorker.Tasks`). */
@@ -458,6 +461,19 @@ export function buildTaskList(deps: TaskDeps): TaskList {
       limits: basePackageLimits(deps.config.limits.basePackageMaxBytes),
       timeZone: deps.config.defaults.timezone,
       ...deps.baseExport,
+    }),
+    'base.import': createBaseImportTask({
+      db: deps.db,
+      jobs: new JobsRepository(deps.db),
+      storage,
+      schema,
+      // Batches of 5 000 records run longer than a request allows.
+      records: importRecords,
+      logger: deps.logger.child({ task: 'base.import' }),
+      limits: basePackageLimits(deps.config.limits.basePackageMaxBytes),
+      maxFieldsPerTable: deps.config.limits.maxFieldsPerTable,
+      maxFileBytes: deps.config.limits.attachmentMaxFileBytes,
+      ...deps.baseImport,
     }),
     'auth.password_reset_email': createPasswordResetEmailTask({
       db: deps.db,
@@ -726,6 +742,12 @@ export {
   createBaseExportTask,
   type BaseExportDeps,
 } from './base-export.js';
+export {
+  BASE_IMPORT_ORG_CAP,
+  baseImportTempDir,
+  createBaseImportTask,
+  type BaseImportDeps,
+} from './base-import.js';
 export {
   COMPUTED_ANALYZE_THRESHOLD,
   COMPUTED_BACKFILL_BATCH_ATTEMPTS,
