@@ -30,9 +30,10 @@ import {
 import { Client as LegacyClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport as LegacyTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ApiRateLimits } from '../../src/common/rate-limit/api-rate-limits.js';
+import { FieldService } from '../../src/modules/field/field.service.js';
 
 import { createMigratedDatabase, createTestDb, type TestDatabase } from './database.js';
 import { closeSockets, listen, TestSocket } from './realtime-support.js';
@@ -698,6 +699,51 @@ describe('MCP schema tools (T1014)', () => {
       }),
     ) as unknown as McpFieldResult;
     expect(empty.field.options).toEqual(['Mới', 'Xong', 'Đang làm']);
+
+    // The race, forced (Quyết định S9 #36): someone adds an option after the tool read the
+    // field and before the service writes it. The merge happens under the schema lock, so
+    // the option survives.
+    const services = [a, b].map((t) => t.app.get(FieldService));
+    const originals = services.map((service) => service.update.bind(service));
+    let raced = 0;
+    const spies = services.map((service, n) =>
+      vi.spyOn(service, 'update').mockImplementation(async (...args) => {
+        if (raced === 0) {
+          raced += 1;
+          // Only the MCP tool asks for the upsert.
+          expect(args[4]).toEqual({ keepUnlistedOptions: true });
+          const added = await fx.call('u_admin', 'PATCH', `/fields/${statusId}`, {
+            options: { options: [...(await storedOptions()), { name: 'Chen ngang' }] },
+          });
+          expect(added.statusCode, added.body).toBe(200);
+          expect(added.json<{ job_id: unknown }>().job_id).toBeNull();
+        }
+        return (originals[n] as FieldService['update'])(...args);
+      }),
+    );
+    let raceResult: McpFieldResult;
+    try {
+      raceResult = okOf(
+        await call(tk.schema_w, 'update_field', {
+          table_id: fx.orders.id,
+          field: 'status',
+          options: { options: [{ name: 'Xong', color: 6 }, { name: 'Sau cùng' }] },
+        }),
+      ) as unknown as McpFieldResult;
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+    expect(raced).toBe(1);
+    expect(raceResult.field.options).toEqual(['Mới', 'Xong', 'Đang làm', 'Chen ngang', 'Sau cùng']);
+    expect(await optionsOf(statusId)).toEqual([
+      'Mới',
+      'Xong',
+      'Đang làm',
+      'Chen ngang',
+      'Sau cùng',
+    ]);
+    expect((await storedOptions()).slice(0, 2).map((option) => option.id)).toEqual(idsBefore);
+
     const { rows: jobs } = await sql<{ count: string }>`
       SELECT count(*)::text AS count FROM meta.jobs
        WHERE organization_id = ${fx.orgId} AND type = 'schema.remove_select_options'
