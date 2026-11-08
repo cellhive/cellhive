@@ -46,7 +46,8 @@
     "noAccess": "(No access)",
     "unknownUser": "Unknown user",
     "weekOf": "Week of {{date}}",
-    "quarter": "Q{{quarter}} {{year}}"
+    "quarter": "Q{{quarter}} {{year}}",
+    "month": "{{name}} {{year}}"
   },
   "metric": {
     "count": "Count of records",
