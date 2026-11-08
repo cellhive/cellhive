@@ -14,7 +14,9 @@
  * (P103–P127) join as their tasks land: P111, P112 (BACKLOG T1006) with
  * `permissions-s9-ai-matrix.int.test.ts`; P113–P117 (BACKLOG T1007) with the
  * same file and the regression cases of `ai-field.int.test.ts`; P103–P108
- * (BACKLOG T1014, MCP schema tools) with `mcp-schema.int.test.ts`.
+ * (BACKLOG T1014, MCP schema tools) with `mcp-schema.int.test.ts`; P109,
+ * P110 (BACKLOG T1015, MCP `draft_automation`) with
+ * `mcp-draft-automation.int.test.ts`.
  *
  * Extra arguments go to Vitest.
  */
@@ -32,6 +34,8 @@ const REQUIRED = [
   106,
   107,
   108,
+  109,
+  110,
   111,
   112,
   113,

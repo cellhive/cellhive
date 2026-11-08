@@ -448,10 +448,11 @@ describe('MCP schema tools (T1014)', () => {
           (await toolsOf(era, tk.sales_r)).map((tool) => tool.name),
           label,
         ).toEqual([...SCHEMA_READ_TOOLS, 'query_records', 'get_records', 'aggregate_records']);
+        // `automations:read` adds `draft_automation` (T1015), never a write tool.
         expect(
           (await toolsOf(era, tk.auto_r)).map((tool) => tool.name),
           label,
-        ).toEqual(SCHEMA_READ_TOOLS);
+        ).toEqual([...SCHEMA_READ_TOOLS, 'draft_automation']);
         // Not listed → the same JSON-RPC error as a tool that does not exist.
         const args = { table_id: fx.orders.id, name: 'P103', type: 'text' };
         for (const token of [tk.sales_r, tk.auto_r, ...(allowSchemaWrites ? [] : [tk.schema_w])]) {

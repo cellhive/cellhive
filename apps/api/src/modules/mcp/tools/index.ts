@@ -1,4 +1,5 @@
 import { aggregateRecordsTool } from './aggregate.js';
+import { draftAutomationTool } from './automation.js';
 import { listBasesTool } from './bases.js';
 import { getRecordsTool, queryRecordsTool } from './records.js';
 import { schemaTools } from './schema.js';
@@ -8,6 +9,7 @@ import { createRecordsTool, updateRecordsTool } from './write.js';
 import type { AccessService } from '../../../common/access/access.service.js';
 import type { AppLogger } from '../../../common/logging/app-logger.js';
 import type { SchemaAccess } from '../../../common/schema/schema-access.js';
+import type { AutomationDraftsService } from '../../automation/automation-drafts.service.js';
 import type { BaseService } from '../../base/base.service.js';
 import type { WidgetQueryLimiter } from '../../dashboard/widget-query-limiter.js';
 import type { FieldService } from '../../field/field.service.js';
@@ -39,12 +41,15 @@ export interface McpToolServices {
   readonly groupMembers: GroupMembersRepository;
   readonly recordQuery: RecordQueryService;
   readonly limiter: WidgetQueryLimiter;
+  /** `draft_automation`: the digest and check of automation drafts, the store of MCP drafts. */
+  readonly automationDrafts: AutomationDraftsService;
   /** Schema tools: a failed clean-up (ids only). */
   readonly logger?: AppLogger;
 }
 
 /**
- * Every MCP tool, in `tools/list` order (CONTRACTS §30): reads, record
+ * Every MCP tool, in `tools/list` order (CONTRACTS §30): reads (with
+ * `draft_automation`, which saves nothing in the base — T1015), record
  * writes, schema writes (T1014). A new tool declares its scope, `writes`
  * kind and resource in its definition and gets a row in the tool × scope ×
  * write kind lock (`test/unit/mcp-tools.test.ts`).
@@ -58,6 +63,7 @@ export function mcpTools(services: McpToolServices): McpTool[] {
     queryRecordsTool(records, db),
     getRecordsTool(records, db),
     aggregateRecordsTool(services),
+    draftAutomationTool(services),
     createRecordsTool(records),
     updateRecordsTool(records),
     ...schemaTools(services),

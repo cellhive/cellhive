@@ -32,6 +32,10 @@ import {
   toolErrorResult,
 } from '../../src/modules/mcp/tool-errors.js';
 import { aggregateResultOf, aggregateWidgetsOf } from '../../src/modules/mcp/tools/aggregate.js';
+import {
+  draftAutomationInputSchema,
+  draftOpenUrl,
+} from '../../src/modules/mcp/tools/automation.js';
 import { mcpTools, type McpToolServices } from '../../src/modules/mcp/tools/index.js';
 import {
   notAvailable,
@@ -126,7 +130,7 @@ function errorOf(result: Awaited<ReturnType<typeof callTool>>) {
  * resource before any tool code runs.
  */
 describe('MCP tools: registry and central checks (T920)', () => {
-  it('locks the scope and write kind of every registered tool (T1014: write kind column)', () => {
+  it('locks the scope and write kind of every registered tool (T1014: write kind column; T1015)', () => {
     const tools = mcpTools({} as McpToolServices);
     expect(
       tools.map((tool) => ({
@@ -142,6 +146,8 @@ describe('MCP tools: registry and central checks (T920)', () => {
       { name: 'query_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'get_records', scope: 'records:read', writes: false, readOnly: true },
       { name: 'aggregate_records', scope: 'records:read', writes: false, readOnly: true },
+      // T1015: saves nothing in the base (a draft kept 24 hours for the builder).
+      { name: 'draft_automation', scope: 'automations:read', writes: false, readOnly: true },
       { name: 'create_records', scope: 'records:write', writes: 'records', readOnly: false },
       { name: 'update_records', scope: 'records:write', writes: 'records', readOnly: false },
       { name: 'create_table', scope: 'schema:write', writes: 'schema', readOnly: false },
@@ -207,11 +213,13 @@ describe('MCP tools: registry and central checks (T920)', () => {
           ? ['list_bases', 'list_tables', 'describe_table']
           : scope === 'records:read'
             ? ['query_records', 'get_records', 'aggregate_records']
-            : scope === 'records:write' && allowWrites
-              ? ['create_records', 'update_records']
-              : scope === 'schema:write' && allowSchemaWrites
-                ? ['create_table', 'create_field', 'update_field']
-                : [],
+            : scope === 'automations:read'
+              ? ['draft_automation']
+              : scope === 'records:write' && allowWrites
+                ? ['create_records', 'update_records']
+                : scope === 'schema:write' && allowSchemaWrites
+                  ? ['create_table', 'create_field', 'update_field']
+                  : [],
       );
       expect(names(FAKE_TOOLS)).toEqual(
         scope === 'records:read'
@@ -1017,4 +1025,31 @@ describe('MCP schema tools: select options by name (T1014)', () => {
       ]);
     },
   );
+});
+
+describe('MCP draft_automation (T1015)', () => {
+  it('opens the builder of a new automation with the draft id, never the definition', () => {
+    expect(
+      draftOpenUrl('https://cellhive.example.com', 'bse_A1b2C3d4E5f6G7h8', 'mdr_A1b2C3d4E5f6G7h8'),
+    ).toBe(
+      'https://cellhive.example.com/b/bse_A1b2C3d4E5f6G7h8/automations/new?draft=mdr_A1b2C3d4E5f6G7h8',
+    );
+  });
+
+  it('lists one static input schema: the base, the table, the draft by name', () => {
+    const schema = z.toJSONSchema(draftAutomationInputSchema, { io: 'input' }) as {
+      required?: string[];
+      properties: Record<string, unknown>;
+    };
+    expect(Object.keys(schema.properties)).toEqual(['base_id', 'table_id', 'draft']);
+    expect(schema.required).toEqual(['base_id', 'draft']);
+    const draft = schema.properties['draft'] as { required?: string[] };
+    expect(draft.required).toEqual(['name', 'trigger', 'actions']);
+    expect(
+      draftAutomationInputSchema.safeParse({
+        base_id: 'bse_A1b2C3d4E5f6G7h8',
+        draft: { name: 'x', trigger: { type: 'record.created' }, actions: [] },
+      }).success,
+    ).toBe(true);
+  });
 });
