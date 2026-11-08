@@ -72,7 +72,7 @@ const CASES: readonly (readonly [string, AddressClass, string])[] = [
   ['fec0::1', 'private', 'site-local (deprecated)'],
   ['2001:0:4136:e378:8000:63bf:3fff:fdd2', 'private', 'Teredo'],
   ['3fff::1', 'private', 'documentation (RFC 9637)'],
-  // Never reachable: cloud metadata (AWS, GCP, Azure, OpenStack, ECS, Alibaba).
+  // Never reachable: cloud metadata (AWS, GCP, Azure, OpenStack, ECS, Alibaba, …).
   ['169.254.169.254', 'blocked', 'AWS/GCP/Azure metadata'],
   ['::ffff:169.254.169.254', 'blocked', 'metadata IPv4-mapped'],
   ['::ffff:a9fe:a9fe', 'blocked', 'metadata IPv4-mapped (hex)'],
@@ -82,6 +82,29 @@ const CASES: readonly (readonly [string, AddressClass, string])[] = [
   ['169.254.170.2', 'blocked', 'ECS task metadata'],
   ['100.100.100.200', 'blocked', 'Alibaba Cloud metadata'],
   ['fd00:ec2::254', 'blocked', 'AWS metadata IPv6'],
+  // T1008: the other metadata and platform endpoints of NEVER_ALLOWED_RANGES, and their
+  // IPv4 ones embedded in IPv6.
+  ['168.63.129.16', 'blocked', 'Azure WireServer'],
+  ['::ffff:168.63.129.16', 'blocked', 'Azure WireServer IPv4-mapped'],
+  ['::ffff:a83f:8110', 'blocked', 'Azure WireServer IPv4-mapped (hex)'],
+  ['64:ff9b::a83f:8110', 'blocked', 'Azure WireServer through NAT64'],
+  ['2002:a83f:8110::1', 'blocked', 'Azure WireServer through 6to4'],
+  ['168.63.129.15', 'public', 'next to the WireServer'],
+  ['168.63.129.17', 'public', 'next to the WireServer'],
+  ['169.254.170.23', 'blocked', 'EKS Pod Identity agent'],
+  ['fd00:ec2::23', 'blocked', 'EKS Pod Identity agent IPv6'],
+  ['fd20:ce::254', 'blocked', 'GCP metadata IPv6'],
+  ['fd00:c1::a9fe:a9fe', 'blocked', 'Oracle Cloud metadata IPv6'],
+  ['192.0.0.192', 'blocked', 'Oracle Cloud Classic metadata'],
+  ['::ffff:192.0.0.192', 'blocked', 'Oracle Cloud Classic metadata IPv4-mapped'],
+  ['169.254.0.23', 'blocked', 'Tencent Cloud metadata'],
+  ['169.254.42.42', 'blocked', 'Scaleway metadata'],
+  ['fd00:42::42', 'blocked', 'Scaleway metadata IPv6'],
+  ['fd00:a9fe:a9fe::1', 'blocked', 'Akamai/Linode metadata IPv6'],
+  ['fe80::a9fe:a9fe', 'blocked', 'link-local metadata IPv6 (Akamai/Linode, OpenStack)'],
+  ['fe80::a9fe:a9fe%eth0', 'blocked', 'link-local metadata IPv6 with a zone'],
+  ['169.254.170.3', 'private', 'link-local next to the ECS endpoint'],
+  ['fd00:ec2::1', 'private', 'ULA next to the AWS endpoints'],
   // Never reachable: unspecified, multicast, broadcast, reserved.
   ['0.0.0.0', 'blocked', 'unspecified'],
   ['0.1.2.3', 'blocked', '"this network" 0/8'],
@@ -114,6 +137,7 @@ describe('classifyAddress (net, ADR-35 §3)', () => {
     expect(NEVER_ALLOWED_RANGES.ipv4).toContain('169.254.169.254/32');
     expect(NEVER_ALLOWED_RANGES.ipv4).toContain('100.100.100.200/32');
     expect(NEVER_ALLOWED_RANGES.ipv6).toContain('fd00:ec2::254/128');
+    expect(NEVER_ALLOWED_RANGES.ipv4).toContain('168.63.129.16/32');
     for (const cidr of [...NEVER_ALLOWED_RANGES.ipv4, ...NEVER_ALLOWED_RANGES.ipv6]) {
       expect(classifyAddress(cidr.split('/')[0] ?? '')).toBe('blocked');
     }

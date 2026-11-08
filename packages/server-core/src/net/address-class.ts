@@ -28,15 +28,42 @@ export type AddressClass = 'public' | 'private' | 'blocked';
  * Ranges no setting ever opens (ADR-35 §3 "không bao giờ mở được"). Kept
  * apart from {@link PRIVATE_RANGES} so a reader sees at once what an
  * allowlist can never reach.
+ *
+ * Cloud metadata and platform endpoints hand out credentials, tokens or
+ * instance configuration to whoever asks from the machine, so neither an
+ * allowlist entry nor `SMTP_ALLOW_PRIVATE_HOSTS` opens them. Each address
+ * names where its provider documents it.
  */
 export const NEVER_ALLOWED_RANGES = {
   ipv4: [
     // Unspecified ("this network").
     '0.0.0.0/8',
-    // Cloud metadata endpoints (AWS/GCP/Azure/OpenStack, ECS task metadata, Alibaba).
+    // Instance metadata of AWS (IMDS), GCP, Azure (IMDS), Oracle Cloud, OpenStack,
+    // Akamai/Linode, DigitalOcean, Hetzner and others —
+    // docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html,
+    // cloud.google.com/compute/docs/metadata/querying-metadata,
+    // learn.microsoft.com/azure/virtual-machines/instance-metadata-service.
     '169.254.169.254/32',
+    // AWS ECS task metadata and credentials —
+    // docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html.
     '169.254.170.2/32',
+    // AWS EKS Pod Identity agent (credentials) —
+    // docs.aws.amazon.com/eks/latest/userguide/pod-identities.html.
+    '169.254.170.23/32',
+    // Azure WireServer (VM agent, extensions, certificates; platform DNS and DHCP) —
+    // learn.microsoft.com/azure/virtual-network/what-is-ip-address-168-63-129-16.
+    '168.63.129.16/32',
+    // Alibaba Cloud ECS metadata —
+    // alibabacloud.com/help/en/ecs/overview-of-ecs-instance-metadata.
     '100.100.100.200/32',
+    // Tencent Cloud CVM metadata: the address `metadata.tencentyun.com` resolves to —
+    // intl.cloud.tencent.com/document/product/213/4934.
+    '169.254.0.23/32',
+    // Scaleway instance metadata — scaleway.com/en/developers/api/instance/v1 (user data).
+    '169.254.42.42/32',
+    // Oracle Cloud Infrastructure Classic metadata —
+    // docs.oracle.com/en/cloud/iaas/compute-iaas-cloud/stcsg/retrieving-instance-metadata.html.
+    '192.0.0.192/32',
     // Multicast.
     '224.0.0.0/4',
     // Reserved; includes the limited broadcast 255.255.255.255.
@@ -45,8 +72,23 @@ export const NEVER_ALLOWED_RANGES = {
   ipv6: [
     // Unspecified.
     '::/128',
-    // AWS metadata over IPv6.
+    // AWS IMDS over IPv6 (Nitro instances) — same AWS page as 169.254.169.254.
     'fd00:ec2::254/128',
+    // AWS EKS Pod Identity agent over IPv6 — same AWS page as 169.254.170.23.
+    'fd00:ec2::23/128',
+    // GCP metadata server of IPv6-only instances — same GCP page as 169.254.169.254.
+    'fd20:ce::254/128',
+    // Oracle Cloud Infrastructure IMDS over IPv6 —
+    // docs.oracle.com/iaas/Content/Compute/Tasks/gettingmetadata.htm.
+    'fd00:c1::a9fe:a9fe/128',
+    // Akamai/Linode Metadata service —
+    // techdocs.akamai.com/cloud-computing/docs/metadata-service-api; the link-local one is
+    // also the IPv6 metadata address of OpenStack Neutron
+    // (specs.openstack.org/openstack/neutron-specs/specs/ussuri/metadata-add-ipv6-support.html).
+    'fd00:a9fe:a9fe::1/128',
+    'fe80::a9fe:a9fe/128',
+    // Scaleway instance metadata over IPv6 — same Scaleway page as 169.254.42.42.
+    'fd00:42::42/128',
     // Multicast.
     'ff00::/8',
   ],
