@@ -80,6 +80,7 @@ import { zodIssuesToProblemErrors } from '../errors/zod-issues.js';
 import { emit } from '../events/event-writer.js';
 import { enqueue } from '../jobs/enqueue.js';
 import { JobsRepository } from '../jobs/jobs.repository.js';
+import { EmailAssetsRepository } from '../mail/images/email-assets.repository.js';
 import { NotificationBufferRepository } from '../notifications/buffer/notification-buffer.repository.js';
 import { RecordFollowsRepository } from '../notifications/follows/record-follows.repository.js';
 import { NotificationsRepository } from '../notifications/notifications.repository.js';
@@ -95,6 +96,7 @@ import {
 } from '../records/links/link-conversion.js';
 import { toFieldModel } from '../records/table-model.js';
 import { ShareLinksRepository } from '../share-links/share-links.repository.js';
+import { FormCoversRepository } from '../views/form-covers.repository.js';
 import { configJson, defaultViewConfig } from '../views/view-config.js';
 import { ViewsRepository } from '../views/views.repository.js';
 
@@ -212,6 +214,7 @@ import { TablesRepository } from './tables.repository.js';
 import type { AuditContext } from '../audit/audit-entry.js';
 import type { Db, Tx } from '../db/create-db.js';
 import type {
+  Base,
   FieldConversionRow,
   FieldRow,
   JsonObject,
@@ -303,6 +306,12 @@ export interface ComputedFieldContext {
   readonly readable?: SchemaReadability;
   /** Organization zone (ADR-21) for the compile check; default UTC. */
   readonly timeZone?: string;
+  /**
+   * How a new formula `expression` is written: `display` (`[Field name]`,
+   * the API, default) or `stored` (`[fld_…]`, a `.chbase` import, whose
+   * formulas are stored forms with ids of the new base — T1018/T1019).
+   */
+  readonly expressionForm?: 'display' | 'stored';
 }
 
 /**
@@ -432,6 +441,104 @@ export interface StartLinkConversionInput {
 }
 
 /** The field was written while a revert merged later edits: merge again. */
+/**
+ * A base being imported (ADR-24 amendment §4, CONTRACTS §12.2): hidden
+ * (`deleted_at` set) and owned by its `base.import` job. Only the job
+ * builds it, through the `import*` methods below, and only the job purges it
+ * (`purgeBase`); every other operation sees no such base.
+ */
+export interface ImportingBase {
+  readonly baseId: Id<'bse'>;
+  readonly importJobId: Id<'job'>;
+}
+
+/** A field of a package being imported, with the id the import gave it. */
+export interface ImportFieldInput {
+  readonly id: Id<'fld'>;
+  readonly name: string;
+  readonly type: string;
+  /** Stored options with the ids of the new base (`references.ts`), users as user ids. */
+  readonly options: unknown;
+  readonly description: string | null;
+  readonly required: boolean;
+  readonly uniqueValues: boolean;
+  /** Display order among the fields of its table. */
+  readonly position: number;
+}
+
+/** Field types `importTable` creates (a column of their own, a system column or none). */
+export const IMPORT_TABLE_FIELD_TYPES: ReadonlySet<string> = new Set([
+  'text',
+  'number',
+  'checkbox',
+  'datetime',
+  'select',
+  'user',
+  'attachment',
+  'auto_number',
+  'created_at',
+  'updated_at',
+  'created_by',
+  'updated_by',
+  'button',
+  'parent',
+]);
+
+/** Types a primary field of an imported table may have (they own a column). */
+const IMPORT_PRIMARY_TYPES: ReadonlySet<string> = new Set([
+  'text',
+  'number',
+  'checkbox',
+  'datetime',
+  'select',
+  'user',
+  'attachment',
+  'auto_number',
+]);
+
+export interface ImportTableInput {
+  readonly id: Id<'tbl'>;
+  readonly name: string;
+  readonly description: string | null;
+  /** Display order among the tables of the base. */
+  readonly position: number;
+  readonly primary: ImportFieldInput;
+  /**
+   * The other fields `importTable` creates (`IMPORT_TABLE_FIELD_TYPES`); a
+   * `parent` field adds `__parent_id`. Link, formula and lookup fields come
+   * later (`importLinkField`, T1019), so do AI options.
+   */
+  readonly fields: readonly ImportFieldInput[];
+}
+
+export interface ImportedTable {
+  readonly table: TableRow;
+  /** The primary field first, then the others in input order. */
+  readonly fields: readonly FieldRow[];
+  /** The grid view every new table gets (SPEC §8). */
+  readonly defaultView: ViewRow;
+}
+
+/** A link pair of a package: the field that owns the junction (side `a`) and its reverse. */
+export interface ImportLinkFieldInput {
+  readonly tableId: Id<'tbl'>;
+  /** Side `a`; `options` are full `LinkOptions` with the ids of the new base. */
+  readonly field: ImportFieldInput;
+  /** Side `b` in `options.link_table` (`bidirectional`), or `null` for a one-way link. */
+  readonly reverse: ImportFieldInput | null;
+}
+
+export interface ImportedLinkField {
+  readonly field: FieldRow;
+  readonly reverse: FieldRow | null;
+}
+
+/** What `purgeBase` removed. */
+export interface PurgedImport {
+  readonly tables: number;
+  readonly junctions: number;
+}
+
 export class ConcurrentFieldEditsError extends Error {
   constructor() {
     super('the field was written during the revert');
@@ -763,6 +870,130 @@ function s1Definition(type: string): {
   const definition = getFieldType(type);
   if (definition === undefined) throw new TypeError(`No definition for ${type}`);
   return { type, definition };
+}
+
+/** A field of `importTable`, checked like `addField` checks it. */
+interface PreparedImportField {
+  readonly id: Id<'fld'>;
+  readonly name: string;
+  readonly type: ImplementedFieldType | 'button' | 'parent';
+  readonly options: unknown;
+  readonly isPrimary: boolean;
+  readonly required: boolean;
+  readonly uniqueValues: boolean;
+  readonly description: string | null;
+  readonly position: number;
+  /** A column of its own (`planColumn`); `parent` adds `__parent_id` instead. */
+  readonly ownsColumn: boolean;
+}
+
+function importFieldOf(
+  spec: ImportFieldInput,
+  isPrimary: boolean,
+  path: string,
+): PreparedImportField {
+  if (!isId('fld', spec.id)) throw new TypeError('importTable: a field id is required');
+  const name = normalizeSchemaName(spec.name, `${path}.name`);
+  const common = {
+    id: spec.id,
+    name,
+    isPrimary,
+    description: spec.description,
+    position: spec.position,
+  };
+  switch (spec.type) {
+    case 'button':
+      assertButtonConstraints(spec.uniqueValues, spec.required);
+      return {
+        ...common,
+        type: 'button',
+        options: parseOptions(
+          { optionsSchema: buttonOptionsSchema },
+          spec.options,
+          `${path}.options`,
+        ),
+        required: false,
+        uniqueValues: false,
+        ownsColumn: false,
+      };
+    case 'parent':
+      assertParentConstraints(spec.uniqueValues, spec.required);
+      return {
+        ...common,
+        type: 'parent',
+        options: parseOptions(
+          { optionsSchema: parentOptionsSchema },
+          spec.options,
+          `${path}.options`,
+        ),
+        required: false,
+        uniqueValues: false,
+        ownsColumn: false,
+      };
+    default: {
+      if (!IMPORT_TABLE_FIELD_TYPES.has(spec.type)) {
+        throw validationFailed([
+          {
+            path: `${path}.type`,
+            code: 'UNSUPPORTED_FIELD_TYPE',
+            message: `Field type ${JSON.stringify(spec.type)} is not created with its table`,
+            params: { type: spec.type },
+          },
+        ]);
+      }
+      const { type, definition } = s1Definition(spec.type);
+      const options = parseOptions(definition, spec.options, `${path}.options`);
+      if (aiOptionsOf({ type, options }) !== null) {
+        throw new TypeError('importTable: AI options are not set with the table');
+      }
+      if (spec.uniqueValues && !UNIQUE_CAPABLE_TYPES.has(type)) {
+        throw validationFailed([
+          {
+            path: `${path}.unique_values`,
+            code: 'UNIQUE_NOT_SUPPORTED',
+            message: `Field type ${type} cannot require unique values`,
+            params: { type },
+          },
+        ]);
+      }
+      return {
+        ...common,
+        type,
+        options,
+        required: spec.required,
+        uniqueValues: spec.uniqueValues,
+        ownsColumn: definition.systemColumn === null,
+      };
+    }
+  }
+}
+
+/** One side of an imported link pair, checked like a saved link. */
+function importLinkOf(
+  spec: ImportFieldInput,
+  path: string,
+): Omit<ImportFieldInput, 'options'> & { readonly options: LinkOptions } {
+  if (!isId('fld', spec.id)) throw new TypeError('importLinkField: a field id is required');
+  if (spec.type !== 'link') throw new TypeError('importLinkField: a link field is required');
+  if (spec.uniqueValues) {
+    throw validationFailed([
+      {
+        path: `${path}.unique_values`,
+        code: 'UNIQUE_NOT_SUPPORTED',
+        message: 'Field type link cannot require unique values',
+        params: { type: 'link' },
+      },
+    ]);
+  }
+  return {
+    ...spec,
+    name: normalizeSchemaName(spec.name, `${path}.name`),
+    options: parseOptions(
+      { optionsSchema: linkOptionsSchema },
+      spec.options,
+      `${path}.options`,
+    ) as LinkOptions,
+  };
 }
 
 /** A type conversions work with (T403: stored and system types, not link/attachment). */
@@ -4835,7 +5066,14 @@ export class SchemaService {
         await this.assertComputedCapacity(txScope, table.base_id);
         const rows = await loadBaseSchemaRows(this.db, txScope, table.base_id);
         const prepared = prepareComputedDefinition(
-          { type, options: input.options, style: styleModeOf(input.options, undefined) },
+          {
+            type,
+            options: input.options,
+            ...(input.computed?.expressionForm === undefined
+              ? {}
+              : { expressionForm: input.computed.expressionForm }),
+            style: styleModeOf(input.options, undefined),
+          },
           computedContextOf(rows, tableId, input.computed),
         );
         const fieldId = newId('fld');
@@ -5558,6 +5796,373 @@ export class SchemaService {
     await this.db.withTx((tx) => this.execute(tx, [analyzeTableSql(table.db_table_name)]), {
       timeoutMs: COMPACTION_STATEMENT_TIMEOUT_MS,
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Package import (ADR-24 amendment §4, CONTRACTS §12.2, BACKLOG T1018)
+  //
+  // The `base.import` job builds a hidden base (`ImportingBase`) through
+  // these methods: the same DDL, checks and meta rows as `createTable` /
+  // `addField`, but with the ids the import gave the objects of the package
+  // and **no** event, audit entry, realtime message or permission bump — a
+  // hidden base exists for nobody, and an audit entry could never be taken
+  // back by a purge (`meta.audit_logs` is append-only). Finishing the import
+  // records `base.created`. Every method first checks, in its transaction,
+  // that the base is still hidden and owned by that job (else `404`).
+
+  /**
+   * Creates a table of a package in the hidden base `base`, with its
+   * primary field (a type with a column of its own) and the other fields of
+   * `IMPORT_TABLE_FIELD_TYPES` — options validated by their schemas, date
+   * reminders checked and given their cursor, unique values only on types
+   * that support them, at most `MAX_FIELDS_PER_TABLE` fields, the column
+   * budget of ADR-20 — plus the default grid view, in one transaction.
+   * `auto_number` values come from the package (no renumbering job). AI
+   * options are not set here (T1019).
+   */
+  async importTable(
+    scope: OrgScope,
+    base: ImportingBase,
+    input: ImportTableInput,
+  ): Promise<ImportedTable> {
+    this.assertScope(scope);
+    const name = normalizeSchemaName(input.name, 'name');
+    if (!IMPORT_PRIMARY_TYPES.has(input.primary.type)) {
+      throw validationFailed([
+        {
+          path: 'primary.type',
+          code: 'UNSUPPORTED_FIELD_TYPE',
+          message: `A primary field cannot be of type ${input.primary.type}`,
+          params: { type: input.primary.type },
+        },
+      ]);
+    }
+    const prepared = [input.primary, ...input.fields].map((spec, index) =>
+      importFieldOf(spec, index === 0, index === 0 ? 'primary' : `fields.${String(index - 1)}`),
+    );
+    const names = new Set<string>();
+    for (const [index, field] of prepared.entries()) {
+      if (names.has(field.name)) {
+        throw validationFailed([
+          {
+            path: index === 0 ? 'primary.name' : `fields.${String(index - 1)}.name`,
+            code: 'NAME_CONFLICT',
+            message: 'The field name is already used',
+          },
+        ]);
+      }
+      names.add(field.name);
+    }
+    const parents = prepared.filter((field) => field.type === 'parent');
+    if (parents.length > 1) {
+      throw validationFailed([
+        {
+          path: 'fields',
+          code: 'SUBRECORDS_ALREADY_ENABLED',
+          message: 'A table has at most one parent field',
+        },
+      ]);
+    }
+    if (prepared.length > this.maxFields) {
+      throw new AppError('FIELD_LIMIT_EXCEEDED', {
+        detail: `A table can have at most ${String(this.maxFields)} fields.`,
+        errors: [
+          {
+            path: 'fields',
+            code: 'FIELD_LIMIT_EXCEEDED',
+            message: `A table can have at most ${String(this.maxFields)} fields`,
+            params: { limit: this.maxFields },
+          },
+        ],
+        params: { limit: this.maxFields, active: prepared.length },
+      });
+    }
+    return this.retrying(input.id, () =>
+      this.db.withTx(async (tx) => {
+        await this.lock(tx, input.id);
+        const txScope = withTxScope(scope, tx);
+        const row = await this.importingBase(txScope, base);
+        await this.lockTableOrder(tx, base.baseId);
+        const collation = await this.baseCollation(tx, row.settings);
+        if (await this.tables.nameTaken(txScope, base.baseId, name)) {
+          throw nameConflict('table', name);
+        }
+        const dbTableName = dataTableName();
+        const plans = prepared.map((field) =>
+          field.ownsColumn
+            ? planColumn(
+                {
+                  type: field.type,
+                  options: field.options,
+                  column: fieldColumnName(),
+                  isPrimary: field.isPrimary,
+                  uniqueValues: field.uniqueValues,
+                },
+                dbTableName,
+                collation,
+              )
+            : null,
+        );
+        const slots = plans.filter((plan) => plan !== null).length + parents.length;
+        if (slotDecision(0, slots, this.thresholds) === 'locked') {
+          throw new AppError('FIELD_LIMIT_EXCEEDED', {
+            detail: 'The table has more columns than a table may have.',
+            errors: [
+              {
+                path: 'fields',
+                code: 'FIELD_LIMIT_EXCEEDED',
+                message: 'The table has more columns than a table may have',
+                params: { limit: this.thresholds.lock },
+              },
+            ],
+            params: { limit: this.thresholds.lock, active: slots },
+          });
+        }
+        await this.execute(tx, [createTableSql(dbTableName), ...systemIndexesSql(dbTableName)]);
+        for (const plan of plans) {
+          if (plan !== null) await this.execute(tx, columnDdl(dbTableName, plan));
+        }
+        if (parents.length > 0) await this.execute(tx, parentColumnDdl(dbTableName));
+        await this.tables.insert(txScope, {
+          id: input.id,
+          baseId: base.baseId,
+          name,
+          description: input.description,
+          dbTableName,
+          collation,
+          position: input.position,
+        });
+        const fields: FieldRow[] = [];
+        for (const [index, field] of prepared.entries()) {
+          fields.push(
+            await this.fields.insert(txScope, {
+              id: field.id,
+              tableId: input.id,
+              name: field.name,
+              type: field.type,
+              dbColumnName: plans[index]?.column ?? null,
+              options: field.options as JsonObject,
+              isPrimary: field.isPrimary,
+              required: field.required,
+              uniqueValues: field.uniqueValues,
+              description: field.description,
+              position: field.position,
+            }),
+          );
+        }
+        const table = await this.tables.update(txScope, input.id, {
+          primaryFieldId: input.primary.id,
+        });
+        if (table === undefined) throw new Error('table row vanished');
+        // T547: date reminders, checked once every field of the table exists.
+        for (const field of fields) {
+          if (field.type !== 'datetime') continue;
+          await validateDateReminder(this.db, txScope, input.id, field.options);
+          await syncDateReminder(this.db, txScope, field.id, null, field);
+        }
+        const defaultView = await this.views.insert(txScope, {
+          id: newId('viw'),
+          tableId: input.id,
+          type: 'grid',
+          name: DEFAULT_VIEW_NAME,
+          config: configJson(defaultViewConfig('grid')),
+          position: 0,
+          ownerId: null,
+        });
+        return { table, fields, defaultView };
+      }),
+    );
+  }
+
+  /**
+   * Creates a link pair of a package in the hidden base `base`: the
+   * junction (unique `a_id` / `b_id` for a single-record side), the field
+   * that owns it (side `a`) and, for a two-way link, its reverse (side `b`)
+   * with the options the package gave it — both with their final names,
+   * options and ids, in one transaction holding the schema locks of both
+   * tables. `record_filter`s are validated against the linked table like a
+   * saved link. The pair must point at each other (`link_table`,
+   * `symmetric_field_id`, `bidirectional`), else `422`.
+   */
+  async importLinkField(
+    scope: OrgScope,
+    base: ImportingBase,
+    input: ImportLinkFieldInput,
+  ): Promise<ImportedLinkField> {
+    this.assertScope(scope);
+    const field = importLinkOf(input.field, 'field');
+    const reverse = input.reverse === null ? null : importLinkOf(input.reverse, 'reverse');
+    const paired =
+      reverse === null
+        ? !field.options.bidirectional && field.options.symmetric_field_id === null
+        : field.options.bidirectional &&
+          reverse.options.bidirectional &&
+          field.options.symmetric_field_id === reverse.id &&
+          reverse.options.symmetric_field_id === field.id &&
+          reverse.options.link_table === input.tableId;
+    if (!paired) {
+      throw validationFailed([
+        {
+          path: 'reverse',
+          code: 'INVALID_OPTIONS',
+          message: 'The two fields of a link pair must point at each other',
+        },
+      ]);
+    }
+    return this.retrying(input.tableId, () =>
+      this.db.withTx(async (tx) => {
+        await this.lock(tx, input.tableId);
+        const txScope = withTxScope(scope, tx);
+        await this.importingBase(txScope, base);
+        const table = await this.tables.getById(txScope, input.tableId);
+        if (table?.base_id !== base.baseId) throw notFound('table');
+        const target = await this.lockLinkTarget(tx, txScope, table, field.options.link_table);
+        const self = target.id === table.id;
+        await this.assertFieldCapacity(txScope, table.id, reverse !== null && self ? 2 : 1);
+        if (reverse !== null && !self) await this.assertFieldCapacity(txScope, target.id);
+        if (await this.fields.nameTaken(txScope, table.id, field.name)) {
+          throw nameConflict('field', field.name);
+        }
+        if (
+          reverse !== null &&
+          ((self && reverse.name === field.name) ||
+            (await this.fields.nameTaken(txScope, target.id, reverse.name)))
+        ) {
+          throw nameConflict('field', reverse.name);
+        }
+        const recordFilter = await this.checkRecordFilter(
+          txScope,
+          target,
+          field.options.record_filter,
+          undefined,
+        );
+        const reverseFilter =
+          reverse === null
+            ? null
+            : await this.checkRecordFilter(
+                txScope,
+                table,
+                reverse.options.record_filter,
+                undefined,
+              );
+        const junction = junctionTableName();
+        await this.execute(
+          tx,
+          createJunctionSql(
+            junction,
+            table.db_table_name,
+            target.db_table_name,
+            !field.options.allow_multiple,
+          ),
+        );
+        if (reverse !== null && !reverse.options.allow_multiple) {
+          await this.execute(tx, [junctionSingleIndexSql(junction, 'b')]);
+        }
+        const created = await this.fields.insert(txScope, {
+          id: field.id,
+          tableId: table.id,
+          name: field.name,
+          type: 'link',
+          dbColumnName: null,
+          options: { ...field.options, record_filter: recordFilter } as JsonObject,
+          isPrimary: false,
+          required: field.required,
+          uniqueValues: false,
+          description: field.description,
+          position: field.position,
+          linkJunction: junction,
+          linkSide: 'a',
+        });
+        const createdReverse =
+          reverse === null
+            ? null
+            : await this.fields.insert(txScope, {
+                id: reverse.id,
+                tableId: target.id,
+                name: reverse.name,
+                type: 'link',
+                dbColumnName: null,
+                options: { ...reverse.options, record_filter: reverseFilter } as JsonObject,
+                isPrimary: false,
+                required: reverse.required,
+                uniqueValues: false,
+                description: reverse.description,
+                position: reverse.position,
+                linkJunction: junction,
+                linkSide: 'b',
+              });
+        return { field: created, reverse: createdReverse };
+      }),
+    );
+  }
+
+  /**
+   * Purges the hidden base of an import (a failed, cancelled or interrupted
+   * `base.import` job, CONTRACTS §12.2), in one transaction: every junction
+   * and data table of its tables dropped, then the meta rows of its files
+   * (cells, form covers, email images), its tables (fields, views… by
+   * cascade) and the base itself (roles, automations, dashboards… by
+   * cascade). Only a base whose `import_job_id` is `base.importJobId`:
+   * `null` (nothing done) for any other — a base the import finished, or one
+   * that is gone. Stored objects are the caller's to delete first (their
+   * keys are in the rows this removes). No event, no audit entry: the base
+   * never existed for anyone.
+   */
+  async purgeBase(scope: OrgScope, base: ImportingBase): Promise<PurgedImport | null> {
+    this.assertScope(scope);
+    return this.db.withTx(async (tx) => {
+      await sql`SELECT set_config('lock_timeout', ${`${String(this.lockTimeoutMs)}ms`}, true)`.execute(
+        tx,
+      );
+      const txScope = withTxScope(scope, tx);
+      const row = await this.bases.findImporting(txScope, base.importJobId, base.baseId);
+      if (row === undefined) return null;
+      const tables = await this.tables.listOfImportingBase(txScope, base.baseId, base.importJobId);
+      for (const table of tables) await this.lock(tx, table.id);
+      const dataTables = tables
+        .filter((table) => table.purged_at === null)
+        .map((table) => table.db_table_name);
+      // Junctions from the catalog: each references both of its tables.
+      const junctions = new Set<string>();
+      for (const dataTable of dataTables) {
+        for (const key of await foreignKeysReferencing(tx, dataTable)) {
+          if (
+            !key.self &&
+            key.schema === DATA_SCHEMA &&
+            JUNCTION_TABLE_NAME_PATTERN.test(key.table)
+          ) {
+            junctions.add(key.table);
+          }
+        }
+      }
+      await this.execute(tx, [
+        ...[...junctions].sort().map((junction) => dropJunctionSql(junction)),
+        ...dataTables.map((dataTable) => dropDataTableSql(dataTable)),
+      ]);
+      await this.attachments.deleteOfImportingBase(txScope, base.baseId, base.importJobId);
+      await new FormCoversRepository(this.db).deleteOfImportingBase(
+        txScope,
+        base.baseId,
+        base.importJobId,
+      );
+      await new EmailAssetsRepository(this.db).deleteOfImportingBase(
+        txScope,
+        base.baseId,
+        base.importJobId,
+      );
+      await this.tables.deleteOfImportingBase(txScope, base.baseId, base.importJobId);
+      if (!(await this.bases.deleteImporting(txScope, base.baseId, base.importJobId))) {
+        throw new Error('purgeBase: the base row vanished under its lock');
+      }
+      return { tables: tables.length, junctions: junctions.size };
+    });
+  }
+
+  /** The hidden base of an import, locked until the end of `scope`'s transaction (else `404`). */
+  private async importingBase(scope: OrgScope, base: ImportingBase): Promise<Base> {
+    const row = await this.bases.findImporting(scope, base.importJobId, base.baseId);
+    if (row === undefined) throw notFound('base');
+    return row;
   }
 
   // -------------------------------------------------------------------------

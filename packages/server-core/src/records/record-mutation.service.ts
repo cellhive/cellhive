@@ -48,6 +48,7 @@ import {
   type Tx,
 } from '../db/create-db.js';
 import { sqlStateOf, SQLSTATE } from '../db/pg-errors.js';
+import { BasesRepository } from '../db/repositories/bases.repository.js';
 import { OrganizationsRepository } from '../db/repositories/organizations.repository.js';
 import { isOrgScope, withTxScope, type OrgScope } from '../db/repository.js';
 import { AppError } from '../errors/app-error.js';
@@ -80,6 +81,7 @@ import { assertNotConverting } from './conversions/write-lock.js';
 import { LinkFanout, type LinkFanoutKind } from './links/link-fanout.js';
 import { filtersNameLinks, LinkFilterMeta, rulesOf } from './links/link-filters.js';
 import { LinkImageReader } from './links/link-images.js';
+import { junctionRef } from './links/link-reader.js';
 import { accessibleTable, relatedAccessContext } from './links/link-targets.js';
 import {
   LinkWriter,
@@ -90,6 +92,7 @@ import {
   type PreparedLinkCell,
 } from './links/link-writer.js';
 import { MemberDirectoryRepository } from './member-directory.repository.js';
+import { packageWriteValue } from './package-values.js';
 import {
   deleteTrashedRows,
   purgeSummary,
@@ -148,7 +151,7 @@ import type {
   ComputedRecomputeResult,
   RecomputeSource,
 } from '../computed/recompute/changes.js';
-import type { FieldRow, JsonObject, JsonValue, TableRow } from '../db/schema.js';
+import type { AttachmentRow, FieldRow, JsonObject, JsonValue, TableRow } from '../db/schema.js';
 import type { Actor, Causation, EventInput } from '../events/event.js';
 import type { SchemaChange } from '../schema/schema-change-publisher.js';
 import type { SchemaService } from '../schema/schema.service.js';
@@ -200,6 +203,52 @@ export interface RecordMutationServiceOptions {
    */
   readonly automationMaxRunsPerBatch?: number;
 }
+
+/**
+ * One batch of a `.chbase` import (ADR-24 amendment §4, CONTRACTS §12.2) for
+ * `RecordMutationService.loadPackageBatch`, ids and users already those of
+ * the new base:
+ * - `records` — new records of a table with their times, creator and
+ *   values in storage form (`fields` by field id; a field left out is
+ *   empty, never its default);
+ * - `links` — rows of the junction of a link field (side `a`);
+ * - `parents` — `__parent_id` of records of a table with sub-records.
+ */
+export type PackageLoadBatch =
+  | {
+      readonly kind: 'records';
+      readonly tableId: Id<'tbl'>;
+      readonly records: readonly PackageLoadRecord[];
+    }
+  | {
+      readonly kind: 'links';
+      readonly fieldId: Id<'fld'>;
+      readonly rows: readonly {
+        readonly a: Id<'rec'>;
+        readonly b: Id<'rec'>;
+        readonly position: number;
+      }[];
+    }
+  | {
+      readonly kind: 'parents';
+      readonly tableId: Id<'tbl'>;
+      readonly rows: readonly { readonly id: Id<'rec'>; readonly parentId: Id<'rec'> }[];
+    };
+
+export interface PackageLoadRecord {
+  readonly id: Id<'rec'>;
+  /** `__auto` of the package: creation order, kept (and the identity moved past it). */
+  readonly auto: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  /** Members of the organization (an unmatched email is `null`). */
+  readonly createdBy: Id<'usr'> | null;
+  readonly updatedBy: Id<'usr'> | null;
+  readonly fields: Readonly<Record<string, unknown>>;
+}
+
+/** Records of one `loadPackageBatch` at most (ADR-24 §2.4: batches of 5 000). */
+export const PACKAGE_LOAD_BATCH_SIZE = 5000;
 
 /** Whole-transaction attempts of a write that hit a deadlock (`40P01`, SPEC §5.9). */
 export const DEADLOCK_ATTEMPTS = 3;
@@ -778,6 +827,291 @@ export class RecordMutationService {
     } catch (error) {
       throw this.translate(error);
     }
+  }
+
+  /**
+   * Loads one batch of a `.chbase` package into the hidden base of an import
+   * (ADR-24 amendment §4: loading a package is not a user's mutation), in
+   * its own transaction under the table's shared schema lock. Only for a
+   * base `base.importJobId` is building (else `404`).
+   *
+   * - `records`: every value checked against its field by the field type's
+   *   own parser, users checked to be members, files to be files of that
+   *   cell of this import; `__created_at`, `__updated_at`, the creator and
+   *   last editor, `__auto` (`OVERRIDING SYSTEM VALUE`, the identity then
+   *   moved past it) and `auto_number` values are the package's,
+   *   `__version = 1`;
+   * - `links`: junction rows (`position` kept);
+   * - `parents`: `__parent_id`, then the tree checks of sub-records (no
+   *   cycle, depth).
+   *
+   * No event, audit entry, follow, notification, realtime message, computed
+   * or AI queueing: the base is hidden and its import is audited once
+   * (`base.imported`). A value that does not fit → `422
+   * INVALID_CELL_VALUE` with `records.<index>.fields.<field>` paths; a
+   * duplicate of a unique field or of a junction row → `422
+   * UNIQUE_VIOLATION`. Returns the rows written.
+   */
+  async loadPackageBatch(
+    scope: OrgScope,
+    base: { readonly baseId: Id<'bse'>; readonly importJobId: Id<'job'> },
+    batch: PackageLoadBatch,
+  ): Promise<number> {
+    this.assertScope(scope);
+    const size = batch.kind === 'records' ? batch.records.length : batch.rows.length;
+    if (size > PACKAGE_LOAD_BATCH_SIZE) {
+      throw new RangeError(`loadPackageBatch: at most ${String(PACKAGE_LOAD_BATCH_SIZE)} rows`);
+    }
+    if (size === 0) return 0;
+    try {
+      return await this.db.withTx(
+        async (tx) => {
+          const txScope = withTxScope(scope, tx);
+          const hidden = await new BasesRepository(this.db).findImporting(
+            txScope,
+            base.importJobId,
+            base.baseId,
+          );
+          if (hidden === undefined) throw tableNotFound();
+          switch (batch.kind) {
+            case 'records':
+              return await this.loadPackageRecords(tx, txScope, base.baseId, batch);
+            case 'links':
+              return await this.loadPackageLinks(tx, txScope, base.baseId, batch);
+            case 'parents':
+              return await this.loadPackageParents(tx, txScope, base.baseId, batch);
+          }
+        },
+        { timeoutMs: this.timeoutMs },
+      );
+    } catch (error) {
+      throw this.translate(error);
+    }
+  }
+
+  private async packageTable(
+    tx: Tx,
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    tableId: Id<'tbl'>,
+  ): Promise<TableModel> {
+    await this.acquireSchemaLock(tx, tableId, false);
+    const table = await this.tables.getById(scope, tableId);
+    if (table?.base_id !== baseId) throw tableNotFound();
+    return buildTableModel(table, await this.fieldsRepo.listByTable(scope, tableId), null);
+  }
+
+  private async loadPackageRecords(
+    tx: Tx,
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    batch: Extract<PackageLoadBatch, { kind: 'records' }>,
+  ): Promise<number> {
+    const model = await this.packageTable(tx, scope, baseId, batch.tableId);
+    const columns = model.fields.filter((field) => field.ownsColumn);
+    const byId = new Map<string, FieldModel>(columns.map((field) => [field.id, field]));
+    const issues: Issue[] = [];
+    const at = (index: number, key: string) => `records.${String(index)}.fields.${key}`;
+
+    // Members of the organization among the users the batch names.
+    const userIds = new Set<string>();
+    const attachmentIds = new Set<string>();
+    for (const record of batch.records) {
+      if (record.createdBy !== null) userIds.add(record.createdBy);
+      if (record.updatedBy !== null) userIds.add(record.updatedBy);
+      for (const [key, value] of Object.entries(record.fields)) {
+        const field = byId.get(key);
+        if (!Array.isArray(value)) continue;
+        for (const entry of value as unknown[]) {
+          if (field?.type === 'user' && typeof entry === 'string') userIds.add(entry);
+          if (
+            field?.type === 'attachment' &&
+            isPlainObject(entry) &&
+            typeof entry['id'] === 'string'
+          )
+            attachmentIds.add(entry['id']);
+        }
+      }
+    }
+    const members = new Set<string>(
+      (await this.members.findMembers(scope, [...userIds])).map((member) => member.id),
+    );
+    const files = new Map<string, AttachmentRow>(
+      (await this.attachments.getByIds(scope, [...attachmentIds])).map((row) => [row.id, row]),
+    );
+
+    const rows = batch.records.map((record, index) => {
+      for (const [key, user] of [
+        ['created_by', record.createdBy],
+        ['updated_by', record.updatedBy],
+      ] as const) {
+        if (user !== null && !members.has(user)) {
+          issues.push({
+            path: `records.${String(index)}.${key}`,
+            code: 'USER_NOT_FOUND',
+            message: 'Not a member of the organization',
+          });
+        }
+      }
+      const row: Record<string, JsonValue> = {
+        __id: record.id,
+        __auto: String(record.auto),
+        __created_at: record.createdAt,
+        __updated_at: record.updatedAt,
+        __created_by: record.createdBy,
+        __updated_by: record.updatedBy,
+        __version: 1,
+      };
+      for (const key of Object.keys(record.fields)) {
+        if (!byId.has(key)) {
+          issues.push({
+            path: at(index, key),
+            code: 'FIELD_NOT_FOUND',
+            message: 'The table has no field with a value of its own under this id',
+          });
+        }
+      }
+      for (const field of columns) {
+        const value = record.fields[field.id] ?? null;
+        if (field.type === 'auto_number') {
+          // A number given once (a ticket number people quote) stays what it was.
+          if (value !== null && (typeof value !== 'string' || value.length > 1000)) {
+            issues.push({
+              path: at(index, field.id),
+              code: 'EXPECTED_STRING',
+              message: 'Expected the auto number text',
+            });
+          }
+          row[field.column] = typeof value === 'string' ? value : null;
+          continue;
+        }
+        const resolveAttachment = (id: string) => {
+          const file = files.get(id);
+          return file === undefined ||
+            file.status !== 'ready' ||
+            file.base_id !== baseId ||
+            file.table_id !== model.table.id ||
+            file.field_id !== field.id ||
+            file.record_id !== record.id
+            ? undefined
+            : { id: file.id, name: file.filename, size: Number(file.size), mime: file.mime };
+        };
+        try {
+          const write = packageWriteValue(field, value);
+          if (field.type === 'user' && Array.isArray(write)) {
+            for (const entry of write as { id: string }[]) {
+              if (!members.has(entry.id)) throw new FieldValueError([userNotFound()]);
+            }
+          }
+          row[field.column] = storageToJson(
+            field.definition.toStorage(write, field.options, { resolveAttachment }),
+          );
+        } catch (error) {
+          if (!(error instanceof FieldValueError)) throw error;
+          for (const issue of error.issues) {
+            issues.push({
+              path: at(index, field.id),
+              code: issue.code,
+              message: issue.message,
+              ...(issue.params === undefined ? {} : { params: issue.params }),
+            });
+          }
+        }
+      }
+      return row;
+    });
+    if (issues.length > 0) {
+      throw new AppError('INVALID_CELL_VALUE', {
+        detail: 'A value of the package does not fit its field.',
+        errors: issues.slice(0, 100),
+      });
+    }
+
+    const names = [
+      '__id',
+      '__auto',
+      '__created_at',
+      '__updated_at',
+      '__created_by',
+      '__updated_by',
+      '__version',
+      ...columns.map((field) => field.column),
+    ];
+    const ref = this.tableRef(model.table);
+    await sql`
+      INSERT INTO ${ref} (${sql.join(names.map((name) => sql.id(name)))})
+      OVERRIDING SYSTEM VALUE
+      SELECT ${sql.join(names.map((name) => sql.id('x', name)))}
+        FROM jsonb_populate_recordset(NULL::${ref}, ${JSON.stringify(rows)}::jsonb) AS x
+    `.execute(tx);
+    // New records continue after the package's: the identity moves past its largest `__auto`.
+    const last = batch.records.reduce((max, record) => Math.max(max, record.auto), 0);
+    const qualified = `${DATA_SCHEMA}.${assertDataTableName(model.table.db_table_name)}`;
+    await sql`
+      SELECT setval(s.seq, GREATEST(${last}::bigint, COALESCE(pg_sequence_last_value(s.seq), 0)))
+        FROM (SELECT pg_get_serial_sequence(${qualified}, '__auto')::regclass AS seq) AS s
+    `.execute(tx);
+    return rows.length;
+  }
+
+  private async loadPackageLinks(
+    tx: Tx,
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    batch: Extract<PackageLoadBatch, { kind: 'links' }>,
+  ): Promise<number> {
+    const row = await this.fieldsRepo.getById(scope, batch.fieldId);
+    if (row === undefined) throw tableNotFound();
+    const model = await this.packageTable(tx, scope, baseId, row.table_id);
+    const link = model.links.find((candidate) => candidate.id === batch.fieldId);
+    if (link?.side !== 'a') throw tableNotFound();
+    const target = await this.tables.getById(scope, link.targetTableId);
+    if (target?.base_id !== baseId) throw tableNotFound();
+    if (target.id !== model.table.id) await this.acquireSchemaLock(tx, target.id, false);
+    const values = batch.rows.map((item) => {
+      if (
+        !Number.isSafeInteger(item.position) ||
+        item.position < 0 ||
+        item.position > 2 ** 31 - 1
+      ) {
+        throw new RangeError('loadPackageBatch: a junction position is out of range');
+      }
+      return { a: item.a, b: item.b, position: item.position };
+    });
+    await sql`
+      INSERT INTO ${junctionRef(link)} (a_id, b_id, position)
+      SELECT x.a, x.b, x.position
+        FROM jsonb_to_recordset(${JSON.stringify(values)}::jsonb) AS x (a text, b text, position integer)
+    `.execute(tx);
+    return values.length;
+  }
+
+  private async loadPackageParents(
+    tx: Tx,
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    batch: Extract<PackageLoadBatch, { kind: 'parents' }>,
+  ): Promise<number> {
+    const model = await this.packageTable(tx, scope, baseId, batch.tableId);
+    if (model.parent === null) throw tableNotFound();
+    const values = batch.rows.map((item) => ({ id: item.id, parent: item.parentId }));
+    const ref = this.tableRef(model.table);
+    const { rows } = await sql<{ id: string }>`
+      UPDATE ${ref} AS ${sql.id(ALIAS)}
+         SET __parent_id = x.parent
+        FROM jsonb_to_recordset(${JSON.stringify(values)}::jsonb) AS x (id text, parent text)
+       WHERE ${sql.id(ALIAS, '__id')} = x.id
+      RETURNING ${sql.id(ALIAS, '__id')} AS id
+    `.execute(tx);
+    if (rows.length !== values.length) throw tableNotFound();
+    const indexOf = new Map<string, number>(values.map((item, index) => [item.id, index]));
+    await assertTreeInvariants(
+      tx,
+      model.table,
+      values.map((item) => item.id),
+      (id) => `rows.${String(indexOf.get(id) ?? 0)}`,
+    );
+    return values.length;
   }
 
   /** Creates 1–1 000 records (CONTRACTS §1.4); requires the `add` operation. */
@@ -4802,4 +5136,12 @@ function userIdsOf(value: unknown): string[] {
 
 function isValidOptionName(name: string): boolean {
   return selectOptionSchema.safeParse({ id: 'opt_0000000000000000', name }).success;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function userNotFound(): ValueIssue {
+  return { code: 'USER_NOT_FOUND', message: 'Not a member of the organization' };
 }

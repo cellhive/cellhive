@@ -64,8 +64,11 @@ export {
   AUTO_NUMBER_BATCH_SIZE,
   MAX_RECORDS_PER_MUTATION,
   OPTION_REMOVAL_BATCH_SIZE,
+  PACKAGE_LOAD_BATCH_SIZE,
   RecordMutationService,
   type AutoNumberRecomputeResult,
+  type PackageLoadBatch,
+  type PackageLoadRecord,
   type CreateOptions,
   type ExpiredPurgeResult,
   type MutationOptions,
@@ -86,6 +89,7 @@ export type {
   LinkCandidatesOutput,
 } from './links/link-candidates.js';
 export { sameStoredValue, storageToJson, storedValueToJson } from './storage-values.js';
+export { packageWriteValue } from './package-values.js';
 export type { LinkCellCountRow } from './links/link-conversion.js';
 export type * from './types.js';
 export { loadQueryView, type QueryView } from './view-scope.js';

@@ -93,6 +93,7 @@ export {
   ConcurrentFieldEditsError,
   FIELD_RESTORE_WINDOW_MS,
   fieldConvertingError,
+  IMPORT_TABLE_FIELD_TYPES,
   MAX_SCHEMA_NAME_LENGTH,
   normalizeSchemaName,
   REMOVE_SELECT_OPTIONS_JOB_TYPE,
@@ -113,6 +114,13 @@ export {
   type SchemaServiceOptions,
   type TablePatch,
   type UpdateFieldOptionsInput,
+  type ImportedLinkField,
+  type ImportedTable,
+  type ImportFieldInput,
+  type ImportingBase,
+  type ImportLinkFieldInput,
+  type ImportTableInput,
+  type PurgedImport,
 } from './schema.service.js';
 export {
   noopSchemaChangePublisher,

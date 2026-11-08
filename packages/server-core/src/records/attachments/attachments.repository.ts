@@ -1,6 +1,7 @@
 import { newId, type Id } from '@cellhive/contracts';
 import { sql } from 'kysely';
 
+import { importingBaseIdQuery } from '../../db/repositories/bases.repository.js';
 import {
   TenantRepository,
   type OrgScope,
@@ -379,6 +380,42 @@ export class AttachmentsRepository
     if (excluding.length > 0) query = query.where('id', 'not in', [...excluding]);
     const row = await query.executeTakeFirstOrThrow();
     return Number(row.n);
+  }
+
+  /**
+   * Storage keys of every file of the hidden base `baseId` that
+   * `importJobId` is building (any state), so its purge can delete the
+   * objects; `[]` for a base that is not being imported by that job.
+   */
+  async objectKeysOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<string[]> {
+    const executor = this.executor(scope);
+    const rows = await executor
+      .selectFrom('meta.attachments')
+      .select('object_key')
+      .where('organization_id', '=', scope.organizationId)
+      .where('base_id', 'in', importingBaseIdQuery(executor, scope, baseId, importJobId))
+      .orderBy('id')
+      .execute();
+    return rows.map((row) => row.object_key);
+  }
+
+  /** Deletes the rows of every file of the hidden base `baseId` that `importJobId` is building. */
+  async deleteOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<number> {
+    const executor = this.executor(scope);
+    const result = await executor
+      .deleteFrom('meta.attachments')
+      .where('organization_id', '=', scope.organizationId)
+      .where('base_id', 'in', importingBaseIdQuery(executor, scope, baseId, importJobId))
+      .executeTakeFirst();
+    return Number(result.numDeletedRows);
   }
 
   async deleteByIds(scope: OrgScope, ids: readonly Id<'att'>[]): Promise<number> {

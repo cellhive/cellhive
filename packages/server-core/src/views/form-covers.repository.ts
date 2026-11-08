@@ -1,6 +1,7 @@
 import { newId, type Id } from '@cellhive/contracts';
 import { sql, type ExpressionBuilder } from 'kysely';
 
+import { importingBaseIdQuery } from '../db/repositories/bases.repository.js';
 import {
   TenantRepository,
   type OrgScope,
@@ -139,6 +140,41 @@ export class FormCoversRepository
       .orderBy('id')
       .forUpdate()
       .execute();
+  }
+
+  /**
+   * Storage keys of every form cover of the hidden base `baseId` that
+   * `importJobId` is building, for its purge; `[]` otherwise.
+   */
+  async objectKeysOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<string[]> {
+    const executor = this.executor(scope);
+    const rows = await executor
+      .selectFrom('meta.form_covers')
+      .select('object_key')
+      .where('organization_id', '=', scope.organizationId)
+      .where('base_id', 'in', importingBaseIdQuery(executor, scope, baseId, importJobId))
+      .orderBy('id')
+      .execute();
+    return rows.map((row) => row.object_key);
+  }
+
+  /** Deletes every form cover of the hidden base `baseId` that `importJobId` is building. */
+  async deleteOfImportingBase(
+    scope: OrgScope,
+    baseId: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<number> {
+    const executor = this.executor(scope);
+    const result = await executor
+      .deleteFrom('meta.form_covers')
+      .where('organization_id', '=', scope.organizationId)
+      .where('base_id', 'in', importingBaseIdQuery(executor, scope, baseId, importJobId))
+      .executeTakeFirst();
+    return Number(result.numDeletedRows);
   }
 
   async deleteByIds(scope: OrgScope, ids: readonly Id<'att'>[]): Promise<number> {
