@@ -35507,7 +35507,7 @@
     },
     "/api/v1/mcp": {
       "post": {
-        "description": "Model Context Protocol endpoint for MCP clients (Claude Code, Cursor, VS Code…). Serves the 2026-07-28 revision (`server/discover`, `_meta` envelope on every request) and 2025-era clients (`initialize` without a session) on the same URL; answers are always `application/json`, never `Mcp-Session-Id`. `Authorization: Bearer cht_…` only: the session cookie is ignored. Tools are listed by the scopes of the token and `settings.mcp.allow_writes`; calling an unlisted tool is JSON-RPC `-32602`; a failed tool call is a result with `isError` and `{ code, message, errors }`. `GET` and `DELETE` answer `405`. Not idempotent (`Idempotency-Key` is ignored).",
+        "description": "Model Context Protocol endpoint for MCP clients (Claude Code, Cursor, VS Code…). Serves the 2026-07-28 revision (`server/discover`, `_meta` envelope on every request) and 2025-era clients (`initialize` without a session) on the same URL; answers are always `application/json`, never `Mcp-Session-Id`. `Authorization: Bearer cht_…` only: the session cookie is ignored. Tools are listed by the scopes of the token and `settings.mcp.allow_writes`; calling an unlisted tool is JSON-RPC `-32602`; a failed tool call is a result with `isError` and `{ code, message, errors, total }` (at most 100 `errors`, `total` counts them all). `GET` and `DELETE` answer `405`. Not idempotent (`Idempotency-Key` is ignored).",
         "operationId": "mcp",
         "requestBody": {
           "content": {
@@ -35566,7 +35566,7 @@
                 }
               }
             },
-            "description": "`PAYLOAD_TOO_LARGE`: body over 10 MiB"
+            "description": "`PAYLOAD_TOO_LARGE`: body over 2 MiB"
           },
           "415": {
             "content": {

@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import {
   aggregateRecordsInputSchema,
   type AggregatePlan,
@@ -23,6 +25,7 @@ import {
 
 import { recordAccessContextOf } from '../../../common/access/record-access-context.js';
 import { withRetryAfter } from '../../dashboard/widget-query-limiter.js';
+import { cutText, fittingCount } from '../shape.js';
 import { defineTool, type McpTool } from '../tool-context.js';
 
 import { auditRead, DATA_NOTE } from './records.js';
@@ -87,9 +90,17 @@ export function aggregateWidgetsOf(input: AggregateRecordsInput, table: WidgetTa
   return results.filter((result): result is Widget => result.ok);
 }
 
+/** A group cell as the model reads it: its label, text cut like a text cell (CONTRACTS §30.3). */
+function labelOf(cell: unknown): unknown {
+  const label = groupLabelOf(cell);
+  return typeof label === 'string' ? (cutText(label) ?? label) : label;
+}
+
 /**
  * Widget data as the model reads it (CONTRACTS §30.4): field names instead
- * of ids, group cells as labels, the KPIs of an ungrouped call as one row.
+ * of ids, group cells as labels (cut at `MCP_TEXT_CELL_MAX_CHARS`), the KPIs
+ * of an ungrouped call as one row; groups left out from the end while the
+ * JSON is over `MCP_RESULT_MAX_BYTES` (`truncated`, the first one kept).
  */
 export function aggregateResultOf(
   answers: readonly WidgetAggregateResult[],
@@ -107,20 +118,30 @@ export function aggregateResultOf(
   if (!grouped) {
     const empty = answers.some((answer) => answer.rows.length === 0);
     const values = answers.map((answer) => (answer.rows[0]?.[0] ?? null) as number | null);
-    return { columns, rows: empty ? [] : [values], other: null, total: empty ? null : values };
+    return {
+      columns,
+      rows: empty ? [] : [values],
+      other: null,
+      total: empty ? null : values,
+      truncated: false,
+    };
   }
   const [answer] = answers as [WidgetAggregateResult];
   const rowOf = (row: readonly unknown[]) =>
-    row.map((cell, index) => (raw[index]?.role === 'metric' ? cell : groupLabelOf(cell)));
-  return {
+    row.map((cell, index) => (raw[index]?.role === 'metric' ? cell : labelOf(cell)));
+  const rows = answer.rows.map(rowOf);
+  const rest: AggregateRecordsResult = {
     columns,
-    rows: answer.rows.map(rowOf),
+    rows: [],
     other:
       answer.other === undefined
         ? null
         : { groups: answer.other.groups, rows: answer.other.rows.map(rowOf) },
     total: answer.total ?? null,
+    truncated: false,
   };
+  const kept = fittingCount(rows, Buffer.byteLength(JSON.stringify(rest)));
+  return { ...rest, rows: rows.slice(0, kept), truncated: kept < rows.length };
 }
 
 /**
@@ -159,25 +180,30 @@ export function aggregateRecordsTool(services: McpToolServices): McpTool {
       ).map((field) => field.meta);
       const widgets = aggregateWidgetsOf(input, { id: table.id, fields });
       const timeZone = input.timezone ?? access.timeZone;
-      const answers = await Promise.all(
-        widgets.map(({ type, config: widget }) => {
-          // "Other" sums up the groups past `limit`.
-          const query = widgetQueryOf(
-            type,
-            type === 'bar' ? { ...widget, group_others: true } : widget,
-          );
-          if (query === null || query === 'invalid') {
-            throw new AppError('INTERNAL', { detail: 'A checked plan makes a widget query.' });
+      const queries = widgets.map(({ type, config: widget }) => {
+        // "Other" sums up the groups past `limit`.
+        const query = widgetQueryOf(
+          type,
+          type === 'bar' ? { ...widget, group_others: true } : widget,
+        );
+        if (query === null || query === 'invalid') {
+          throw new AppError('INTERNAL', { detail: 'A checked plan makes a widget query.' });
+        }
+        return query;
+      });
+      // One slot of the caller's line for the whole call: the KPIs of an
+      // ungrouped call run one after the other in it.
+      const answers = await services.limiter
+        .run(principal.userId, async () => {
+          const out: WidgetAggregateResult[] = [];
+          for (const query of queries) {
+            out.push(await services.recordQuery.widgetData(scope, access, query, { timeZone }));
           }
-          return services.limiter
-            .run(principal.userId, () =>
-              services.recordQuery.widgetData(scope, access, query, { timeZone }),
-            )
-            .catch((error: unknown) => {
-              throw withRetryAfter(error);
-            });
-        }),
-      );
+          return out;
+        })
+        .catch((error: unknown) => {
+          throw withRetryAfter(error);
+        });
       // Only if the schema changed meanwhile; never tells which field.
       if (
         answers.some((answer) => answer.status === 'no_permission' || answer.status === 'broken')

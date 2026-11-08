@@ -1,12 +1,20 @@
+import { Buffer } from 'node:buffer';
+
 import {
   aggregateRecordsInputSchema,
   API_TOKEN_SCOPES,
   DEFAULT_MCP_POLICY,
   MCP_FILTER_OPERATORS,
+  MCP_RESULT_MAX_BYTES,
+  MCP_TOOL_ERROR_MAX_BYTES,
+  problemTitle,
+  type AggregateRecordsResult,
   type ApiTokenScope,
   type FieldDto,
   type Id,
   type McpPolicy,
+  type McpToolError,
+  type ProblemErrorItem,
 } from '@cellhive/contracts';
 import { TUPLE_OPERATORS } from '@cellhive/filter-dsl';
 import { AppError } from '@cellhive/server-core/errors';
@@ -17,7 +25,11 @@ import { z } from 'zod';
 import { dataResult } from '../../src/modules/mcp/envelope.js';
 import { callTool, type McpToolDeps } from '../../src/modules/mcp/mcp-server.js';
 import { defineTool, listedTools, type McpTool } from '../../src/modules/mcp/tool-context.js';
-import { MCP_NOT_FOUND_MESSAGE } from '../../src/modules/mcp/tool-errors.js';
+import {
+  MCP_NOT_FOUND_MESSAGE,
+  shownErrors,
+  toolErrorResult,
+} from '../../src/modules/mcp/tool-errors.js';
 import { aggregateResultOf, aggregateWidgetsOf } from '../../src/modules/mcp/tools/aggregate.js';
 import { mcpTools, type McpToolServices } from '../../src/modules/mcp/tools/index.js';
 import { mcpFieldOf } from '../../src/modules/mcp/tools/tables.js';
@@ -215,6 +227,7 @@ describe('MCP tools: registry and central checks (T920)', () => {
       code: 'NOT_FOUND',
       message: MCP_NOT_FOUND_MESSAGE,
       errors: [],
+      total: 0,
     });
     expect(deps.hitBase).not.toHaveBeenCalled();
     expect(run).not.toHaveBeenCalled();
@@ -265,6 +278,7 @@ describe('MCP tools: registry and central checks (T920)', () => {
       code: 'NOT_FOUND',
       message: MCP_NOT_FOUND_MESSAGE,
       errors: [item],
+      total: 1,
     });
   });
 
@@ -386,6 +400,146 @@ describe('MCP data envelope (T920)', () => {
     expect((dataResult(data).content[0] as { text: string }).text).not.toContain(
       `<${String(tag)}>`,
     );
+  });
+});
+
+const item = (path: string, code: string, extra: Partial<ProblemErrorItem> = {}) => ({
+  path,
+  code,
+  message: 'Problem',
+  ...extra,
+});
+const range = <T>(count: number, of: (n: number) => T): T[] =>
+  Array.from({ length: count }, (_, n) => of(n));
+const unknownField = (record: number) => (n: number) =>
+  item(`records[${String(record)}].fields.f${String(n)}`, 'UNKNOWN_FIELD');
+
+/** BACKLOG T1009 (CONTRACTS §30.1, §30.6): what a tool error shows, and its size. */
+describe('MCP tool errors (T1009)', () => {
+  it.each<[string, ProblemErrorItem[], string[]]>([
+    [
+      'at most 20 unknown fields per record, other problems kept',
+      [
+        ...range(30, unknownField(0)),
+        item('records[0].fields.Status', 'INVALID_SELECT_OPTION'),
+        ...range(30, unknownField(1)),
+      ],
+      [
+        ...range(20, unknownField(0)).map((shown) => shown.path),
+        'records[0].fields.Status',
+        ...range(20, unknownField(1)).map((shown) => shown.path),
+      ],
+    ],
+    [
+      'unknown keys of a record object count with its unknown fields',
+      [
+        ...range(15, (n) => item(`records[2].k${String(n)}`, 'UNRECOGNIZED_KEY')),
+        ...range(15, unknownField(2)),
+      ],
+      [
+        ...range(15, (n) => `records[2].k${String(n)}`),
+        ...range(5, unknownField(2)).map((shown) => shown.path),
+      ],
+    ],
+    [
+      'at most 20 unknown keys outside records',
+      [
+        ...range(25, (n) => item(`k${String(n)}`, 'UNRECOGNIZED_KEY')),
+        item('filter.conditions[0][0]', 'UNKNOWN_FIELD'),
+        item('limit', 'TOO_BIG'),
+      ],
+      [...range(20, (n) => `k${String(n)}`), 'limit'],
+    ],
+    [
+      'at most 100 in all',
+      range(150, (n) => item(`records[${String(n)}].fields.Status`, 'INVALID_SELECT_OPTION')),
+      range(100, (n) => `records[${String(n)}].fields.Status`),
+    ],
+    [
+      'unknown keys of 50 records: 20 of each of the first five',
+      Array.from({ length: 50 }, (_, record) => range(200, unknownField(record))).flat(),
+      Array.from({ length: 5 }, (_, record) =>
+        range(20, unknownField(record)).map((shown) => shown.path),
+      ).flat(),
+    ],
+  ])('%s', (_case, items, paths) => {
+    expect(shownErrors(items).map((shown) => shown.path)).toEqual(paths);
+  });
+
+  it('cuts long strings of an item, params included', () => {
+    const long = 'é'.repeat(600);
+    const [shown] = shownErrors([
+      item(`records[0].fields.${long}`, 'INVALID_SELECT_OPTION', {
+        message: long,
+        params: { value: long, values: [long, 1], nested: { name: long } },
+      }),
+    ]);
+    const cut = `${'é'.repeat(500)}…`;
+    expect(shown).toEqual({
+      path: `records[0].fields.${'é'.repeat(500 - 'records[0].fields.'.length)}…`,
+      code: 'INVALID_SELECT_OPTION',
+      message: cut,
+      params: { value: cut, values: [cut, 1], nested: { name: cut } },
+    });
+  });
+
+  const resultOf = (error: unknown) => {
+    const result = toolErrorResult(error, () => undefined);
+    const payload = result.structuredContent as McpToolError;
+    const text = (result.content[0] as { text: string }).text;
+    return { result, payload, text, bytes: Buffer.byteLength(JSON.stringify(result)) };
+  };
+
+  it('puts the error in a data block, with the total of its items', () => {
+    const errors = range(130, (n) => item(`records[${String(n)}].id`, 'PERMISSION_DENIED'));
+    const { result, payload, text } = resultOf(
+      new AppError('PERMISSION_DENIED', { detail: 'Not allowed.', errors }),
+    );
+    expect(result.isError).toBe(true);
+    expect(payload).toEqual({
+      code: 'PERMISSION_DENIED',
+      message: 'Not allowed.',
+      errors: errors.slice(0, 100),
+      total: 130,
+    });
+    const tag = /^<(cellhive-data-[0-9a-f]{16})>$/mu.exec(text)?.[1];
+    expect(text.startsWith('Cellhive data. ')).toBe(true);
+    expect(text.endsWith(`</${String(tag)}>`)).toBe(true);
+    expect(JSON.parse(text.split('\n')[2] ?? '')).toEqual(payload);
+  });
+
+  it('leaves items out from the end to stay within 64 KB', () => {
+    // 100 items of 1.5 KB of JSON each, written twice (structured, text).
+    const errors = range(100, (n) =>
+      item(`records[${String(n)}].fields.${'x'.repeat(480)}`, 'INVALID_SELECT_OPTION', {
+        message: 'y'.repeat(500),
+        params: { value: 'z'.repeat(500) },
+      }),
+    );
+    const { payload, bytes } = resultOf(new AppError('VALIDATION_FAILED', { errors }));
+    expect(bytes).toBeLessThanOrEqual(MCP_TOOL_ERROR_MAX_BYTES);
+    expect(payload.total).toBe(100);
+    expect(payload.errors.length).toBeGreaterThan(10);
+    expect(payload.errors.length).toBeLessThan(30);
+    expect(payload.errors).toEqual(errors.slice(0, payload.errors.length));
+    // One more item would not fit.
+    const more = { ...payload, errors: errors.slice(0, payload.errors.length + 1) };
+    expect(Buffer.byteLength(JSON.stringify(more)) * 2).toBeGreaterThan(MCP_TOOL_ERROR_MAX_BYTES);
+  });
+
+  it('falls back to the title of the code when one character is too large', () => {
+    // One grapheme: a letter with 70,000 combining marks.
+    const detail = `e${'\u0301'.repeat(70_000)}`;
+    const { payload, bytes } = resultOf(
+      new AppError('VALIDATION_FAILED', { detail, errors: [item('x', 'INVALID')] }),
+    );
+    expect(bytes).toBeLessThanOrEqual(MCP_TOOL_ERROR_MAX_BYTES);
+    expect(payload).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: problemTitle('VALIDATION_FAILED'),
+      errors: [],
+      total: 1,
+    });
   });
 });
 
@@ -550,6 +704,7 @@ describe('MCP aggregate_records (T922)', () => {
       ],
       other: { groups: 2, rows: [[null, 7]] },
       total: [457],
+      truncated: false,
     });
 
     const kpi = (value: number | null, rows = [[value]]): WidgetAggregateResult => ({
@@ -561,10 +716,49 @@ describe('MCP aggregate_records (T922)', () => {
       rows: [[3, null]],
       other: null,
       total: [3, null],
+      truncated: false,
     });
     expect(aggregateResultOf([kpi(0, []), kpi(0, [])], names, false)).toMatchObject({
       rows: [],
       total: null,
     });
+  });
+
+  it('cuts group labels like text cells and leaves groups out past 32 KB (T1009)', () => {
+    const dimension = {
+      key: 'dimension',
+      role: 'dimension',
+      field_id: F.status as Id<'fld'>,
+      field_type: null,
+      aggregation: null,
+      date_bucket: null,
+      bucket_width: null,
+    } as const;
+    const answer = (labels: readonly string[]): WidgetAggregateResult => ({
+      status: 'ok',
+      columns: [dimension, { ...dimension, key: 'm1', role: 'metric', field_id: null }],
+      rows: labels.map((label) => [{ value: label, label: null }, 1]),
+      total: [labels.length],
+    });
+    const names = new Map([[F.status, 'status']]);
+    const long = aggregateResultOf([answer(['a'.repeat(50_000)])], names, true);
+    expect(long).toMatchObject({ rows: [[`${'a'.repeat(4_000)}…`, 1]], truncated: false });
+
+    const wide = Array.from(
+      { length: 12 },
+      (_, n) => `${String(n).padStart(2, '0')}${'w'.repeat(3_998)}`,
+    );
+    const cut: AggregateRecordsResult = aggregateResultOf([answer(wide)], names, true);
+    expect(cut.truncated).toBe(true);
+    expect(cut.total).toEqual([12]);
+    expect(cut.rows).toEqual(wide.slice(0, cut.rows.length).map((label) => [label, 1]));
+    expect(Buffer.byteLength(JSON.stringify(cut))).toBeLessThanOrEqual(MCP_RESULT_MAX_BYTES);
+    const next = { ...cut, rows: wide.slice(0, cut.rows.length + 1).map((label) => [label, 1]) };
+    expect(Buffer.byteLength(JSON.stringify(next))).toBeGreaterThan(MCP_RESULT_MAX_BYTES);
+    // The first group is kept, whatever its size: 4,000 emoji sequences of 18 bytes.
+    const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
+    const one = aggregateResultOf([answer([family.repeat(5_000)])], names, true);
+    expect(one).toMatchObject({ rows: [[`${family.repeat(4_000)}…`, 1]], truncated: false });
+    expect(Buffer.byteLength(JSON.stringify(one))).toBeGreaterThan(MCP_RESULT_MAX_BYTES);
   });
 });

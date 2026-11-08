@@ -26,6 +26,8 @@ import { viewTypeSchema } from './views.js';
 
 /** The only route of the MCP server; `GET`/`DELETE` answer `405`. */
 export const MCP_PATH = '/api/v1/mcp';
+/** Largest request body of the MCP route, in bytes; larger → `413 PAYLOAD_TOO_LARGE`. */
+export const MCP_REQUEST_MAX_BYTES = 2 * 1024 * 1024;
 
 /**
  * A JSON-RPC 2.0 message posted to the endpoint, for the OpenAPI document
@@ -63,6 +65,18 @@ export const mcpResponseSchema = z
 
 // --- Tools (CONTRACTS §30.2+) ---------------------------------------------------------
 
+/** Most items in `errors` of a tool error; `total` counts them all. */
+export const MCP_TOOL_ERRORS_MAX = 100;
+/**
+ * Most unknown-key items (`UNKNOWN_FIELD`, `UNRECOGNIZED_KEY`) a tool error
+ * keeps per record of a write (`records[i]…`), and for the rest of the input.
+ */
+export const MCP_TOOL_ERRORS_UNKNOWN_KEYS_MAX = 20;
+/** Longest string in a tool error (message, paths, params), in graphemes; longer → cut + `…`. */
+export const MCP_TOOL_ERROR_TEXT_MAX_CHARS = 500;
+/** Largest tool error result (`structuredContent` and `content` as JSON), in UTF-8 bytes. */
+export const MCP_TOOL_ERROR_MAX_BYTES = 64 * 1024;
+
 /**
  * `isError` result of a tool call: an `AppError` as data, so that the model
  * can correct its call. `NOT_FOUND` has one message for every reason
@@ -72,7 +86,12 @@ export const mcpToolErrorSchema = z
   .object({
     code: errorCodeSchema,
     message: z.string(),
-    errors: z.array(problemErrorItemSchema),
+    errors: z.array(problemErrorItemSchema).meta({
+      description:
+        `At most ${String(MCP_TOOL_ERRORS_MAX)} items, of which at most ` +
+        `${String(MCP_TOOL_ERRORS_UNKNOWN_KEYS_MAX)} unknown keys per record`,
+    }),
+    total: z.int().min(0).meta({ description: 'Problems found, also those left out of `errors`' }),
     retry_after: z.int().min(1).optional().meta({ description: 'Seconds, when retrying helps' }),
   })
   .meta({ id: 'McpToolError' });
@@ -388,6 +407,11 @@ export const aggregateRecordsResultSchema = z.object({
     .array(z.number().nullable())
     .nullable()
     .meta({ description: 'Each metric over every matching record; `null` when none match' }),
+  truncated: z.boolean().meta({
+    description:
+      `Groups were left out from the end of \`rows\` to keep the result under ` +
+      `${String(MCP_RESULT_MAX_BYTES)} bytes (\`total\` still counts them)`,
+  }),
 });
 export type AggregateRecordsResult = z.infer<typeof aggregateRecordsResultSchema>;
 

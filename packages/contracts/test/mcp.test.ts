@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AUDIT_VIA_KINDS,
+  aggregateRecordsResultSchema,
   createRecordsInputSchema,
   DEFAULT_MCP_POLICY,
   eventViaSchema,
   listBasesInputSchema,
+  MCP_REQUEST_MAX_BYTES,
   MCP_WRITE_RECORDS_MAX,
+  mcpToolErrorSchema,
   orgAuditLogQuerySchema,
   organizationSettingsSchema,
   updateOrganizationRequestSchema,
@@ -78,5 +81,18 @@ describe('MCP contracts (CONTRACTS §30, T920)', () => {
     expect(Object.keys(operation ?? {})).toEqual(['post']);
     expect(operation?.post?.operationId).toBe('mcp');
     expect(operation?.post?.security).toEqual([{ apiToken: ['schema:read'] }]);
+    expect(MCP_REQUEST_MAX_BYTES).toBe(2 * 1024 * 1024);
+    expect(JSON.stringify(operation?.post?.responses?.['413'])).toContain('body over 2 MiB');
+  });
+
+  it('counts the problems of a tool error, and flags aggregates cut at 32 KB (T1009)', () => {
+    const error = { code: 'VALIDATION_FAILED', message: 'Invalid.', errors: [] };
+    expect(mcpToolErrorSchema.safeParse(error).success).toBe(false);
+    expect(mcpToolErrorSchema.safeParse({ ...error, total: 10_000 }).success).toBe(true);
+    const result = { columns: [], rows: [], other: null, total: null };
+    expect(aggregateRecordsResultSchema.safeParse(result).success).toBe(false);
+    expect(aggregateRecordsResultSchema.safeParse({ ...result, truncated: true }).success).toBe(
+      true,
+    );
   });
 });

@@ -27,6 +27,28 @@ export function cutText(text: string, max: number = MCP_TEXT_CELL_MAX_CHARS): st
 
 const bytesOf = (value: unknown) => Buffer.byteLength(JSON.stringify(value));
 
+/**
+ * How many of `items`, from the start, fit in an array of a JSON result
+ * whose other parts take `restBytes`, within `maxBytes` — at least one, so
+ * that the caller always moves on. Each item is counted with a comma: a few
+ * bytes over, never under.
+ */
+export function fittingCount(
+  items: readonly unknown[],
+  restBytes: number,
+  maxBytes: number = MCP_RESULT_MAX_BYTES,
+): number {
+  let used = restBytes;
+  let count = 0;
+  for (const item of items) {
+    const size = bytesOf(item) + 1;
+    if (count > 0 && used + size > maxBytes) break;
+    used += size;
+    count += 1;
+  }
+  return count;
+}
+
 export interface ShapedRecords {
   readonly records: McpRecord[];
   readonly truncated_cells: McpTruncatedCell[];
