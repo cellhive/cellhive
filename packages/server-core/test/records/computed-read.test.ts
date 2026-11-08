@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 
+import { aiPromptReadFieldIds } from '../../src/ai/index.js';
 import {
   computedCellValue,
   computedReferences,
@@ -220,6 +221,25 @@ describe('lock rule', () => {
     const linked = computedReferences(lookupAi, rows, analysisOf);
     expect([...linked.crossFields].sort()).toEqual([aiCost.id, cost.id].sort());
     expect(linked.strictFields.size).toBe(0);
+  });
+
+  it.each([
+    ['a plain source', `{{ [${amount.id}] }}`, [amount.id]],
+    ['a same-row formula: what it reads too', `{{ [${same.id}] }}`, [amount.id, cost.id, same.id]],
+    [
+      'a formula over a formula, transitively',
+      `{{ [${nested.id}] }}`,
+      [amount.id, cost.id, nested.id, same.id],
+    ],
+    [
+      'a formula over an AI field: its sources too',
+      `{{ [${overAi.id}] }}`,
+      [aiCost.id, cost.id, overAi.id],
+    ],
+    ['no placeholder', 'Hello', []],
+  ])('what flows into a prompt: %s', (_name, prompt, expected) => {
+    // The fields of the prompt and, through computed sources, what they read on the record.
+    expect(aiPromptReadFieldIds(prompt, rows, analysisOf)).toEqual([...expected].sort());
   });
 
   it('reads the base setting', () => {

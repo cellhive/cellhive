@@ -14,10 +14,13 @@ import {
   summaryBody,
   summaryTitle,
   validateAutomationDefinition,
+  withTextStepSources,
   type AutomationFieldMeta,
   type AutomationValidationContext,
 } from '../../src/automation/index.js';
 
+import type { BaseSchemaRows } from '../../src/computed/index.js';
+import type { FieldRow, TableRow } from '../../src/db/schema.js';
 import type { MemberBaseAccess } from '../../src/import/member-access.js';
 
 const ORDERS: Id<'tbl'> = 'tbl_OrdersTable00001';
@@ -329,6 +332,61 @@ describe('notificationReferences (BACKLOG T515)', () => {
       triggerRecord: found.triggerRecord,
       steps: [...found.steps],
     }).toEqual(expected);
+  });
+});
+
+describe('withTextStepSources: an AI text placed by a notification (CONTRACTS §29.6)', () => {
+  const MARGIN: Id<'fld'> = 'fld_OrdersMargin0001';
+  const row = (id: string, type: string, options: unknown = {}) =>
+    ({
+      id,
+      table_id: ORDERS,
+      name: id,
+      type,
+      options,
+      deleted_at: null,
+      result_type: type === 'formula' ? { kind: 'number' } : null,
+      compute_mode: type === 'formula' ? 'virtual' : null,
+    }) as unknown as FieldRow;
+  const rows: BaseSchemaRows = {
+    baseId: 'bse_NotifBase0000001',
+    tables: [{ id: ORDERS, name: 'Orders', primary_field_id: F.title } as unknown as TableRow],
+    fields: [
+      row(F.title, 'text'),
+      row(F.amount, 'number'),
+      row(F.cost, 'number'),
+      row(MARGIN, 'formula', { expression: `[${F.amount}] - [${F.cost}]` }),
+    ],
+  };
+  const text = (prompt: string) => ({
+    id: 'act_text',
+    type: 'ai_generate_text' as const,
+    config: { prompt, instructions: null, max_output_tokens: 300, target_field_id: null },
+  });
+  const placed = (steps: string[]) => ({
+    fields: new Map(),
+    triggerRecord: false,
+    steps: new Set(steps),
+  });
+
+  it.each([
+    ['a field named by the prompt', `{{ [${F.title}] }}`, [F.title]],
+    // AI values are always strict: what the formula reads counts, whatever the base setting.
+    [
+      'a formula named by the prompt: what it reads too',
+      `{{ [${MARGIN}] }}`,
+      [F.amount, F.cost, MARGIN],
+    ],
+  ])('%s', (_name, prompt, expected) => {
+    const found = withTextStepSources(placed(['act_text']), [text(prompt)], ORDERS, rows);
+    expect([...found.fields.keys()].sort()).toEqual([...expected].sort());
+    expect(found.triggerRecord).toBe(true);
+  });
+
+  it('a text the templates do not place adds nothing', () => {
+    const found = withTextStepSources(placed([]), [text(`{{ [${MARGIN}] }}`)], ORDERS, rows);
+    expect(found.fields.size).toBe(0);
+    expect(found.triggerRecord).toBe(false);
   });
 });
 

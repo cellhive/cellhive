@@ -11,6 +11,7 @@ import {
   type SendNotificationStepOutput,
 } from '@cellhive/contracts';
 
+import { loadBaseSchemaRows } from '../../../computed/definition/schema-rows.js';
 import { GroupMembersRepository } from '../../../db/repositories/groups.repository.js';
 import { withTxScope } from '../../../db/repository.js';
 import { EventsRepository } from '../../../events/events.repository.js';
@@ -201,20 +202,28 @@ export function createSendNotificationAction(
       const link = await linkOf(config, definition, context, triggerTableId);
       const flat = flattenActions(definition.actions).map((item) => item.action);
       const sources = definitionSources(definition, flat, triggerTableId);
-      const references = withTextStepSources(
-        notificationReferences(
-          [config.title.template, config.body.template],
-          context.schema,
-          triggerTableId,
-          {
-            trigger: TRIGGER_REFERENCES[definition.trigger.type],
-            steps: sources.steps,
-            ...(sources.texts === undefined ? {} : { texts: sources.texts }),
-          },
-        ),
-        flat,
+      const placed = notificationReferences(
+        [config.title.template, config.body.template],
+        context.schema,
         triggerTableId,
+        {
+          trigger: TRIGGER_REFERENCES[definition.trigger.type],
+          steps: sources.steps,
+          ...(sources.texts === undefined ? {} : { texts: sources.texts }),
+        },
       );
+      // An AI text placed by the templates: what flows into its prompt, transitively.
+      const placesText = flat.some(
+        (item) => item.type === 'ai_generate_text' && placed.steps.has(item.id),
+      );
+      const references = placesText
+        ? withTextStepSources(
+            placed,
+            flat,
+            triggerTableId,
+            await loadBaseSchemaRows(deps.db, scope, run.baseId),
+          )
+        : placed;
       const required = await requiredRecords(context, link, references, sources.steps);
 
       // 2. Access of each recipient, grouped by permission profile.

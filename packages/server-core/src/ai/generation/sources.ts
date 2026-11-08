@@ -39,10 +39,23 @@ export function aiReadFieldIds(
   analysisOf: AnalysisOf = aiAnalysisOf(rows),
 ): Id<'fld'>[] {
   const ai = aiOptionsOf(field);
-  if (ai === null) return [];
+  return ai === null ? [] : aiPromptReadFieldIds(ai.prompt, rows, analysisOf);
+}
+
+/**
+ * Every field whose value flows into a stored prompt — of an AI field or of
+ * an AI action (`ai_generate_text`, `ai_classify`): the fields it names
+ * plus the same-record fields its computed sources read, transitively,
+ * whatever `strict_computed_permissions`.
+ */
+export function aiPromptReadFieldIds(
+  prompt: string,
+  rows: BaseSchemaRows,
+  analysisOf: AnalysisOf = aiAnalysisOf(rows),
+): Id<'fld'>[] {
   const byId = new Map<string, FieldRow>(rows.fields.map((row) => [row.id, row]));
   const out = new Set<string>();
-  for (const id of aiSourceFieldIds(ai.prompt)) {
+  for (const id of aiSourceFieldIds(prompt)) {
     out.add(id);
     const source = byId.get(id);
     if (source === undefined || !isComputedRow(source)) continue;
