@@ -91,6 +91,10 @@
     "cancel": "Huỷ",
     "addShort": "Bản ghi"
   },
+  "dock": {
+    "selected_other": "Đã chọn {{count, number}} bản ghi",
+    "clearSelection": "Bỏ chọn"
+  },
   "edit": {
     "search": "Tìm…",
     "remove": "Bỏ {{value}}",

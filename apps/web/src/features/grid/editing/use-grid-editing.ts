@@ -45,6 +45,7 @@ import type {
   UndoHooks,
 } from '../../../grid';
 import type { AttachmentUi } from '../../../lib/attachments/ui';
+import type { DeleteCommand } from '../../../lib/records/commands';
 import type { RecordBlockLoader } from '../blocks/block-loader';
 import type { BaseDetail, RecordDto } from '@cellhive/contracts';
 
@@ -85,6 +86,12 @@ export interface GridEditing {
   readonly addRecord: () => Promise<number | null>;
   /** Moves records to the trash; resolves with how many went. */
   readonly deleteRecords: (recordIds: readonly string[]) => Promise<number>;
+  /**
+   * (T1011) Moves records to the trash without a toast — the selection dock
+   * says so and offers "Undo"; resolves with the deletion as it went on the
+   * undo stack (no ids when none went), or `null` when a request failed.
+   */
+  readonly trashRecords: (recordIds: readonly string[]) => Promise<DeleteCommand | null>;
   /** T418: files dropped on or pasted into attachment cells; `undefined` when none may be edited. */
   readonly fileHooks: FileHooks | undefined;
 }
@@ -350,6 +357,11 @@ export function useGridEditing({
     [controller, t],
   );
 
+  const trashRecords = useCallback(
+    (recordIds: readonly string[]) => controller.removeRecords(recordIds),
+    [controller],
+  );
+
   return {
     controller,
     hooks,
@@ -361,6 +373,7 @@ export function useGridEditing({
     },
     addRecord,
     deleteRecords,
+    trashRecords,
     fileHooks,
   };
 }

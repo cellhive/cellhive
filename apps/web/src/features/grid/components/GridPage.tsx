@@ -81,18 +81,19 @@ import {
   type FieldToolsProps,
 } from '../../../lib/schema/field-tools';
 import { meQuery } from '../../../lib/session/session';
-import { showToast } from '../../../lib/toast/toast';
+import { showErrorToast, showToast } from '../../../lib/toast/toast';
 import { countConditions, viewRecordQuery } from '../../../lib/views/query';
 import { shortCount } from '../../../lib/views/summary/format';
 import { useGridRealtime } from '../blocks/use-grid-realtime';
 import { useRecordBlocks } from '../blocks/use-record-blocks';
-import { useGridClipboard } from '../bulk/use-grid-clipboard';
+import { SelectionDock, type SelectionDockHandle, type UndoOutcome } from '../bulk/SelectionDock';
+import { MAX_BULK_ROWS, useGridClipboard } from '../bulk/use-grid-clipboard';
 import { useGridButtons } from '../buttons/use-grid-buttons';
 import { useColorRulesRefetch } from '../colors/use-color-rules-refetch';
 import { RecomputeBanner } from '../computed/RecomputeBanner';
 import { useComputedColumns } from '../computed/use-computed-columns';
 import { ConversionBanners, conversionBannerId } from '../conversion/ConversionBanners';
-import { AddRecordButton, DeleteRecordsButton } from '../editing/RecordActions';
+import { AddRecordButton } from '../editing/RecordActions';
 import { SchemaLockedBanner } from '../editing/SchemaLockedBanner';
 import { useGridEditing } from '../editing/use-grid-editing';
 import { mayHaveCollapsed } from '../groups/collapse';
@@ -120,6 +121,7 @@ import { UndoRedoButtons } from './UndoRedoButtons';
 import type { AiGenerateMode } from '../../../lib/ai/AiGenerateDialog';
 import type { LinkComponents } from '../../../lib/links/picker';
 import type { ChannelMessage } from '../../../lib/realtime/socket';
+import type { DeleteCommand } from '../../../lib/records/commands';
 import type { SummaryBarLayout } from '../../../lib/views/summary/types';
 import type { ViewToolbarComponents } from '../../../lib/views/toolbar';
 import type { ViewDto } from '@cellhive/contracts';
@@ -555,18 +557,28 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [ranges, rows, snapshot.version],
   );
-  // "Delete N records" acts on whole rows only (row markers), not on a cell range (T322a).
-  const selectedRowIds = useMemo(
-    () =>
-      selectedRecordIds(
-        ranges.filter((range) => range.wholeRows === true),
-        rows,
-      ),
-    // A new block version may bring records of selected rows.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ranges, rows, snapshot.version],
+  // The selection dock acts on whole rows only (the gutter's check boxes, Shift+Space),
+  // not on a cell range (T322a, T1011); phones show cards, without a selection.
+  const wholeRows = useMemo(
+    () => (narrow ? [] : ranges.filter((range) => range.wholeRows === true)),
+    [narrow, ranges],
+  );
+  // Every selected row counts, loaded or not (a click on the gutter's header selects all).
+  const wholeRowCount = wholeRows.reduce(
+    (count, range) => count + range.lastRow - range.firstRow + 1,
+    0,
   );
   const gridHandle = useRef<GridViewHandle>(null);
+  const dock = useRef<SelectionDockHandle>(null);
+  // "Clear selection", Escape, a deletion: the rows go from the grid's selection.
+  const clearRowSelection = useCallback(() => {
+    gridHandle.current?.clearRowSelection();
+    setRanges((current) =>
+      current.some((range) => range.wholeRows === true)
+        ? current.filter((range) => range.wholeRows !== true)
+        : current,
+    );
+  }, []);
 
   // Record panel (FRONTEND §10.1): `?record=rec_…` is the open record (deep link).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -981,7 +993,12 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
         : { files: editing.fileHooks }),
       // A read-only table (reader) still says why Enter or typing opens nothing.
       readOnlyHint: t('edit.readOnlyHint'),
-      selection: { onSelectionChange: setRanges, ...clipboardHooks },
+      selection: {
+        onSelectionChange: setRanges,
+        // Tab from the selected rows goes to the selection dock (T1011).
+        onTabFromRows: () => dock.current?.focus() ?? false,
+        ...clipboardHooks,
+      },
     }),
     [
       columnHooks,
@@ -1102,6 +1119,62 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
     }
     setSearch('');
   };
+  // The selection dock (T1011, Lucian #178): delete at once with "Undo" — a tree asks
+  // about the sub-records in its own dialog first (T417) and offers no undo there.
+  const { requestDelete } = tree;
+  const { trashRecords } = editing;
+  const treeActive = tree.active;
+  const deleteSelected = useCallback(async () => {
+    // As many rows as a paste or a fill at most; rows not loaded yet are fetched first.
+    if (wholeRowCount > MAX_BULK_ROWS) {
+      showToast({
+        variant: 'error',
+        message: t('clipboard.tooLarge', { max: MAX_BULK_ROWS.toLocaleString(locale.locale) }),
+      });
+      return null;
+    }
+    const recordIds = new Set<string>();
+    try {
+      for (const range of wholeRows) {
+        const records = await rows.loadRows(range.firstRow, range.lastRow);
+        for (const record of records) if (record !== undefined) recordIds.add(record.id);
+      }
+    } catch (error) {
+      showErrorToast(error);
+      return null;
+    }
+    if (recordIds.size === 0) return null;
+    if (treeActive) {
+      if ((await requestDelete([...recordIds])) > 0) clearRowSelection();
+      return null;
+    }
+    const command = await trashRecords([...recordIds]);
+    if (command !== null && command.recordIds.length > 0) clearRowSelection();
+    return command;
+  }, [
+    wholeRowCount,
+    wholeRows,
+    rows,
+    treeActive,
+    requestDelete,
+    trashRecords,
+    clearRowSelection,
+    t,
+    locale.locale,
+  ]);
+  const { undoCommand, canUndoCommand } = gridUndo;
+  const undoDeletion = useCallback(
+    async (command: DeleteCommand): Promise<UndoOutcome> => {
+      const outcome = await undoCommand(command);
+      // `null`: undone already (Ctrl/⌘+Z) — nothing left to offer — or another undo runs.
+      if (outcome === null) return canUndoCommand(command) ? 'failed' : 'gone';
+      return outcome === 'kept' ? 'failed' : outcome === 'done' ? 'done' : 'gone';
+    },
+    [undoCommand, canUndoCommand],
+  );
+  const focusGrid = useCallback(() => {
+    gridHandle.current?.focus();
+  }, []);
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDownCapture={onKeyDownCapture}>
       <GridToolbar
@@ -1184,17 +1257,6 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
               </DropdownMenuItem>
             ) : null}
           </>
-        }
-        selection={
-          editing.canDelete ? (
-            <DeleteRecordsButton
-              tableName={table.name}
-              selectedIds={selectedRowIds}
-              // A tree asks about the sub-records in its own dialog (T417).
-              onDelete={tree.active ? tree.requestDelete : editing.deleteRecords}
-              confirm={!tree.active}
-            />
-          ) : undefined
         }
         primary={
           editing.canAdd && ready ? (
@@ -1378,8 +1440,9 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
               onClear={narrowedBy === null ? undefined : clearFilter}
             />
           ) : null}
-          {snapshot.newRows > 0 || snapshot.stale ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+          {/* Over the last rows: "N new rows", then the selection dock (T1011) under it. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-2 px-4">
+            {snapshot.newRows > 0 || snapshot.stale ? (
               <Button
                 size="sm"
                 className="pointer-events-auto rounded-full shadow-popover"
@@ -1393,8 +1456,19 @@ export function GridPage({ view, FieldTools, RecordDetail, ViewToolbar, Link }: 
                   ? t('newRows', { count: snapshot.newRows })
                   : t('rowsChanged')}
               </Button>
-            </div>
-          ) : null}
+            ) : null}
+            {narrow ? null : (
+              <SelectionDock
+                ref={dock}
+                selected={wholeRowCount}
+                onDelete={editing.canDelete ? deleteSelected : undefined}
+                onClear={clearRowSelection}
+                onUndo={undoDeletion}
+                canUndo={canUndoCommand}
+                onLeave={focusGrid}
+              />
+            )}
+          </div>
           {snapshot.error !== null && ready ? (
             <div className="absolute inset-x-4 bottom-4 flex flex-col items-start gap-2">
               <ErrorAlert error={snapshot.error} />

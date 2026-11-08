@@ -51,6 +51,16 @@ vi.mock('../../../grid/GridView', () => ({
             type="button"
             onClick={() => {
               hooks?.selection?.onSelectionChange?.([
+                { firstRow: 0, lastRow: 10_000, fieldIds: [primary], wholeRows: true },
+              ]);
+            }}
+          >
+            select 10001 rows
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              hooks?.selection?.onSelectionChange?.([
                 { firstRow: 0, lastRow: 1, fieldIds: [primary] },
               ]);
             }}
@@ -445,6 +455,7 @@ describe('GridPage (T202)', () => {
 
     function serve(access: ReturnType<typeof tableAccess>, extra: Record<string, Route> = {}) {
       let rows = records(3);
+      let trash: typeof rows = [];
       return stubApi({
         signedIn: true,
         routes: {
@@ -466,8 +477,18 @@ describe('GridPage (T202)', () => {
           },
           [`DELETE /tables/${TABLE}/records`]: (init) => {
             const ids = (JSON.parse(init?.body as string) as { ids: string[] }).ids;
+            trash = [...trash, ...rows.filter((row) => ids.includes(row.id))];
             rows = rows.filter((row) => !ids.includes(row.id));
             return json({ ids });
+          },
+          [`POST /tables/${TABLE}/records/restore`]: (init) => {
+            const ids = (JSON.parse(init?.body as string) as { ids: string[] }).ids;
+            const back = trash
+              .filter((row) => ids.includes(row.id))
+              .map((row) => ({ ...row, version: row.version + 1 }));
+            trash = trash.filter((row) => !ids.includes(row.id));
+            rows = [...rows, ...back].sort((a, b) => a.id.localeCompare(b.id));
+            return json({ records: back });
           },
           ...extra,
         },
@@ -489,27 +510,98 @@ describe('GridPage (T202)', () => {
       expect(new Headers(call?.[1]?.headers).get('idempotency-key')).toMatch(/^web-/u);
     });
 
-    it('deletes the selected rows after confirming', async () => {
+    it('deletes the selected rows from the dock at once, then undoes (T1011)', async () => {
       const fetchMock = serve(tableAccess({ [PRIMARY]: 'edit' }, ['delete']));
       await renderApp(`/b/${BASE}/t/${TABLE}`);
       expect(await screen.findByText('3 records')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add record' })).not.toBeInTheDocument();
-      // T320b: "Delete N records" shows only while rows are selected — T322a: whole
-      // rows (row markers), not a cell range.
-      expect(screen.queryByRole('button', { name: /^Delete/u })).not.toBeInTheDocument();
+      // The dock shows only while whole rows are selected (T322a: not a cell range).
+      expect(screen.queryByRole('region', { name: /selected/u })).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'select cells 1-2' }));
-      expect(screen.queryByRole('button', { name: /^Delete/u })).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: /selected/u })).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'select rows 1-2' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Delete 2 records' }));
-      const dialog = screen.getByRole('dialog', { name: 'Delete 2 records?' });
-      expect(dialog).toHaveTextContent('They move to the trash of Tickets');
-      await userEvent.click(within(dialog).getByRole('button', { name: 'Delete 2 records' }));
-      expect(await screen.findByText('2 records moved to the trash.')).toBeInTheDocument();
+      const dock = screen.getByRole('region', { name: '2 records selected' });
+      expect(within(dock).getByRole('status')).toHaveAttribute('aria-live', 'polite');
+      // No confirmation: the records go to the trash at once.
+      await userEvent.click(within(dock).getByRole('button', { name: 'Delete 2 records' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      const deleted = await screen.findByRole('region', {
+        name: '2 records moved to the trash.',
+      });
       expect(await screen.findByText('1 record')).toBeInTheDocument();
       const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'DELETE');
       expect(JSON.parse(call?.[1]?.body as string)).toEqual({
         ids: [records(1)[0]?.id, records(1, 1)[0]?.id],
       });
+
+      // "Undo": the same records come back (a restore of the delete command).
+      await userEvent.click(within(deleted).getByRole('button', { name: 'Undo' }));
+      expect(await screen.findByText('3 records')).toBeInTheDocument();
+      const restore = fetchMock.mock.calls.find(([url]) => url.includes('/records/restore'));
+      expect(JSON.parse(restore?.[1]?.body as string)).toEqual({
+        ids: [records(1)[0]?.id, records(1, 1)[0]?.id],
+      });
+      await waitFor(() => {
+        expect(screen.queryByRole('region', { name: /trash/u })).not.toBeInTheDocument();
+      });
+      // The deletion was the last change: its undo can be redone like Ctrl/⌘+Z's.
+      expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled();
+    });
+
+    it('the dock clears the selection and offers "Undo" for 8 s only', async () => {
+      serve(tableAccess({ [PRIMARY]: 'edit' }, ['delete']));
+      await renderApp(`/b/${BASE}/t/${TABLE}`);
+      expect(await screen.findByText('3 records')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'select rows 1-2' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+      expect(screen.queryByRole('region', { name: /selected/u })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'select rows 1-2' }));
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        await userEvent.click(screen.getByRole('button', { name: 'Delete 2 records' }));
+        const deleted = await screen.findByRole('region', {
+          name: '2 records moved to the trash.',
+        });
+        // "Delete" went from under the focus: "Undo", in its place, has it (paused meanwhile).
+        expect(within(deleted).getByRole('button', { name: 'Undo' })).toHaveFocus();
+        await vi.advanceTimersByTimeAsync(9_000);
+        expect(deleted).toBeVisible();
+        await userEvent.click(screen.getByRole('button', { name: 'select cells 1-2' }));
+        // Paused while the pointer is on it.
+        await userEvent.hover(deleted);
+        await vi.advanceTimersByTimeAsync(9_000);
+        expect(deleted).toBeVisible();
+        await userEvent.unhover(deleted);
+        await vi.advanceTimersByTimeAsync(8_100);
+        await waitFor(() => {
+          expect(screen.queryByRole('region', { name: /trash/u })).not.toBeInTheDocument();
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('the dock counts every selected row and deletes at most 10 000 at once', async () => {
+      const fetchMock = serve(tableAccess({ [PRIMARY]: 'edit' }, ['delete']));
+      await renderApp(`/b/${BASE}/t/${TABLE}`);
+      expect(await screen.findByText('3 records')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'select 10001 rows' }));
+      const dock = screen.getByRole('region', { name: '10,001 records selected' });
+      await userEvent.click(within(dock).getByRole('button', { name: 'Delete 10,001 records' }));
+      expect(await screen.findByText('Select at most 10,000 rows at a time.')).toBeInTheDocument();
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+      expect(screen.getByRole('region', { name: '10,001 records selected' })).toBeVisible();
+    });
+
+    it('a reader sees the dock without "Delete"', async () => {
+      serve(tableAccess({ [PRIMARY]: 'read' }, [], 'read_only'));
+      await renderApp(`/b/${BASE}/t/${TABLE}`);
+      expect(await screen.findByText('3 records')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'select rows 1-2' }));
+      const dock = screen.getByRole('region', { name: '2 records selected' });
+      expect(within(dock).queryByRole('button', { name: /^Delete/u })).not.toBeInTheDocument();
+      expect(within(dock).getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
     });
 
     it('offers editing only for the fields the role may edit (read → disabled)', async () => {

@@ -30,6 +30,7 @@ Cellhive bundles the following third-party data. Source code dependencies are li
 | --------------------------------- | ---- | ------------ | ---------------------------------------------------------------------------- |
 | Theme tokens and `.ux` base rules | —    | —            | `apps/web/src/styles/lucian.css`                                             |
 | CSV field mapper                  | #130 | `a0a6df398c` | `apps/web/src/features/import/components/FieldMapper.tsx`, `FieldMapper.css` |
+| Bulk selection dock               | #178 | `d65e7c7e70` | `apps/web/src/features/grid/bulk/SelectionDock.tsx`, `SelectionDock.css`     |
 
 ```text
 MIT License

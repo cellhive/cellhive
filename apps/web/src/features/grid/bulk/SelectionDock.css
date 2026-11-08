@@ -1,0 +1,113 @@
+/*! Lucian UX/UI Prompt #178 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#178 */
+/*
+ * #178 "Bulk selection dock" (element d65e7c7e70, catalog 34c4b3e61d), ported
+ * to the grid's selected rows (FRONTEND §6.10, §9.3 "Lucian UX/UI").
+ * Kept: the dock — the count, then the actions — on the swapped surface
+ * (the pattern's ink background with page-colored buttons), tabular numbers,
+ * the undo offered right after the action, and its entrance: from 7 px lower
+ * at 55 % opacity to rest in 350 ms (the pattern's `.dock` → `.dock.active`,
+ * `transition: all .35s`, here on transform and opacity only).
+ * Adapted to FRONTEND §9.3: the inverse surface (`--inverse`/`--on-inverse`,
+ * like the trash's selection bar) for the ink/page swap, 8 px radius, the
+ * 4 px grid (padding 8/16 px, gap 8 px), body text 13 px (the pattern has
+ * 12 px), buttons from `@cellhive/ui` (the pattern's own button styles are
+ * dropped), the popover elevation since the dock floats over the
+ * rows, a focus ring in the dock's own ink, a quick fade on the way out
+ * (`--motion-exit`); the file cards of the gallery demo are the grid's rows.
+ */
+
+/* Fluid: the pattern's 320–370 px card is its gallery frame; here the dock fits its content. */
+.u178 {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  font-size: var(--font-size-body);
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  /* The strip over the rows lets clicks through; only the dock takes them. */
+  pointer-events: none;
+}
+
+.u178 .dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--radius-frame);
+  background: var(--inverse);
+  color: var(--on-inverse);
+  box-shadow: var(--elevation-popover);
+  pointer-events: auto;
+  transition:
+    transform 0.35s,
+    opacity 0.35s;
+}
+
+/* Shown (from `hidden`): it rises 7 px and firms up, like the pattern's `.dock.active`. */
+@starting-style {
+  .u178 .dock {
+    transform: translateY(7px);
+    opacity: 0.55;
+  }
+}
+
+/* Leaving: a quick fade (no 350 ms on the way out), then `display: none`. */
+.u178 .dock[hidden] {
+  display: none;
+  transform: translateY(7px);
+  opacity: 0;
+  transition:
+    transform var(--motion-exit) var(--ease-exit),
+    opacity var(--motion-exit) var(--ease-exit),
+    display var(--motion-exit) allow-discrete;
+}
+
+.u178 .count {
+  min-width: 0;
+  margin-right: 4px;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The page-colored buttons of the pattern: `@cellhive/ui` secondary, no border on the dark. */
+.u178 .act {
+  border-color: transparent;
+}
+
+/* The close button sits on the inverse surface. */
+.u178 .close {
+  color: var(--on-inverse);
+}
+
+.u178 .close:hover {
+  background: color-mix(in srgb, var(--on-inverse) 15%, transparent);
+}
+
+/* The accent ring would fade on the light dock of the dark theme: the dock's own ink. */
+.u178 .dock :focus-visible {
+  outline-color: var(--on-inverse);
+}
+
+/* Phones (a grid shown below 768 px): full width, above the home indicator. */
+@media (max-width: 767.98px) {
+  .u178 .dock {
+    width: 100%;
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+
+  .u178 .count {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u178 *,
+  .u178 *::before,
+  .u178 *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
