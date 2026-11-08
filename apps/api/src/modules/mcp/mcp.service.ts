@@ -19,6 +19,7 @@ import { AppLogger } from '../../common/logging/app-logger.js';
 import { ApiRateLimits } from '../../common/rate-limit/api-rate-limits.js';
 import { SchemaAccess } from '../../common/schema/schema-access.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
+import { AutomationDraftsService } from '../automation/automation-drafts.service.js';
 import { BaseService } from '../base/base.service.js';
 import { WidgetQueryLimiter } from '../dashboard/widget-query-limiter.js';
 import { FieldService } from '../field/field.service.js';
@@ -94,6 +95,7 @@ export class McpService implements OnApplicationShutdown {
     @Inject(GroupMembersRepository) groupMembers: GroupMembersRepository,
     @Inject(RecordQueryService) recordQuery: RecordQueryService,
     @Inject(WidgetQueryLimiter) limiter: WidgetQueryLimiter,
+    @Inject(AutomationDraftsService) automationDrafts: AutomationDraftsService,
     @Inject(IdempotencyService) idempotency: IdempotencyService,
     @Inject(MetricsService) metrics: MetricsService,
     @Inject(AppLogger) logger: AppLogger,
@@ -132,6 +134,7 @@ export class McpService implements OnApplicationShutdown {
       groupMembers,
       recordQuery,
       limiter,
+      automationDrafts,
       logger,
     });
     this.endpoint = new McpEndpoint(tools, {

@@ -13,6 +13,8 @@ import { Module } from '@nestjs/common';
 import { APP_CONFIG, DB, MAIL_SERVICE, STORAGE_DRIVER } from '../../common/tokens.js';
 import { EmailAssetService } from '../email-settings/email-asset.service.js';
 
+import { AutomationDraftsController } from './automation-drafts.controller.js';
+import { AutomationDraftsService } from './automation-drafts.service.js';
 import { AutomationDuplicateController } from './automation-duplicate.controller.js';
 import { AutomationEmailAssetController } from './automation-email-asset.controller.js';
 import { AutomationEmailController } from './automation-email.controller.js';
@@ -28,11 +30,14 @@ import { AutomationRunsService } from './runs/automation-runs.service.js';
  * Automation management: definitions, enable/disable, `run_as` and take
  * over (BACKLOG T502); preview and test email of `send_email` (T514); run
  * history, re-run and cancel (T518); duplicate with body images (T551);
- * "Send a test" of `http_request` through the outbox (T606).
+ * "Send a test" of `http_request` through the outbox (T606); drafts by
+ * name — the digest and check of T908, the MCP drafts kept for the
+ * builder (T1015).
  */
 @Module({
   controllers: [
     AutomationController,
+    AutomationDraftsController,
     AutomationDuplicateController,
     AutomationEmailController,
     AutomationEmailAssetController,
@@ -41,6 +46,7 @@ import { AutomationRunsService } from './runs/automation-runs.service.js';
   ],
   providers: [
     AutomationService,
+    AutomationDraftsService,
     AutomationEmailService,
     AutomationHttpTestService,
     AutomationRunsService,
@@ -75,6 +81,6 @@ import { AutomationRunsService } from './runs/automation-runs.service.js';
         }),
     },
   ],
-  exports: [AutomationService],
+  exports: [AutomationService, AutomationDraftsService],
 })
 export class AutomationModule {}

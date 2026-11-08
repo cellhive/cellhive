@@ -385,7 +385,7 @@ describe('AI automation draft API (T908)', () => {
     for (const index of [1, 2]) expect(lastUserMessage(index)).not.toMatch(/(fld|tbl|opt)_/u);
   });
 
-  it('offers the bots usable in the base; the draft names one, saved by its id', async () => {
+  it('offers the bots usable in the base; the draft names one, saved by its id; a literal chat is a warning', async () => {
     const secret = await fx.call('owner', 'POST', `/orgs/${fx.orgId}/secrets`, {
       kind: 'telegram_bot',
       name: 'Bot nhóm',
@@ -418,6 +418,16 @@ describe('AI automation draft API (T908)', () => {
           },
         ],
       },
+      // A chat the model wrote into the draft: a warning for the builder (T1015).
+      warnings: [
+        {
+          code: 'literal_chat_id',
+          message:
+            'Step act_1 posts to the Telegram chat -1001234567890 written in the draft, not ' +
+            'taken from a field: save it only if this group or channel is yours.',
+          action_id: 'act_1',
+        },
+      ],
     });
     const format = JSON.stringify(chats()[0]?.body?.['response_format']);
     expect(format).toContain('"Bot nhóm"');
