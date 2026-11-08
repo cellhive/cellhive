@@ -81,7 +81,7 @@ function valuesOf(tokens: readonly NotificationRecipientValue[]): NotificationRe
 
 function tokenKey(token: NotificationRecipientValue): string {
   if ('user_ids' in token) return `user:${token.user_ids.join(',')}`;
-  if ('group_id' in token) return `group:${token.group_id}`;
+  if ('group_id' in token) return `group:${token.group_id ?? ''}`;
   if ('field' in token) return `field:${token.field}`;
   if ('step' in token) return `step:${token.step}:${token.path ?? ''}`;
   return `trigger:${token.trigger}`;
@@ -166,7 +166,7 @@ export function SendNotificationPanel({
     token: NotificationRecipientValue,
   ): { text: string; tone: ChipTone | 'user' | 'group' } => {
     if ('user_ids' in token) return { text: userName(token.user_ids[0] ?? ''), tone: 'user' };
-    if ('group_id' in token) return { text: groupName(token.group_id), tone: 'group' };
+    if ('group_id' in token) return { text: groupName(token.group_id ?? ''), tone: 'group' };
     if ('step' in token && token.path?.startsWith('records[0].fields.') === true) {
       const fieldId = token.path.slice('records[0].fields.'.length);
       const owner = scope.steps.find((item) => item.id === token.step);

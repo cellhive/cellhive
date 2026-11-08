@@ -89,8 +89,12 @@ export function createSendTelegramAction(deps: SendTelegramActionDeps): Automati
       }
       const { config } = action;
 
-      const secret = await secrets.findUsable(scope, config.secret_id, run.baseId, 'telegram_bot');
-      if (secret === undefined) {
+      const secretId = config.secret_id;
+      const secret =
+        secretId === null
+          ? undefined
+          : await secrets.findUsable(scope, secretId, run.baseId, 'telegram_bot');
+      if (secretId === null || secret === undefined) {
         throw new AutomationStepError(
           'secret_unavailable',
           'The bot of this step is gone or not shared with this base.',
@@ -183,7 +187,7 @@ export function createSendTelegramAction(deps: SendTelegramActionDeps): Automati
       }
       const output: SendTelegramStepOutput = {
         message_id: sent.messageId,
-        secret_id: config.secret_id,
+        secret_id: secretId,
         length: Array.from(text).length,
         truncated: rendered.truncated,
       };

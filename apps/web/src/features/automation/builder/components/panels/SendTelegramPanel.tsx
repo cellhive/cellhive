@@ -69,7 +69,9 @@ export function SendTelegramPanel({ action, scope, onChange }: ActionPanelProps<
     staleTime: 30_000,
   });
   const items = bots.data?.items ?? [];
-  const known = config.secret_id === NO_SECRET || items.some((bot) => bot.id === config.secret_id);
+  // `null`: a bot a base import left out (CONTRACTS §12.2), chosen again like an empty one.
+  const secretId = config.secret_id ?? NO_SECRET;
+  const known = secretId === NO_SECRET || items.some((bot) => bot.id === secretId);
   const set = (patch: Partial<typeof config>) => {
     onChange({ ...action, config: { ...config, ...patch } });
   };
@@ -80,7 +82,7 @@ export function SendTelegramPanel({ action, scope, onChange }: ActionPanelProps<
         {(control) => (
           <Select
             {...control}
-            value={config.secret_id}
+            value={secretId}
             disabled={bots.isPending}
             data-testid="telegram-bot"
             onChange={(event) => {
@@ -94,7 +96,7 @@ export function SendTelegramPanel({ action, scope, onChange }: ActionPanelProps<
               </option>
             ))}
             {known || bots.isPending ? null : (
-              <option value={config.secret_id}>{t('telegram.unknownBot')}</option>
+              <option value={secretId}>{t('telegram.unknownBot')}</option>
             )}
           </Select>
         )}

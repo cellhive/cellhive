@@ -45,7 +45,7 @@ export async function checkSendNotificationRecipients(
   for (const { action } of steps) {
     for (const value of action.config.recipients) {
       if ('user_ids' in value) for (const id of value.user_ids) userIds.add(id);
-      if ('group_id' in value) groupIds.add(value.group_id);
+      if ('group_id' in value && value.group_id !== null) groupIds.add(value.group_id);
     }
   }
   const [members, groups] = await Promise.all([
@@ -67,7 +67,8 @@ export async function checkSendNotificationRecipients(
           });
         });
       }
-      if ('group_id' in value && !knownGroups.has(value.group_id)) {
+      // `null`: detached by a base import (CONTRACTS §12.2), unknown until one is chosen.
+      if ('group_id' in value && (value.group_id === null || !knownGroups.has(value.group_id))) {
         errors.push({
           path: `${at}.group_id`,
           code: NOTIFICATION_GROUP_NOT_FOUND,

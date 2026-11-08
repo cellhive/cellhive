@@ -27,12 +27,16 @@ export const runN8nWorkflowConfigSchema = z
         '(`INVALID_URL`), the address when called (CONTRACTS §25.4). In a template each ' +
         'placeholder value is percent-encoded',
     }),
-    signing_secret_id: idOf('sec').meta({
-      description:
-        'Required `webhook_signing` secret of the organization whose scope includes the base: ' +
-        'the request carries `webhook-signature` (Standard Webhooks; two signatures for 24 ' +
-        'hours after the secret is replaced)',
-    }),
+    signing_secret_id: idOf('sec')
+      .nullable()
+      .meta({
+        description:
+          'Required `webhook_signing` secret of the organization whose scope includes the base: ' +
+          'the request carries `webhook-signature` (Standard Webhooks; two signatures for 24 ' +
+          'hours after the secret is replaced); ' +
+          '`null` once a base import detached it (CONTRACTS §12.2): the step cannot run and ' +
+          'turning the automation on is `422 AUTOMATION_INVALID` until one is chosen',
+      }),
     fields: z
       .array(idOf('fld'))
       .min(1)

@@ -41,12 +41,14 @@ export async function checkHttpRequestSecrets(
   const errors: ProblemErrorItem[] = [];
   const now = input.now ?? new Date();
   const check = async (
-    secretId: Id<'sec'>,
+    secretId: Id<'sec'> | null,
     kind: SecretKind,
     path: string,
     url: OutboundUrl | null,
   ): Promise<void> => {
-    const row = await secrets.findUsable(scope, secretId, input.baseId, kind);
+    // `null`: detached by a base import (CONTRACTS §12.2), not usable until one is chosen.
+    const row =
+      secretId === null ? undefined : await secrets.findUsable(scope, secretId, input.baseId, kind);
     if (row === undefined) {
       errors.push({
         path,

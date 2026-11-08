@@ -75,9 +75,14 @@ export const sendTelegramTextSchema = z
 
 export const sendTelegramConfigSchema = z
   .strictObject({
-    secret_id: idOf('sec').meta({
-      description: 'A `telegram_bot` secret of the organization whose scope includes the base',
-    }),
+    secret_id: idOf('sec')
+      .nullable()
+      .meta({
+        description:
+          'A `telegram_bot` secret of the organization whose scope includes the base; ' +
+          '`null` once a base import detached it (CONTRACTS §12.2): the step cannot run and ' +
+          'turning the automation on is `422 AUTOMATION_INVALID` until one is chosen',
+      }),
     chat_id: telegramChatValueSchema,
     text: sendTelegramTextSchema,
   })

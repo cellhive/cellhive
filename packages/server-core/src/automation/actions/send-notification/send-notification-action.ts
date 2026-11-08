@@ -153,8 +153,10 @@ export function createSendNotificationAction(
     const groupIds: Id<'grp'>[] = [];
     for (const value of config.recipients) {
       if ('user_ids' in value) userIds.push(...value.user_ids);
-      else if ('group_id' in value) groupIds.push(value.group_id);
-      else {
+      else if ('group_id' in value) {
+        // Never `null` in an automation that runs (turning it on checks every group).
+        if (value.group_id !== null) groupIds.push(value.group_id);
+      } else {
         const resolved = await values.resolve(value);
         userIds.push(...recipientPartsOf(resolved.value).userIds);
       }
