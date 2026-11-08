@@ -147,11 +147,19 @@ export class FieldService {
     return this.dtos.one(base, field);
   }
 
+  /**
+   * `PATCH /fields/:id`. `keepUnlistedOptions` (only the MCP `update_field`
+   * tool passes it, CONTRACTS §30.7, Quyết định S9 #36): select options of
+   * `input.options` are upserted under the schema lock and every current
+   * option is kept, so nothing is deleted even when an option is added
+   * concurrently; the REST route never sets it.
+   */
   async update(
     principal: Principal,
     fieldId: Id<'fld'>,
     input: UpdateFieldRequest,
     meta: RequestMeta,
+    mode: { readonly keepUnlistedOptions?: boolean } = {},
   ): Promise<UpdateFieldResponse> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
     if (input.options !== undefined && Object.hasOwn(input.options, 'ai')) {
@@ -173,6 +181,7 @@ export class FieldService {
         ...(input.options === undefined
           ? {}
           : { optionsPatch: input.options, optionsBase: field.options }),
+        ...(mode.keepUnlistedOptions === true ? { keepUnlistedOptions: true } : {}),
         ...(input.description === undefined ? {} : { description: input.description }),
         ...(input.required === undefined ? {} : { required: input.required }),
         ...(input.unique_values === undefined ? {} : { uniqueValues: input.unique_values }),

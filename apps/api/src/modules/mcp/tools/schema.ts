@@ -133,18 +133,12 @@ function rewritten(error: unknown, rewrite: (path: string) => string, named = fa
 const under = (prefix: string) => (path: string) => (path === '' ? prefix : `${prefix}.${path}`);
 
 /** REST option paths back to the MCP names (`options.link_table` → `options.link_table_id`). */
-function mcpPathOf(type: string, path: string, selectOrigins?: readonly (number | null)[]): string {
+function mcpPathOf(type: string, path: string): string {
   if (type === 'link') return path.replace(/^options\.link_table\b/u, 'options.link_table_id');
   if (type === 'lookup') {
     return path
       .replace(/^options\.select\b/u, 'options.field')
       .replace(/^options\.(?:from|where)\b.*$/u, 'options.link_field');
-  }
-  if (type === 'select' && selectOrigins !== undefined) {
-    return path.replace(/^options\.options\[(\d+)\]/u, (whole, index: string) => {
-      const origin = selectOrigins[Number(index)];
-      return origin === null || origin === undefined ? whole : `options.options[${String(origin)}]`;
-    });
   }
   return path;
 }
@@ -203,49 +197,31 @@ export function selectCreateOptions(input: McpSelectOptionsInput): JsonRecord {
   };
 }
 
-/** The options patch of a select field and, per option of its list, the input item it came from. */
-export interface SelectPatch {
-  readonly patch: JsonRecord;
-  /** Index in `patch.options` → index in the input's `options` (`null`: kept as it was). */
-  readonly origins: readonly (number | null)[];
-}
-
 /**
- * The options patch of `update_field` on a select field: the list is an
- * upsert by name — an option named again keeps its id (its colour may
- * change), a new name is added at the end, an option left out stays where
- * it is. Every current option is in the list, so `FieldService.update`
- * never deletes one (`job_id` stays `null`). `default_value` names options
- * the field has.
+ * The options patch of `update_field` on a select field, for
+ * `FieldService.update` with `keepUnlistedOptions`: the named options as
+ * they are (by name, no id) — the service merges them under the schema
+ * lock as an upsert (`upsertSelectOptions` of server-core): a name the
+ * field has keeps its option and place (its colour may change), a new name
+ * is added at the end, and every option not named — also one added
+ * concurrently — stays. No option is ever deleted (`job_id` stays `null`).
+ * `default_value` names options the field has (`current`).
  */
-export function selectUpdatePatch(current: unknown, input: McpSelectOptionsInput): SelectPatch {
-  const stored = storedOptionsOf(current);
-  const patch: JsonRecord = {};
-  if (input.multiple !== undefined) patch['multiple'] = input.multiple;
-  let origins: (number | null)[] = [];
-  if (input.options !== undefined) {
-    const named = new Map(input.options.map((option, index) => [option.name, index]));
-    const list: JsonRecord[] = stored.map((option) => {
-      const index = named.get(option.name);
-      const color = index === undefined ? undefined : input.options?.[index]?.color;
-      return { ...option, ...(color === undefined ? {} : { color }) };
-    });
-    origins = stored.map((option) => named.get(option.name) ?? null);
-    const known = new Set(stored.map((option) => option.name));
-    input.options.forEach((option, index) => {
-      if (known.has(option.name)) return;
-      list.push({
-        name: option.name,
-        ...(option.color === undefined ? {} : { color: option.color }),
-      });
-      origins.push(index);
-    });
-    patch['options'] = list;
-  }
-  if (input.default_value !== undefined) {
-    patch['default_value'] = defaultIdsOf(input.default_value, stored);
-  }
-  return { patch, origins };
+export function selectUpdatePatch(current: unknown, input: McpSelectOptionsInput): JsonRecord {
+  return {
+    ...(input.multiple === undefined ? {} : { multiple: input.multiple }),
+    ...(input.options === undefined
+      ? {}
+      : {
+          options: input.options.map((option) => ({
+            name: option.name,
+            ...(option.color === undefined ? {} : { color: option.color }),
+          })),
+        }),
+    ...(input.default_value === undefined
+      ? {}
+      : { default_value: defaultIdsOf(input.default_value, storedOptionsOf(current)) }),
+  };
 }
 
 /** `options.ai` set or removed → refused: AI fields are set up in the app (CONTRACTS §30.7). */
@@ -477,24 +453,16 @@ class SchemaWrites {
     if (isAiField(field)) await requireAiFieldUnlocked(this.services.db, base, field);
 
     let options: JsonRecord | undefined;
-    let origins: readonly (number | null)[] | undefined;
     if (input.options !== undefined) {
       refuseAi(input.options);
       if (!(MCP_CREATABLE_FIELD_TYPES as readonly string[]).includes(field.type)) {
         throw notAvailable('options', 'field_type');
       }
       if (field.type === 'select') {
-        const named = parseOptions(mcpSelectOptionsInputSchema, input.options);
-        // The options as they are right before the update (after the awaits above), so that
-        // the list holds every option `FieldService.update` will see: none is left out.
-        const { field: latest } = await this.services.schemaAccess.requireField(
-          principal,
-          field.id,
-          'manage',
+        options = selectUpdatePatch(
+          field.options,
+          parseOptions(mcpSelectOptionsInputSchema, input.options),
         );
-        const selectPatch = selectUpdatePatch(latest.options, named);
-        options = selectPatch.patch;
-        origins = selectPatch.origins;
       } else if (field.type === 'link') {
         const { allow_multiple: allowMultiple } = parseOptions(
           mcpLinkOptionsUpdateSchema,
@@ -518,9 +486,13 @@ class SchemaWrites {
     };
     let updated: FieldDto;
     try {
-      updated = await this.services.fields.update(principal, field.id, request, meta);
+      // The select merge happens in the service, under the schema lock: an option added
+      // since `field` was read is kept too (Quyết định S9 #36).
+      updated = await this.services.fields.update(principal, field.id, request, meta, {
+        keepUnlistedOptions: true,
+      });
     } catch (error) {
-      throw rewritten(error, (path) => mcpPathOf(field.type, path, origins));
+      throw rewritten(error, (path) => mcpPathOf(field.type, path));
     }
     return this.resultOf(principal, baseId, updated);
   }

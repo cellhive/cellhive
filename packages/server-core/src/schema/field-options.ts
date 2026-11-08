@@ -50,16 +50,24 @@ export function withNewOptionIds(type: string, options: JsonRecord | undefined):
  * - with `base` (the options the caller read before sending the patch),
  *   options added to the field since then by a concurrent change are not
  *   the caller's to delete: they are kept, after the listed ones.
+ *
+ * With `keepUnlisted` (MCP `update_field`, CONTRACTS §30.7, Quyết định S9
+ * #36) the list is an upsert instead: see {@link upsertSelectOptions}.
  */
 export function mergeFieldOptions(
   type: string,
   current: unknown,
   patch: Readonly<JsonRecord>,
   base?: unknown,
+  mode: { readonly keepUnlisted?: boolean } = {},
 ): JsonRecord {
   const locked = isRecord(current) ? current : {};
   const merged: JsonRecord = { ...locked, ...patch };
   if (type !== 'select' || !Array.isArray(patch.options)) return merged;
+  if (mode.keepUnlisted === true) {
+    merged.options = upsertSelectOptions(locked.options, patch.options as unknown[]);
+    return merged;
+  }
 
   const existing = optionIdsOf(locked);
   const errors: ProblemErrorItem[] = [];
@@ -109,4 +117,58 @@ export function mergeFieldOptions(
     }
   }
   return merged;
+}
+
+/**
+ * The select options of a patch that never deletes one (MCP `update_field`,
+ * CONTRACTS §30.7), computed from the options read under the table's schema
+ * lock, so that an option added by a concurrent change is never lost:
+ *
+ * - every current option stays, in its current order;
+ * - an item with an `id` updates that option in place (an id the field does
+ *   not have is `UNKNOWN_OPTION`, as without the mode);
+ * - an item without `id` whose `name` is a current option's updates it in
+ *   place (its colour), keeping its id;
+ * - any other item is a new option with a fresh id, added at the end.
+ *
+ * No option is ever removed, so `default_value` needs no clean-up and no
+ * job removes values from the records.
+ */
+export function upsertSelectOptions(current: unknown, items: readonly unknown[]): unknown[] {
+  const options: unknown[] = Array.isArray(current) ? [...(current as unknown[])] : [];
+  const indexOf = (match: (option: JsonRecord) => boolean) =>
+    options.findIndex((option) => isRecord(option) && match(option));
+  const errors: ProblemErrorItem[] = [];
+  items.forEach((item, position) => {
+    if (!isRecord(item)) {
+      options.push(item);
+      return;
+    }
+    if (item.id !== undefined) {
+      const at = indexOf((option) => option.id === item.id);
+      if (at === -1) {
+        errors.push({
+          path: `options.options[${String(position)}].id`,
+          code: UNKNOWN_OPTION,
+          message: 'The field has no option with this id; leave `id` out to add an option',
+        });
+        return;
+      }
+      options[at] = { ...(options[at] as JsonRecord), ...item };
+      return;
+    }
+    const at = indexOf((option) => option.name === item.name);
+    if (at === -1) {
+      options.push({ ...item, id: newId('opt') });
+      return;
+    }
+    options[at] = { ...(options[at] as JsonRecord), ...item, id: (options[at] as JsonRecord).id };
+  });
+  if (errors.length > 0) {
+    throw new AppError('VALIDATION_FAILED', {
+      detail: 'Select options can only keep ids the field already has.',
+      errors,
+    });
+  }
+  return options;
 }

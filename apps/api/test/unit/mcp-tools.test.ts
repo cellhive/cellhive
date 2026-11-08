@@ -946,8 +946,10 @@ describe('MCP aggregate_records (T922)', () => {
 
 /**
  * BACKLOG T1014 (CONTRACTS §30.7): select options of the schema tools by
- * name — new ids on create, an upsert on update that never leaves an
- * option out (so `FieldService.update` never deletes one).
+ * name — new ids on create; on update the named options only, merged as an
+ * upsert under the schema lock by `FieldService.update` with
+ * `keepUnlistedOptions` (Quyết định S9 #36, server-core
+ * `upsertSelectOptions`).
  */
 describe('MCP schema tools: select options by name (T1014)', () => {
   const OPEN = { id: 'opt_SchemaToolOpen00', name: 'Open', color: 1 };
@@ -971,34 +973,18 @@ describe('MCP schema tools: select options by name (T1014)', () => {
     expect(selectCreateOptions({})).toEqual({ options: [] });
   });
 
-  it.each<[string, Parameters<typeof selectUpdatePatch>[1], unknown, (number | null)[]]>([
+  it.each<[string, Parameters<typeof selectUpdatePatch>[1], unknown]>([
     [
-      'an option left out is kept, a new name is added at the end',
+      'the named options as they are, by name: the service upserts them under the lock',
       { options: [{ name: 'Open' }, { name: 'Waiting', color: 2 }] },
-      { options: [OPEN, DONE, { name: 'Waiting', color: 2 }] },
-      [0, null, 1],
+      { options: [{ name: 'Open' }, { name: 'Waiting', color: 2 }] },
     ],
-    ['an empty list keeps every option', { options: [] }, { options: [OPEN, DONE] }, [null, null]],
-    [
-      'a name given again only changes its colour',
-      { options: [{ name: 'Done', color: 9 }, { name: 'Open' }] },
-      { options: [OPEN, { ...DONE, color: 9 }] },
-      [1, 0],
-    ],
-    ['no list: the options stay untouched', { multiple: true }, { multiple: true }, []],
-    ['the default by name', { default_value: 'Open' }, { default_value: OPEN.id }, []],
-    ['no default', { default_value: null }, { default_value: null }, []],
-  ])('%s', (_case, input, patch, origins) => {
-    const result = selectUpdatePatch(current, input);
-    expect(result.patch).toEqual(patch);
-    expect(result.origins).toEqual(origins);
-    // Every option the field has is still listed: nothing to delete.
-    const listed = result.patch['options'] as { id?: string }[] | undefined;
-    if (listed !== undefined) {
-      for (const option of current.options) {
-        expect(listed.map((item) => item.id)).toContain(option.id);
-      }
-    }
+    ['an empty list', { options: [] }, { options: [] }],
+    ['no list: the options stay untouched', { multiple: true }, { multiple: true }],
+    ['the default by name', { default_value: 'Open' }, { default_value: OPEN.id }],
+    ['no default', { default_value: null }, { default_value: null }],
+  ])('%s', (_case, input, patch) => {
+    expect(selectUpdatePatch(current, input)).toEqual(patch);
   });
 
   it('refuses a default naming an option the field does not have yet', () => {

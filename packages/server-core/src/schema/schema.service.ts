@@ -359,6 +359,13 @@ export interface FieldPatch {
    * as "missing from the list". Default: the current options.
    */
   readonly optionsBase?: unknown;
+  /**
+   * Select options of `optionsPatch` are an upsert (MCP `update_field`,
+   * CONTRACTS §30.7, Quyết định S9 #36): merged under the schema lock with
+   * every current option kept in its order (`upsertSelectOptions`), so no
+   * option is ever deleted and no removal job is queued.
+   */
+  readonly keepUnlistedOptions?: boolean;
   readonly uniqueValues?: boolean;
   readonly required?: boolean;
   readonly description?: string | null;
@@ -1966,7 +1973,9 @@ export class SchemaService {
           ? undefined
           : patch.optionsPatch === undefined
             ? patch.options
-            : mergeFieldOptions(field.type, field.options, patch.optionsPatch, patch.optionsBase);
+            : mergeFieldOptions(field.type, field.options, patch.optionsPatch, patch.optionsBase, {
+                keepUnlisted: patch.keepUnlistedOptions === true,
+              });
         const parsedOptions =
           requested === undefined
             ? undefined
@@ -2098,6 +2107,11 @@ export class SchemaService {
         let jobId: Id<'job'> | undefined = computedChange?.jobId;
         if (field.type === 'select' && field.db_column_name !== null) {
           const removed = removedOptionIds(field.options, current.options);
+          if (removed.length > 0 && patch.keepUnlistedOptions === true) {
+            // Unreachable by construction (`upsertSelectOptions` keeps every option): a guard
+            // so that this mode can never delete one.
+            throw new TypeError('updateField: keepUnlistedOptions would remove options');
+          }
           if (removed.length > 0) {
             jobId = await this.enqueueOptionRemoval(tx, current, removed, context);
           }
