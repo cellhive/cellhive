@@ -16,6 +16,12 @@ export interface GroupTexts {
   readonly weekOf: (date: string) => string;
   /** `(quarter, year)` → "Q1 2026". */
   readonly quarter: (quarter: number, year: number) => string;
+  /**
+   * A month bucket: `name` is the locale's short month name ("Aug"),
+   * `month` its number — "Aug 2026" in English, "T8/2026" in Vietnamese
+   * (where the short name, "thg 8", reads oddly).
+   */
+  readonly month: (name: string, month: number, year: number) => string;
 }
 
 /** Reads a group cell of `rows` (`{ value, label }`), tolerating anything else. */
@@ -51,14 +57,15 @@ function dateFormat(locale: string, options: Intl.DateTimeFormatOptions): Intl.D
 
 /**
  * The first day of a date bucket (`YYYY-MM-DD`, CONTRACTS §28.3) as text:
- * day → medium date, week → "Week of …", month → "Jan 2026", quarter →
- * "Q1 2026", year → "2026". Dates are calendar days (no time zone shift).
+ * day → medium date, week → "Week of …", month → `texts.month` ("Jan 2026",
+ * "T1/2026"), quarter → "Q1 2026", year → "2026". Dates are calendar days
+ * (no time zone shift).
  */
 export function bucketLabel(
   value: string,
   bucket: DateBucket | null,
   locale: string,
-  texts: Pick<GroupTexts, 'weekOf' | 'quarter'>,
+  texts: Pick<GroupTexts, 'weekOf' | 'quarter' | 'month'>,
 ): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/u.exec(value);
   if (match === null) return value;
@@ -70,7 +77,11 @@ export function bucketLabel(
     case 'quarter':
       return texts.quarter(Math.floor(date.getUTCMonth() / 3) + 1, date.getUTCFullYear());
     case 'month':
-      return dateFormat(locale, { month: 'short', year: 'numeric' }).format(date);
+      return texts.month(
+        dateFormat(locale, { month: 'short' }).format(date),
+        date.getUTCMonth() + 1,
+        date.getUTCFullYear(),
+      );
     case 'week':
       return texts.weekOf(dateFormat(locale, { dateStyle: 'medium' }).format(date));
     default:

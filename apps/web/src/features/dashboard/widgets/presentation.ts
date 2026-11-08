@@ -70,6 +70,7 @@ export function useWidgetPresentation(
       unknownUser: t('group.unknownUser'),
       weekOf: (date) => t('group.weekOf', { date }),
       quarter: (quarter, year) => t('group.quarter', { quarter, year }),
+      month: (name, month, year) => t('group.month', { name, month, year }),
     };
     const slots = new Map<string, number>();
     for (const fieldId of optionFieldIds) {

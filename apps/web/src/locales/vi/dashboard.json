@@ -45,7 +45,8 @@
     "noAccess": "(Không có quyền)",
     "unknownUser": "Người dùng không xác định",
     "weekOf": "Tuần từ {{date}}",
-    "quarter": "Q{{quarter}} {{year}}"
+    "quarter": "Q{{quarter}} {{year}}",
+    "month": "T{{month}}/{{year}}"
   },
   "metric": {
     "count": "Số bản ghi",

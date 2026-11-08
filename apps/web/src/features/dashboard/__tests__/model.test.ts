@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createTestI18n } from '../../../../test/i18n';
 import {
   changeFormatter,
   fieldNumberStyle,
@@ -24,6 +25,7 @@ const TEXTS: GroupTexts = {
   unknownUser: 'Unknown user',
   weekOf: (date) => `Week of ${date}`,
   quarter: (quarter, year) => `Q${String(quarter)} ${String(year)}`,
+  month: (name, _month, year) => `${name} ${String(year)}`,
 };
 const plain = (value: number) => value.toLocaleString('en');
 const col = (overrides: Record<string, unknown> = {}) => ({
@@ -62,6 +64,33 @@ describe('groupLabel (T811)', () => {
     ['not a date', 'day', 'not a date'],
   ] as const)('bucket %s by %s → %s', (value, bucket, expected) => {
     expect(bucketLabel(value, bucket, 'en', TEXTS)).toBe(expected);
+  });
+});
+
+describe('month buckets in each language (T1004)', () => {
+  /** The month text of the real `dashboard` locale of `language`. */
+  const monthOf = async (language: 'en' | 'vi') => {
+    const i18n = await createTestI18n(language);
+    const t = i18n.getFixedT(language, 'dashboard');
+    return (name: string, month: number, year: number) => t('group.month', { name, month, year });
+  };
+
+  it.each([
+    ['vi', '2026-08-01', 'T8/2026'],
+    ['vi', '2026-12-01', 'T12/2026'],
+    ['en', '2026-08-01', 'Aug 2026'],
+  ] as const)('%s: %s → %s', async (language, value, expected) => {
+    const texts = { ...TEXTS, month: await monthOf(language) };
+    expect(bucketLabel(value, 'month', language, texts)).toBe(expected);
+    expect(
+      groupLabel(
+        { value, label: null },
+        col({ date_bucket: 'month' }) as never,
+        language,
+        texts,
+        plain,
+      ),
+    ).toBe(expected);
   });
 });
 
