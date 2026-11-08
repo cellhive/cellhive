@@ -248,6 +248,8 @@ export const API_TOKEN_ROUTE_SCOPES = {
   // bases
   createBase: { method: 'POST', path: '/api/v1/workspaces/{workspaceId}/bases', scope: 'session' },
   deleteBase: { method: 'DELETE', path: '/api/v1/bases/{baseId}', scope: 'session' },
+  // `.chbase` export (T1017): record values, plus `schema:read` and `automations:read` per request
+  exportBase: { method: 'POST', path: '/api/v1/bases/{baseId}/export', scope: 'records:read' },
   getBase: { method: 'GET', path: '/api/v1/bases/{baseId}', scope: 'schema:read' },
   listBaseMembers: { method: 'GET', path: '/api/v1/bases/{baseId}/members', scope: 'records:read' },
   listBases: {

@@ -3,6 +3,7 @@ import { registerApiTokenRoutes } from './routes/api-tokens.js';
 import { registerAuditRoutes } from './routes/audit.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerAutomationRoutes } from './routes/automations.js';
+import { registerBasePackageRoutes } from './routes/base-packages.js';
 import { registerDashboardRoutes } from './routes/dashboards.js';
 import { registerEmailAssetRoutes } from './routes/email-assets.js';
 import { registerEmailIdentityRoutes } from './routes/email-identities.js';
@@ -63,6 +64,7 @@ export const routeRegistrars: readonly RouteRegistrar[] = [
   registerFormRoutes,
   registerFormCoverRoutes,
   registerAuditRoutes,
+  registerBasePackageRoutes,
   registerImportRoutes,
   registerFileRoutes,
   registerLinkRoutes,

@@ -1,6 +1,15 @@
+import { createWriteStream } from 'node:fs';
+import { access, constants, rm } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
+
 import {
   AuditWriter,
+  basePackageKey,
+  createStorageDriver,
+  findBaseOrganization,
   JOB_QUEUE_SCHEMA,
+  JobsRepository,
+  orgScope,
   systemAuditContext,
   type Tx,
   type User,
@@ -10,6 +19,7 @@ import { sql } from 'kysely';
 import { runMigrations } from '../migrate.js';
 import { revokeUserApiTokens } from '../modules/api-token/revoke-user-tokens.js';
 import { PasswordResetLinks, type ResetLink } from '../modules/auth/password-reset-links.js';
+import { startBaseExport } from '../modules/base-package/base-export.service.js';
 import {
   lockSetup,
   OrganizationProvisioner,
@@ -17,6 +27,8 @@ import {
 } from '../modules/setup/org-provisioning.js';
 
 import { CliError, type CliContext } from './context.js';
+
+import type { Id } from '@cellhive/contracts';
 
 /**
  * CLI commands (SPEC §14.1A, §14.2). They run with server access, act as
@@ -245,4 +257,99 @@ export async function jobsUnlockStaleCommand(
     `${input.dryRun ? 'Would unlock' : 'Unlocked'} jobs of ${String(workerIds.length)} worker(s):`,
   );
   for (const id of workerIds) ctx.io.out(id);
+}
+
+/** How often `cellhive base export` reads the state of its job. */
+export const BASE_EXPORT_POLL_MS = 1_000;
+/** After this long in `queued`, the CLI says the worker may not be running. */
+const BASE_EXPORT_QUEUED_HINT_MS = 30_000;
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `cellhive base export --base <bse_…> --out <file.chbase>` (CONTRACTS
+ * §12.2): starts the same `base.export` job as `POST /bases/:id/export`
+ * (system actor, `base.exported` audited) and waits for the worker to
+ * finish it, then copies the package from object storage into `--out` (a
+ * new file, never overwritten) and removes the stored copy. Prints the job
+ * id, then the result as JSON with `path` instead of `download_url`. The
+ * caps of `BASE_PACKAGE_MAX_BYTES` apply as to any export.
+ */
+export async function baseExportCommand(
+  ctx: CliContext,
+  input: { readonly baseId: Id<'bse'>; readonly out: string },
+  options: { readonly pollMs?: number; readonly sleep?: (ms: number) => Promise<void> } = {},
+): Promise<void> {
+  if (await exists(input.out)) throw new CliError(`${input.out} already exists.`);
+  const organizationId = await findBaseOrganization(ctx.db.kysely, input.baseId);
+  if (organizationId === undefined)
+    throw new CliError('No base has this id (or it is in the trash).');
+  const scope = orgScope(organizationId);
+  const jobId = await startBaseExport(ctx.db, {
+    scope,
+    baseId: input.baseId,
+    createdBy: null,
+    context: systemAuditContext(),
+  });
+  ctx.io.err(`Export started (job ${jobId}); the worker writes the package.`);
+  ctx.io.out(jobId);
+
+  const jobs = new JobsRepository(ctx.db);
+  const pollMs = options.pollMs ?? BASE_EXPORT_POLL_MS;
+  const sleep =
+    options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const started = Date.now();
+  let hinted = false;
+  for (;;) {
+    const job = await jobs.getById(scope, jobId);
+    if (job === undefined) throw new CliError('The export job is gone.');
+    if (job.status === 'succeeded') break;
+    if (job.status === 'failed' || job.status === 'cancelled') {
+      const error = job.error as { code?: unknown; detail?: unknown } | null;
+      const code = typeof error?.code === 'string' ? error.code : job.status;
+      const detail = typeof error?.detail === 'string' ? ` ${error.detail}` : '';
+      throw new CliError(`The export ${job.status} (${code}).${detail}`);
+    }
+    if (!hinted && job.status === 'queued' && Date.now() - started > BASE_EXPORT_QUEUED_HINT_MS) {
+      hinted = true;
+      ctx.io.err(
+        'Still queued: is the worker running? (another export of the organization waits too)',
+      );
+    }
+    await sleep(pollMs);
+  }
+
+  const storage = createStorageDriver(ctx.config);
+  const key = basePackageKey(organizationId, jobId);
+  try {
+    const body = await storage.getStream(key);
+    if (body === null) throw new CliError('The package is no longer stored; export again.');
+    try {
+      // `wx`: a file created meanwhile is never overwritten.
+      await pipeline(body, createWriteStream(input.out, { flags: 'wx', mode: 0o600 }));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        await rm(input.out, { force: true });
+      }
+      throw error;
+    }
+    await storage.delete(key);
+    await jobs.clearDownload(scope, jobId);
+  } finally {
+    await storage.close();
+  }
+  const job = await jobs.getById(scope, jobId);
+  const result = { ...((job?.result ?? {}) as Record<string, unknown>) };
+  delete result['download_url'];
+  delete result['expires_at'];
+  delete result['file_deleted'];
+  ctx.io.err(`Package written to ${input.out}.`);
+  ctx.io.out(JSON.stringify({ path: input.out, ...result }));
 }
