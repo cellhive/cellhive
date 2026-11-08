@@ -190,7 +190,6 @@ export function initialSecretForm(editing: SecretDto | null): SecretFormState {
 export function secretRequestOf(
   form: SecretFormState,
   editing: SecretDto | null,
-  now: Date = new Date(),
 ):
   | { readonly ok: true; readonly create: CreateSecretInput }
   | { readonly ok: true; readonly update: UpdateSecretRequest | null }
@@ -218,7 +217,7 @@ export function secretRequestOf(
     editing !== null &&
     form.valueMode === 'keep' &&
     isValueSentSecretKind(editing.kind) &&
-    allowedHostsAddHost(editing, canonicalAllowedHosts(hosts), now)
+    allowedHostsAddHost(editing, canonicalAllowedHosts(hosts))
   ) {
     errors.allowed_hosts = 'hosts_need_value';
   }

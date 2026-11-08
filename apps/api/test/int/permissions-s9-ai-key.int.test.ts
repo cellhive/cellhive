@@ -341,6 +341,25 @@ describe('permission matrix S9 — the AI key stays with its host (T1008, P118)'
       allowed_hosts: ['hooks.other.test'],
     });
     expect(signingMoved.statusCode, signingMoved.body).toBe(200);
+    // A header value stored before lists existed was never bound to a host: its first list binds it,
+    // even after its transition period; the next host added needs the value again.
+    await sql`UPDATE meta.secrets SET allowed_hosts = '{}', legacy_hosts_until = now() - interval '1 day'
+               WHERE id = ${headerId}`.execute(db.kysely);
+    const first = await call('owner', 'PATCH', `/secrets/${headerId}`, {
+      allowed_hosts: ['api.crm.test'],
+    });
+    expect(first.statusCode, first.body).toBe(200);
+    expect(secretSchema.parse(first.json())).toMatchObject({
+      allowed_hosts: ['api.crm.test'],
+      legacy_hosts_until: null,
+    });
+    expect(
+      errorsOf(
+        await call('owner', 'PATCH', `/secrets/${headerId}`, {
+          allowed_hosts: ['api.crm.test', 'api.evil.test'],
+        }),
+      ),
+    ).toEqual([expect.objectContaining({ path: 'value', code: 'SECRET_VALUE_REQUIRED' })]);
     // 404 before anything for another organization, 403 for a member.
     expectProblem(
       await call('stranger', 'PATCH', `/secrets/${keyId}`, { allowed_hosts: [trapHost()] }),
