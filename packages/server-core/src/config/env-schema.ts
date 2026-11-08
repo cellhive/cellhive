@@ -1,7 +1,12 @@
 import { Buffer } from 'node:buffer';
 import { domainToASCII } from 'node:url';
 
-import { timeZoneProblem } from '@cellhive/contracts';
+import {
+  BASE_PACKAGE_DEFAULT_MAX_BYTES,
+  BASE_PACKAGE_MAX_BYTES_LIMIT,
+  BASE_PACKAGE_MIN_BYTES_LIMIT,
+  timeZoneProblem,
+} from '@cellhive/contracts';
 import { z } from 'zod';
 
 import { parseCidr, type Cidr } from './cidr.js';
@@ -38,6 +43,8 @@ export const ENV_DEFAULTS = {
   EXPORT_MAX_ROWS: '1000000',
   // SPEC §14.2: 100 MB per attachment (T406).
   ATTACHMENT_MAX_FILE_BYTES: '104857600',
+  // T1016: largest `.chbase` package exported or imported (2 GiB).
+  BASE_PACKAGE_MAX_BYTES: String(BASE_PACKAGE_DEFAULT_MAX_BYTES),
   AUTOMATION_MAX_RUNNING_PER_ORG: '5',
   // ADR-26 §4: runs one automation creates for one batch (request, import job, run).
   AUTOMATION_MAX_RUNS_PER_BATCH: '1000',
@@ -365,6 +372,9 @@ export const envSchema = z.object({
   EXPORT_MAX_ROWS: integer(1, 10_000_000),
   // Up to 5 GiB, the largest single S3 PUT (uploads are one presigned PUT).
   ATTACHMENT_MAX_FILE_BYTES: integer(1, 5 * 1024 * 1024 * 1024),
+  // T1016 (CONTRACTS §12.2): a package is spooled to a temporary file and
+  // stored with one S3 PUT, so at most 5 GiB; at least 1 MiB.
+  BASE_PACKAGE_MAX_BYTES: integer(BASE_PACKAGE_MIN_BYTES_LIMIT, BASE_PACKAGE_MAX_BYTES_LIMIT),
   AUTOMATION_MAX_RUNNING_PER_ORG: integer(1, 1000),
   AUTOMATION_MAX_RUNS_PER_BATCH: integer(1, 50_000),
   AUTOMATION_RUN_RETENTION_DAYS: integer(1, 3650),
