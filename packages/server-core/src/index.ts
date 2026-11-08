@@ -1,5 +1,6 @@
 export * from './api-tokens/index.js';
 export * from './audit/index.js';
+export * from './base-package/index.js';
 export * from './auth/index.js';
 export * from './computed/index.js';
 export * from './config/index.js';

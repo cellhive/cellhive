@@ -14,6 +14,10 @@
       "types": "./dist/audit/index.d.ts",
       "import": "./dist/audit/index.js"
     },
+    "./base-package": {
+      "types": "./dist/base-package/index.d.ts",
+      "import": "./dist/base-package/index.js"
+    },
     "./config": {
       "types": "./dist/config/index.d.ts",
       "import": "./dist/config/index.js"
@@ -115,6 +119,7 @@
     "sanitize-html": "^2.18.0",
     "saxes": "^6.0.0",
     "yauzl": "^3.4.0",
+    "yazl": "^3.3.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
