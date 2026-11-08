@@ -14,7 +14,10 @@
  * (P103–P127) join as their tasks land: P111, P112 (BACKLOG T1006) with
  * `permissions-s9-ai-matrix.int.test.ts`; P113–P117 (BACKLOG T1007) with the
  * same file and the regression cases of `ai-field.int.test.ts`; P103–P108
- * (BACKLOG T1014, MCP schema tools) with `mcp-schema.int.test.ts`.
+ * (BACKLOG T1014, MCP schema tools) with `mcp-schema.int.test.ts`; P119–P127
+ * (BACKLOG T1020, `.chbase` packages) with `permissions-s9-package-matrix.int.test.ts`
+ * and the export/import files of T1017–T1019 (`base-export*`, `base-import*`,
+ * `base-package-roundtrip`).
  *
  * Extra arguments go to Vitest.
  */
@@ -39,6 +42,7 @@ const REQUIRED = [
   115,
   116,
   117,
+  ...Array.from({ length: 9 }, (_v, index) => 119 + index),
 ].map((n) => `P${String(n).padStart(2, '0')}`);
 
 /** Every name mentioning a row: `P07`, `P01/P19`, `P16–P18`, `P100` (ranges expanded). */
