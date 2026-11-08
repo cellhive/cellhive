@@ -16,7 +16,7 @@ Dòng "Nguồn:" nhắc `docs/reviews/…` hoặc BACKLOG trỏ tới ghi chú l
 | [0021](0021-formula-explicit-timezone.md) | Hàm formula nhận timezone tường minh | Accepted | 2026-09-23 |
 | [0022](0022-standard-webhooks.md) | Ký webhook theo Standard Webhooks | Accepted | 2026-09-23 |
 | [0023](0023-audit-and-record-history.md) | Audit log và lịch sử record | Accepted | 2026-09-23 |
-| [0024](0024-base-export-import-package.md) | Gói xuất/nhập nguyên một base | Accepted | 2026-09-23 |
+| [0024](0024-base-export-import-package.md) | Gói xuất/nhập nguyên một base (sửa đổi 2026-11: định dạng v1 đầy đủ, người dùng theo email, trần, đọc gói không tin cậy) | Accepted | 2026-09-23 |
 | [0025](0025-automation-run-as.md) | Automation chạy bằng quyền người bật/sửa cuối (`run_as`) | Accepted | 2026-09-24 |
 | [0026](0026-bulk-writes-and-automation.md) | Ghi hàng loạt và automation: lô, breaker theo lô, `skip_bulk` | Accepted | 2026-09-24 |
 | [0027](0027-http-request-causation-token.md) | Chống vòng lặp `http_request` gọi lại webhook của chính instance | Accepted | 2026-09-24 |
