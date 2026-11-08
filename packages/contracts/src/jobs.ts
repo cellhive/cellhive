@@ -17,13 +17,19 @@ export type JobAccepted = z.infer<typeof jobAcceptedSchema>;
 export const jobSchema = z
   .strictObject({
     id: idOf('job'),
-    type: z.string().meta({ description: 'e.g. `audit.export`, `base.export`' }),
+    type: z
+      .string()
+      .meta({ description: 'e.g. `audit.export`, `table.import`, `base.export`, `base.import`' }),
     status: z.enum(JOB_STATUSES),
     progress: z.number().min(0).max(1),
-    result: z.record(z.string(), z.unknown()).nullable().meta({
-      description:
-        'Outcome of a succeeded job, e.g. `{ "download_url", "expires_at", "size" }` for exports',
-    }),
+    result: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .meta({
+        description:
+          'Outcome of a succeeded job, e.g. `{ "download_url", "expires_at", "size" }` for exports; ' +
+          '`BaseExportResult` for `base.export`, `BaseImportResult` for `base.import`',
+      }),
     error: z
       .record(z.string(), z.unknown())
       .nullable()

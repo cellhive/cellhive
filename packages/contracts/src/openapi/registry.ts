@@ -3,6 +3,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { aiFieldReaderOptionsSchema } from '../ai-fields.js';
 import { API_TOKEN_ROUTE_SCOPES, type ApiTokenRouteEntry } from '../api-token-scopes.js';
 import { n8nWorkflowPayloadSchema } from '../automation-actions/run-n8n-workflow.js';
+import { baseExportResultSchema, baseImportResultSchema } from '../base-packages.js';
 import { formulaFieldOptionsSchema, lookupFieldOptionsSchema } from '../computed-fields.js';
 import { dateReminderOptionSchema } from '../date-reminders.js';
 import { problemDetailsSchema } from '../errors.js';
@@ -37,7 +38,9 @@ const COMMON_COMPONENTS: CommonComponents = { problemDetails: problemDetailsSche
  * published as their own components (T471, CONTRACTS §13) — with `ai` of an
  * AI field as returned to each reader (`AiFieldReaderOptions`, T1006).
  * `N8nWorkflowPayload` is the body Cellhive sends (`run_n8n_workflow`, T607,
- * CONTRACTS §21), not a route.
+ * CONTRACTS §21), not a route. `BaseExportResult` / `BaseImportResult` are
+ * the `result` of the `base.export` / `base.import` jobs (CONTRACTS §12.2,
+ * T1016), read through `GET /jobs/{id}`.
  */
 export const STANDALONE_SCHEMAS: readonly ZodType[] = [
   linkFieldOptionsSchema,
@@ -47,6 +50,8 @@ export const STANDALONE_SCHEMAS: readonly ZodType[] = [
   aiFieldReaderOptionsSchema,
   dateReminderOptionSchema,
   n8nWorkflowPayloadSchema,
+  baseExportResultSchema,
+  baseImportResultSchema,
 ];
 
 /** Builds a fresh registry with every registered route. */

@@ -691,6 +691,35 @@ export const AI_PROVIDER_ERROR_REASONS = [
 
 export type AiProviderErrorReason = (typeof AI_PROVIDER_ERROR_REASONS)[number];
 
+/**
+ * Whole-base packages (CONTRACTS §6, §12.2, T1016): `errors[]` of
+ * `422 INVALID_PACKAGE`, each with `path` = an entry of the package, plus
+ * `#<JSON pointer>` inside a JSON entry or `:<line>#<pointer>` inside an
+ * NDJSON entry (never a path outside the package). `ARCHIVE_LIMIT_EXCEEDED`
+ * carries `params.reason` (`BASE_PACKAGE_LIMIT_REASONS`) and `params.limit`;
+ * `DANGLING_REFERENCE` and `DUPLICATE_ID` carry `params.id`.
+ */
+export const BASE_PACKAGE_DETAIL_CODES = [
+  'INVALID_ARCHIVE',
+  'ARCHIVE_LIMIT_EXCEEDED',
+  'UNSAFE_ENTRY',
+  'UNKNOWN_ENTRY',
+  'DUPLICATE_ENTRY',
+  'MISSING_ENTRY',
+  'INVALID_ENTRY',
+  'CHECKSUM_MISMATCH',
+  'UNSUPPORTED_FORMAT_VERSION',
+  'DANGLING_REFERENCE',
+  'INVALID_DEFINITION',
+  'DUPLICATE_ID',
+] as const;
+
+/**
+ * A package over `BASE_PACKAGE_MAX_BYTES` (T1016): the export job fails with
+ * `VALIDATION_FAILED`, an upload is `413 PAYLOAD_TOO_LARGE`; `params.limit`.
+ */
+export const BASE_PACKAGE_SIZE_DETAIL_CODES = ['PACKAGE_TOO_LARGE'] as const;
+
 /** Every documented detail code, once. */
 export const ERROR_DETAIL_CODES = [
   ...new Set([
@@ -730,6 +759,8 @@ export const ERROR_DETAIL_CODES = [
     ...AI_DETAIL_CODES,
     ...AI_SETTINGS_DETAIL_CODES,
     ...AI_FIELD_GENERATE_DETAIL_CODES,
+    ...BASE_PACKAGE_DETAIL_CODES,
+    ...BASE_PACKAGE_SIZE_DETAIL_CODES,
   ]),
 ] as readonly ErrorDetailCode[];
 
@@ -769,4 +800,6 @@ export type ErrorDetailCode =
   | (typeof REQUEST_DETAIL_CODES)[number]
   | (typeof AI_DETAIL_CODES)[number]
   | (typeof AI_SETTINGS_DETAIL_CODES)[number]
-  | (typeof AI_FIELD_GENERATE_DETAIL_CODES)[number];
+  | (typeof AI_FIELD_GENERATE_DETAIL_CODES)[number]
+  | (typeof BASE_PACKAGE_DETAIL_CODES)[number]
+  | (typeof BASE_PACKAGE_SIZE_DETAIL_CODES)[number];
