@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import { ENV_KEYS, loadConfig } from '../../src/config/index.js';
+import { ENV_KEYS, IMAGE_ENV_KEYS, loadConfig } from '../../src/config/index.js';
 
 const ENV_EXAMPLE = new URL('../../../../.env.example', import.meta.url);
 
@@ -28,10 +28,19 @@ function parseEnvFile(content: string): Map<string, string> {
 }
 
 describe('.env.example', () => {
-  const entries = parseEnvFile(readFileSync(ENV_EXAMPLE, 'utf8'));
+  const content = readFileSync(ENV_EXAMPLE, 'utf8');
+  const entries = parseEnvFile(content);
 
-  it('lists exactly the variables of the zod schema (SPEC §20)', () => {
-    expect([...entries.keys()].sort()).toEqual([...ENV_KEYS].sort());
+  it('lists exactly the variables of the zod schema (SPEC §20) but those of the images', () => {
+    const operatorKeys = ENV_KEYS.filter((key) => !IMAGE_ENV_KEYS.includes(key));
+    expect([...entries.keys()].sort()).toEqual([...operatorKeys].sort());
+  });
+
+  it('names the variables of the images in a comment only (T1023)', () => {
+    for (const key of IMAGE_ENV_KEYS) {
+      expect(entries.has(key)).toBe(false);
+      expect(content).toMatch(new RegExp(`^# .*\\b${key}\\b`, 'mu'));
+    }
   });
 
   it('is a valid development configuration', () => {

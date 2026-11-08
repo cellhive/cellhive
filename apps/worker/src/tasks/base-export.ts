@@ -41,12 +41,6 @@ import type { Logger } from 'pino';
 /** Base exports running at once per organization (ADR-18 `acquireOrgSlot`, CONTRACTS §12.2). */
 export const BASE_EXPORT_ORG_CAP = 1;
 
-/**
- * `app_version` of the packages this build writes (the version of the
- * application packages until the build carries its own).
- */
-export const BASE_PACKAGE_APP_VERSION = '0.0.0';
-
 const payloadSchema = z.object({
   organization_id: idOf('org'),
   job_id: idOf('job'),
@@ -66,7 +60,8 @@ export interface BaseExportDeps {
   readonly timeZone: string;
   /** Where the package is spooled before it is stored (default: the OS temporary directory). */
   readonly tempRoot?: string;
-  readonly appVersion?: string;
+  /** `app_version` of the manifest: the version of the running build (`config.version`). */
+  readonly appVersion: string;
   readonly now?: () => Date;
   /** Tests only: the source of the base instead of the database and storage. */
   readonly source?: (organizationId: Id<'org'>, baseId: Id<'bse'>) => BaseExportSource;
@@ -199,7 +194,7 @@ export function createBaseExportTask(deps: BaseExportDeps): Task<'base.export'> 
         path,
         tempDir: dir,
         limits: deps.limits,
-        appVersion: deps.appVersion ?? BASE_PACKAGE_APP_VERSION,
+        appVersion: deps.appVersion,
         exportedAt: deps.now?.() ?? new Date(),
         exportedByEmail: exportedBy?.email ?? null,
         onProgress: async (progress) => {

@@ -117,6 +117,11 @@ export interface OidcProviderConfig {
 }
 
 export interface AppConfig {
+  /**
+   * `CELLHIVE_BUILD_VERSION`: version of this build (`0.1.0`, `0.1.0-rc.1`), set by
+   * the image; `dev` when the build has none. Public (`/healthz`).
+   */
+  readonly version: string;
   readonly nodeEnv: ParsedEnv['NODE_ENV'];
   readonly mode: Mode;
   readonly port: number;
@@ -340,6 +345,7 @@ function toConfig(env: ParsedEnv, oidcProviders: readonly OidcProviderConfig[]):
       : { driver: 'local', path: env.STORAGE_LOCAL_PATH };
 
   return {
+    version: env.CELLHIVE_BUILD_VERSION,
     nodeEnv: env.NODE_ENV,
     mode: env.MODE,
     port: env.PORT,

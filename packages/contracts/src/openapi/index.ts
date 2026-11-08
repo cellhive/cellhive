@@ -12,6 +12,7 @@ export {
   healthResponseSchema,
   READINESS_DEPENDENCIES,
   readinessResponseSchema,
+  type HealthResponse,
   type ReadinessDependency,
   type ReadinessResponse,
 } from './routes/health.js';

@@ -191,6 +191,21 @@ describe('loadConfig: rejects invalid environments and names the variables', () 
       env: { ...BASE, METRICS_TOKEN: 'short' },
       variables: ['METRICS_TOKEN'],
     },
+    {
+      name: 'CELLHIVE_BUILD_VERSION with a space (T1023)',
+      env: { ...BASE, CELLHIVE_BUILD_VERSION: '0.1.0 rc1' },
+      variables: ['CELLHIVE_BUILD_VERSION'],
+    },
+    {
+      name: 'CELLHIVE_BUILD_VERSION starting with "-" (T1023)',
+      env: { ...BASE, CELLHIVE_BUILD_VERSION: '-0.1.0' },
+      variables: ['CELLHIVE_BUILD_VERSION'],
+    },
+    {
+      name: 'CELLHIVE_BUILD_VERSION over 64 characters (T1023)',
+      env: { ...BASE, CELLHIVE_BUILD_VERSION: `0.1.0-${'a'.repeat(59)}` },
+      variables: ['CELLHIVE_BUILD_VERSION'],
+    },
   ];
 
   it.each(cases)('$name', ({ env, variables }) => {
@@ -273,6 +288,7 @@ describe('loadConfig: defaults and parsing', () => {
     expect(config).toMatchObject({
       nodeEnv: 'production',
       mode: 'api',
+      version: 'dev',
       port: 3000,
       publicUrl: 'https://cellhive.example.com',
       database: { poolMax: 10 },
@@ -503,6 +519,17 @@ describe('loadConfig: defaults and parsing', () => {
     expect(Object.isFrozen(config.security)).toBe(true);
     expect(Object.isFrozen(config.security.trustedProxies)).toBe(true);
     expect(Object.isFrozen(config.security.trustedProxies[0])).toBe(true);
+  });
+
+  it.each([
+    { name: 'unset', value: undefined, version: 'dev' },
+    { name: 'empty', value: '', version: 'dev' },
+    { name: 'a release', value: '0.1.0', version: '0.1.0' },
+    { name: 'a release candidate', value: '0.1.0-rc.1', version: '0.1.0-rc.1' },
+    { name: 'build metadata', value: ' 0.2.0-dev+abc1234 ', version: '0.2.0-dev+abc1234' },
+    { name: '64 characters', value: `0.1.0-${'a'.repeat(58)}`, version: `0.1.0-${'a'.repeat(58)}` },
+  ])('reads the build version from CELLHIVE_BUILD_VERSION: $name (T1023)', ({ value, version }) => {
+    expect(loadConfig({ ...BASE, CELLHIVE_BUILD_VERSION: value }).version).toBe(version);
   });
 
   it('ignores variables outside SPEC §20', () => {

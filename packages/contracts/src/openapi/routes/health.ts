@@ -3,8 +3,16 @@ import { z } from 'zod';
 import { problemResponse, type RouteRegistrar } from '../types.js';
 
 export const healthResponseSchema = z
-  .object({ status: z.literal('ok') })
-  .meta({ id: 'HealthStatus', description: 'Liveness status' });
+  .object({
+    status: z.literal('ok'),
+    version: z.string().min(1).max(64).meta({
+      description:
+        'Version of the running build (`0.1.0`, `0.1.0-rc.1`; `dev` for a build without one)',
+    }),
+  })
+  .meta({ id: 'HealthStatus', description: 'Liveness status and version of the running build' });
+
+export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
 /** Dependencies checked by `/readyz` (SPEC §19), in report order. */
 export const READINESS_DEPENDENCIES = ['database', 'cache', 'storage'] as const;
@@ -36,7 +44,9 @@ export const registerHealthRoutes: RouteRegistrar = (registry, components) => {
     operationId: 'getHealthz',
     tags: ['system'],
     summary: 'Liveness probe',
-    description: 'Answers 200 while the process is running; checks no dependency.',
+    description:
+      'Answers 200 while the process is running, with the version of the running build; ' +
+      'checks no dependency.',
     security: [],
     responses: {
       200: {

@@ -10093,17 +10093,24 @@
         "type": "object"
       },
       "HealthStatus": {
-        "description": "Liveness status",
+        "description": "Liveness status and version of the running build",
         "properties": {
           "status": {
             "enum": [
               "ok"
             ],
             "type": "string"
+          },
+          "version": {
+            "description": "Version of the running build (`0.1.0`, `0.1.0-rc.1`; `dev` for a build without one)",
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
           }
         },
         "required": [
-          "status"
+          "status",
+          "version"
         ],
         "type": "object"
       },
@@ -55631,7 +55638,7 @@
     },
     "/healthz": {
       "get": {
-        "description": "Answers 200 while the process is running; checks no dependency.",
+        "description": "Answers 200 while the process is running, with the version of the running build; checks no dependency.",
         "operationId": "getHealthz",
         "responses": {
           "200": {

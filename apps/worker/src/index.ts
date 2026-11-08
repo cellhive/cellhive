@@ -36,7 +36,6 @@ export {
 } from './thumbnails/email-image.js';
 export { readAtMost } from './thumbnails/render-thumbnails.js';
 export {
-  BASE_PACKAGE_APP_VERSION,
   baseExportTempDir,
   baseImportTempDir,
   buildTaskList,

@@ -2,9 +2,11 @@ export { formatCidr, parseCidr, type Cidr } from './cidr.js';
 export {
   asciiDomain,
   CONDITIONAL_REQUIREMENTS,
+  DEV_BUILD_VERSION,
   ENV_DEFAULTS,
   ENV_KEYS,
   envSchema,
+  IMAGE_ENV_KEYS,
   OIDC_DEFAULT_SCOPES,
   OIDC_MAX_PROVIDERS,
   OIDC_PROVIDER_VARIABLES,
