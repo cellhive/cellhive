@@ -780,9 +780,10 @@ describe('permission matrix S7 over HTTP (T818)', () => {
       dashboard_id: D.id,
       table_ids: [fx.orders.id],
     });
-    const text = JSON.stringify(hint);
-    for (const forbidden of [r2, '222', '33', F('amount'), F('cost')]) {
-      expect(text).not.toContain(forbidden);
+    // Compare values, not substrings: a random id may contain "33".
+    const values = Object.values(hint as Record<string, unknown>).flat();
+    for (const forbidden of [r2, 222, 33, '222', '33', F('amount'), F('cost')]) {
+      expect(values).not.toContain(forbidden);
     }
     await admin.next(dataChanged, 10_000);
     // Tickets (w_tickets): the admin hears of it, Sales (no Tickets) never does.
