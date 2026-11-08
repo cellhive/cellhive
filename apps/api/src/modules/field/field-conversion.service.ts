@@ -28,6 +28,7 @@ import {
   type SelectOptions,
 } from '@cellhive/field-types';
 import {
+  AiSettingsRepository,
   AuditLogsRepository,
   BaseRolesRepository,
   computedDefinitionOf,
@@ -49,6 +50,7 @@ import {
   isComputedRow,
   loadBaseSchemaRows,
   MemberDirectoryRepository,
+  prepareAiOptions,
   prepareComputedDefinition,
   previewComputedRevert,
   previewComputedSource,
@@ -57,11 +59,13 @@ import {
   previewRevert,
   RecordMutationService,
   RecordQueryService,
+  requireAi,
   SchemaService,
   sourceColumnOf,
   storedDefinitionOf,
   ViewsRepository,
   withNewOptionIds,
+  type AiFieldContext,
   type AppConfig,
   type Db,
   type FieldConversionRow,
@@ -206,6 +210,7 @@ export class FieldConversionService {
     @Inject(GroupMembersRepository) private readonly groupMembers: GroupMembersRepository,
     @Inject(LinkConversionService) private readonly links: LinkConversionService,
     @Inject(FieldDtoService) private readonly dtos: FieldDtoService,
+    @Inject(AiSettingsRepository) private readonly aiSettings: AiSettingsRepository,
   ) {
     this.members = new MemberDirectoryRepository(db);
   }
@@ -232,6 +237,8 @@ export class FieldConversionService {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
     assertNoButton(field, body.type);
     await requireAiFieldUnlocked(this.db, base, field);
+    // A preview answers like the change: AI settings of the target checked like a PATCH.
+    await this.targetAi(base, field, body);
     // T404: link fields (direction, allow_multiple; link ↔ other types refused).
     if (this.links.handles(field, body)) return this.links.preview(principal, base, field, body);
     // T463: to a formula/lookup; from one, the converter reads every source.
@@ -300,6 +307,7 @@ export class FieldConversionService {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
     assertNoButton(field, body.type);
     await requireAiFieldUnlocked(this.db, base, field);
+    const targetAi = await this.targetAi(base, field, body);
     if (this.links.handles(field, body)) {
       const converted = await this.links.convert(principal, base, field, body, meta);
       return {
@@ -322,19 +330,26 @@ export class FieldConversionService {
         { from: field.type, to: body.type },
       );
     }
-    const { plan, toOptions } = planned;
+    const { plan } = planned;
     const scope = base.org.scope;
 
     if (plan.kind === 'none') {
-      // No value changes: applied at once, like a PATCH of the options.
+      // No value changes: applied at once, like a PATCH of the options (its AI checks included).
       const { field: updated, removeOptionsJobId } = await this.schema.updateFieldWithJob(
         scope,
         fieldId,
-        { optionsPatch: toOptions, optionsBase: field.options },
+        {
+          optionsPatch: planned.toOptions,
+          optionsBase: field.options,
+          ...(targetAi === null ? {} : { ai: this.aiContextOf(base) }),
+        },
         context,
       );
       return { job_id: removeOptionsJobId, field: await this.dtoOf(base, updated) };
     }
+    // The conversion stores the target options as they are: the prompt with ids.
+    const toOptions: JsonRecord =
+      targetAi === null ? planned.toOptions : { ...planned.toOptions, ai: targetAi };
 
     let finalOptions: JsonRecord = toOptions;
     let counted: StartConversionInput['counted'];
@@ -422,6 +437,8 @@ export class FieldConversionService {
   async revertPreview(principal: Principal, fieldId: Id<'fld'>): Promise<RevertConversionPreview> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'manage');
     const conversion = await this.revertible(base.org.scope, field);
+    // The preview shows the old values: it answers like the revert.
+    await this.requireRevertibleAi(base, field, conversion);
     if (conversion.kind !== 'column') return this.links.revertPreview(base, field, conversion);
     if (isComputedConversion(conversion)) {
       return this.computedRevertPreview(principal, base, field, conversion);
@@ -458,13 +475,18 @@ export class FieldConversionService {
     const context = mutationContextOf(meta, principal.userId);
     const mode = body.mode ?? 'keep_later_edits';
     const conversion = await this.revertible(scope, field);
+    await this.requireRevertibleAi(base, field, conversion);
     if (conversion.kind !== 'column') {
       const reverted = await this.links.revert(principal, base, field, conversion, body, meta);
       return this.dtoOf(base, reverted);
     }
+    // An AI field coming back: its prompt is checked again under the schema lock.
+    const ai = this.aiContextOf(base);
     if (mode === 'new_field') {
       const name = body.name ?? `${field.name} (old version)`;
-      const created = await this.schema.restoreConversionAsNewField(scope, fieldId, name, context);
+      const created = await this.schema.restoreConversionAsNewField(scope, fieldId, name, context, {
+        ai,
+      });
       return this.dtoOf(base, created);
     }
     if (isComputedConversion(conversion)) {
@@ -485,6 +507,7 @@ export class FieldConversionService {
           edited: preview.edited,
           overwritten: preview.edited,
         },
+        ai,
       });
       return this.dtoOf(base, reverted);
     }
@@ -504,6 +527,7 @@ export class FieldConversionService {
           edited: counted.edited,
           overwritten: counted.edited,
         },
+        ai,
       });
       return this.dtoOf(base, reverted);
     }
@@ -528,6 +552,7 @@ export class FieldConversionService {
             kept: counted.keptEdits.length,
             overwritten: counted.editedUnconvertible,
           },
+          ai,
         });
         return await this.dtoOf(base, reverted);
       } catch (error) {
@@ -620,6 +645,81 @@ export class FieldConversionService {
       plan,
       this.conversionLocale(base),
     );
+  }
+
+  /** What the caller may reference in the prompt of an AI field they save (SPEC §9.5). */
+  private aiContextOf(base: BaseAccess): AiFieldContext {
+    return { readable: readabilityOf(base.access) };
+  }
+
+  /**
+   * A type change whose target carries `options.ai` (a `text`/`select`
+   * field, CONTRACTS §4.4, §29.5): the checks of setting it with `PATCH` —
+   * AI on with record data allowed (`422 AI_NOT_CONFIGURED` /
+   * `AI_RECORD_DATA_DISABLED`), then the prompt, in names, against what the
+   * caller reads (`422 VALIDATION_FAILED`: a hidden field is unknown, a
+   * link/parent or a formula reading another record is
+   * `CROSS_TABLE_NOT_SUPPORTED`) and no cycle through a formula/lookup
+   * reading the field. Returns `options.ai` as stored (prompt with ids);
+   * `null` when the target has no AI settings.
+   */
+  private async targetAi(
+    base: BaseAccess,
+    field: FieldRow,
+    body: ConvertFieldPreviewRequest,
+  ): Promise<JsonRecord | null> {
+    if (body.type !== 'text' && body.type !== 'select') return null;
+    const requested = isRecord(body.options) ? body.options['ai'] : undefined;
+    if (requested === null || requested === undefined) return null;
+    requireAi(await this.aiSettings.find(base.org.scope), { recordData: true });
+    const scope = base.org.scope;
+    const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
+    const context = this.aiContextOf(base);
+    const prepared = prepareAiOptions(
+      requested,
+      rows,
+      { id: field.id, tableId: field.table_id, isPrimary: field.is_primary },
+      context,
+    );
+    const edges = [
+      ...(await new FieldDependenciesRepository(this.db).listByBase(scope, base.base.id)).filter(
+        (edge) => edge.fieldId !== field.id,
+      ),
+      ...prepared.edges,
+    ];
+    const active = new Set<string>(
+      rows.fields.filter((row) => isComputedRow(row) || isAiField(row)).map((row) => row.id),
+    );
+    active.add(field.id);
+    const cycle = findCycle(field.id, edges, active);
+    if (cycle !== null) throw formulaCycleProblem(cycle, rows, context.readable);
+    return prepared.ai;
+  }
+
+  /**
+   * Undoing the latest conversion of `field` (revert, its preview, restore
+   * as a new field — CONTRACTS §4.4, §29.5) when the field is an AI field,
+   * or was one before the conversion: `403` for a caller locked out of it
+   * (a field flowing into its prompt they cannot read), then — an AI field
+   * coming back — AI on with record data allowed (`422 AI_NOT_CONFIGURED` /
+   * `AI_RECORD_DATA_DISABLED`), like saving its `options.ai`.
+   */
+  private async requireRevertibleAi(
+    base: BaseAccess,
+    field: FieldRow,
+    conversion: FieldConversionRow,
+  ): Promise<void> {
+    await requireAiFieldUnlocked(this.db, base, field);
+    const before = conversion.from_definition;
+    if (typeof before !== 'object' || before === null || Array.isArray(before)) return;
+    const restored: FieldRow = {
+      ...field,
+      type: definitionTypeOf(before),
+      options: before['options'] ?? null,
+    };
+    if (!isAiField(restored)) return;
+    await requireAiFieldUnlocked(this.db, base, restored);
+    requireAi(await this.aiSettings.find(base.org.scope), { recordData: true });
   }
 
   /** The latest conversion when the revert may undo it; `404` otherwise, `409` while running. */
