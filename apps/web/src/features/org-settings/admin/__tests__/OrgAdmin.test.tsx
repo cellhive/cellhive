@@ -34,11 +34,12 @@ const page = <T,>(items: T[]) => ({ items, total: items.length, offset: 0, limit
 function serve({
   role = 'owner',
   others,
-}: { role?: Role; others?: ReturnType<typeof member>[] } = {}) {
+  timezone = ORG.settings.timezone,
+}: { role?: Role; others?: ReturnType<typeof member>[]; timezone?: string } = {}) {
   const calls: [string, unknown][] = [];
   const body = (init: RequestInit | undefined) =>
     typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
-  let org = { ...ORG, role };
+  let org = { ...ORG, role, settings: { ...ORG.settings, timezone } };
   let members = [
     { user: ME.user, role, joined_at: NOW },
     ...(others ?? [member(BINH, 'Binh', 'admin'), member(CHI, 'Chi', 'member')]),
@@ -53,8 +54,9 @@ function serve({
       'GET /me': () => json({ ...ME, orgs: [{ ...ME.orgs[0], role }] }),
       [`GET /orgs/${ORG.id}`]: () => json(org),
       [`PATCH /orgs/${ORG.id}`]: (init) => {
-        calls.push(['PATCH org', body(init)]);
-        org = { ...org, ...(body(init) as object) };
+        const input = body(init) as { name?: string; settings?: object };
+        calls.push(['PATCH org', input]);
+        org = { ...org, ...(input as object), settings: { ...org.settings, ...input.settings } };
         return json(org);
       },
       [`GET /orgs/${ORG.id}/members`]: () => json(page(members)),
@@ -211,6 +213,53 @@ describe('organization settings (T830)', () => {
     expect(screen.getByText(ORG.id)).toBeVisible();
     expect(screen.getByText(`/o/${ORG.slug}`)).toBeVisible();
     expect(await axeViolations(document.body)).toEqual([]);
+  });
+
+  it('sets the organization time zone from the IANA names, explaining what it decides (T1005)', async () => {
+    const { calls } = serve();
+    await renderApp(`/o/${ORG.slug}/settings`);
+    const form = await screen.findByTestId('org-info-form');
+    const zone = within(form).getByLabelText('Time zone');
+    expect(zone).toHaveValue('UTC');
+    expect(zone).toHaveAccessibleDescription(/day of the AI quota.*automation schedules/su);
+    const options = within(zone)
+      .getAllByRole('option')
+      .map((option) => option.getAttribute('value'));
+    expect(options).toContain('Asia/Ho_Chi_Minh');
+    expect(options).not.toContain('Asia/Saigon');
+    expect(options.filter((value) => /^[+\-\u2212]|^UTC[+-]/u.test(value ?? ''))).toEqual([]);
+
+    await userEvent.selectOptions(zone, 'Asia/Ho_Chi_Minh');
+    await userEvent.click(within(form).getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Saved.')).toBeVisible();
+    // Only what changed.
+    expect(calls).toEqual([['PATCH org', { settings: { timezone: 'Asia/Ho_Chi_Minh' } }]]);
+    const saved = await screen.findByTestId('org-info-form');
+    expect(within(saved).getByLabelText('Time zone')).toHaveValue('Asia/Ho_Chi_Minh');
+    expect(within(saved).getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(await axeViolations(document.body)).toEqual([]);
+  });
+
+  it('keeps a stored zone the list lacks selectable: a fixed zone, an old name by its primary name (T1005)', async () => {
+    serve({ timezone: 'Etc/GMT-7' });
+    await renderApp(`/o/${ORG.slug}/settings`);
+    const zone = within(await screen.findByTestId('org-info-form')).getByLabelText('Time zone');
+    expect(zone).toHaveValue('Etc/GMT-7');
+    expect(within(zone).getAllByRole('option')[0]).toHaveValue('Etc/GMT-7');
+    expect(
+      within(await screen.findByTestId('org-info-form')).getByRole('button', {
+        name: 'Save changes',
+      }),
+    ).toBeDisabled();
+  });
+
+  it('shows a stored legacy name by its IANA primary name, unchanged until edited (T1005)', async () => {
+    const { calls } = serve({ timezone: 'EST5EDT' });
+    await renderApp(`/o/${ORG.slug}/settings`);
+    const form = await screen.findByTestId('org-info-form');
+    expect(within(form).getByLabelText('Time zone')).toHaveValue('America/New_York');
+    expect(within(form).getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(calls).toEqual([]);
   });
 
   it('changes a member role and removes a member, whose bases go to the caller', async () => {

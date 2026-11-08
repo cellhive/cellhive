@@ -15,6 +15,8 @@
     "info": {
       "title": "Organization",
       "name": "Organization name",
+      "timezone": "Time zone",
+      "timezoneHint": "Members who have not chosen a time zone see dates in it. It also sets the day of the AI quota (which resets at midnight here) and when automation schedules without a time zone of their own run.",
       "save": "Save changes",
       "saved": "Saved."
     },

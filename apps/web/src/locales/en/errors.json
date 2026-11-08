@@ -125,7 +125,7 @@
     "NO_PASSWORD": "This account signs in with an external provider and has no password.",
     "CURRENT_PASSWORD_INVALID": "The current password is wrong.",
     "INVALID_LOCALE": "Unknown language.",
-    "INVALID_TIME_ZONE": "Unknown time zone.",
+    "INVALID_TIME_ZONE": "Unknown time zone. Use a time zone name such as Asia/Ho_Chi_Minh, not a UTC offset such as +07:00.",
     "DEPENDENCY_DOWN": "A service is unavailable.",
     "MALFORMED_JSON": "Not a valid JSON document.",
     "NOT_ALLOWED": "Not allowed here.",
