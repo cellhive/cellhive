@@ -18,6 +18,10 @@ const ADMIN = {
 };
 const TABLE_NAME = 'Phiếu xoá';
 const RECORD_NAMES = ['Phiếu 1', 'Phiếu 2', 'Phiếu 3', 'Phiếu 4'];
+/** Grid geometry of a new table (compact rows): column header, row height, row gutter. */
+const HEADER_HEIGHT = 36;
+const ROW_HEIGHT = 34;
+const GUTTER = 40;
 
 test('T408: delete 3 records permanently from the trash; another tab sees them go', async ({
   page,
@@ -26,7 +30,7 @@ test('T408: delete 3 records permanently from the trash; another tab sees them g
   const cspViolations = collectCspViolations(page);
   const ids = { baseId: '', tableId: '', recordIds: [] as string[] };
 
-  await test.step('set up: base, table, 4 records moved to the trash', async () => {
+  await test.step('set up: base, table, 4 records moved to the trash from the grid', async () => {
     await page.goto('/login');
     // Any order of the specs (T470/T527): set up, signed in, or invited by the demo admin.
     // Signed in as them: no second sign-in. It would rotate the session while the
@@ -53,7 +57,29 @@ test('T408: delete 3 records permanently from the trash; another tab sees them g
       { records: RECORD_NAMES.map((name) => ({ fields: { Name: name } })) },
     );
     ids.recordIds = created.records.map((record) => record.id);
-    await ok(page, 'DELETE', `/tables/${table.id}/records`, { ids: ids.recordIds });
+
+    // T1011: the gutter's check boxes and the selection dock — no confirmation.
+    await page.goto(`/b/${ids.baseId}/t/${ids.tableId}`);
+    const canvas = page.locator('.ob-grid canvas').first();
+    await expect(canvas).toBeVisible();
+    await expect(page.getByTestId('glide-cell-1-3')).toHaveText(RECORD_NAMES[3] ?? '');
+    const box = await canvas.boundingBox();
+    if (box === null) throw new Error('no grid canvas');
+    for (const row of [0, 1, 2, 3]) {
+      const y = box.y + HEADER_HEIGHT + ROW_HEIGHT * row + ROW_HEIGHT / 2;
+      await page.mouse.move(box.x + GUTTER / 2, y);
+      await page.mouse.click(box.x + GUTTER / 2, y);
+    }
+    const dock = page.getByRole('region', { name: '4 records selected' });
+    const deleted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'DELETE' &&
+        response.url().endsWith(`/api/v1/tables/${table.id}/records`),
+    );
+    await dock.getByRole('button', { name: 'Delete 4 records' }).click();
+    expect((await deleted).status(), 'DELETE records').toBe(200);
+    await expect(page.getByRole('region', { name: '4 records moved to the trash.' })).toBeVisible();
+    await expect(page.getByTestId('glide-cell-1-0')).toHaveCount(0);
   });
 
   const trashPath = () => `/b/${ids.baseId}/t/${ids.tableId}/trash`;

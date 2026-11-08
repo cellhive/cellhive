@@ -257,7 +257,9 @@ test.describe.serial('T203 cell editing', () => {
     expect(forced.body.code).toBe('FIELD_READ_ONLY');
   });
 
-  test('add a record (button and shortcut) and delete it after confirming', async ({ page }) => {
+  test('add a record (button and shortcut) and delete it from the selection dock', async ({
+    page,
+  }) => {
     await signIn(page, WORKER_ORG.email('admin'));
     const customersUrl = ticketsUrl;
     await gotoTable(page, customersUrl, 'Tickets');
@@ -294,15 +296,14 @@ test.describe.serial('T203 cell editing', () => {
         await page.keyboard.press('Enter');
         await saved;
 
-        // T322a: "Delete N records" acts on whole rows — select the row (Shift+Space).
-        if (!(await page.getByRole('button', { name: 'Delete 1 record' }).isVisible())) {
-          await page.keyboard.press('Shift+Space');
-        }
-        await page.getByRole('button', { name: 'Delete 1 record' }).click();
-        const dialog = page.getByRole('dialog', { name: 'Delete 1 record?' });
-        await expect(dialog).toBeVisible();
-        await expectNoSeriousA11yViolations(page, 'delete confirmation');
-        await dialog.getByRole('button', { name: 'Delete record' }).click();
+        // T322a: the selection dock acts on whole rows — select the row (Shift+Space).
+        const dock = page.getByRole('region', { name: '1 record selected' });
+        if (!(await dock.isVisible())) await page.keyboard.press('Shift+Space');
+        await expect(dock).toBeVisible();
+        await expectNoSeriousA11yViolations(page, 'selection dock');
+        // T1011: no confirmation — the record goes to the trash, the dock offers "Undo".
+        await dock.getByRole('button', { name: 'Delete 1 record' }).click();
+        await expect(page.getByRole('dialog')).toHaveCount(0);
         await expect(
           page.getByRole('status').filter({ hasText: '1 record moved to the trash.' }),
         ).toBeVisible();
