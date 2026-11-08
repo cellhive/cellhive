@@ -207,6 +207,11 @@ export interface GridViewHandle {
    * click outside it (T322a: the record panel opens over the grid).
    */
   readonly closeEditor: () => void;
+  /**
+   * (T1011) Drops the whole rows and columns of the selection (the
+   * selection dock's "Clear selection", Escape); the current cell stays.
+   */
+  readonly clearRowSelection: () => void;
 }
 
 /**
@@ -607,6 +612,8 @@ export function GridView({
   const selectionNow = useRef<GridSelection>(EMPTY_SELECTION);
   const [tip, setTip] = useState<Tip | null>(null);
   const pendingFocus = useRef<Item | null>(null);
+  /** (T1011) Drops whole rows and columns from the selection (set once the handlers exist). */
+  const clearRows = useRef<() => void>(() => undefined);
   /** Characters typed on a cell to start editing it, until its editor has the focus (`typeToEdit`). */
   const [typing] = useState(() => new TypeToEdit());
   /** The synthetic F2 that opens the editor is going through glide (not a user key). */
@@ -1638,6 +1645,9 @@ export function GridView({
           new MouseEvent('mousedown', { bubbles: true, cancelable: true }),
         );
       },
+      clearRowSelection: () => {
+        clearRows.current();
+      },
     }),
     [rowCount, select, toDisplay],
   );
@@ -1819,6 +1829,18 @@ export function GridView({
         : tipFor(cell[0], cell[1], editorRef.current?.getBounds(cell[0], cell[1]), 'selection'),
     );
   };
+
+  useLayoutEffect(() => {
+    clearRows.current = () => {
+      const current = selectionNow.current;
+      if (current.rows.length === 0 && current.columns.length === 0) return;
+      onGridSelectionChange({
+        ...current,
+        rows: CompactSelection.empty(),
+        columns: CompactSelection.empty(),
+      });
+    };
+  });
 
   const showExpand = (args: GridMouseEventArgs) => {
     // The tree's row tools (T417) follow the hovered row too.
@@ -2334,7 +2356,42 @@ export function GridView({
       if (row !== undefined) rows.onAddRow(row, cell[0]);
       return true;
     }
+    if (
+      event.key === 'Escape' &&
+      (selectionNow.current.rows.length > 0 || selectionNow.current.columns.length > 0)
+    ) {
+      // (T1011) Escape drops the selected rows (and the selection dock with them).
+      consume();
+      clearRows.current();
+      return true;
+    }
+    const range = selectionNow.current.current?.range;
+    if (
+      event.key === ' ' &&
+      event.shiftKey &&
+      !primary &&
+      range !== undefined &&
+      range.height > 1
+    ) {
+      // (T1011) Shift+Space on a range of rows selects them all (glide: the current row only).
+      consume();
+      onGridSelectionChange({
+        ...selectionNow.current,
+        rows: selectionNow.current.rows.add([range.y, range.y + range.height]),
+      });
+      return true;
+    }
     if (selectionHooks === undefined) return false;
+    if (
+      event.key === 'Tab' &&
+      !event.shiftKey &&
+      !primary &&
+      selectionNow.current.rows.length > 0 &&
+      selectionHooks.onTabFromRows?.() === true
+    ) {
+      consume();
+      return true;
+    }
     if (
       (event.key === 'Delete' || event.key === 'Backspace') &&
       !primary &&
@@ -2618,9 +2675,12 @@ export function GridView({
         theme={theme}
         rowHeight={rowHeight}
         headerHeight={HEADER_HEIGHT}
-        // Grouped rows (T320a): the gutter numbers rows within their group and
-        // shows the check box on hover (whole-row selection).
-        rowMarkers={{ kind: model === undefined ? 'number' : 'both', width: rowMarkerWidth }}
+        // The gutter numbers the rows (within their group, T320a) and shows a check
+        // box on hover: a click selects the whole row, another adds or drops one,
+        // Shift extends (T1011: the selection dock acts on them). A tree keeps
+        // plain numbers: its ⋮⋮ drag handle sits there (T417; Shift+Space selects).
+        rowMarkers={{ kind: tree === undefined ? 'both' : 'number', width: rowMarkerWidth }}
+        rowSelectionMode="multi"
         verticalBorder={!grouped}
         {...(grouped || hasBadges ? { drawHeader } : {})}
         {...(onHeaderClicked === undefined ? {} : { onHeaderClicked })}

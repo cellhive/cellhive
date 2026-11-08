@@ -31,12 +31,6 @@ export interface GridToolbarProps {
   readonly assist?: ReactNode;
   /** Before the view controls: undo / redo (icon-only; from 768 px, else in the menu). */
   readonly leading?: ReactNode;
-  /**
-   * After the view controls and the "⋯" menu, set apart by a divider: the
-   * actions on the selected rows ("Delete N records", T322a — away from
-   * the primary action).
-   */
-  readonly selection?: ReactNode;
   /** At the end: the primary action, "+ Record" (accent). */
   readonly primary?: ReactNode;
   /**
@@ -53,8 +47,8 @@ const DENSITIES: readonly GridDensity[] = ['compact', 'comfortable'];
  * that never wraps — the view controls on the left (their labels give way
  * to icons below 1280 px, `TOOLBAR_LABEL`),
  * then "⋯" with the secondary actions and the row height (a view setting,
- * T310), then the actions on the selected rows; the search box and
- * "+ Record" on the right.
+ * T310); the search box and "+ Record" on the right. The actions on the
+ * selected rows are in the selection dock under the rows (T1011).
  */
 export function GridToolbar({
   density,
@@ -64,7 +58,6 @@ export function GridToolbar({
   search,
   assist,
   leading,
-  selection,
   primary,
   menu,
 }: GridToolbarProps) {
@@ -126,9 +119,6 @@ export function GridToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
       {assist === undefined ? null : <div className="flex shrink-0 items-center">{assist}</div>}
-      {selection === undefined || selection === null ? null : (
-        <div className="flex shrink-0 items-center gap-1">{selection}</div>
-      )}
       <div className="min-w-0 flex-1" />
       {search === undefined ? null : (
         <div className="flex min-w-24 shrink items-center md:w-56 xl:w-64">{search}</div>

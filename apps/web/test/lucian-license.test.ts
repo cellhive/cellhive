@@ -16,6 +16,8 @@ const PORTED: Readonly<Record<string, string>> = {
   'src/styles/lucian.css': 'theme tokens',
   'src/features/import/components/FieldMapper.tsx': '#130',
   'src/features/import/components/FieldMapper.css': '#130',
+  'src/features/grid/bulk/SelectionDock.tsx': '#178',
+  'src/features/grid/bulk/SelectionDock.css': '#178',
 };
 
 const WEB = fileURLToPath(new URL('..', import.meta.url));

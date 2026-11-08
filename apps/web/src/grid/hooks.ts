@@ -129,6 +129,12 @@ export interface SelectionHooks {
   readonly onFill?: (source: GridSelectionRange, destination: GridSelectionRange) => void;
   /** Delete / Backspace: empty the cells of the selection the user may edit. */
   readonly onClear?: (ranges: readonly GridSelectionRange[]) => void;
+  /**
+   * (T1011) Tab while whole rows are selected: the page moves the focus to
+   * what acts on them (the selection dock) and answers `true`; else Tab
+   * moves between cells as usual (which would drop the rows).
+   */
+  readonly onTabFromRows?: () => boolean;
 }
 
 export type { ClipboardContent };

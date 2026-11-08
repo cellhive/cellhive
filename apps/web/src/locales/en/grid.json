@@ -100,6 +100,11 @@
     "cancel": "Cancel",
     "addShort": "Record"
   },
+  "dock": {
+    "selected_one": "{{count, number}} record selected",
+    "selected_other": "{{count, number}} records selected",
+    "clearSelection": "Clear selection"
+  },
   "edit": {
     "search": "Search…",
     "remove": "Remove {{value}}",
