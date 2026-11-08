@@ -38,6 +38,10 @@ function reader() {
 }
 const TABLE_NAME = 'Đơn hàng';
 const RECORD_NAMES = ['Đơn số 1', 'Đơn số 2', 'Đơn số 3'];
+/** Grid geometry of a new table (compact rows): column header, row height, row gutter. */
+const HEADER_HEIGHT = 36;
+const ROW_HEIGHT = 34;
+const GUTTER = 40;
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/login');
@@ -79,6 +83,44 @@ interface Ids {
   recordIds: string[];
 }
 
+/** The middle of data row `row` of the grid, `x` px from its left edge. */
+async function rowPoint(page: Page, row: number, x: number) {
+  const box = await page.locator('.ob-grid canvas').first().boundingBox();
+  if (box === null) throw new Error('no grid canvas');
+  return { x: box.x + x, y: box.y + HEADER_HEIGHT + ROW_HEIGHT * row + ROW_HEIGHT / 2 };
+}
+
+/** Clicks the check box of data row `row` in the gutter (T1011: adds or drops the row). */
+async function toggleRow(page: Page, row: number) {
+  const point = await rowPoint(page, row, GUTTER / 2);
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.click(point.x, point.y);
+}
+
+/** Primary values of the first rows, from glide's accessibility table. */
+async function primaryTexts(page: Page, rows: number): Promise<string[]> {
+  const texts: string[] = [];
+  for (let row = 0; row < rows; row += 1) {
+    texts.push((await page.getByTestId(`glide-cell-1-${String(row)}`).textContent()) ?? '');
+  }
+  return texts;
+}
+
+async function openGrid(page: Page, ids: Ids, rows: number) {
+  await page.goto(`/b/${ids.baseId}/t/${ids.tableId}`);
+  await expect(page.locator('.ob-grid canvas').first()).toBeVisible();
+  await expect(page.getByTestId(`glide-cell-1-${String(rows - 1)}`)).not.toHaveText('');
+}
+
+async function trashCount(page: Page, ids: Ids): Promise<number> {
+  const trash = await ok<{ records: unknown[] }>(
+    page,
+    'GET',
+    `/tables/${ids.tableId}/records/trash`,
+  );
+  return trash.records.length;
+}
+
 test('T208: trash lists who deleted what, restores, and hides restore from readers', async ({
   page,
   browser,
@@ -87,7 +129,7 @@ test('T208: trash lists who deleted what, restores, and hides restore from reade
   const ids: Ids = { baseId: '', tableId: '', recordIds: [] };
   const READER = reader();
 
-  await test.step('set up: base, table, 3 records deleted through the API', async () => {
+  await test.step('set up: base, table, 3 records, a reader', async () => {
     await page.goto('/login');
     // The worker's administrator (T800): invited into the worker's organization if new.
     await signInFirstAdmin(page, ADMIN);
@@ -112,7 +154,6 @@ test('T208: trash lists who deleted what, restores, and hides restore from reade
     );
     ids.recordIds = created.records.map((record) => record.id);
     expect(ids.recordIds).toHaveLength(3);
-    await ok(page, 'DELETE', `/tables/${table.id}/records`, { ids: ids.recordIds });
 
     // A reader of the base: invited, account created, `system_reader` role.
     const invitation = await ok<{ invite_url: string }>(
@@ -143,6 +184,102 @@ test('T208: trash lists who deleted what, restores, and hides restore from reade
       principal_id: accepted.user.id,
       role_id: readerRole?.id,
     });
+  });
+
+  await test.step('T1011: the selection dock deletes 3 rows at once; "Undo" puts them back', async () => {
+    await openGrid(page, ids, 3);
+    const before = await primaryTexts(page, 3);
+    expect(before).toEqual(RECORD_NAMES);
+    // The gutter's check boxes add rows one by one (Lark, Airtable).
+    for (const row of [0, 1, 2]) await toggleRow(page, row);
+    const dock = page.getByRole('region', { name: '3 records selected' });
+    await expect(dock).toBeVisible();
+    await expect(dock.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+    // The inverse surface (like the trash's selection bar), sliding in over 350 ms.
+    expect(
+      await dock.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [style.backgroundColor, style.transitionDuration];
+      }),
+    ).toEqual(['rgb(22, 25, 29)', '0.35s, 0.35s']);
+    await expectNoSeriousA11yViolations(page, 'selection dock');
+
+    const deleted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'DELETE' &&
+        response.url().endsWith(`/api/v1/tables/${ids.tableId}/records`),
+    );
+    await dock.getByRole('button', { name: 'Delete 3 records' }).click();
+    expect((await deleted).status(), 'DELETE records').toBe(200);
+    // No confirmation (BACKLOG S9 decision #7): the dock offers "Undo" instead.
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const offer = page.getByRole('region', { name: '3 records moved to the trash.' });
+    await expect(offer).toBeVisible();
+    await expect(page.getByTestId('glide-cell-1-0')).toHaveCount(0);
+    expect(await trashCount(page, ids)).toBe(3);
+    await expectNoSeriousA11yViolations(page, 'selection dock (undo)');
+
+    const restored = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().endsWith(`/api/v1/tables/${ids.tableId}/records/restore`),
+    );
+    await offer.getByRole('button', { name: 'Undo' }).click();
+    expect((await restored).status(), 'POST records/restore').toBeLessThan(300);
+    await expect(offer).toBeHidden();
+    // Back in the same places; nothing left in the trash.
+    await expect.poll(() => primaryTexts(page, 3)).toEqual(before);
+    expect(await trashCount(page, ids)).toBe(0);
+  });
+
+  await test.step('T1011: keyboard — Shift+Space on 3 rows, Tab into the dock, Escape', async () => {
+    const first = await rowPoint(page, 0, GUTTER + 60);
+    const last = await rowPoint(page, 2, GUTTER + 60);
+    await page.mouse.click(first.x, first.y);
+    await page.keyboard.down('Shift');
+    await page.mouse.click(last.x, last.y);
+    await page.keyboard.up('Shift');
+    await page.keyboard.press('Shift+Space');
+    const dock = page.getByRole('region', { name: '3 records selected' });
+    await expect(dock).toBeVisible();
+    // The dock never takes the focus by itself: the grid keeps the keyboard (Ctrl/⌘+C).
+    await expect(dock.getByRole('button')).toHaveCount(2);
+    expect(await dock.evaluate((element) => element.contains(document.activeElement))).toBe(false);
+    await page.keyboard.press('Tab');
+    await expect(dock.getByRole('button', { name: 'Delete 3 records' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(dock.getByRole('button', { name: 'Clear selection' })).toBeFocused();
+    // Not a trap: Escape clears the selection and gives the grid the keyboard back.
+    await page.keyboard.press('Escape');
+    await expect(dock).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.closest('.ob-grid') !== null))
+      .toBe(true);
+    // The cell range is still there: Shift+Space selects its rows again, Escape drops them.
+    await page.keyboard.press('Shift+Space');
+    await expect(dock).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dock).toBeHidden();
+  });
+
+  await test.step('T1011: with reduced motion the dock is there at once', async () => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await toggleRow(page, 1);
+    const dock = page.getByRole('region', { name: '1 record selected' });
+    await expect(dock).toBeVisible();
+    const [duration, opacity] = await dock.evaluate((element) => [
+      Number.parseFloat(getComputedStyle(element).transitionDuration),
+      getComputedStyle(element).opacity,
+    ]);
+    expect(duration).toBeLessThan(0.01);
+    expect(opacity).toBe('1');
+    await dock.getByRole('button', { name: 'Clear selection' }).click();
+    await expect(dock).toBeHidden();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+  });
+
+  await test.step('delete the 3 records through the API', async () => {
+    await ok(page, 'DELETE', `/tables/${ids.tableId}/records`, { ids: ids.recordIds });
   });
 
   const trashPath = () => `/b/${ids.baseId}/t/${ids.tableId}/trash`;
@@ -251,6 +388,18 @@ test('T208: trash lists who deleted what, restores, and hides restore from reade
     await expect(reader.getByRole('heading', { level: 1, name: TABLE_NAME })).toBeVisible();
     await expect(reader.getByRole('link', { name: `Trash of ${TABLE_NAME}` })).toHaveCount(0);
 
+    // T1011: the selection dock without "Delete" (no `delete` operation).
+    await expect(reader.getByTestId('glide-cell-1-1')).not.toHaveText('');
+    await toggleRow(reader, 0);
+    await toggleRow(reader, 1);
+    const dock = reader.getByRole('region', { name: '2 records selected' });
+    await expect(dock).toBeVisible();
+    await expect(dock.getByRole('button', { name: /Delete/u })).toHaveCount(0);
+    await expect(dock.getByRole('button', { name: 'Clear selection' })).toBeVisible();
+    await expectNoSeriousA11yViolations(reader, 'selection dock (reader)');
+    await dock.getByRole('button', { name: 'Clear selection' }).click();
+    await expect(dock).toBeHidden();
+
     await reader.goto(trashPath());
     await expect(
       reader.getByRole('heading', { name: 'No access to deleted records' }),
@@ -260,6 +409,42 @@ test('T208: trash lists who deleted what, restores, and hides restore from reade
     await expect(reader.getByRole('tab', { name: 'Fields' })).toHaveCount(0);
     await expectNoSeriousA11yViolations(reader, 'trash (reader)');
     await context.close();
+  });
+
+  await test.step('T1011: a tree still asks about the sub-records', async () => {
+    await ok(page, 'POST', `/tables/${ids.tableId}/fields`, {
+      name: 'Bản ghi cha',
+      type: 'parent',
+    });
+    await ok(page, 'POST', `/tables/${ids.tableId}/records?field_key_type=name`, {
+      records: [{ fields: { Name: 'Đơn con' }, parent_id: ids.recordIds[1] }],
+    });
+    const views = await ok<{ items: { id: string }[] }>(
+      page,
+      'GET',
+      `/tables/${ids.tableId}/views`,
+    );
+    await ok(page, 'PATCH', `/views/${views.items[0]?.id ?? ''}`, {
+      config: { tree: { enabled: true, show_ancestors: true } },
+    });
+    await openGrid(page, ids, 2);
+    const row = (await primaryTexts(page, 2)).indexOf(RECORD_NAMES[1] ?? '');
+    expect(row).toBeGreaterThanOrEqual(0);
+    const cell = await rowPoint(page, row, GUTTER + 60);
+    await page.mouse.click(cell.x, cell.y);
+    await page.keyboard.press('Shift+Space');
+    const dock = page.getByRole('region', { name: '1 record selected' });
+    await dock.getByRole('button', { name: 'Delete 1 record' }).click();
+    await expect(page.getByTestId('tree-delete-choice')).toBeVisible();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Cancel' })
+      .filter({ hasText: 'Cancel' })
+      .click();
+    await expect(page.getByTestId('tree-delete-choice')).toBeHidden();
+    // Cancelled: nothing went, the row stays selected.
+    await expect(dock).toBeVisible();
+    expect(await trashCount(page, ids)).toBe(1);
   });
 
   expect(cspViolations, 'Content-Security-Policy violations').toEqual([]);

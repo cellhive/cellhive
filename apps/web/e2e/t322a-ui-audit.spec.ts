@@ -371,7 +371,7 @@ test.describe('T322a UI audit fixes', () => {
     await page.context().close();
   });
 
-  test('grid: "+" column adds a field; "Delete" only for whole rows, apart from "+ Record"', async ({
+  test('grid: "+" column adds a field; "Delete" only for whole rows, in the selection dock', async ({
     browser,
   }) => {
     const page = await openAdmin(browser);
@@ -385,14 +385,15 @@ test.describe('T322a UI audit fixes', () => {
     await page.keyboard.press('Shift+Space');
     const remove = page.getByRole('button', { name: 'Delete 1 record' });
     await expect(remove).toBeVisible();
-    const [removeBox, addBox, search] = await Promise.all([
-      remove.boundingBox(),
-      page.getByRole('button', { name: 'Add record' }).boundingBox(),
-      page.getByRole('toolbar', { name: 'View options' }).getByRole('searchbox').boundingBox(),
-    ]);
-    // Left of the search box, far from the primary action.
-    expect((removeBox?.x ?? 0) + (removeBox?.width ?? 0)).toBeLessThan(search?.x ?? 0);
-    expect((addBox?.x ?? 0) - ((removeBox?.x ?? 0) + (removeBox?.width ?? 0))).toBeGreaterThan(200);
+    // T1011: in the selection dock under the rows, not in the toolbar next to "+ Record".
+    await expect(
+      page.getByRole('region', { name: '1 record selected' }).getByRole('button', {
+        name: 'Delete 1 record',
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('toolbar', { name: 'View options' }).getByRole('button', { name: /^Delete/u }),
+    ).toHaveCount(0);
 
     // Scroll to the end of the columns: the "+" after the last header.
     await page.locator('.ob-grid .dvn-scroller').evaluate((scroller) => {
