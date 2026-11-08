@@ -243,6 +243,13 @@ export function packageOf(
   );
 }
 
+/**
+ * Timeout of the tests that build, write or read whole packages: zip work
+ * takes milliseconds here but can take seconds on a loaded CI runner with
+ * coverage, so they never rely on vitest's 5 s default.
+ */
+export const ZIP_TEST_TIMEOUT_MS = 30_000;
+
 /** A temporary directory removed by `cleanup`. */
 export async function scratch(): Promise<{
   readonly file: (name: string, data: Buffer) => Promise<string>;

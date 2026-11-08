@@ -30,7 +30,7 @@ import {
 } from '../../src/base-package/index.js';
 import { AppError } from '../../src/errors/app-error.js';
 
-import { scratch } from './zip-builder.js';
+import { scratch, ZIP_TEST_TIMEOUT_MS } from './zip-builder.js';
 
 import type { StoredRecordOutput } from '../../src/records/types.js';
 import type { Id } from '@cellhive/contracts';
@@ -457,7 +457,7 @@ async function exportOf(
 
 const sha = (data: Buffer) => createHash('sha256').update(data).digest('hex');
 
-describe('exportBasePackage', () => {
+describe('exportBasePackage', { timeout: ZIP_TEST_TIMEOUT_MS }, () => {
   it('writes a package the reader accepts, with every entry and the counts', async () => {
     const progress: number[] = [];
     const { path, exported } = await exportOf(new FakeSource(), basePackageLimits(), progress);
@@ -721,8 +721,9 @@ describe('exportBasePackage', () => {
   });
 
   it('an NDJSON entry past its ratio fails with entry_ratio, as the reader would', async () => {
+    // The ratio of repeated rows does not grow with their number: 1 000 are enough.
     const error = await exportOf(
-      repeated(),
+      new FakeSource(schemaOf(), { [T_ORD]: [repeatedRows(0, 1000)], [T_CUS]: [] }),
       basePackageLimits(undefined, { maxNdjsonEntryRatio: 10 }),
     ).catch((failure: unknown) => failure);
     expect(error).toBeInstanceOf(AppError);
