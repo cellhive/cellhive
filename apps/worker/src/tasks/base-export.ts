@@ -116,7 +116,7 @@ function interrupted(detail: string): JobProblem {
  * directory of the job, then stored with one `putStream` of its exact
  * length under `{org}/base-export-{job}.chbase`; the result carries the
  * download link (one hour), the size and the counts. The temporary
- * directory is removed in every case. A failure — a package over
+ * directory is removed in every case, before the job reads as final. A failure — a package over
  * `BASE_PACKAGE_MAX_BYTES` (`VALIDATION_FAILED` `PACKAGE_TOO_LARGE`), a cap
  * of the format (`INVALID_PACKAGE` `ARCHIVE_LIMIT_EXCEEDED`), anything
  * else (`INTERNAL`) — marks the job `failed` and deletes the stored object,
@@ -210,6 +210,8 @@ export function createBaseExportTask(deps: BaseExportDeps): Task<'base.export'> 
         contentType: BASE_PACKAGE_MEDIA_TYPE,
         contentLength: exported.bytes,
       });
+      // Cleaned up before the job reads as final.
+      await rm(dir, { recursive: true, force: true });
       const finishedAt = deps.now?.() ?? new Date();
       const result: BaseExportResult = {
         download_url: exportDownloadPath(jobId),
@@ -240,6 +242,8 @@ export function createBaseExportTask(deps: BaseExportDeps): Task<'base.export'> 
         { ...context, err, code: problem.code, duration_ms: Date.now() - started },
         'base.export failed',
       );
+      // The temporary directory and the stored object go before the job reads as failed.
+      await rm(dir, { recursive: true, force: true });
       await deps.storage.delete(key).catch((error: unknown) => {
         deps.logger.warn({ ...context, err: error }, 'base.export: stored package not deleted');
       });
