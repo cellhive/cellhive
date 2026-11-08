@@ -1,6 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 
 import {
+  aiFieldOptionsSchema,
   COMPUTED_BACKFILL_JOB_TYPE,
   DEFAULT_COMPUTED_FIELDS_MAX_PER_BASE,
   DEFAULT_VIEW_NAME,
@@ -13,10 +14,12 @@ import {
   buttonOptionsSchema,
   classifyConversion,
   collateClause,
+  formulaOptionsSchema,
   getFieldType,
   isImplementedFieldType,
   isS1FieldType,
   linkOptionsSchema,
+  lookupOptionsSchema,
   MAX_OPTION_COLOR,
   MAX_SELECT_OPTIONS,
   parentOptionsSchema,
@@ -60,6 +63,7 @@ import {
   loadFieldErrorsState,
   sameFieldError,
   type FieldError,
+  type FieldErrorRef,
 } from '../computed/errors/index.js';
 import {
   dependentsInOrder,
@@ -538,6 +542,43 @@ export interface ImportLinkFieldInput {
 export interface ImportedLinkField {
   readonly field: FieldRow;
   readonly reverse: FieldRow | null;
+}
+
+/** A formula or lookup field of a package (T1019), created once what it reads exists. */
+export interface ImportComputedFieldInput {
+  readonly tableId: Id<'tbl'>;
+  /** `options` in stored form with the ids of the new base. */
+  readonly field: ImportFieldInput;
+  /** Organization zone (ADR-21) of the compile check. */
+  readonly timeZone: string;
+  /**
+   * The definition names what the package does not hold: created as broken
+   * as its source had it (`REF` with `refs`, `result_type` of the package
+   * when it is one).
+   */
+  readonly broken: {
+    readonly refs: readonly FieldErrorRef[];
+    readonly resultType: unknown;
+  } | null;
+}
+
+/** `options.ai` of an imported text/select field (T1019). */
+export interface ImportFieldAiInput {
+  readonly tableId: Id<'tbl'>;
+  readonly fieldId: Id<'fld'>;
+  /** Stored form: the prompt with the ids of the new base. */
+  readonly ai: unknown;
+  /** The prompt names what the package does not hold (kept as it is). */
+  readonly broken: boolean;
+}
+
+/** A `record_filter` of an imported link that names a field created later (T1019). */
+export interface ImportLinkRecordFilterInput {
+  readonly tableId: Id<'tbl'>;
+  readonly fieldId: Id<'fld'>;
+  readonly filter: unknown;
+  /** The filter names what the package does not hold (kept as it is). */
+  readonly broken: boolean;
 }
 
 /** What `purgeBase` removed. */
@@ -6155,6 +6196,269 @@ export class SchemaService {
                 linkSide: 'b',
               });
         return { field: created, reverse: createdReverse };
+      }),
+    );
+  }
+
+  /**
+   * Creates a formula or lookup field of a package in the hidden base
+   * `base` (T1019), with the id, name and position the import gave it: the
+   * definition (stored form — `[fld_…]` of the new base) is checked like a
+   * new field's (`prepareComputedDefinition`: every reference resolved, the
+   * result type, the compile budget; the style kept when it still fits),
+   * within `MAX_FIELDS_PER_TABLE`, `COMPUTED_FIELDS_MAX_PER_BASE` and the
+   * column budget; a `stored` field gets its column and `compute_state =
+   * backfilling` (the import fills it, `RecordMutationService
+   * .backfillComputedBatch`, then `markImportedComputedReady`) — no
+   * `computed.backfill` job, event, audit entry or permission bump. Fields
+   * must come in the order of their references (a field read by another
+   * first). `broken`: the definition names what the package does not hold
+   * (`missing_ids`, or a field imported broken); the field is created as its
+   * source had it — `compute_state = error` with `REF`, no column, no
+   * dependency — after a check of its options' shape only.
+   */
+  async importComputedField(
+    scope: OrgScope,
+    base: ImportingBase,
+    input: ImportComputedFieldInput,
+  ): Promise<FieldRow> {
+    this.assertScope(scope);
+    const spec = input.field;
+    if (!isId('fld', spec.id)) throw new TypeError('importComputedField: a field id is required');
+    if (spec.type !== 'formula' && spec.type !== 'lookup') {
+      throw new TypeError('importComputedField: a formula or lookup field is required');
+    }
+    const type: ComputedFieldTypeName = spec.type;
+    const name = normalizeSchemaName(spec.name, 'name');
+    assertComputedConstraints(type, spec.uniqueValues, spec.required);
+    try {
+      return await this.retrying(input.tableId, () =>
+        this.db.withTx(async (tx) => {
+          await this.lock(tx, input.tableId);
+          const txScope = withTxScope(scope, tx);
+          await this.importingBase(txScope, base);
+          const table = await this.tables.getById(txScope, input.tableId);
+          if (table?.base_id !== base.baseId) throw notFound('table');
+          await this.lockComputedGraph(tx, base.baseId);
+          await this.assertFieldCapacity(txScope, table.id);
+          if (await this.fields.nameTaken(txScope, table.id, name))
+            throw nameConflict('field', name);
+          await this.assertComputedCapacity(txScope, base.baseId);
+          const common = {
+            id: spec.id,
+            tableId: table.id,
+            name,
+            type,
+            isPrimary: false,
+            required: false,
+            uniqueValues: false,
+            description: spec.description,
+            position: spec.position,
+          };
+          if (input.broken !== null) {
+            const options = parseOptions(
+              { optionsSchema: type === 'formula' ? formulaOptionsSchema : lookupOptionsSchema },
+              spec.options,
+              'options',
+            );
+            const error: FieldError = { code: 'REF', refs: input.broken.refs };
+            return this.fields.insert(txScope, {
+              ...common,
+              dbColumnName: null,
+              options: options as JsonObject,
+              computed: {
+                computeMode: 'virtual',
+                resultType: formulaTypeOf(input.broken.resultType) ?? {
+                  kind: 'null',
+                },
+                computeState: 'error',
+                computeError: fieldErrorJson(error),
+              },
+            });
+          }
+          const options = isRecordValue(spec.options) ? spec.options : {};
+          const rows = await loadBaseSchemaRows(this.db, txScope, base.baseId);
+          const prepared = prepareComputedDefinition(
+            {
+              type,
+              options,
+              expressionForm: 'stored',
+              style:
+                options['style'] === undefined || options['style'] === null
+                  ? { mode: 'default' }
+                  : { mode: 'keep', value: options['style'] },
+            },
+            computedContextOf(rows, table.id, { timeZone: input.timeZone }),
+          );
+          const column = await this.computedColumn(tx, table, null, null, prepared);
+          const field = await this.fields.insert(txScope, {
+            ...common,
+            dbColumnName: column,
+            options: prepared.options,
+            computed: {
+              computeMode: prepared.computeMode,
+              resultType: prepared.resultType,
+              computeState: prepared.computeMode === 'stored' ? 'backfilling' : 'ready',
+            },
+          });
+          await this.dependencies.replaceForField(txScope, {
+            baseId: base.baseId,
+            fieldId: field.id,
+            edges: edgesOf(field.id, prepared.analysis.dependencies),
+          });
+          return field;
+        }),
+      );
+    } catch (error) {
+      if (error instanceof SlotBudgetExhausted) {
+        throw new AppError('FIELD_LIMIT_EXCEEDED', {
+          detail: 'The table has more columns than a table may have.',
+          params: { table_id: input.tableId, used_slots: error.usedSlots },
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The end of the backfill of an imported `stored` formula/lookup field
+   * (T1019): `backfilling` → `ready`, in the hidden base `base` only; no
+   * event (nobody sees the base yet). Returns whether it changed.
+   */
+  async markImportedComputedReady(
+    scope: OrgScope,
+    base: ImportingBase,
+    fieldId: Id<'fld'>,
+  ): Promise<boolean> {
+    this.assertScope(scope);
+    return this.db.withTx(async (tx) => {
+      const txScope = withTxScope(scope, tx);
+      await this.importingBase(txScope, base);
+      const field = await this.fields.getById(txScope, fieldId);
+      if (field === undefined || !isComputedRow(field)) throw notFound('field');
+      const table = await this.tables.getById(txScope, field.table_id);
+      if (table?.base_id !== base.baseId) throw notFound('field');
+      if (field.compute_state !== 'backfilling') return false;
+      await this.fields.update(txScope, fieldId, { computeState: 'ready', computeError: null });
+      return true;
+    });
+  }
+
+  /**
+   * Sets `options.ai` of an imported `text`/`select` field of the hidden
+   * base `base` (T1019, CONTRACTS §29.5): the prompt (stored form, ids of
+   * the new base) is checked as when an AI field is saved
+   * (`prepareAiOptions` — same record only, no attachment, button, other AI
+   * field or itself, not a primary field) — whether AI is available in the
+   * organization is not checked — and its `same_row` dependencies are
+   * written. Nothing is queued: the values of the package are the values.
+   * `broken`: the prompt names what the package does not hold
+   * (`missing_ids`); it is kept as its source had it after a check of its
+   * shape, without dependencies.
+   */
+  async importFieldAi(
+    scope: OrgScope,
+    base: ImportingBase,
+    input: ImportFieldAiInput,
+  ): Promise<FieldRow> {
+    this.assertScope(scope);
+    return this.retrying(input.tableId, () =>
+      this.db.withTx(async (tx) => {
+        await this.lock(tx, input.tableId);
+        const txScope = withTxScope(scope, tx);
+        await this.importingBase(txScope, base);
+        const table = await this.tables.getById(txScope, input.tableId);
+        if (table?.base_id !== base.baseId) throw notFound('table');
+        const field = await this.fields.getById(txScope, input.fieldId);
+        if (field?.table_id !== table.id) throw notFound('field');
+        if (field.type !== 'text' && field.type !== 'select') {
+          throw validationFailed([
+            {
+              path: 'options.ai',
+              code: 'INVALID_FIELD_TYPE',
+              message: 'Only text and select fields can be AI fields',
+              params: { type: field.type },
+            },
+          ]);
+        }
+        await this.lockComputedGraph(tx, base.baseId);
+        const current = isRecordValue(field.options) ? field.options : {};
+        let ai: unknown;
+        let edges: FieldDependencyEdge[] = [];
+        if (input.broken) {
+          const parsed = aiFieldOptionsSchema.safeParse(input.ai);
+          if (!parsed.success || field.is_primary) {
+            throw validationFailed([
+              { path: 'options.ai', code: 'INVALID_VALUE', message: 'Invalid AI settings' },
+            ]);
+          }
+          ai = parsed.data;
+        } else {
+          const rows = await loadBaseSchemaRows(this.db, txScope, base.baseId);
+          const prepared = prepareAiOptions(
+            input.ai,
+            rows,
+            { id: field.id, tableId: table.id, isPrimary: field.is_primary },
+            { expressionForm: 'stored' },
+          );
+          ai = prepared.ai;
+          edges = prepared.edges;
+        }
+        const { definition } = s1Definition(field.type);
+        const options = parseOptions(definition, { ...current, ai }, 'options');
+        const updated = await this.fields.update(txScope, field.id, {
+          options: options as JsonObject,
+        });
+        if (updated === undefined) throw notFound('field');
+        await this.dependencies.replaceForField(txScope, {
+          baseId: base.baseId,
+          fieldId: field.id,
+          edges,
+        });
+        return updated;
+      }),
+    );
+  }
+
+  /**
+   * Sets the `record_filter` of an imported link field of the hidden base
+   * `base` that names a field created after it (a formula, a lookup —
+   * T1019): validated against the linked table like a saved link's.
+   * `broken`: the filter names what the package does not hold
+   * (`missing_ids`); it is kept as its source had it (its structure was
+   * checked by pass 1), the condition never dropped.
+   */
+  async importLinkRecordFilter(
+    scope: OrgScope,
+    base: ImportingBase,
+    input: ImportLinkRecordFilterInput,
+  ): Promise<FieldRow> {
+    this.assertScope(scope);
+    return this.retrying(input.tableId, () =>
+      this.db.withTx(async (tx) => {
+        await this.lock(tx, input.tableId);
+        const txScope = withTxScope(scope, tx);
+        await this.importingBase(txScope, base);
+        const table = await this.tables.getById(txScope, input.tableId);
+        if (table?.base_id !== base.baseId) throw notFound('table');
+        const field = await this.fields.getById(txScope, input.fieldId);
+        if (field?.table_id !== table.id || field.type !== 'link') throw notFound('field');
+        const options = linkOptionsSchema.parse(field.options);
+        const target = await this.tables.getById(txScope, options.link_table);
+        if (target?.base_id !== base.baseId) throw notFound('table');
+        const recordFilter = input.broken
+          ? (input.filter as JsonObject)
+          : await this.checkRecordFilter(
+              txScope,
+              target,
+              input.filter as LinkOptions['record_filter'],
+              undefined,
+            );
+        const updated = await this.fields.update(txScope, field.id, {
+          options: { ...(field.options as JsonObject), record_filter: recordFilter },
+        });
+        if (updated === undefined) throw notFound('field');
+        return updated;
       }),
     );
   }

@@ -120,6 +120,9 @@ export {
   type ImportingBase,
   type ImportLinkFieldInput,
   type ImportTableInput,
+  type ImportComputedFieldInput,
+  type ImportFieldAiInput,
+  type ImportLinkRecordFilterInput,
   type PurgedImport,
 } from './schema.service.js';
 export {
