@@ -255,7 +255,7 @@ Cellhive sends a provider only what a feature needs. The formula, the draft and 
 | AI formula | The description typed; the formula already in the editor; the names, types, option names (up to 50 per field) and descriptions (up to 200 characters) of the fields the person can read, in the current table and up to 20 other tables of the base; the list of formula functions | Never |
 | Automation draft | The sentence typed; the names of up to 20 tables the person can build automations on, with their fields (names, types, option names), the form views they can see, the names of the Telegram bots the base may use, and whether email can be sent | Never |
 | Ask AI, the question | The question; today's date and the time zone; the names, kinds, option names and descriptions of the fields the person can read and the widget engine can use | Never |
-| Ask AI, the written summary | Only with record values on, and only when there are numbers: the question, the interpretation by names, the column names, and up to 50 result rows of group labels (option names, people's names, record titles, dates) with their numbers, "Other", the total and the previous period of a KPI | Totals and group labels |
+| Ask AI, the written summary | Only with record values on, and only when there are numbers: the question, the interpretation by names, the column names, and up to 50 result rows of group labels (option names, people's names, record titles, dates) with their numbers, "Other", the total and the previous period of a KPI, written as the asker reads them ("tháng 8/2026" or "August 2026", amounts in the field's currency), and which period has not ended yet | Totals and group labels |
 | AI field: preview and generation | For each record, one request: the prompt with the values of the fields it names (cut at 8,000 characters), the instructions, and for a select field its option names | Yes |
 | AI steps | For each run, one request: the step's prompt filled in from the trigger record, the instructions, and for **Classify with AI** the option names of the target field | Yes |
 
@@ -296,14 +296,15 @@ Members who connect their **own** AI client (Claude Code, Cursor, VS Code…) th
 
 - **What counts**: tokens of prompts and answers (`prompt_tokens + completion_tokens` as the provider reports them), per organization and per day. The day follows the organization's time zone: the one chosen at setup or when the organization was created, `DEFAULT_TIMEZONE` otherwise (from a session, `PATCH /api/v1/orgs/:orgId { "settings": { "timezone": "Asia/Ho_Chi_Minh" } }` changes it).
 - **Limit**: 1,000,000 tokens a day by default; any value from 10,000 to 1,000,000,000, or **No limit**. For a local model, **No limit** is reasonable; keeping a limit protects you if the settings are later pointed at a paid API.
-- **Checked before, counted after.** The quota is checked before every interactive request and before every background call, and each call is counted once its answer arrives, including answers that were refused, cut off or invalid. Calls already running when the limit is reached still finish, so a day can end slightly over the limit.
+- **Checked before every call, counted after.** One request can call the provider several times: a repair round when an answer does not fit, the next answer format when a provider refuses one, a second try for a model cut off while it was reasoning, the summary after Ask AI's numbers, the 5 records of a preview, the model list and the test call of **Test connection**. The quota is checked before **each** of these calls, in the background and in AI steps too, and a call is never sent once the limit is reached. Each call is counted once its answer arrives, including answers that were refused, cut off or invalid, and error answers that report usage. Calls already sent when the limit is reached still finish, so a day can end slightly over the limit: at most the calls in flight for the organization (see the concurrency limits in §5.3) times their longest answer.
 - **Estimated counts.** A provider that reports no token usage is counted as `ceil(characters / 3)` for the prompt and for the answer, and the **Usage** table marks those requests as estimated. Three characters per token is cautious for Vietnamese and generous for English.
+- **Counts within bounds.** A reported count is never taken above what the call could use: prompt tokens at most the bytes sent, answer tokens at most the longest answer plus the 2,048 tokens of a thinking model (§2.8). A count past that is recorded at its bound, and the server logs a warning (provider host only) and counts it in `ai_usage_clamped_total`.
 
 When the quota is used up:
 
 | Where | What happens |
 | --- | --- |
-| Formula, draft, Ask AI, previews, tests | `429 AI_QUOTA_EXCEEDED`, with `Retry-After` up to 00:00 of the next day in the organization's time zone and `errors[0].params = { reset_at, daily_token_limit }`. The provider receives nothing. |
+| Formula, draft, Ask AI, previews, tests | `429 AI_QUOTA_EXCEEDED`, with `Retry-After` up to 00:00 of the next day in the organization's time zone and `errors[0].params = { reset_at, daily_token_limit }`. The provider receives nothing more; a preview stops as a whole. When only Ask AI's summary is left, the numbers come back without it. |
 | AI fields | Waiting cells pause (reason `quota`, banner above the grid) and continue by themselves after the reset (checked every minute). Raising the quota and clicking **Resume** continues at once. |
 | AI steps | The step fails with `ai_quota_exceeded` (`params.reset_at`) and is **not retried**: waiting for the next day would hold the whole run. The run history shows it. |
 
@@ -317,7 +318,8 @@ When the quota is used up:
 
 ### 5.3 Rate, concurrency and time limits
 
-- **10 AI requests per minute per person**, at most **2 at once per person** and **8 at once per API instance** (both counted in each API process); sessions and API tokens of the same person count together. Over a limit: `429 RATE_LIMITED` with `Retry-After`. These limits apply to the interactive requests (formula, draft, Ask AI, previews, tests); background generation and AI steps are bounded by the quota and the worker (§5.4).
+- **10 AI requests per minute per person**, at most **2 at once per person** and **8 at once per organization**, counted together by every API instance (in Valkey: a slot is freed when its request ends, or after 2 minutes if an API process stops mid-request); each API process also runs at most 8 at once. Sessions and API tokens of the same person count together. Over a limit: `429 RATE_LIMITED` with `Retry-After`; Valkey unreachable: `503 DEPENDENCY_UNAVAILABLE`, like the other limits. These limits apply to the interactive requests (formula, draft, Ask AI, previews, tests); background generation and AI steps are bounded by the quota and the worker (§5.4).
+- **Closing a request stops it.** When the browser or client closes an interactive request before its answer (a closed tab, a cancelled call), the call to the provider is aborted at once, no further call is made and its slots are freed; the audit entry has the status `aborted`.
 - **90 seconds per interactive request**, for all its calls and repair rounds together. Each call waits at most the **Request timeout** (10–120 seconds, default 60) and the time left; connecting may take 5 seconds. Past that: `504 AI_TIMEOUT`. Keep the read timeout of any reverse proxy in front of Cellhive above 90 seconds: the `web` container allows 120 seconds, but nginx's own default is 60.
 - **Ask AI** computes its numbers through the dashboard query queue: 4 queries at a time per person, 20 per API instance, 10 seconds each (`504 QUERY_TIMEOUT`), and at most 1,000 groups (`422 VALIDATION_FAILED` / `WIDGET_TOO_LARGE`).
 
@@ -335,7 +337,7 @@ AI fields are generated by the worker on a runner of its own, so slow model answ
 | Item | Value |
 | --- | --- |
 | Daily quota | 1,000,000 tokens by default; 10,000–1,000,000,000 or no limit; resets at 00:00 in the organization's time zone |
-| Interactive requests | 10 per minute per person; 2 at once per person; 8 at once per API instance |
+| Interactive requests | 10 per minute per person; 2 at once per person and 8 per organization across every API instance; 8 at once per API process |
 | Time of an interactive request | 90 s for every call and repair round; each call ≤ the request timeout (10–120 s, default 60); connection 5 s |
 | Repair rounds | 2 (3 calls in all), then `AI_INVALID_OUTPUT` |
 | Answer size read from the provider | 1 MiB |
