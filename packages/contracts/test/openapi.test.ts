@@ -23,6 +23,8 @@ const READ_POSTS = new Set([
   '/api/v1/tables/{tableId}/ai/ask',
   // Streamed multipart upload: `Idempotency-Key` is ignored (CONTRACTS §1.1, §19).
   '/api/v1/bases/{baseId}/imports/uploads',
+  // Streamed `.chbase` package: `Idempotency-Key` is ignored (CONTRACTS §1.1, §12.2).
+  '/api/v1/workspaces/{workspaceId}/bases/import',
   // Not bound to an organization; a retry only starts a new link attempt (CONTRACTS §1.1, §27.3).
   '/api/v1/me/identities/{provider}/start',
   // Not bound to an organization; a retry checks the current password again (CONTRACTS §12.0).

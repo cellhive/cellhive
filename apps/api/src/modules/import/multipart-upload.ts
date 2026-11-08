@@ -33,6 +33,17 @@ const tooLarge = (maxBytes: number) =>
     detail: `The file is larger than ${String(maxBytes / 1024 / 1024)} MB.`,
   });
 
+/** Variants of a route that receives a file (a `.chbase` package, CONTRACTS §12.2). */
+export interface ReceiveFileOptions {
+  /** The error of a file over `maxBytes` (default: `413` naming the size in MB). */
+  readonly tooLarge?: () => AppError;
+  /**
+   * Checks the client file name before the content is read: an error stops
+   * the upload at once (default: every name is accepted).
+   */
+  readonly refuseName?: (filename: string) => AppError | null;
+}
+
 /**
  * Reads the `file` part of a `multipart/form-data` body into `dir/upload`
  * as it arrives (never the whole file in memory). Other parts are drained
@@ -44,7 +55,9 @@ export async function receiveMultipartFile(
   contentType: string | undefined,
   dir: string,
   maxBytes: number,
+  options: ReceiveFileOptions = {},
 ): Promise<ReceivedFile> {
+  const tooLargeError = options.tooLarge ?? (() => tooLarge(maxBytes));
   if (contentType === undefined || !/^multipart\/form-data\b/i.test(contentType)) {
     body.resume();
     throw new AppError('UNSUPPORTED_MEDIA_TYPE', {
@@ -79,6 +92,12 @@ export async function receiveMultipartFile(
         stream.resume();
         return;
       }
+      const refused = options.refuseName?.(safeFilename(info.filename)) ?? null;
+      if (refused !== null) {
+        stream.resume();
+        fail(refused);
+        return;
+      }
       let size = 0;
       let truncated = false;
       stream.on('data', (chunk: Buffer) => {
@@ -86,11 +105,11 @@ export async function receiveMultipartFile(
       });
       stream.on('limit', () => {
         truncated = true;
-        fail(tooLarge(maxBytes));
+        fail(tooLargeError());
       });
       received = pipeline(stream, createWriteStream(path, { flags: 'wx', mode: 0o600 })).then(
         () => {
-          if (truncated) throw tooLarge(maxBytes);
+          if (truncated) throw tooLargeError();
           return { path, filename: safeFilename(info.filename), size };
         },
       );

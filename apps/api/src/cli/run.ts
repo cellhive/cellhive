@@ -11,6 +11,7 @@ import { ConfigError, type Env } from '@cellhive/server-core';
 
 import {
   baseExportCommand,
+  baseImportCommand,
   DEFAULT_STALE_LOCK_MINUTES,
   jobsUnlockStaleCommand,
   migrateCommand,
@@ -39,6 +40,9 @@ Commands:
         [--dry-run]                         than ${String(DEFAULT_STALE_LOCK_MINUTES)} minutes by default)
   base export --base <bse_…> --out <file>   Export a whole base as a .chbase package into a
                                             new file (the worker writes it; needs it running)
+  base import --workspace <wsp_…>           Import a .chbase package as a new base owned by
+        --file <file> --as <email>          the --as user (the worker builds it; needs it
+                                            running)
 
 The environment is the server's (DATABASE_URL, PUBLIC_URL, …, SPEC §20).
 Results (links, ids) go to stdout; messages go to stderr.`;
@@ -52,6 +56,9 @@ const OPTIONS = {
   'owner-email': { type: 'string' },
   base: { type: 'string' },
   out: { type: 'string' },
+  workspace: { type: 'string' },
+  file: { type: 'string' },
+  as: { type: 'string' },
   'older-than': { type: 'string' },
   'dry-run': { type: 'boolean' },
   'keep-tokens': { type: 'boolean' },
@@ -69,7 +76,7 @@ function usageError(message: string): CliError {
 
 function required(
   values: Values,
-  name: 'email' | 'org' | 'name' | 'owner-email' | 'base' | 'out',
+  name: 'email' | 'org' | 'name' | 'owner-email' | 'base' | 'out' | 'workspace' | 'file' | 'as',
 ): string {
   const value = values[name];
   if (value === undefined || value.trim() === '') throw usageError(`--${name} is required.`);
@@ -149,6 +156,15 @@ export function parseCommand(argv: readonly string[]): Command | 'help' {
         throw usageError(`--out must name a ${BASE_PACKAGE_EXTENSION} file.`);
       }
       return (ctx) => baseExportCommand(ctx, { baseId, out });
+    }
+    case 'base import': {
+      const workspaceId = validated(idOf('wsp'), 'workspace', required(values, 'workspace'));
+      const file = required(values, 'file');
+      if (!file.toLowerCase().endsWith(BASE_PACKAGE_EXTENSION)) {
+        throw usageError(`--file must name a ${BASE_PACKAGE_EXTENSION} file.`);
+      }
+      const as = validated(emailSchema, 'as', required(values, 'as'));
+      return (ctx) => baseImportCommand(ctx, { workspaceId, file, as });
     }
     default:
       throw usageError(`Unknown command '${command}'.`);

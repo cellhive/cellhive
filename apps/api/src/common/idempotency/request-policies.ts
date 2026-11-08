@@ -79,6 +79,10 @@ export const IDEMPOTENCY_EXCLUDED_ROUTES: Readonly<Record<string, string>> = {
   '/bases/:baseId/imports/uploads':
     'A streamed multipart file body cannot be fingerprinted; a repeated upload only leaves an ' +
     'unused temporary upload that expires after 24 hours (CONTRACTS §1.1, §19).',
+  '/workspaces/:workspaceId/bases/import':
+    'A streamed `.chbase` package (up to BASE_PACKAGE_MAX_BYTES) cannot be fingerprinted; a ' +
+    'repeated upload starts a second import of the same package, which waits for the first ' +
+    '(CONTRACTS §1.1, §12.2).',
 };
 
 /**
