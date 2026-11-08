@@ -1,9 +1,17 @@
 {
   "name": "cellhive",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Self-hosted, fully open source no-code database platform",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cellhive/cellhive.git"
+  },
+  "homepage": "https://github.com/cellhive/cellhive#readme",
+  "bugs": {
+    "url": "https://github.com/cellhive/cellhive/issues"
+  },
   "type": "module",
   "packageManager": "pnpm@10.26.0",
   "engines": {

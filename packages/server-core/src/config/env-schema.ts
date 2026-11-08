@@ -20,6 +20,12 @@ import { parseCidr, type Cidr } from './cidr.js';
  * secrets (including credentials embedded in DATABASE_URL / CACHE_URL / SMTP_URL).
  */
 
+/**
+ * `CELLHIVE_BUILD_VERSION` of a build that was not given a version (a checkout,
+ * or an image built without the `CELLHIVE_VERSION` build argument).
+ */
+export const DEV_BUILD_VERSION = 'dev';
+
 /** Values applied when a variable is unset or empty (SPEC §20 "Mặc định"). */
 export const ENV_DEFAULTS = {
   NODE_ENV: 'production',
@@ -76,6 +82,7 @@ export const ENV_DEFAULTS = {
   // Incoming webhooks (SPEC §13.2, §20): highest `rate_limit_per_sec` of a hook.
   WEBHOOK_MAX_RATE_PER_SEC: '50',
   LOG_LEVEL: 'info',
+  CELLHIVE_BUILD_VERSION: DEV_BUILD_VERSION,
 } as const;
 
 const MIN_SECRET_BYTES = 32;
@@ -398,6 +405,13 @@ export const envSchema = z.object({
     .optional(),
   METRICS_PORT: integer(1, 65535).optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: urlOf(['http:', 'https:']).optional(),
+  // Version of this build (T1023): the server images set it from their
+  // `CELLHIVE_VERSION` build argument (`0.1.0`, `0.1.0-rc.1`); operators do not.
+  // Reported by `/healthz`, at start-up and in exported `.chbase` packages.
+  CELLHIVE_BUILD_VERSION: text().regex(
+    /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/,
+    'must be a version such as 0.1.0 or 0.1.0-rc.1 (letters, digits, ".", "+" and "-", at most 64 characters)',
+  ),
 });
 
 export type EnvKey = keyof typeof envSchema.shape;
@@ -405,6 +419,13 @@ export type ParsedEnv = z.output<typeof envSchema>;
 
 /** Every variable name of SPEC §20, in table order. */
 export const ENV_KEYS = Object.keys(envSchema.shape) as readonly EnvKey[];
+
+/**
+ * Variables the images set (SPEC §20 "biến của image"), left out of `.env.example`:
+ * Compose passes `.env` to the containers, and an empty value there would hide the
+ * image's own.
+ */
+export const IMAGE_ENV_KEYS: readonly EnvKey[] = ['CELLHIVE_BUILD_VERSION'];
 
 export interface EnvRule {
   readonly when: (env: Readonly<Partial<Record<EnvKey, string>>>) => boolean;

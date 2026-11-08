@@ -1,5 +1,5 @@
 import { problemDetailsSchema } from '@cellhive/contracts';
-import { readinessResponseSchema } from '@cellhive/contracts/openapi';
+import { healthResponseSchema, readinessResponseSchema } from '@cellhive/contracts/openapi';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { startValkey } from './global-setup.js';
@@ -17,6 +17,7 @@ describe('/healthz and /readyz', () => {
       valkey = await startValkey();
       t = await startTestApp({
         CACHE_URL: `redis://${valkey.getHost()}:${String(valkey.getMappedPort(6379))}`,
+        CELLHIVE_BUILD_VERSION: '0.1.0-rc.1',
       });
     });
 
@@ -24,10 +25,12 @@ describe('/healthz and /readyz', () => {
       await t.close();
     });
 
-    it('GET /healthz → 200 {status: ok}', async () => {
+    it('GET /healthz → 200 {status: ok} with the version of the build (T1023)', async () => {
       const response = await t.app.inject({ method: 'GET', url: '/healthz' });
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ status: 'ok' });
+      const body: unknown = response.json();
+      expect(healthResponseSchema.parse(body)).toEqual({ status: 'ok', version: '0.1.0-rc.1' });
+      expect(body).toEqual({ status: 'ok', version: '0.1.0-rc.1' });
     });
 
     it('GET /readyz → 200 with every check up', async () => {
@@ -83,6 +86,11 @@ describe('/healthz and /readyz', () => {
         'checks.storage',
       ]);
       expect(response.body).not.toMatch(/127\.0\.0\.1|ECONNREFUSED|wrong|secret/);
+      // A build without CELLHIVE_BUILD_VERSION reports `dev`.
+      expect((await t.app.inject({ method: 'GET', url: '/healthz' })).json()).toEqual({
+        status: 'ok',
+        version: 'dev',
+      });
     } finally {
       await t.close();
     }

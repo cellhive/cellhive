@@ -1,0 +1,535 @@
+name: Release
+run-name: >-
+  ${{ github.event_name == 'push' && format('Release {0}', github.ref_name)
+  || github.event_name == 'pull_request' && format('Release dry run (pull request #{0})', github.event.pull_request.number)
+  || inputs.publish && format('Release {0} (dispatch)', inputs.version)
+  || format('Release dry run {0}', inputs.version) }}
+
+# Release pipeline (SPEC §1A "Phát hành", docs/releasing.md). A tag `v<version>` of
+# cellhive/cellhive builds `cellhive-api` and `cellhive-web` natively on amd64
+# (`ubuntu-24.04`) and arm64 (`ubuntu-24.04-arm`), smoke-tests both on each
+# architecture (tools/release/smoke.sh), pushes them by digest, joins them into one
+# manifest list per image, signs it and the platform images with cosign (keyless,
+# GitHub OIDC), attaches SPDX SBOMs (BuildKit attestations, `cosign attest`, release
+# files) and creates the GitHub Release. `latest` moves only for the newest stable
+# version; a pre-release (`0.1.0-rc.1`) gets its own tag only.
+#
+# A dispatch with `publish: false` (the default) and a pull request touching the release
+# files run every build, smoke test and check and publish nothing: no registry login, no
+# push, no signature, no release. Publishing needs the run on the tag itself.
+#
+# Release tools (buildx, cosign, syft) run here only: they are not in the images nor in
+# pnpm-lock.yaml. Every action is pinned by commit SHA, because the publishing jobs can
+# write packages and releases. Context values reach scripts through env, never inline.
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .dockerignore
+      - infra/docker/**
+      - tools/release/**
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without "v" (for example 0.1.0-rc.1); its X.Y.Z must be the version in package.json
+        required: true
+        type: string
+      publish:
+        description: Push, sign and release. Only on the tag v<version> of cellhive/cellhive (choose that tag as the ref); any other run fails before building
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE_PREFIX: ghcr.io/cellhive
+
+jobs:
+  meta:
+    name: Version and tags
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      publish: ${{ steps.version.outputs.publish }}
+      latest: ${{ steps.version.outputs.latest }}
+      tags: ${{ steps.version.outputs.tags }}
+      epoch: ${{ steps.version.outputs.epoch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Version, tags and publish mode
+        id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          error() { echo "::error::$1"; exit 1; }
+          package=$(jq -r '.version' package.json)
+          case "$EVENT" in
+            push) version=${REF_NAME#v}; publish=true ;;
+            workflow_dispatch) version=$INPUT_VERSION; publish=$INPUT_PUBLISH ;;
+            pull_request) version="$package-pr.$PULL_REQUEST"; publish=false ;;
+            *) error "Unexpected event $EVENT" ;;
+          esac
+          # Semantic Versioning without build metadata: X.Y.Z or X.Y.Z-<pre-release>.
+          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          [[ $version =~ $semver ]] || error "'$version' is not a version such as 0.1.0 or 0.1.0-rc.1"
+          major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
+          prerelease=false
+          [ -z "${BASH_REMATCH[4]}" ] || prerelease=true
+          [ "$major.$minor.$patch" = "$package" ] ||
+            error "Version $version does not match $package of package.json: set the version of every package.json first (docs/releasing.md)"
+          if [ "$publish" = true ]; then
+            [ "$REPOSITORY" = cellhive/cellhive ] || error "Only cellhive/cellhive publishes"
+            [ "$REF" = "refs/tags/v$version" ] || error "Publishing needs the run on tag v$version, not $REF"
+          fi
+          # `latest` and `X.Y` follow the newest stable version only: a patch of an older
+          # minor version, or a pre-release, gets its own tag only.
+          latest=false
+          tags=$version
+          if [ "$prerelease" = false ]; then
+            # Fails the job (pipefail) when the tags cannot be listed.
+            released=$(git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/v||')
+            newest=$(printf '%s\n' "$released" "$version" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ "$newest" = "$version" ]; then
+              latest=true
+              tags="$version $major.$minor latest"
+            fi
+          fi
+          epoch=$(git log -1 --format=%ct)
+          {
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+            echo "publish=$publish"
+            echo "latest=$latest"
+            echo "tags=$tags"
+            echo "epoch=$epoch"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Cellhive $version"
+            echo
+            echo "- Publish: \`$publish\`; pre-release: \`$prerelease\`; newest stable: \`$latest\`"
+            echo "- Image tags: \`$tags\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build and smoke test (${{ matrix.arch }})
+    needs: meta
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      # Push by digest, when publishing only.
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PUBLISH: ${{ needs.meta.outputs.publish }}
+      ARCH: ${{ matrix.arch }}
+      # Commit time as the image creation time, the same in both builds of an image.
+      SOURCE_DATE_EPOCH: ${{ needs.meta.outputs.epoch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Log in to GHCR
+        if: needs.meta.outputs.publish == 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # 1. Both images into the runner's Docker for the smoke test (no attestations yet).
+      #    No shared build cache: a release builds from the checkout only.
+      - name: Build cellhive-api
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: |
+            CELLHIVE_VERSION=${{ needs.meta.outputs.version }}
+            CELLHIVE_REVISION=${{ github.sha }}
+          tags: ${{ env.IMAGE_PREFIX }}/cellhive-api:${{ needs.meta.outputs.version }}
+          load: true
+          provenance: false
+          sbom: false
+      - name: Build cellhive-web
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/docker/web.Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: |
+            CELLHIVE_VERSION=${{ needs.meta.outputs.version }}
+            CELLHIVE_REVISION=${{ github.sha }}
+          tags: ${{ env.IMAGE_PREFIX }}/cellhive-web:${{ needs.meta.outputs.version }}
+          load: true
+          provenance: false
+          sbom: false
+      # 2. migrate, /healthz with the version, sharp thumbnails (musl on arm64), web proxy.
+      - name: Smoke test
+        run: tools/release/smoke.sh "$IMAGE_PREFIX/cellhive-api:$VERSION" "$IMAGE_PREFIX/cellhive-web:$VERSION" "$VERSION"
+
+      # 3. SPDX SBOMs of the smoke-tested images (syft), for the release and `cosign attest`.
+      - name: SBOM directory
+        run: mkdir -p sbom
+      - name: SBOM of cellhive-api
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.IMAGE_PREFIX }}/cellhive-api:${{ needs.meta.outputs.version }}
+          format: spdx-json
+          output-file: sbom/cellhive-api-${{ needs.meta.outputs.version }}-linux-${{ matrix.arch }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: SBOM of cellhive-web
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.IMAGE_PREFIX }}/cellhive-web:${{ needs.meta.outputs.version }}
+          format: spdx-json
+          output-file: sbom/cellhive-web-${{ needs.meta.outputs.version }}-linux-${{ matrix.arch }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Check the SBOMs
+        run: |
+          set -euo pipefail
+          for image in cellhive-api cellhive-web; do
+            file="sbom/$image-$VERSION-linux-$ARCH.spdx.json"
+            npm=$(jq '[.packages[].externalRefs[]? | select(.referenceType == "purl" and (.referenceLocator | startswith("pkg:npm/")))] | length' "$file")
+            echo "$file: $(jq '.packages | length' "$file") packages, $npm npm"
+          done
+          npm=$(jq '[.packages[].externalRefs[]? | select(.referenceType == "purl" and (.referenceLocator | startswith("pkg:npm/")))] | length' "sbom/cellhive-api-$VERSION-linux-$ARCH.spdx.json")
+          [ "$npm" -gt 100 ] || { echo "::error::The cellhive-api SBOM lists $npm npm packages"; exit 1; }
+
+      # 4. The same images again with an SPDX SBOM and SLSA provenance attestation: the
+      #    layers come from the builder's cache of step 1. Publishing pushes them by digest
+      #    (no tag; the manifest list job tags them); otherwise into an OCI layout file.
+      - name: Outputs of the attested builds
+        id: targets
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          for image in api web; do
+            if [ "$PUBLISH" = true ]; then
+              echo "$image=type=image,name=$IMAGE_PREFIX/cellhive-$image,push-by-digest=true,name-canonical=true,push=true" >> "$GITHUB_OUTPUT"
+              echo "${image}-target=$IMAGE_PREFIX/cellhive-$image" >> "$GITHUB_OUTPUT"
+            else
+              echo "$image=type=oci,dest=$RUNNER_TEMP/cellhive-$image.oci.tar" >> "$GITHUB_OUTPUT"
+              echo "${image}-target=$RUNNER_TEMP/cellhive-$image.oci.tar" >> "$GITHUB_OUTPUT"
+            fi
+          done
+      - name: Build cellhive-api with attestations
+        id: api
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: |
+            CELLHIVE_VERSION=${{ needs.meta.outputs.version }}
+            CELLHIVE_REVISION=${{ github.sha }}
+          outputs: ${{ steps.targets.outputs.api }}
+          provenance: mode=max
+          sbom: true
+      - name: Build cellhive-web with attestations
+        id: web
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/docker/web.Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: |
+            CELLHIVE_VERSION=${{ needs.meta.outputs.version }}
+            CELLHIVE_REVISION=${{ github.sha }}
+          outputs: ${{ steps.targets.outputs.web }}
+          provenance: mode=max
+          sbom: true
+      # 5. What is published is what was smoke-tested: same layers, plus the attestations.
+      - name: Check the attested images
+        env:
+          API_TARGET: ${{ steps.targets.outputs.api-target }}
+          WEB_TARGET: ${{ steps.targets.outputs.web-target }}
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          WEB_DIGEST: ${{ steps.web.outputs.digest }}
+        run: |
+          set -euo pipefail
+          if [ "$PUBLISH" = true ]; then
+            api="$API_TARGET@$API_DIGEST" web="$WEB_TARGET@$WEB_DIGEST"
+          else
+            api=$API_TARGET web=$WEB_TARGET
+          fi
+          tools/release/check-image.sh "$ARCH" "$IMAGE_PREFIX/cellhive-api:$VERSION" "$api"
+          tools/release/check-image.sh "$ARCH" "$IMAGE_PREFIX/cellhive-web:$VERSION" "$web"
+          mkdir -p digests
+          echo "$API_DIGEST" > "digests/cellhive-api-$ARCH"
+          echo "$WEB_DIGEST" > "digests/cellhive-web-$ARCH"
+      - name: Upload the SBOMs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ matrix.arch }}
+          path: sbom/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload the digests
+        if: needs.meta.outputs.publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/
+          if-no-files-found: error
+          retention-days: 30
+
+  audit:
+    name: Dependency audit (report)
+    needs: meta
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      # Reads pnpm-lock.yaml only (no install). A report: it never fails the release.
+      - name: pnpm audit --prod --audit-level high
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+        run: |
+          set -uo pipefail
+          corepack enable
+          status=0
+          pnpm audit --prod --audit-level high > pnpm-audit.txt 2>&1 || status=$?
+          cat pnpm-audit.txt
+          {
+            echo '### pnpm audit --prod --audit-level high'
+            echo
+            echo '```'
+            tail -n 3 pnpm-audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::pnpm audit reports advisories of high severity or above (see the pnpm-audit artifact)"
+          fi
+          exit 0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pnpm-audit
+          path: pnpm-audit.txt
+          retention-days: 90
+
+  assets:
+    name: Release notes and files
+    needs: [meta, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sbom-*
+          path: release/
+          merge-multiple: true
+      # Notes: the CHANGELOG section of X.Y.Z; a pre-release takes [Unreleased] until that
+      # section exists. The Compose file names this version by default. GitHub renames a
+      # release file whose name starts with a dot, hence `env.example`.
+      - name: Notes, Compose file, env.example and SHA256SUMS
+        run: |
+          set -euo pipefail
+          section() { awk -v head="## [$1]" 'index($0, head) == 1 { on = 1; next } on && /^## \[/ { exit } on { print }' CHANGELOG.md; }
+          notes=$(section "${VERSION%%-*}")
+          if [ -z "${notes//[[:space:]]/}" ] && [ "$PRERELEASE" = true ]; then
+            notes=$(section Unreleased)
+          fi
+          [ -n "${notes//[[:space:]]/}" ] || { echo "::error::CHANGELOG.md has no section [${VERSION%%-*}]"; exit 1; }
+          printf '%s\n' "$notes" > notes.md
+          sed "s/\${CELLHIVE_VERSION:-latest}/\${CELLHIVE_VERSION:-$VERSION}/" docker-compose.yml > release/docker-compose.yml
+          grep -q "\${CELLHIVE_VERSION:-$VERSION}" release/docker-compose.yml || { echo "::error::docker-compose.yml has no image tag to set"; exit 1; }
+          cp .env.example release/env.example
+          (cd release && sha256sum -- * > SHA256SUMS)
+          cat release/SHA256SUMS
+          { echo "### Release files"; echo; echo '```'; cat release/SHA256SUMS; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: |
+            notes.md
+            release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Manifest lists, signatures, attestations
+    needs: [meta, build]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      # Keyless signing: the workflow's OIDC token gets a Fulcio certificate.
+      id-token: write
+    outputs:
+      api-digest: ${{ steps.lists.outputs.cellhive-api }}
+      web-digest: ${{ steps.lists.outputs.cellhive-web }}
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      TAGS: ${{ needs.meta.outputs.tags }}
+      REVISION: ${{ github.sha }}
+      # The identity docs/releasing.md verifies.
+      CERTIFICATE_IDENTITY: https://github.com/cellhive/cellhive/.github/workflows/release.yml@refs/tags/v${{ needs.meta.outputs.version }}
+      CERTIFICATE_OIDC_ISSUER: https://token.actions.githubusercontent.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: digests-*
+          path: digests/
+          merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sbom-*
+          path: sbom/
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.4
+      - name: Manifest lists
+        id: lists
+        run: |
+          set -euo pipefail
+          for image in cellhive-api cellhive-web; do
+            repository="$IMAGE_PREFIX/$image"
+            tags=()
+            for tag in $TAGS; do tags+=(-t "$repository:$tag"); done
+            docker buildx imagetools create "${tags[@]}" \
+              --annotation "index:org.opencontainers.image.source=https://github.com/cellhive/cellhive" \
+              --annotation "index:org.opencontainers.image.version=$VERSION" \
+              --annotation "index:org.opencontainers.image.revision=$REVISION" \
+              --annotation "index:org.opencontainers.image.licenses=AGPL-3.0-only" \
+              "$repository@$(cat "digests/$image-amd64")" "$repository@$(cat "digests/$image-arm64")"
+            digest=$(docker buildx imagetools inspect "$repository:$VERSION" --format '{{ json .Manifest }}' | jq -r '.digest')
+            platforms=$(docker buildx imagetools inspect --raw "$repository@$digest" |
+              jq -r '[.manifests[] | select(.platform.os == "linux") | .platform.architecture] | sort | join(" ")')
+            [ "$platforms" = "amd64 arm64" ] || { echo "::error::$repository@$digest has platforms '$platforms'"; exit 1; }
+            echo "$image=$digest" >> "$GITHUB_OUTPUT"
+            echo "$repository:$VERSION → $digest (linux/amd64, linux/arm64)" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+      # The manifest list and each platform image, so that a pull by tag or by platform
+      # digest verifies alike. Each SBOM is attested on its platform image and on the list.
+      - name: Sign and attest
+        env:
+          API_DIGEST: ${{ steps.lists.outputs.cellhive-api }}
+          WEB_DIGEST: ${{ steps.lists.outputs.cellhive-web }}
+        run: |
+          set -euo pipefail
+          for image in cellhive-api cellhive-web; do
+            repository="$IMAGE_PREFIX/$image"
+            if [ "$image" = cellhive-api ]; then list=$API_DIGEST; else list=$WEB_DIGEST; fi
+            cosign sign --yes "$repository@$list"
+            for arch in amd64 arm64; do
+              platform=$(docker buildx imagetools inspect --raw "$repository@$list" |
+                jq -r --arg arch "$arch" '.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest')
+              sbom="sbom/$image-$VERSION-linux-$arch.spdx.json"
+              cosign sign --yes "$repository@$platform"
+              cosign attest --yes --type spdxjson --predicate "$sbom" "$repository@$platform"
+              cosign attest --yes --type spdxjson --predicate "$sbom" "$repository@$list"
+            done
+          done
+      # The commands of docs/releasing.md, by tag.
+      - name: Verify signatures and attestations
+        run: |
+          set -euo pipefail
+          for image in cellhive-api cellhive-web; do
+            reference="$IMAGE_PREFIX/$image:$VERSION"
+            cosign verify "$reference" \
+              --certificate-identity "$CERTIFICATE_IDENTITY" \
+              --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER" > /dev/null
+            cosign verify-attestation "$reference" --type spdxjson \
+              --certificate-identity "$CERTIFICATE_IDENTITY" \
+              --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER" > /dev/null
+            echo "$reference: signature and SBOM attestation verified" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+
+  release:
+    name: GitHub Release
+    needs: [meta, assets, publish, audit]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v${{ needs.meta.outputs.version }}
+      VERSION: ${{ needs.meta.outputs.version }}
+      PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+      LATEST: ${{ needs.meta.outputs.latest }}
+      API_DIGEST: ${{ needs.publish.outputs.api-digest }}
+      WEB_DIGEST: ${{ needs.publish.outputs.web-digest }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+      - name: Create or update the release
+        run: |
+          set -euo pipefail
+          {
+            cat notes.md
+            echo
+            echo '### Images'
+            echo
+            echo "- \`$IMAGE_PREFIX/cellhive-api:$VERSION\` (\`$API_DIGEST\`)"
+            echo "- \`$IMAGE_PREFIX/cellhive-web:$VERSION\` (\`$WEB_DIGEST\`)"
+            echo
+            echo "linux/amd64 and linux/arm64, signed with cosign (keyless), with SPDX SBOMs; \`docs/releasing.md\` says how to verify them."
+          } > body.md
+          flags=(--title "Cellhive $VERSION" --notes-file body.md)
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease --latest=false); else flags+=(--latest="$LATEST"); fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            # A re-run: same tag, replace notes and files.
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber release/*
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" release/*
+          fi

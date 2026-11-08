@@ -193,6 +193,12 @@ describe('process startup', () => {
     const first = await runMain(baseEnv(databaseUrl, 'migrate'));
     expect(first.stderr).toBe('');
     expect(first.code).toBe(0);
+    // T1023: the first line names the version of the build (`dev` without CELLHIVE_BUILD_VERSION).
+    expect(first.logs[0]).toMatchObject({
+      msg: 'cellhive starting',
+      version: 'dev',
+      mode: 'migrate',
+    });
     expect(first.logs).toContainEqual(expect.objectContaining({ migration: '0001_initial' }));
     expect(first.logs).toContainEqual(
       expect.objectContaining({ migration: '0002_partition_retention' }),
@@ -377,10 +383,19 @@ describe('process startup', () => {
   it('MODE=all serves HTTP and runs the worker in one process', async () => {
     const databaseUrl = await createDatabase(inject('databaseUrl'));
     expect((await runMain(baseEnv(databaseUrl, 'migrate'))).code).toBe(0);
-    const { main: all, port } = await startListening(baseEnv(databaseUrl, 'all'));
+    const { main: all, port } = await startListening({
+      ...baseEnv(databaseUrl, 'all'),
+      CELLHIVE_BUILD_VERSION: '0.1.0-rc.1',
+    });
     await all.waitForLog('worker started');
+    expect(all.logs()[0]).toMatchObject({
+      msg: 'cellhive starting',
+      version: '0.1.0-rc.1',
+      mode: 'all',
+    });
     const response = await fetch(`http://127.0.0.1:${String(port)}/healthz`);
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: 'ok', version: '0.1.0-rc.1' });
     expect(await all.stop('SIGTERM')).toBe(0);
     expect(all.logs()).toContainEqual(expect.objectContaining({ msg: 'job runner stopped' }));
   });

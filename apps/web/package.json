@@ -1,9 +1,18 @@
 {
   "name": "@cellhive/web",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Cellhive web client (Vite + React SPA)",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cellhive/cellhive.git",
+    "directory": "apps/web"
+  },
+  "homepage": "https://github.com/cellhive/cellhive#readme",
+  "bugs": {
+    "url": "https://github.com/cellhive/cellhive/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

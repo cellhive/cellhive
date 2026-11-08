@@ -88,6 +88,8 @@ function startWorker(config: AppConfig, logger: Logger): Promise<WorkerHandle> {
 async function main(): Promise<void> {
   const config = readConfig();
   const logger = createRootLogger(config.logLevel);
+  // The version of the build (CELLHIVE_BUILD_VERSION) opens every process's log.
+  logger.info({ version: config.version, mode: config.mode }, 'cellhive starting');
 
   switch (config.mode) {
     case 'api':

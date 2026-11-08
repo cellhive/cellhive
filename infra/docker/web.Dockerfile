@@ -4,6 +4,7 @@
 # reverse-proxying /api and /ws to the API (docker-compose.yml, SPEC §20).
 #
 #   docker build -f infra/docker/web.Dockerfile -t cellhive-web .
+#   docker build -f infra/docker/web.Dockerfile --build-arg CELLHIVE_VERSION=0.1.0 -t cellhive-web .
 #
 # Stages: `build` installs only the web app and its workspace dependencies
 # and runs `vite build`; `runtime` is nginx with the files in dist/ and the
@@ -63,4 +64,15 @@ COPY infra/docker/web/security-headers.conf.template /etc/nginx/templates/snippe
 COPY infra/docker/web/share-page-headers.conf.template /etc/nginx/templates/snippets/share-page-headers.conf.template
 COPY infra/docker/web/share-embed-headers.conf.template /etc/nginx/templates/snippets/share-embed-headers.conf.template
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
+# Version of this build, for the OCI labels only (the API reports its own on
+# /healthz): the release workflow passes the tag without its `v` and the commit.
+ARG CELLHIVE_VERSION=dev
+ARG CELLHIVE_REVISION=unknown
+LABEL org.opencontainers.image.title="cellhive-web" \
+      org.opencontainers.image.description="Cellhive web app: nginx serving the SPA and proxying /api and /ws to the API" \
+      org.opencontainers.image.version="${CELLHIVE_VERSION}" \
+      org.opencontainers.image.revision="${CELLHIVE_REVISION}" \
+      org.opencontainers.image.source="https://github.com/cellhive/cellhive" \
+      org.opencontainers.image.url="https://github.com/cellhive/cellhive" \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
 EXPOSE 80

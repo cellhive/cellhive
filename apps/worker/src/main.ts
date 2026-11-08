@@ -35,6 +35,7 @@ function readConfig(): AppConfig {
 async function main(): Promise<void> {
   const config = readConfig();
   const logger = createWorkerLogger(config.logLevel);
+  logger.info({ version: config.version, mode: 'worker' }, 'cellhive starting');
   try {
     const worker = await createWorker(config, {
       logger,

@@ -170,7 +170,12 @@ describe('base export (T1017)', () => {
   beforeAll(async () => {
     database = await createMigratedDatabase();
     db = createTestDb(database.url);
-    t = await startTestApp({ DATABASE_URL: database.url, BASE_PACKAGE_MAX_BYTES: String(MIB) });
+    t = await startTestApp({
+      DATABASE_URL: database.url,
+      BASE_PACKAGE_MAX_BYTES: String(MIB),
+      // T1023: `app_version` of the manifest is the version of the running build.
+      CELLHIVE_BUILD_VERSION: '0.1.0-rc.1',
+    });
     fx = await buildRecordFixture(t, db);
     storage = createStorageDriver(t.config);
     tempRoot = await mkdtemp(join(tmpdir(), 'cellhive-base-export-test-'));
@@ -459,6 +464,7 @@ describe('base export (T1017)', () => {
         await reader.verifyAll();
         expect(reader.manifest.base).toEqual({ id: base2, name: 'B2' });
         expect(reader.manifest.exported_by_email).toBe(fx.users.u_admin.email);
+        expect(reader.manifest.app_version).toBe('0.1.0-rc.1');
       } finally {
         reader.close();
         await rm(path, { force: true });

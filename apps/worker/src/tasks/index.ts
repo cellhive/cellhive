@@ -220,7 +220,7 @@ export interface TaskDeps {
     readonly jobBudgetMs?: number;
   };
   /** Tests only: temporary directory, clock and source of `base.export` (T1017). */
-  readonly baseExport?: Pick<BaseExportDeps, 'tempRoot' | 'now' | 'source' | 'appVersion'>;
+  readonly baseExport?: Pick<BaseExportDeps, 'tempRoot' | 'now' | 'source'>;
   /** Temporary directory, steps of later tasks and (tests) a wrapped target of `base.import`. */
   readonly baseImport?: Pick<BaseImportDeps, 'tempRoot' | 'target' | 'extensions'>;
 }
@@ -460,6 +460,7 @@ export function buildTaskList(deps: TaskDeps): TaskList {
       logger: deps.logger.child({ task: 'base.export' }),
       limits: basePackageLimits(deps.config.limits.basePackageMaxBytes),
       timeZone: deps.config.defaults.timezone,
+      appVersion: deps.config.version,
       ...deps.baseExport,
     }),
     'base.import': createBaseImportTask({
@@ -737,7 +738,6 @@ export {
 } from './auth-password-reset-email.js';
 export {
   BASE_EXPORT_ORG_CAP,
-  BASE_PACKAGE_APP_VERSION,
   baseExportTempDir,
   createBaseExportTask,
   type BaseExportDeps,

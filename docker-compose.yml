@@ -9,12 +9,16 @@
 #   POSTGRES_PASSWORD     required; URL-safe characters only (openssl rand -hex 24)
 #   GARAGE_RPC_SECRET     required for `full` (openssl rand -hex 32)
 #   GARAGE_ADMIN_TOKEN    required for `full` (openssl rand -base64 32)
-#   CELLHIVE_VERSION      image tag, default `latest`
+#   CELLHIVE_VERSION      image tag, default `latest` (the newest stable release); the copy
+#                         attached to a GitHub Release defaults to that release
 #   HTTP_PORT             host port of the web container, default 8080
 # Postgres and Garage refuse to start when their secret is empty.
 #
-# The api and web images are published from T005/T011 onward; until then build
-# the web image locally with `docker compose build web` (infra/docker/web.Dockerfile).
+# Images: ghcr.io/cellhive/cellhive-api and cellhive-web for linux/amd64 and linux/arm64,
+# signed with cosign, with SPDX SBOMs (docs/releasing.md). A pre-release (`0.1.0-rc.1`)
+# is never `latest`: set CELLHIVE_VERSION to run one. To run this checkout instead, set
+# CELLHIVE_VERSION=dev, then `docker compose build web` and
+# `docker build -f infra/docker/api.Dockerfile -t ghcr.io/cellhive/cellhive-api:dev .`
 # One image (`cellhive-api`) serves every server role, selected with MODE.
 name: cellhive
 
