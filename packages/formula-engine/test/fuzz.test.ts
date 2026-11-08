@@ -16,7 +16,12 @@ import { tokenize } from '../src/lexer.js';
 import { inCustomers, inOrders } from './fixture.js';
 import { countNodes, timingBudgetsApply } from './timing.js';
 
-const BUDGET_MS = 5;
+/**
+ * Parse budget per formula on plain Node; v8 coverage instrumentation makes
+ * the parser ~4× slower (same scaling as the evaluator budget in
+ * `evaluate.test.ts`), so the budget follows `FORMULA_ENGINE_COVERAGE`.
+ */
+const BUDGET_MS = process.env['FORMULA_ENGINE_COVERAGE'] === '1' ? 20 : 5;
 
 /** Deterministic PRNG (mulberry32), so a failure reproduces from its seed. */
 function prng(seed: number): () => number {
