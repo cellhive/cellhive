@@ -124,7 +124,14 @@ export function summarizeTrigger(
       return { label, detail: scheduleText(t, locale, trigger.cron, trigger.timezone) };
     case 'webhook.received':
       // (T612) The hook by name; base admins only read hooks (and only they manage these).
-      return { label, detail: names.hook?.(trigger.incoming_webhook_id) ?? null };
+      // `null`: a hook a base import left out (CONTRACTS §12.2).
+      return {
+        label,
+        detail:
+          trigger.incoming_webhook_id === null
+            ? null
+            : (names.hook?.(trigger.incoming_webhook_id) ?? null),
+      };
     case 'record.date_reached': {
       const when = t('trigger.dateReached', {
         offset: offsetText(t, trigger.offset_minutes),

@@ -461,7 +461,9 @@ class DefinitionChecker {
     }
     if (trigger.type === 'webhook.received') {
       // A live hook of this base (T604): another base's or a deleted one reads as unknown.
-      if (this.context.incomingWebhookIds?.has(trigger.incoming_webhook_id) !== true) {
+      // `null`: detached by a base import (CONTRACTS §12.2), unknown until one is chosen.
+      const hookId = trigger.incoming_webhook_id;
+      if (hookId === null || this.context.incomingWebhookIds?.has(hookId) !== true) {
         this.add(join(path, 'incoming_webhook_id'), UNKNOWN_WEBHOOK, 'Unknown incoming webhook');
       }
       return trigger;

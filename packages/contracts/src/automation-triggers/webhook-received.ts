@@ -39,7 +39,13 @@ export const WEBHOOK_TRIGGER_UNIT_PREFIX = 'webhook:';
 export const webhookReceivedTriggerSchema = z
   .strictObject({
     type: z.literal('webhook.received'),
-    incoming_webhook_id: idOf('hok').meta({ description: 'An incoming webhook of the base' }),
+    incoming_webhook_id: idOf('hok')
+      .nullable()
+      .meta({
+        description:
+          'An incoming webhook of the base; `null` once a base import detached it (CONTRACTS ' +
+          '§12.2): turning the automation on is `422 AUTOMATION_INVALID` until one is chosen',
+      }),
   })
   .meta({
     id: 'WebhookReceivedTrigger',

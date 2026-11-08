@@ -25,12 +25,12 @@ export async function checkSendTelegramSecrets(
   const errors: ProblemErrorItem[] = [];
   for (const { action, path } of flattenActions(input.definition.actions)) {
     if (action.type !== 'send_telegram') continue;
-    const secret = await secrets.findUsable(
-      scope,
-      action.config.secret_id,
-      input.baseId,
-      'telegram_bot',
-    );
+    // `null`: detached by a base import (CONTRACTS §12.2), not usable until one is chosen.
+    const secretId = action.config.secret_id;
+    const secret =
+      secretId === null
+        ? undefined
+        : await secrets.findUsable(scope, secretId, input.baseId, 'telegram_bot');
     if (secret === undefined) {
       errors.push({
         path: `${path}.config.secret_id`,

@@ -317,7 +317,9 @@ export class RunAsRevalidator {
     baseId: Id<'bse'>,
   ): Promise<Set<string>> {
     if (definition.trigger.type !== 'webhook.received') return new Set();
-    const hook = await this.hooks.findById(scope, definition.trigger.incoming_webhook_id);
+    const hookId = definition.trigger.incoming_webhook_id;
+    if (hookId === null) return new Set();
+    const hook = await this.hooks.findById(scope, hookId);
     return hook?.base_id === baseId ? new Set([hook.id]) : new Set();
   }
 

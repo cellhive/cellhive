@@ -40,9 +40,12 @@ export const notificationUserIdsSchema = z
   .meta({ id: 'NotificationRecipientUsers', description: 'Fixed users' });
 
 /** `{ "group_id": "grp_…" }`: every member of a group, expanded when the step runs. */
-export const notificationGroupSchema = z
-  .strictObject({ group_id: idOf('grp') })
-  .meta({ id: 'NotificationRecipientGroup', description: 'Members of a group (when sent)' });
+export const notificationGroupSchema = z.strictObject({ group_id: idOf('grp').nullable() }).meta({
+  id: 'NotificationRecipientGroup',
+  description:
+    'Members of a group (when sent); `null` once a base import detached it (CONTRACTS ' +
+    '§12.2): turning the automation on is `422 AUTOMATION_INVALID` until one is chosen',
+});
 
 /**
  * A recipient value: a `user` (or `created_by`/`updated_by`) field of the

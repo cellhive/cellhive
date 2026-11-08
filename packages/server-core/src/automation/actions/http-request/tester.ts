@@ -259,9 +259,9 @@ export class HttpRequestTester {
     let webhookData: WebhookRequestData | undefined;
     if (definition.trigger.type === 'webhook.received') {
       webhookData = NO_WEBHOOK_DATA;
-      const hook = access.isAdmin
-        ? await this.hooks.findById(scope, definition.trigger.incoming_webhook_id)
-        : undefined;
+      const hookId = definition.trigger.incoming_webhook_id;
+      const hook =
+        access.isAdmin && hookId !== null ? await this.hooks.findById(scope, hookId) : undefined;
       const sample = hook?.base_id === baseId ? sampleFromJson(hook.sample) : null;
       if (sample === null) warnings.push({ code: 'no_sample' });
       else webhookData = { body: sample.body, headers: sample.headers, query: sample.query };

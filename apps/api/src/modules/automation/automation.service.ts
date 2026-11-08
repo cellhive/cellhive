@@ -907,7 +907,9 @@ export class AutomationService {
     // `webhook.received` (T604): the hook must be live in this base.
     const incomingWebhookIds = new Set<string>();
     if (definition.trigger.type === 'webhook.received') {
-      const hook = await this.hooks.findById(scope, definition.trigger.incoming_webhook_id);
+      // `null`: detached by a base import (CONTRACTS §12.2), unknown until one is chosen.
+      const hookId = definition.trigger.incoming_webhook_id;
+      const hook = hookId === null ? undefined : await this.hooks.findById(scope, hookId);
       if (hook?.base_id === base.base.id) incomingWebhookIds.add(hook.id);
     }
     return { ...context, views, incomingWebhookIds };

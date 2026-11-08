@@ -10393,10 +10393,13 @@
             "type": "string"
           },
           "secret_id": {
-            "description": "An `http_header` secret of the organization whose scope includes the base",
+            "description": "An `http_header` secret of the organization whose scope includes the base; `null` once a base import detached it (CONTRACTS §12.2): the step cannot run and turning the automation on is `422 AUTOMATION_INVALID` until one is chosen",
             "example": "sec_A1b2C3d4E5f6G7h8",
             "pattern": "^sec_[0-9A-Za-z]{16}$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -12940,13 +12943,16 @@
       },
       "NotificationRecipientGroup": {
         "additionalProperties": false,
-        "description": "Members of a group (when sent)",
+        "description": "Members of a group (when sent); `null` once a base import detached it (CONTRACTS §12.2): turning the automation on is `422 AUTOMATION_INVALID` until one is chosen",
         "properties": {
           "group_id": {
             "description": "grp ID",
             "example": "grp_A1b2C3d4E5f6G7h8",
             "pattern": "^grp_[0-9A-Za-z]{16}$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -15873,10 +15879,13 @@
             "type": "boolean"
           },
           "signing_secret_id": {
-            "description": "Required `webhook_signing` secret of the organization whose scope includes the base: the request carries `webhook-signature` (Standard Webhooks; two signatures for 24 hours after the secret is replaced)",
+            "description": "Required `webhook_signing` secret of the organization whose scope includes the base: the request carries `webhook-signature` (Standard Webhooks; two signatures for 24 hours after the secret is replaced); `null` once a base import detached it (CONTRACTS §12.2): the step cannot run and turning the automation on is `422 AUTOMATION_INVALID` until one is chosen",
             "example": "sec_A1b2C3d4E5f6G7h8",
             "pattern": "^sec_[0-9A-Za-z]{16}$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "url": {
             "anyOf": [
@@ -16683,10 +16692,13 @@
             "$ref": "#/components/schemas/TelegramChatValue"
           },
           "secret_id": {
-            "description": "A `telegram_bot` secret of the organization whose scope includes the base",
+            "description": "A `telegram_bot` secret of the organization whose scope includes the base; `null` once a base import detached it (CONTRACTS §12.2): the step cannot run and turning the automation on is `422 AUTOMATION_INVALID` until one is chosen",
             "example": "sec_A1b2C3d4E5f6G7h8",
             "pattern": "^sec_[0-9A-Za-z]{16}$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "text": {
             "$ref": "#/components/schemas/SendTelegramText"
@@ -21484,10 +21496,13 @@
         "description": "Fires once per request accepted by the incoming webhook (`UNKNOWN_WEBHOOK` when it is not a live hook of the base). No record: `condition` must be `null` (`INVALID_CONDITION`). Values: `{ \"trigger\": \"body\" | \"headers\" | \"query\", \"path\" }`, templates `[@body.<path>]`, `[@headers.<name>]`, `[@query.<path>]`. Base admins only",
         "properties": {
           "incoming_webhook_id": {
-            "description": "An incoming webhook of the base",
+            "description": "An incoming webhook of the base; `null` once a base import detached it (CONTRACTS §12.2): turning the automation on is `422 AUTOMATION_INVALID` until one is chosen",
             "example": "hok_A1b2C3d4E5f6G7h8",
             "pattern": "^hok_[0-9A-Za-z]{16}$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "type": {
             "enum": [
