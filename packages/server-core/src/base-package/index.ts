@@ -1,8 +1,10 @@
 /**
  * Whole-base packages (`.chbase`, ADR-24, CONTRACTS §12.2): the format,
  * a bounded reader of untrusted packages, a streaming writer, the rewrite
- * of ids and references shape by shape, and email ↔ user. Pure apart from
- * stream I/O: no database, no Nest.
+ * of ids and references shape by shape, email ↔ user, and the export of a
+ * base from a source. Pure apart from stream I/O: no database, no Nest
+ * (`DbBaseExportSource`, the source of the `base.export` job, is exported
+ * by the package root only).
  */
 export {
   ATTACHMENTS_ENTRY,
@@ -31,6 +33,21 @@ export {
   packageTooLarge,
   type BasePackageProblem,
 } from './errors.js';
+export {
+  basePackageKey,
+  exportBasePackage,
+  type BaseExportSchema,
+  type BaseExportSource,
+  type ExportAutomation,
+  type ExportBasePackageOptions,
+  type ExportCellFile,
+  type ExportDetachedRef,
+  type ExportedBasePackage,
+  type ExportEmailAsset,
+  type ExportFormCover,
+  type ExportRecordStream,
+  type ExportTable,
+} from './export.js';
 export { jsonNestsDeeperThan } from './json.js';
 export {
   basePackageLimits,

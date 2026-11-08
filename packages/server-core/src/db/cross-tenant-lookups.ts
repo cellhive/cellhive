@@ -133,6 +133,29 @@ export async function findShareLinkOrganization(
   return row?.organization_id;
 }
 
+/**
+ * The organization of the base `baseId` outside the trash, or `undefined`
+ * (BACKLOG T1017, CONTRACTS §12.2).
+ *
+ * Why: the server operator's CLI (`cellhive base export --base <id>`) runs
+ * with server access, no principal, and starts from a base id alone.
+ * Returns the organization id only; every other read then goes through the
+ * repositories with that organization's scope. Never called by a request
+ * handler or a job.
+ */
+export async function findBaseOrganization(
+  executor: DbExecutor | Tx,
+  baseId: Id<'bse'>,
+): Promise<Id<'org'> | undefined> {
+  const row = await executor
+    .selectFrom('meta.bases')
+    .select('organization_id')
+    .where('id', '=', baseId)
+    .where('deleted_at', 'is', null)
+    .executeTakeFirst();
+  return row?.organization_id;
+}
+
 /** What the public route of an incoming webhook learns from a token hash. */
 export interface IncomingWebhookTokenMatch {
   readonly organization_id: Id<'org'>;

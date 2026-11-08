@@ -145,6 +145,7 @@ import { toLinkFieldModel } from './links/link-model.js';
 import { LinkCellReader, linkCellValue, type LinkCells } from './links/link-reader.js';
 import { LinkTargets } from './links/link-targets.js';
 import { MemberDirectoryRepository } from './member-directory.repository.js';
+import { storedValueToJson } from './storage-values.js';
 import { summarize } from './summaries/summaries.js';
 import {
   buildTableModel,
@@ -201,9 +202,11 @@ import type {
   RecordTreeRequest,
   RecordViewScope,
   SortDirection,
+  StoredRecordOutput,
+  StoredRecordStream,
   TrashedRecordOutput,
 } from './types.js';
-import type { FieldConversionRow, FieldRow, TableRow } from '../db/schema.js';
+import type { FieldConversionRow, FieldRow, JsonValue, TableRow } from '../db/schema.js';
 import type { FormulaAnalysis } from '@cellhive/formula-engine';
 
 /** Most sort keys one request may give (the `__auto` tie-breaker is added on top). */
@@ -2611,18 +2614,39 @@ export class RecordQueryService implements ButtonRecordMatcher {
    * A share link export (T810) reads with the link's access context and
    * `viewScope: 'share_link'`, its values formatted for the viewer
    * (`options.display`).
+   *
+   * `form: 'stored'` (whole-base export, CONTRACTS §12.2) reads the rows as
+   * stored instead: the column fields in storage form, the link cells as
+   * ids of live linked records in cell order, the live parent, and the
+   * system columns (`__auto`, creators) — no formula, lookup or button
+   * field, no display data (`cell_format` is ignored).
    */
   async openStream(
     scope: OrgScope,
     tableId: Id<'tbl'>,
     access: RecordAccessContext,
     request: RecordStreamRequest,
+    options: RecordStreamOptions & { readonly form: 'stored' },
+  ): Promise<StoredRecordStream>;
+  async openStream(
+    scope: OrgScope,
+    tableId: Id<'tbl'>,
+    access: RecordAccessContext,
+    request: RecordStreamRequest,
     options: RecordStreamOptions,
-  ): Promise<RecordStream> {
+  ): Promise<RecordStream>;
+  async openStream(
+    scope: OrgScope,
+    tableId: Id<'tbl'>,
+    access: RecordAccessContext,
+    request: RecordStreamRequest,
+    options: RecordStreamOptions,
+  ): Promise<RecordStream | StoredRecordStream> {
     this.assertScope(scope);
     const tableAccess = this.tableAccess(tableId, access);
     const input = parseRequest(streamSchema, request);
     const { maxRows, signal } = options;
+    const stored = options.form === 'stored';
     const viewScope = options.viewScope ?? 'member';
     // `cell_format=text` only: formatting, never filtering (date operands keep `access`).
     const display: RecordAccessContext =
@@ -2659,7 +2683,9 @@ export class RecordQueryService implements ButtonRecordMatcher {
       return {
         target,
         view: plan.view,
-        columns: streamColumns(plan.model, plan.view, plan.visibleComputed, plan.visibleButtons),
+        columns: stored
+          ? storedStreamColumns(plan.model)
+          : streamColumns(plan.model, plan.view, plan.visibleComputed, plan.visibleButtons),
         rowCount: Number(rows[0]?.n ?? 0n),
       };
     });
@@ -2674,8 +2700,38 @@ export class RecordQueryService implements ButtonRecordMatcher {
         after,
         limit,
         signal,
+        stored,
       });
 
+    if (stored) {
+      return {
+        ...opened.target,
+        fields: opened.columns,
+        rowCount: opened.rowCount,
+        exceedsMaxRows: opened.rowCount > maxRows,
+        async *records() {
+          let after: readonly (string | null)[] | null = null;
+          let emitted = 0;
+          while (emitted < maxRows) {
+            if (signal?.aborted === true) return;
+            const limit = Math.min(batchSize, maxRows - emitted);
+            const read = await batch(after, limit);
+            for (let start = 0; start < read.rows.length; start += SERIALIZE_SLICE) {
+              if (start > 0) await yieldToEventLoop();
+              yield serializeStoredRows(
+                read.plan,
+                read.rows.slice(start, start + SERIALIZE_SLICE),
+                read.related,
+              );
+            }
+            emitted += read.rows.length;
+            if (read.rows.length < limit || read.lastKeys === null) return;
+            after = read.lastKeys;
+            await yieldToEventLoop();
+          }
+        },
+      };
+    }
     return {
       ...opened.target,
       fields: opened.columns,
@@ -2721,6 +2777,8 @@ export class RecordQueryService implements ButtonRecordMatcher {
       readonly after: readonly (string | null)[] | null;
       readonly limit: number;
       readonly signal: AbortSignal | undefined;
+      /** Storage form: no formula/lookup/button values, no display data, the system columns. */
+      readonly stored: boolean;
     },
   ): Promise<{
     plan: ReadPlan;
@@ -2774,9 +2832,13 @@ export class RecordQueryService implements ButtonRecordMatcher {
             selectedLinks: batch.fieldIds.flatMap((id) => links.get(id) ?? []),
             selectedParent: parent !== null && batch.fieldIds.includes(parent.id) ? parent : null,
             // Formula/lookup values under the exporter's access (T462): locked → empty.
-            selectedComputed: batch.fieldIds.flatMap((id) => computed.get(id) ?? []),
+            selectedComputed: batch.stored
+              ? []
+              : batch.fieldIds.flatMap((id) => computed.get(id) ?? []),
             // Buttons export their label (T517).
-            selectedButtons: batch.fieldIds.flatMap((id) => buttons.get(id) ?? []),
+            selectedButtons: batch.stored
+              ? []
+              : batch.fieldIds.flatMap((id) => buttons.get(id) ?? []),
           };
           const organizationId = scope.organizationId;
           const terms = [
@@ -2798,8 +2860,12 @@ export class RecordQueryService implements ButtonRecordMatcher {
           const where = and(this.scopedConditions(plan, { field_key_type: 'id' }));
           const inner = terms.map(keyOf('q'));
           const outer = terms.map(keyOf('p'));
+          // Storage form: the system columns a read never shows.
+          const system = batch.stored
+            ? sql`, ${col('__created_by')} AS __created_by, ${col('__updated_by')} AS __updated_by, ${col('__auto')}::text AS __auto`
+            : sql``;
           const { rows } = await sql<DataRow>`
-          SELECT ${this.selectList(plan)},
+          SELECT ${this.selectList(plan)}${system},
                  ${sql.join(outer.map((key, index) => sql`${key.expr}::text AS ${sql.id(`s${String(index)}`)}`))}
             FROM (
               SELECT q.*
@@ -2816,9 +2882,13 @@ export class RecordQueryService implements ButtonRecordMatcher {
             JOIN ${from} ON ${col('__id')} = p.__pid
            ORDER BY ${sql.join(outer.map(renderTerm))}
         `.execute(tx);
-          const users = await this.usersOf(txScope, plan.selected, rows);
+          const users = batch.stored
+            ? new Map<string, UserRef>()
+            : await this.usersOf(txScope, plan.selected, rows);
           const related = await this.relatedCells(txScope, plan, rows, access);
-          const computedData = await this.computedData(txScope, plan, rows, access);
+          const computedData = batch.stored
+            ? null
+            : await this.computedData(txScope, plan, rows, access);
           const last = rows.at(-1);
           const lastKeys =
             last === undefined
@@ -3812,6 +3882,74 @@ function streamColumns(
   }
   for (const field of shown) if (!ordered.has(field.id)) ordered.set(field.id, field);
   return [...ordered.values()];
+}
+
+/**
+ * Columns of a `form: 'stored'` stream: the fields with a column of their
+ * own (system types aside: their values are the row's system columns),
+ * the link fields and the `parent` field, in display order.
+ */
+function storedStreamColumns(model: TableModel): RecordStreamField[] {
+  return [
+    ...model.visible
+      .filter((field) => field.definition.systemColumn === null)
+      .map((field) => ({ field: field.row, type: field.type })),
+    ...model.visibleLinks.map((field) => ({ field: field.row, type: 'link' })),
+    ...(model.visibleParent === null ? [] : [{ field: model.visibleParent.row, type: 'parent' }]),
+  ]
+    .sort(
+      (a, b) =>
+        a.field.position - b.field.position ||
+        (a.field.id < b.field.id ? -1 : a.field.id > b.field.id ? 1 : 0),
+    )
+    .map(({ field, type }) => ({ id: field.id, name: field.name, type }));
+}
+
+/** Records of `rows` in storage form (`form: 'stored'`), keyed by field id. */
+function serializeStoredRows(
+  plan: Pick<ReadPlan, 'selected' | 'selectedLinks' | 'selectedParent'>,
+  rows: readonly DataRow[],
+  related: RelatedCells,
+): StoredRecordOutput[] {
+  return rows.map((row) => {
+    const fields: Record<string, JsonValue> = {};
+    const define = (key: string, value: JsonValue) => {
+      // A field id is never `__proto__`; defined as data all the same.
+      Object.defineProperty(fields, key, {
+        value,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    };
+    plan.selected.forEach((field, index) => {
+      if (field.definition.systemColumn !== null) return;
+      define(field.id, storedValueToJson(field.type, row[`c${String(index)}`]));
+    });
+    for (const link of plan.selectedLinks) {
+      const refs = related.links?.get(link.id)?.get(row.__id) ?? [];
+      define(link.id, refs.length === 0 ? null : refs.map((ref) => ref.id));
+    }
+    const text = (value: unknown) => (typeof value === 'string' ? value : null);
+    const parentId = text(row.__parent);
+    return {
+      id: row.__id,
+      created_at: row.__created_at.toISOString(),
+      updated_at: row.__updated_at.toISOString(),
+      created_by: text(row['__created_by']),
+      updated_by: text(row['__updated_by']),
+      auto: Number(row['__auto']),
+      ...(plan.selectedParent === null
+        ? {}
+        : {
+            parent_id:
+              parentId === null
+                ? null
+                : ((related.parents?.get(parentId)?.id ?? null) as Id<'rec'> | null),
+          }),
+      fields,
+    };
+  });
 }
 
 /** A cell of a record, as data (a field named `__proto__` stays data). */

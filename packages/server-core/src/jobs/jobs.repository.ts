@@ -216,9 +216,11 @@ export class JobsRepository
 
   /**
    * The base a job works on, when the job is tied to one: an import
-   * (`meta.imports.job_id`) or a field conversion (`meta.field_conversions`
-   * → its table). `null` when the job names no base (BACKLOG T704: API
-   * tokens limited to bases only see jobs of those bases).
+   * (`meta.imports.job_id`), a field conversion (`meta.field_conversions`
+   * → its table) or a base export (`base_id` of the `base.exported` audit
+   * entry written with the job, CONTRACTS §12.2). `null` when the job names
+   * no base (BACKLOG T704: API tokens limited to bases only see jobs of
+   * those bases).
    */
   async baseIdOf(scope: OrgScope, id: Id<'job'>): Promise<Id<'bse'> | null> {
     const row = await this.executor(scope)
@@ -232,11 +234,23 @@ export class JobsRepository
       .leftJoin('meta.tables as t', (join) =>
         join.onRef('t.organization_id', '=', 'c.organization_id').onRef('t.id', '=', 'c.table_id'),
       )
-      .select(['i.base_id as import_base_id', 't.base_id as conversion_base_id'])
+      .select((eb) => [
+        'i.base_id as import_base_id',
+        't.base_id as conversion_base_id',
+        eb
+          .selectFrom('meta.audit_logs as a')
+          .select('a.base_id')
+          .whereRef('a.organization_id', '=', 'j.organization_id')
+          .where('a.entity_type', '=', 'job')
+          .whereRef('a.entity_id', '=', 'j.id')
+          .where('a.action', '=', 'base.exported')
+          .limit(1)
+          .as('export_base_id'),
+      ])
       .where('j.organization_id', '=', scope.organizationId)
       .where('j.id', '=', id)
       .executeTakeFirst();
-    return row?.import_base_id ?? row?.conversion_base_id ?? null;
+    return row?.import_base_id ?? row?.conversion_base_id ?? row?.export_base_id ?? null;
   }
 
   /** Running jobs of `type` in the organization (ADR-18 `countRunning`). */

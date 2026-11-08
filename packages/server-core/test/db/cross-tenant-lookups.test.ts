@@ -32,6 +32,7 @@ describe('cross-tenant lookups (AGENTS.md rule 5, SPEC §14.1)', () => {
       'createMonthlyPartition',
       'dropMonthlyPartitionsBefore',
       'findApiTokenByHash',
+      'findBaseOrganization',
       'findIncomingWebhookByTokenHash',
       'findInvitationOrganization',
       'findShareLinkOrganization',
