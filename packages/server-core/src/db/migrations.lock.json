@@ -58,6 +58,7 @@
     "0055_canonical_time_zones": "a8fa2314434ae192a0fa6bd3ec1353826bb13b8b2fa04912c374f5a903020c14",
     "0056_ai_generation_queue": "c5166388ccf5911f176a887a7fc314bf023b17f68b72785b0b445ce1ccd266a3",
     "0057_ai_generation_queue_job_idx": "d05a0036b53b52c76b8854620c8d57681211fc04fd49ab44ea3638d8839b28c4",
-    "0058_time_zone_offsets": "5c4f34905d019c82ce49cab240f967d03d1d3a22c2d24f84c2defcf2a12fda09"
+    "0058_time_zone_offsets": "5c4f34905d019c82ce49cab240f967d03d1d3a22c2d24f84c2defcf2a12fda09",
+    "0059_bases_import_job": "afd1842681807e1a6bd10881e83a1e665363a14547e6a6d5d456e2cb568e6eeb"
   }
 }

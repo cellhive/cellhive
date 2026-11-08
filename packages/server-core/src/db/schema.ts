@@ -236,6 +236,12 @@ export interface BasesTable {
   /** Bumped on every permission change (SPEC §14.1). */
   permission_version: Int8WithDefault;
   deleted_at: NullableTimestamp;
+  /**
+   * The `base.import` job building the base (migration 0059, T1018): set
+   * while the base is hidden (`deleted_at` set too), cleared when the import
+   * finishes.
+   */
+  import_job_id: NullableRef<'job'>;
   created_at: CreatedAt;
   updated_at: UpdatedAt;
 }
