@@ -37,6 +37,7 @@ import { AiSettingsRepository } from '../settings/ai-settings.repository.js';
 import { requireAi, type AiSettingsState } from '../settings/settings.js';
 import { AiUsageLedger, isAiQuotaExceeded, type AiQuotaContext } from '../usage/quota.js';
 
+import { aiConfigFieldIds } from './definition.js';
 import { enqueueAiGeneration } from './jobs.js';
 import { aiOptionsOf, aiSourcesOf } from './options.js';
 import {
@@ -52,12 +53,14 @@ import {
 import { AiGenerationQueueRepository, type TakenAiRow } from './queue.repository.js';
 import { aiCrossRecordSources } from './sources.js';
 
+import type { BaseSchemaRows } from '../../computed/definition/schema-rows.js';
 import type { Db, Tx } from '../../db/create-db.js';
 import type { JsonValue } from '../../db/schema.js';
 import type { Causation } from '../../events/event.js';
 import type { RecordMutationService } from '../../records/record-mutation.service.js';
 import type { RecordQueryService } from '../../records/record-query.service.js';
 import type { RecordAccessContext } from '../../records/types.js';
+import type { SchemaChange } from '../../schema/schema-change-publisher.js';
 import type { AiCallHooks, AiProviderSettings, AiUsage, LlmClient } from '../client.js';
 import type { AiDeadline } from '../deadline.js';
 import type { FormulaRecord } from '@cellhive/formula-engine';
@@ -204,6 +207,28 @@ export interface AiFieldStateChange {
   readonly tableId: Id<'tbl'>;
   readonly fieldId: Id<'fld'>;
   readonly state: AiFieldStateDto;
+  /**
+   * The active fields flowing into its prompt (`aiConfigFieldIds`): only
+   * subscribers who manage the table and read each one receive `ai_state`.
+   */
+  readonly configFieldIds: readonly Id<'fld'>[];
+}
+
+/**
+ * The `schema.changed` of `change` (CONTRACTS §7): field `updated` with
+ * `ai_state` and the fields its receivers must read to get it.
+ */
+export function aiFieldStateSchemaChange(change: AiFieldStateChange): SchemaChange {
+  return {
+    organization_id: change.organizationId,
+    base_id: change.baseId,
+    table_id: change.tableId,
+    entity: 'field',
+    entity_id: change.fieldId,
+    action: 'updated',
+    ai_state: change.state,
+    ai_config_field_ids: change.configFieldIds,
+  };
 }
 
 export interface AiFieldGeneratorOptions {
@@ -693,18 +718,25 @@ export async function aiFieldStateChanges(
   const fields = new FieldsRepository(db);
   const tables = new TablesRepository(db);
   const states = await new AiGenerationQueueRepository(db).statesOf(scope, fieldIds);
+  const bases = new Map<Id<'bse'>, BaseSchemaRows>();
   const changes: AiFieldStateChange[] = [];
   for (const fieldId of fieldIds) {
     const field = await fields.getById(scope, fieldId);
     const table = field === undefined ? undefined : await tables.getById(scope, field.table_id);
     const state = states.get(fieldId);
     if (field === undefined || table === undefined || state === undefined) continue;
+    let rows = bases.get(table.base_id);
+    if (rows === undefined) {
+      rows = await loadBaseSchemaRows(db, scope, table.base_id);
+      bases.set(table.base_id, rows);
+    }
     changes.push({
       organizationId: scope.organizationId,
       baseId: table.base_id,
       tableId: table.id,
       fieldId,
       state,
+      configFieldIds: aiConfigFieldIds(field, rows),
     });
   }
   return changes;

@@ -373,7 +373,10 @@ export const realtimeSchemaChangedSchema = z.strictObject({
   action: z.enum(SCHEMA_CHANGE_ACTIONS),
   /**
    * (T910) An AI field whose generation queue was paused or resumed as a
-   * whole: its counts (never record ids). Absent on every other change.
+   * whole: its counts (never record ids), only for subscribers who manage
+   * the table and read every field flowing into its prompt (the readers of
+   * its whole `options.ai`, CONTRACTS §29.5); others get the message
+   * without it. Absent on every other change.
    */
   ai_state: aiFieldStateSchema.optional(),
 });

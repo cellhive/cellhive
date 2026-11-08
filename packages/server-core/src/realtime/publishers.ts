@@ -51,6 +51,9 @@ export class RealtimeSchemaChangePublisher implements SchemaChangePublisher {
       entity_id: change.entity_id,
       action: change.action,
       ...(change.ai_state === undefined ? {} : { ai_state: change.ai_state }),
+      ...(change.ai_config_field_ids === undefined
+        ? {}
+        : { ai_config_field_ids: [...change.ai_config_field_ids] }),
     });
     const db = this.options.db;
     if (

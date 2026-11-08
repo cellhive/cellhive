@@ -1,53 +1,32 @@
-import { isId } from '@cellhive/contracts';
 import {
-  AiGenerationQueueRepository,
-  aiFieldLockedFor,
-  aiOptionsForReader,
-  aiOptionsOf,
   AiSettingsRepository,
-  AutomationsRepository,
-  buttonAutomationOf,
   FIELD_RESTORE_WINDOW_MS,
   FieldsRepository,
-  isAiField,
   isComputedRow,
-  loadBaseSchemaRows,
   requireAi,
   SchemaService,
-  strictComputedPermissionsOf,
-  TablesRepository,
   withNewOptionIds,
   type AppConfig,
-  type BaseSchemaRows,
   type ComputedFieldContext,
   type Db,
   type FieldRow,
   type LinkFieldContext,
-  type OrgScope,
 } from '@cellhive/server-core';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { notFound, permissionDenied, type BaseAccess } from '../../common/access/access.service.js';
 import { mutationContextOf } from '../../common/access/change-log.js';
 import { canManageTable, SchemaAccess } from '../../common/schema/schema-access.js';
-import { fieldDtoOf, pageOf } from '../../common/schema/schema-dto.js';
+import { pageOf } from '../../common/schema/schema-dto.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
 
-import {
-  computedDtoPart,
-  loadErrorRefs,
-  organizationTimeZone,
-  readabilityOf,
-  requireAiFieldUnlocked,
-  type ErrorRefRows,
-} from './computed-fields.js';
+import { organizationTimeZone, readabilityOf, requireAiFieldUnlocked } from './computed-fields.js';
 import { FieldConversionService } from './field-conversion.service.js';
+import { FieldDtoService, linkTableOf } from './field-dto.service.js';
 
 import type { Principal } from '../../common/auth/principal.js';
 import type { RequestMeta } from '../../common/auth/request-meta.js';
 import type {
-  AiFieldStateDto,
-  ButtonFieldSummary,
   CreateFieldRequest,
   DeletePreview,
   FieldDto,
@@ -72,10 +51,10 @@ export class FieldService {
     @Inject(SchemaAccess) private readonly schemaAccess: SchemaAccess,
     @Inject(FieldsRepository) private readonly fields: FieldsRepository,
     @Inject(FieldConversionService) private readonly conversions: FieldConversionService,
-    @Inject(TablesRepository) private readonly tables: TablesRepository,
     @Inject(DB) private readonly db: Db,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(AiSettingsRepository) private readonly aiSettings: AiSettingsRepository,
+    @Inject(FieldDtoService) private readonly dtos: FieldDtoService,
   ) {}
 
   /**
@@ -89,15 +68,6 @@ export class FieldService {
     requireAi(await this.aiSettings.find(base.org.scope), { recordData: true });
   }
 
-  /** Queue counts of the AI fields among `fields` (T910). */
-  private async aiStatesOf(
-    base: BaseAccess,
-    fields: readonly FieldRow[],
-  ): Promise<Map<Id<'fld'>, AiFieldStateDto>> {
-    const ids = fields.filter(isAiField).map((field) => field.id);
-    return new AiGenerationQueueRepository(this.db).statesOf(base.org.scope, ids);
-  }
-
   /**
    * What the caller may reference in a formula/lookup (SPEC §9.5: tables
    * and fields they read) and the organization zone (T456).
@@ -107,89 +77,6 @@ export class FieldService {
       readable: readabilityOf(base.access),
       timeZone: organizationTimeZone(base, this.config.defaults.timezone),
     };
-  }
-
-  /**
-   * Meta of the base, loaded only when some field is computed, with the
-   * inactive fields/tables their errors name (T460).
-   */
-  private async rowsFor(
-    base: BaseAccess,
-    fields: readonly FieldRow[],
-  ): Promise<{ rows: BaseSchemaRows; inactive: ErrorRefRows } | undefined> {
-    if (!fields.some((field) => isComputedRow(field) || isAiField(field))) return undefined;
-    const rows = await loadBaseSchemaRows(this.db, base.org.scope, base.base.id);
-    const inactive = await loadErrorRefs(base.org.scope, rows, fields, {
-      fields: this.fields,
-      tables: this.tables,
-    });
-    return { rows, inactive };
-  }
-
-  private computedOf(
-    base: BaseAccess,
-    loaded: { rows: BaseSchemaRows; inactive: ErrorRefRows } | undefined,
-    field: FieldRow,
-    aiStates?: ReadonlyMap<Id<'fld'>, AiFieldStateDto>,
-  ) {
-    const ai = aiOptionsOf(field);
-    if (loaded !== undefined && ai !== null) {
-      // T910: the prompt in names for this reader; always strict.
-      const readable = readabilityOf(base.access);
-      const state = aiStates?.get(field.id);
-      return {
-        options: {
-          ...(field.options as Record<string, unknown>),
-          ai: aiOptionsForReader(ai, loaded.rows, field.table_id, readable),
-        },
-        locked: aiFieldLockedFor(field, loaded.rows, (id) => readable.field(field.table_id, id)),
-        ...(state === undefined ? {} : { ai_state: state }),
-      };
-    }
-    return loaded === undefined
-      ? undefined
-      : computedDtoPart(
-          field,
-          loaded.rows,
-          base.access,
-          strictComputedPermissionsOf(base.base.settings),
-          loaded.inactive,
-        );
-  }
-
-  /**
-   * The automation attached to each button field (T517): id, on/off and
-   * `min_permission` of its `button.clicked` trigger.
-   */
-  private async buttonsOf(
-    scope: OrgScope,
-    fields: readonly FieldRow[],
-  ): Promise<Map<string, ButtonFieldSummary>> {
-    const buttons = fields.filter((field) => field.type === 'button');
-    const out = new Map<string, ButtonFieldSummary>();
-    if (buttons.length === 0) return out;
-    const rows = await new AutomationsRepository(this.db).listForButtons(
-      scope,
-      buttons.map((field) => field.id),
-    );
-    for (const field of buttons) {
-      let summary: ButtonFieldSummary = {
-        automation_id: null,
-        automation_enabled: false,
-        min_permission: null,
-      };
-      for (const row of rows) {
-        const automation = buttonAutomationOf(row, field.table_id, field.id);
-        if (automation === null) continue;
-        summary = {
-          automation_id: row.id,
-          automation_enabled: row.enabled,
-          min_permission: automation.trigger.min_permission,
-        };
-      }
-      out.set(field.id, summary);
-    }
-    return out;
   }
 
   /**
@@ -208,19 +95,7 @@ export class FieldService {
       (field) => field.deleted_at === null && visible[field.id] !== undefined,
     );
     // T403: each field says whether its values are being converted / can be reverted.
-    const states = await this.conversions.statesOf(base.org.scope, tableId);
-    const deletedTargets = await this.deletedLinkTargets(base.org.scope, rows);
-    const schemaRows = await this.rowsFor(base, rows);
-    const buttons = await this.buttonsOf(base.org.scope, rows);
-    const aiStates = await this.aiStatesOf(base, live);
-    const dto = (field: FieldRow) =>
-      fieldDtoOf(
-        field,
-        deletedTargets,
-        states.get(field.id) ?? null,
-        this.computedOf(base, schemaRows, field, aiStates),
-        buttons.get(field.id),
-      );
+    const dto = await this.dtos.serializer(base, rows);
     if (!query.include_deleted) return pageOf(live, query, dto);
     const restorableSince = Date.now() - FIELD_RESTORE_WINDOW_MS;
     const trashed = rows
@@ -264,23 +139,12 @@ export class FieldService {
       },
       mutationContextOf(meta, principal.userId),
     );
-    return fieldDtoOf(
-      field,
-      undefined,
-      null,
-      this.computedOf(
-        base,
-        await this.rowsFor(base, [field]),
-        field,
-        await this.aiStatesOf(base, [field]),
-      ),
-      (await this.buttonsOf(base.org.scope, [field])).get(field.id),
-    );
+    return this.dtos.one(base, field);
   }
 
   async get(principal: Principal, fieldId: Id<'fld'>): Promise<FieldDto> {
     const { base, field } = await this.schemaAccess.requireField(principal, fieldId, 'read');
-    return this.dto(base, field);
+    return this.dtos.one(base, field);
   }
 
   async update(
@@ -321,25 +185,7 @@ export class FieldService {
       },
       mutationContextOf(meta, principal.userId),
     );
-    return { ...(await this.dto(base, updated)), job_id: removeOptionsJobId };
-  }
-
-  /** A field DTO with its link flag (T401), conversion state (T403) and computed part (T456). */
-  private async dto(base: BaseAccess, field: FieldRow): Promise<FieldDto> {
-    const scope = base.org.scope;
-    const states = await this.conversions.statesOf(scope, field.table_id);
-    return fieldDtoOf(
-      field,
-      await this.deletedLinkTargets(scope, [field]),
-      states.get(field.id) ?? null,
-      this.computedOf(
-        base,
-        await this.rowsFor(base, [field]),
-        field,
-        await this.aiStatesOf(base, [field]),
-      ),
-      (await this.buttonsOf(scope, [field])).get(field.id),
-    );
+    return { ...(await this.dtos.one(base, updated)), job_id: removeOptionsJobId };
   }
 
   /**
@@ -355,7 +201,7 @@ export class FieldService {
       fieldId,
       mutationContextOf(meta, principal.userId),
     );
-    return this.dto(base, field);
+    return this.dtos.one(base, field);
   }
 
   /**
@@ -390,24 +236,6 @@ export class FieldService {
     };
   }
 
-  /** Linked tables of `rows`' link fields that are in the trash or gone (CONTRACTS §13). */
-  private async deletedLinkTargets(
-    scope: OrgScope,
-    rows: readonly FieldRow[],
-  ): Promise<Set<string>> {
-    const targets = new Set(
-      rows.flatMap((row) => {
-        const target = row.type === 'link' ? linkTableOf(row.options) : null;
-        return target === null ? [] : [target];
-      }),
-    );
-    const deleted = new Set<string>();
-    for (const target of targets) {
-      if ((await this.tables.getById(scope, target)) === undefined) deleted.add(target);
-    }
-    return deleted;
-  }
-
   /**
    * `GET /fields/:id/delete-preview` (T460, CONTRACTS §13): schema rights on
    * the table like the delete (`403`/`404`); changes nothing.
@@ -425,10 +253,4 @@ export class FieldService {
       mutationContextOf(meta, principal.userId),
     );
   }
-}
-
-/** `options.link_table` when it is a table id, else `null`. */
-function linkTableOf(options: unknown): Id<'tbl'> | null {
-  if (typeof options !== 'object' || options === null || !('link_table' in options)) return null;
-  return isId('tbl', options.link_table) ? options.link_table : null;
 }

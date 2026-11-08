@@ -1,5 +1,6 @@
 import {
   AiFieldGenerator,
+  aiFieldStateSchemaChange,
   createAiActions,
   AutomationDispatcher,
   AutomationRunEngine,
@@ -333,15 +334,7 @@ export function buildTaskList(deps: TaskDeps): TaskList {
       : {
           onStateChange: async (changes) => {
             for (const change of changes) {
-              await schemaPublisher.publish({
-                organization_id: change.organizationId,
-                base_id: change.baseId,
-                table_id: change.tableId,
-                entity: 'field',
-                entity_id: change.fieldId,
-                action: 'updated',
-                ai_state: change.state,
-              });
+              await schemaPublisher.publish(aiFieldStateSchemaChange(change));
             }
           },
         }),

@@ -149,9 +149,12 @@ export {
   type QuotaDay,
 } from './usage/quota.js';
 export {
+  aiConfigFieldIds,
+  aiConfigVisible,
   aiOptionsForReader,
   aiPromptSourceProblems,
   prepareAiOptions,
+  type AiConfigReader,
   type AiFieldContext,
   type AiPromptSource,
 } from './generation/definition.js';
@@ -160,6 +163,7 @@ export {
   aiBackOffMs,
   aiFailureReason,
   aiFieldStateChanges,
+  aiFieldStateSchemaChange,
   AiFieldGenerator,
   aiSystemAccess,
   aiTargetOf,

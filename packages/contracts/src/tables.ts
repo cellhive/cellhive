@@ -241,7 +241,10 @@ export const fieldOptionsSchema = z.record(z.string(), z.unknown()).meta({
     '`multiple` and `options` (`[{ id, name, color }]`). Validated per type (CONTRACTS §13); ' +
     'the options of `link`, `parent`, `formula` and `lookup` are described by the components ' +
     '`LinkFieldOptions`, `ParentFieldOptions`, `FormulaFieldOptions` and `LookupFieldOptions`; ' +
-    'the `reminder` of a `datetime` field by `DateReminderOption`.',
+    'the `reminder` of a `datetime` field by `DateReminderOption`; the `ai` of an AI ' +
+    '`text`/`select` field by `AiFieldReaderOptions` when returned (`AiFieldOptions` when sent): ' +
+    'the whole configuration only for table managers who read every field flowing into its ' +
+    'prompt, `{ task }` for everyone else.',
 });
 export type FieldOptions = z.infer<typeof fieldOptionsSchema>;
 
@@ -352,7 +355,9 @@ export const fieldSchema = z
       }),
     ai_state: aiFieldStateSchema.optional().meta({
       description:
-        'Only on AI fields (`options.ai`, T910): counts of rows waiting, failed and paused',
+        'Only on AI fields (`options.ai`, T910) whose whole configuration the reader gets ' +
+        '(`AiFieldConfig`: schema rights on the table and every field flowing into the prompt ' +
+        'readable): counts of rows waiting, failed and paused. Absent for every other reader',
     }),
     button: buttonFieldSummarySchema.optional().meta({
       description:

@@ -708,6 +708,47 @@
         ],
         "type": "object"
       },
+      "AiFieldConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "auto_update": {
+            "type": "boolean"
+          },
+          "instructions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_output_tokens": {
+            "maximum": 2000,
+            "minimum": 16,
+            "type": "integer"
+          },
+          "prompt": {
+            "description": "The template with current field names (`{{ [Field] }}`); a field deleted since shows as `#REF[fld_…]`",
+            "type": "string"
+          },
+          "task": {
+            "enum": [
+              "summarize",
+              "classify",
+              "extract",
+              "translate",
+              "custom"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "prompt",
+          "instructions",
+          "auto_update",
+          "max_output_tokens"
+        ],
+        "type": "object"
+      },
       "AiFieldGenerate": {
         "additionalProperties": false,
         "properties": {
@@ -945,6 +986,36 @@
         },
         "required": [
           "ai"
+        ],
+        "type": "object"
+      },
+      "AiFieldReaderOptions": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/AiFieldConfig"
+          },
+          {
+            "$ref": "#/components/schemas/AiFieldRedactedOptions"
+          }
+        ],
+        "description": "`options.ai` of an AI field in the field API: the whole configuration (`AiFieldConfig`, with `prompt`) for table managers who read every field flowing into the prompt; `{ task }` (`AiFieldRedactedOptions`) for everyone else (CONTRACTS §29.5)"
+      },
+      "AiFieldRedactedOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "task": {
+            "enum": [
+              "summarize",
+              "classify",
+              "extract",
+              "translate",
+              "custom"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
         ],
         "type": "object"
       },
@@ -8599,7 +8670,7 @@
         "properties": {
           "ai_state": {
             "additionalProperties": false,
-            "description": "Only on AI fields (`options.ai`, T910): counts of rows waiting, failed and paused",
+            "description": "Only on AI fields (`options.ai`, T910) whose whole configuration the reader gets (`AiFieldConfig`: schema rights on the table and every field flowing into the prompt readable): counts of rows waiting, failed and paused. Absent for every other reader",
             "properties": {
               "failed": {
                 "minimum": 0,
@@ -9079,7 +9150,7 @@
       },
       "FieldOptions": {
         "additionalProperties": {},
-        "description": "Options of the field type (SPEC §5.5), e.g. `style`, `default_value`; for `select`: `multiple` and `options` (`[{ id, name, color }]`). Validated per type (CONTRACTS §13); the options of `link`, `parent`, `formula` and `lookup` are described by the components `LinkFieldOptions`, `ParentFieldOptions`, `FormulaFieldOptions` and `LookupFieldOptions`; the `reminder` of a `datetime` field by `DateReminderOption`.",
+        "description": "Options of the field type (SPEC §5.5), e.g. `style`, `default_value`; for `select`: `multiple` and `options` (`[{ id, name, color }]`). Validated per type (CONTRACTS §13); the options of `link`, `parent`, `formula` and `lookup` are described by the components `LinkFieldOptions`, `ParentFieldOptions`, `FormulaFieldOptions` and `LookupFieldOptions`; the `reminder` of a `datetime` field by `DateReminderOption`; the `ai` of an AI `text`/`select` field by `AiFieldReaderOptions` when returned (`AiFieldOptions` when sent): the whole configuration only for table managers who read every field flowing into its prompt, `{ task }` for everyone else.",
         "type": "object"
       },
       "FieldType": {
@@ -19364,7 +19435,7 @@
         "properties": {
           "ai_state": {
             "additionalProperties": false,
-            "description": "Only on AI fields (`options.ai`, T910): counts of rows waiting, failed and paused",
+            "description": "Only on AI fields (`options.ai`, T910) whose whole configuration the reader gets (`AiFieldConfig`: schema rights on the table and every field flowing into the prompt readable): counts of rows waiting, failed and paused. Absent for every other reader",
             "properties": {
               "failed": {
                 "minimum": 0,

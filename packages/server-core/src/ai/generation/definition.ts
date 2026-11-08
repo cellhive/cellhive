@@ -2,6 +2,7 @@ import {
   aiFieldOptionsSchema,
   AUTOMATION_DISALLOWED_FUNCTIONS,
   type AiFieldOptions,
+  type AiFieldReaderOptions,
   type Id,
   type ProblemErrorItem,
 } from '@cellhive/contracts';
@@ -24,8 +25,10 @@ import {
 import { AppError } from '../../errors/app-error.js';
 import { zodIssuesToProblemErrors } from '../../errors/zod-issues.js';
 
-import { isAiField } from './options.js';
-import { aiAnalysisOf, aiCrossRecordSources } from './sources.js';
+import { aiOptionsOf, isAiField } from './options.js';
+import { aiAnalysisOf, aiCrossRecordSources, aiReadFieldIds } from './sources.js';
+
+import type { AnalysisOf } from '../../records/computed/read/references.js';
 
 /** What the person saving an AI field may reference (T910; permission checks belong to the caller). */
 export interface AiFieldContext {
@@ -168,14 +171,68 @@ export function prepareAiOptions(
 }
 
 /**
- * `options.ai` for a reader of the field API: the prompt with current names
- * (a field the reader cannot read, or deleted, shows as `#REF[fld_…]`).
+ * Who reads an AI field through the field API, `schema.changed` or any
+ * other output of its configuration (CONTRACTS §13, §29.5).
+ */
+export interface AiConfigReader {
+  /** Schema rights on the field's table: base admin or table `manage`. */
+  readonly canManage: boolean;
+  readonly readable: SchemaReadability;
+}
+
+/**
+ * The fields a reader must read to see the configuration of `field`: every
+ * **active** field flowing into its prompt (`aiReadFieldIds` — its sources
+ * and what computed sources read on the same record); a deleted source
+ * shows as `#REF[fld_…]` and is left out, like the definition of a formula
+ * (`[]` for a field that is not an AI field).
+ */
+export function aiConfigFieldIds(
+  field: { readonly type: string; readonly options: unknown },
+  rows: BaseSchemaRows,
+  analysisOf?: AnalysisOf,
+): Id<'fld'>[] {
+  const active = new Set<string>(rows.fields.map((row) => row.id));
+  return aiReadFieldIds(field, rows, analysisOf).filter((id) => active.has(id));
+}
+
+/**
+ * Whether `reader` gets the whole `options.ai` of an AI field of `tableId`
+ * and its `ai_state` — the rule of a formula's definition (CONTRACTS §13):
+ * schema rights on the table **and** every field of `configFieldIds`
+ * ({@link aiConfigFieldIds}) readable.
+ */
+export function aiConfigVisible(
+  reader: AiConfigReader,
+  tableId: Id<'tbl'>,
+  configFieldIds: readonly Id<'fld'>[],
+): boolean {
+  return reader.canManage && configFieldIds.every((id) => reader.readable.field(tableId, id));
+}
+
+/**
+ * `options.ai` of `field` for one reader (`null`: not an AI field) — the
+ * one serializer of every output of the configuration (CONTRACTS §29.5):
+ * when {@link aiConfigVisible}, the whole configuration with the prompt in
+ * the reader's names (a deleted field shows as `#REF[fld_…]`); otherwise
+ * `{ task }` only.
  */
 export function aiOptionsForReader(
-  ai: AiFieldOptions,
+  field: {
+    readonly table_id: Id<'tbl'>;
+    readonly type: string;
+    readonly options: unknown;
+  },
   rows: BaseSchemaRows,
-  tableId: Id<'tbl'>,
-  readable?: SchemaReadability,
-): AiFieldOptions {
-  return { ...ai, prompt: renderTemplateNames(ai.prompt, snapshotOfBase(rows, tableId, readable)) };
+  reader: AiConfigReader,
+): AiFieldReaderOptions | null {
+  const ai = aiOptionsOf(field);
+  if (ai === null) return null;
+  if (!aiConfigVisible(reader, field.table_id, aiConfigFieldIds(field, rows))) {
+    return { task: ai.task };
+  }
+  return {
+    ...ai,
+    prompt: renderTemplateNames(ai.prompt, snapshotOfBase(rows, field.table_id, reader.readable)),
+  };
 }

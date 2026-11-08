@@ -10,7 +10,9 @@
  * Fails when a test fails or a row has none. P21 and P65–P77 (S7, BACKLOG
  * T818) joined the required rows with `permissions-s7-matrix.int.test.ts`;
  * P78–P102 (S8 AI and MCP, BACKLOG T917) with `permissions-s8-matrix.int.test.ts`
- * and `mcp.int.test.ts` — row numbers have two or three digits.
+ * and `mcp.int.test.ts` — row numbers have two or three digits. The S9 rows
+ * (P103–P127) join as their tasks land: P111, P112 (BACKLOG T1006) with
+ * `permissions-s9-ai-matrix.int.test.ts`.
  *
  * Extra arguments go to Vitest.
  */
@@ -19,9 +21,12 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const REQUIRED = Array.from({ length: 102 }, (_v, index) => index + 1).map(
-  (n) => `P${String(n).padStart(2, '0')}`,
-);
+const REQUIRED = [
+  ...Array.from({ length: 102 }, (_v, index) => index + 1),
+  // S9 (BACKLOG "Phụ lục ma trận quyền S9"), by task.
+  111,
+  112,
+].map((n) => `P${String(n).padStart(2, '0')}`);
 
 /** Every name mentioning a row: `P07`, `P01/P19`, `P16–P18`, `P100` (ranges expanded). */
 export function codesOf(name: string): string[] {

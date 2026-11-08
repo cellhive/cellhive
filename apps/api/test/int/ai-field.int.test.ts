@@ -442,7 +442,9 @@ describe('AI fields (T910)', () => {
     const listed = await fx.call('u_sales1', 'GET', `/tables/${fx.orders.id}/fields`);
     const field = listed.json<{ items: FieldDto[] }>().items.find((item) => item.id === note.id);
     expect(field).toMatchObject({ locked: true });
-    expect((field?.options['ai'] as { prompt: string }).prompt).toContain('#REF[');
+    // T1006: the configuration only for table managers who read every source.
+    expect(field?.options['ai']).toEqual({ task: 'summarize' });
+    expect(field).not.toHaveProperty('ai_state');
     expectProblem(
       await fx.call('u_sales1', 'POST', `/tables/${fx.orders.id}/records/query`, {
         filter: { op: 'and', items: [{ field: 'ai_note', operator: 'is_not_empty' }] },

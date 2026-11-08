@@ -1,5 +1,8 @@
 import {
+  aiConfigFieldIds,
+  aiConfigVisible,
   aiFieldLockedFor,
+  aiOptionsForReader,
   computedImpactOf,
   displayExpression,
   fieldErrorOf,
@@ -18,6 +21,7 @@ import {
   type FieldRow,
   type FieldsRepository,
   type OrgScope,
+  type AiConfigReader,
   type SchemaReadability,
   type TableRow,
   type TablesRepository,
@@ -29,6 +33,7 @@ import { canManageTable } from '../../common/schema/schema-access.js';
 
 import type { BaseAccess } from '../../common/access/access.service.js';
 import type {
+  AiFieldStateDto,
   ComputeErrorDto,
   ComputedResultTypeDto,
   ComputeModeName,
@@ -77,6 +82,62 @@ export async function requireAiFieldUnlocked(
   if (aiFieldLockedFor(field, rows, (id) => readable.field(field.table_id, id))) {
     throw permissionDenied('The values of this AI field are made from fields you cannot read.');
   }
+}
+
+/** A reader of the AI fields of `tableId` (CONTRACTS §29.5): schema rights and what they read. */
+export function aiReaderOf(access: EffectiveAccess, tableId: Id<'tbl'>): AiConfigReader {
+  return { canManage: canManageTable(access, tableId), readable: readabilityOf(access) };
+}
+
+/**
+ * Whether a reader gets the whole `options.ai` and the `ai_state` of an AI
+ * field (CONTRACTS §29.5): schema rights on its table and every active
+ * field flowing into its prompt readable — like the definition of a
+ * formula ({@link definitionVisible}). `false` for other fields.
+ */
+export function aiConfigVisibleTo(
+  field: FieldRow,
+  rows: BaseSchemaRows,
+  access: EffectiveAccess,
+): boolean {
+  return (
+    isAiField(field) &&
+    aiConfigVisible(
+      aiReaderOf(access, field.table_id),
+      field.table_id,
+      aiConfigFieldIds(field, rows),
+    )
+  );
+}
+
+/** The AI part of a field DTO (CONTRACTS §13, §29.5). */
+export interface AiDtoPart {
+  readonly options: Record<string, unknown>;
+  readonly locked: boolean;
+  readonly ai_state?: AiFieldStateDto;
+}
+
+/**
+ * The AI part of the DTO of `field` for a reader (`undefined` for a field
+ * that is not an AI field): `options.ai` through `aiOptionsForReader` —
+ * the whole configuration, prompt in the reader's names, or `{ task }` —;
+ * `locked` (always strict); `state` as `ai_state` only with the whole
+ * configuration (no key otherwise).
+ */
+export function aiDtoPart(
+  field: FieldRow,
+  rows: BaseSchemaRows,
+  access: EffectiveAccess,
+  state?: AiFieldStateDto,
+): AiDtoPart | undefined {
+  const reader = aiReaderOf(access, field.table_id);
+  const ai = aiOptionsForReader(field, rows, reader);
+  if (ai === null) return undefined;
+  return {
+    options: { ...(isRecord(field.options) ? field.options : {}), ai },
+    locked: aiFieldLockedFor(field, rows, (id) => reader.readable.field(field.table_id, id)),
+    ...('prompt' in ai && state !== undefined ? { ai_state: state } : {}),
+  };
 }
 
 /** Zone of computed values (ADR-21): the organization's, else the instance default. */

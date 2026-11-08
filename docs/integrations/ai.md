@@ -405,6 +405,8 @@ Example: the AI field "Summary" has the prompt `Summarize {{ [Description] }}, m
 
 Previewing and generating need the person to read that whole set of fields (`403` otherwise).
 
+**The configuration follows the same rule, for table managers only.** The prompt, the instructions and the other settings of an AI field (`options.ai`), and the counts of its queue (`ai_state`: waiting, failed, paused), are given only to people who can change the table's fields **and** can read that whole set of fields, like the definition of a formula. Everyone else gets `options.ai = { "task": "summarize" }` (they still see an AI field: read-only cells, the AI icon) and no `ai_state`, in every answer of the field API and in realtime `schema.changed` messages; the field dialog shows **Configured by a table manager** instead of the settings. Share links and MCP never return the configuration.
+
 ### 6.5 Read-only cells, regenerating, history
 
 - **Cells are read-only for everyone.** Edits through the grid, the API, imports or forms are refused (`403 FIELD_READ_ONLY`), and an automation cannot write an AI field (`update_record`/`create_record` → `422 AUTOMATION_INVALID` / `FIELD_READ_ONLY`). Pressing Enter on a cell explains how to edit by hand.

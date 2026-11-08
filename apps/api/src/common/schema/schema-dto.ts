@@ -38,7 +38,8 @@ export function fieldDtoOf(
   /**
    * Formula/lookup fields (T456): options as the reader may see them and the
    * computed state, from `computedDtoPart` of the field module. AI fields
-   * (T910): options with the prompt in names, `locked`, `ai_state`.
+   * (T910): options with `ai` for the reader (whole with the prompt in names,
+   * or `{ task }` — T1006), `locked`, `ai_state` (whole only).
    */
   computed?: Pick<
     FieldDto,
@@ -64,10 +65,11 @@ export function fieldDtoOf(
     type: field.type as FieldTypeName,
     options:
       typeof options === 'object' && options !== null && !Array.isArray(options)
-        ? // A formula/lookup definition is only given through `computed` (T456).
+        ? // A formula/lookup definition is only given through `computed` (T456), an AI
+          // configuration too (T1006: whole or `{ task }` per reader); `ai: null` stays.
           field.type === 'formula' || field.type === 'lookup'
           ? { style: options.style ?? null }
-          : options
+          : withoutAiConfig(options)
         : {},
     is_primary: field.is_primary,
     required: field.required,
@@ -87,6 +89,13 @@ export function fieldDtoOf(
     ...(computed === undefined ? {} : computed),
     ...(button === undefined || field.type !== 'button' ? {} : { button }),
   };
+}
+
+/** `options` without an `ai` configuration (`ai: null` — AI removed — is kept). */
+function withoutAiConfig(options: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(options).filter(([key, value]) => key !== 'ai' || value === null),
+  );
 }
 
 /** One page of an in-memory list (CONTRACTS §1.1). */
