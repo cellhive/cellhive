@@ -368,3 +368,335 @@ test('phones: run history and drawer at 375 px', async ({ browser }) => {
   await expectNoSeriousA11yViolations(page, 'run drawer at 375 px');
   await context.close();
 });
+
+// --- T1013: the run tape (Lucian UX/UI #191) ------------------------------------------
+
+interface TapeStep {
+  readonly action: string;
+  readonly type: string;
+  readonly status: string;
+  readonly attempt?: number;
+  /** ms after the run started. */
+  readonly from: number;
+  readonly to: number | null;
+  readonly output?: unknown;
+  readonly error?: unknown;
+}
+
+/**
+ * A run of `automation` written straight into the run log (no job: nobody
+ * runs it), started `ago` ms before now, with its definition snapshot.
+ */
+async function insertRun(run: {
+  readonly id: string;
+  readonly automation: string;
+  readonly status: string;
+  readonly ago: number;
+  readonly end: number | null;
+  readonly error?: unknown;
+  readonly definition: unknown;
+  readonly steps: readonly TapeStep[];
+}): Promise<void> {
+  const start = Date.now() - run.ago;
+  const at = (ms: number) => new Date(start + ms).toISOString();
+  await sql(
+    `INSERT INTO meta.automation_runs
+       (id, organization_id, automation_id, automation_version, trigger_unit, status, error,
+        input, started_at, finished_at, created_at)
+     VALUES ($1, $2, $3, 1, $1, $4, $5::jsonb, $6::jsonb, $7, $8, $7)`,
+    [
+      run.id,
+      orgId,
+      run.automation,
+      run.status,
+      run.error === undefined ? null : JSON.stringify(run.error),
+      JSON.stringify({
+        automation_version: 1,
+        definition: run.definition,
+        trigger: {
+          event_id: null,
+          type: 'record.created',
+          table_id: demo.tickets,
+          record_id: triggerId,
+          bulk: false,
+          batch: null,
+        },
+      }),
+      at(0),
+      run.end === null ? null : at(run.end),
+    ],
+  );
+  for (const [index, step] of run.steps.entries()) {
+    await sql(
+      `INSERT INTO meta.automation_run_steps
+         (id, organization_id, run_id, action_id, status, attempt, idempotency_key, started_at,
+          finished_at, input, output, error)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb)`,
+      [
+        `stp_${`${run.id.slice(4, 10)}${String(index)}`.padEnd(16, '0').slice(0, 16)}`,
+        orgId,
+        run.id,
+        step.action,
+        step.status,
+        step.attempt ?? 1,
+        `${run.id}:${step.action}`,
+        at(step.from),
+        step.to === null ? null : at(step.to),
+        JSON.stringify({ type: step.type }),
+        step.output === undefined ? null : JSON.stringify(step.output),
+        step.error === undefined ? null : JSON.stringify(step.error),
+      ],
+    );
+  }
+}
+
+/** The computed color of a Cellhive token (`--success`…), as the browser writes colors. */
+async function tokenColor(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const probe = document.createElement('i');
+    probe.style.color = `var(${name})`;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+}
+
+test('run tape: a retry and an error in order and color; scrub to step 2; keyboard', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const { context, page } = await openAs(browser);
+  const csp = collectCspViolations(page);
+  const definition = {
+    trigger: { type: 'record.created', table_id: demo.tickets },
+    actions: [
+      {
+        id: 'act_find',
+        type: 'find_records',
+        config: {
+          table_id: demo.tickets,
+          filter: { field: demo.title, operator: 'contains', value: MARK },
+          fields: [demo.title],
+        },
+      },
+      {
+        id: 'act_update',
+        type: 'update_record',
+        config: {
+          table_id: demo.tickets,
+          record_id: { field: demo.title },
+          fields: { [demo.text]: { literal: 'checked' } },
+        },
+      },
+      {
+        id: 'act_create',
+        type: 'create_record',
+        config: { table_id: demo.tickets, fields: { [demo.title]: { literal: 'follow-up' } } },
+      },
+    ],
+  };
+  const tape = await ok<{ id: string }>(page, 'POST', `/bases/${demo.baseId}/automations`, {
+    name: `E2E tape ${RUN}`,
+    enabled: false,
+    definition,
+  });
+  // Step 2 failed once and succeeded on its second attempt 10 s later; step 3 failed.
+  const run = runId('Tape');
+  await insertRun({
+    id: run,
+    automation: tape.id,
+    status: 'failed',
+    ago: 60_000,
+    end: 13_000,
+    error: { code: 'permission_denied', step: 'act_create', params: { scope: 'table' } },
+    definition,
+    steps: [
+      { action: 'act_find', type: 'find_records', status: 'succeeded', from: 50, to: 400 },
+      {
+        action: 'act_update',
+        type: 'update_record',
+        status: 'succeeded',
+        attempt: 2,
+        from: 10_400,
+        to: 11_300,
+        output: { id: triggerId },
+      },
+      {
+        action: 'act_create',
+        type: 'create_record',
+        status: 'failed',
+        from: 11_350,
+        to: 12_950,
+        error: { code: 'permission_denied', params: { scope: 'table' }, attempt: 1 },
+      },
+    ],
+  });
+  await page.goto(`/b/${demo.baseId}/automations/${tape.id}/runs?run=${run}`);
+  const detail = page.getByTestId('run-detail');
+  const strip = detail.getByTestId('run-tape');
+  await expect(strip).toBeVisible();
+
+  // Order and color: succeeded, succeeded (with a retry dot), failed — left to right.
+  const segments = ['act_find', 'act_update', 'act_create'].map((action) =>
+    strip.getByTestId(`run-tape-segment-${action}`),
+  );
+  const statuses = await Promise.all(
+    segments.map((segment) => segment.getAttribute('data-status')),
+  );
+  expect(statuses).toEqual(['succeeded', 'succeeded', 'failed']);
+  const lefts = await Promise.all(
+    segments.map(async (segment) => (await segment.boundingBox())?.x ?? -1),
+  );
+  expect([...lefts].sort((a, b) => a - b)).toEqual(lefts);
+  const colors = await Promise.all(
+    segments.map((segment) => segment.evaluate((node) => getComputedStyle(node).backgroundColor)),
+  );
+  expect(colors).toEqual([
+    await tokenColor(page, '--success'),
+    await tokenColor(page, '--success'),
+    await tokenColor(page, '--danger'),
+  ]);
+  await expect(strip.getByTestId('run-tape-dot-retry-act_update')).toBeAttached();
+  // The playhead starts at the end: the failed step, 13.0 / 13.0 s.
+  await expect(strip.getByTestId('run-tape-card')).toContainText('Step 3 · Create record');
+  await expect(strip.getByTestId('run-tape-time')).toHaveText('13.0 / 13.0 s');
+  await expectNoSeriousA11yViolations(page, 'run drawer with the tape');
+
+  // Drag the playhead from the start to step 2: its card, its row marked, its output in view.
+  const track = strip.getByTestId('run-tape-track');
+  const box = await track.boundingBox();
+  const target = await segments[1]?.boundingBox();
+  if (box === null || target === null || target === undefined) throw new Error('No tape.');
+  await page.mouse.move(box.x + 14, box.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, box.y + 15, { steps: 8 });
+  await page.mouse.up();
+  await expect(strip.getByTestId('run-tape-card')).toContainText('Step 2 · Update record');
+  await expect(strip.getByTestId('run-tape-card')).toContainText('Attempt 2');
+  const row = detail.getByTestId('run-step-act_update');
+  await expect(row).toHaveAttribute('aria-current', 'step');
+  await expect(detail.getByTestId('step-output-act_update')).toContainText(triggerId);
+  await expect(detail.getByTestId('step-output-act_update')).toBeInViewport();
+  await expect(detail.getByTestId('run-step-act_find')).not.toHaveAttribute('aria-current');
+
+  // Keyboard: Home, → step to step (the slider names the step and the time), Space plays.
+  await track.focus();
+  await page.keyboard.press('Home');
+  await expect(track).toHaveAttribute(
+    'aria-valuetext',
+    /^Step 1 · Find records, Succeeded, 0\.0 s of 13\.0 s$/u,
+  );
+  await page.keyboard.press('ArrowRight');
+  await expect(track).toHaveAttribute(
+    'aria-valuetext',
+    /^Step 2 · Update record, Succeeded, 10\.4 s/u,
+  );
+  await expect(row).toHaveAttribute('aria-current', 'step');
+  await page.keyboard.press('ArrowRight');
+  await expect(track).toHaveAttribute('aria-valuetext', /^Step 3 · Create record, Failed/u);
+  await page.keyboard.press('ArrowLeft');
+  await expect(track).toHaveAttribute('aria-valuetext', /^Step 2 · Update record/u);
+  await page.keyboard.press(' ');
+  await expect(strip.getByTestId('run-tape-play')).toHaveAttribute('aria-label', 'Pause');
+  await expect(strip.getByTestId('run-tape-play')).toHaveAttribute('aria-label', 'Play', {
+    timeout: 10_000,
+  });
+  await expect(strip.getByTestId('run-tape-time')).toHaveText('13.0 / 13.0 s');
+  // Next event from the start lands on step 2; Back to start goes to 0.
+  await strip.getByTestId('run-tape-start').click();
+  await expect(strip.getByTestId('run-tape-time')).toHaveText('0.0 / 13.0 s');
+  await strip.getByTestId('run-tape-next').click();
+  await expect(strip.getByTestId('run-tape-card')).toContainText('Step 2 · Update record');
+
+  // Reduced motion: Play shows the end at once.
+  await strip.getByTestId('run-tape-start').click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await strip.getByTestId('run-tape-play').click();
+  await expect(strip.getByTestId('run-tape-time')).toHaveText('13.0 / 13.0 s');
+  await expect(strip.getByTestId('run-tape-play')).toHaveAttribute('aria-label', 'Play');
+  await expect(detail.getByTestId('run-step-act_create')).toHaveAttribute('aria-current', 'step');
+  expect(csp).toEqual([]);
+  await context.close();
+});
+
+test('run tape: a run waiting in a delay; phones', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const { context, page } = await openAs(browser, { width: 375, height: 812 });
+  const definition = {
+    trigger: { type: 'record.created', table_id: demo.tickets },
+    actions: [
+      {
+        id: 'act_find',
+        type: 'find_records',
+        config: {
+          table_id: demo.tickets,
+          filter: { field: demo.title, operator: 'contains', value: MARK },
+          fields: [demo.title],
+        },
+      },
+      { id: 'act_wait', type: 'delay', config: { minutes: 60 } },
+    ],
+  };
+  const waiting = await ok<{ id: string }>(page, 'POST', `/bases/${demo.baseId}/automations`, {
+    name: `E2E tape wait ${RUN}`,
+    enabled: false,
+    definition,
+  });
+  const run = runId('TapeWait');
+  await insertRun({
+    id: run,
+    automation: waiting.id,
+    status: 'waiting',
+    ago: 120_000,
+    end: null,
+    definition,
+    steps: [
+      {
+        action: 'act_find',
+        type: 'find_records',
+        status: 'succeeded',
+        from: 40,
+        to: 380,
+        output: { count: 0, truncated: false, records: [] },
+      },
+      {
+        action: 'act_wait',
+        type: 'delay',
+        status: 'waiting',
+        from: 400,
+        to: null,
+        output: { until: new Date(Date.now() + 58 * 60_000).toISOString() },
+      },
+    ],
+  });
+  await page.goto(`/b/${demo.baseId}/automations/${waiting.id}/runs?run=${run}`);
+  const strip = page.getByTestId('run-tape');
+  await expect(strip).toBeVisible();
+  // The wait runs to the last poll, with its dot; the card says until when.
+  await expect(strip.getByTestId('run-tape-segment-act_wait')).toHaveAttribute(
+    'data-status',
+    'waiting',
+  );
+  await expect(strip.getByTestId('run-tape-segment-act_wait')).toHaveCSS(
+    'background-color',
+    await tokenColor(page, '--warning'),
+  );
+  await expect(strip.getByTestId('run-tape-dot-waiting-act_wait')).toBeAttached();
+  await expect(strip.getByTestId('run-tape-card')).toContainText('Waiting until');
+  // 375 px: no horizontal scroll, the tape is a full touch target.
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(375);
+  expect(
+    (await strip.getByTestId('run-tape-track').boundingBox())?.height ?? 0,
+  ).toBeGreaterThanOrEqual(44);
+  await expectNoSeriousA11yViolations(page, 'run tape at 375 px');
+  // Home: step 1, its row scrolled into view under the tape.
+  await strip.getByTestId('run-tape-track').focus();
+  await page.keyboard.press('Home');
+  await expect(strip.getByTestId('run-tape-card')).toContainText('Step 1 · Find records');
+  const first = page.getByTestId('run-step-act_find');
+  await expect(first).toHaveAttribute('aria-current', 'step');
+  await expect(first).toBeInViewport({ ratio: 1 });
+  await context.close();
+});

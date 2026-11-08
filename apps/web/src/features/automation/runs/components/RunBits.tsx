@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { batchOverflowOf, textParam } from '../model/runs';
+import { batchOverflowOf, textParam, type TimelineItem } from '../model/runs';
 
 import type { Formatters } from '../../../../lib/i18n/format';
 import type { RecordTitle } from '../use-record-titles';
@@ -76,6 +76,21 @@ export function StepIcon({ status }: { readonly status: AutomationRunStatus | nu
             ? 'text-accent'
             : 'text-fg-muted';
   return <Icon aria-hidden="true" className={cn('size-[18px]', color)} />;
+}
+
+/** "Step 2 · Update record" (a step of the timeline; its action id when the type is unknown). */
+export function stepTitleOf(
+  item: Pick<TimelineItem, 'actionId' | 'number' | 'type' | 'step'>,
+  t: TFunction,
+) {
+  const type = item.type ?? item.step?.action_type ?? null;
+  const name =
+    type === null
+      ? item.actionId
+      : t(`automationBuilder:actionType.${type}`, { defaultValue: type });
+  return item.number === null
+    ? name
+    : t('automationRuns:detail.stepTitle', { number: item.number, name });
 }
 
 /** "84 ms", "1.2 s", "3 min" (the active time of a run or a step). */

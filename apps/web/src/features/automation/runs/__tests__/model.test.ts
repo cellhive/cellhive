@@ -150,6 +150,18 @@ describe('timeline of a run', () => {
     ).toEqual([[null, 'find_records']]);
     expect(timelineOf(definition, [step('act_x')]).at(-1)?.actionId).toBe('act_x');
   });
+
+  it.each([
+    ['ended', NOW.toISOString(), NOW.getTime() + 1500, NOW.getTime() + 1500],
+    ['still going', null, NOW.getTime() + 1500, null],
+  ] as const)('carries the times of a step that has %s (the run tape)', (_, end, start, finish) => {
+    const started = new Date(start).toISOString();
+    const [first, , , , last] = timelineOf(definition, [
+      step('act_1', { started_at: started, finished_at: end === null ? null : started }),
+    ]);
+    expect([first?.startedAt, first?.finishedAt]).toEqual([start, finish]);
+    expect([last?.startedAt, last?.finishedAt]).toEqual([null, null]);
+  });
 });
 
 describe('batch overflow run', () => {

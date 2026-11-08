@@ -116,6 +116,20 @@
     "acceptedBefore_one": "{{count, number}} recipient was accepted before the failure — the email reached none of them.",
     "acceptedBefore_other": "{{count, number}} recipients were accepted before the failure — the email reached none of them."
   },
+  "tape": {
+    "label": "Run timeline",
+    "position": "Playback position",
+    "valueText": "{{step}}, {{status}}, {{time}} of {{total}}",
+    "output": "{{time}} / {{total}}",
+    "play": "Play",
+    "pause": "Pause",
+    "start": "Back to start",
+    "next": "Next event",
+    "speed": "Playback speed {{speed}}×",
+    "startedAt": "Started at {{time}}",
+    "soFar": "{{duration}} so far",
+    "retry": "Retry"
+  },
   "duration": {
     "ms": "{{value}} ms",
     "s": "{{value}} s",
