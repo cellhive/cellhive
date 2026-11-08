@@ -136,5 +136,18 @@ describe('workspace page', () => {
     await renderApp(`/o/${ORG.slug}/w/${WSP}`);
     expect(await screen.findByRole('heading', { level: 1, name: 'Sales' })).toBeVisible();
     expect(screen.queryByTestId('workspace-menu')).toBeNull();
+    // T1020: importing a base is creating one.
+    expect(screen.queryByRole('button', { name: 'Import base from a .chbase file' })).toBeNull();
+  });
+
+  it('T1020: "Import base" beside "New base" opens the import dialog', async () => {
+    serve();
+    await renderApp(`/o/${ORG.slug}/w/${WSP}`);
+    const open = await screen.findByRole('button', { name: 'Import base from a .chbase file' });
+    expect(open).toHaveTextContent('Import baseFrom a .chbase file');
+    await userEvent.click(open);
+    const dialog = await screen.findByRole('dialog', { name: 'Import base from a .chbase file' });
+    expect(within(dialog).getByTestId('import-dropzone')).toBeVisible();
+    expect(await axeViolations(document.body)).toEqual([]);
   });
 });

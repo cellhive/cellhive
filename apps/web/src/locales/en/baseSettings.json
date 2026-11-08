@@ -8,6 +8,7 @@
       "roles": "Roles",
       "shareLinks": "Share links",
       "webhooks": "Webhooks",
+      "export": "Export base",
       "audit": "Audit log"
     },
     "groups": {
@@ -445,5 +446,81 @@
     "allDashboards": "Every dashboard of the base.",
     "noDashboards": "No dashboard.",
     "noAccessDashboards": "No access: {{names}}"
+  },
+  "export": {
+    "title": "Export base",
+    "subtitle": "Save {{name}} as one .chbase file, to rebuild it in another workspace or on another Cellhive instance.",
+    "holds": {
+      "title": "What the package holds",
+      "included": "Included",
+      "excluded": "Not included",
+      "items": {
+        "data": "Every table, field and record, including fields that roles hide from other members",
+        "files": "Links, sub-records and attached files",
+        "views": "Shared views and forms, dashboards and custom roles",
+        "automations": "Automations: they arrive turned off"
+      },
+      "missing": {
+        "members": "Members, groups and the roles they have",
+        "secrets": "Secrets, bots, sending identities and incoming webhooks (only their names, to set up again)",
+        "history": "Record history, the audit log and automation runs",
+        "personal": "Personal views, the trash, share links and API tokens"
+      }
+    },
+    "start": "Export base",
+    "showProgress": "Show progress",
+    "showDetails": "Show details",
+    "cli": {
+      "title": "Larger bases",
+      "body": "Importing in the browser takes packages up to the upload limit of the instance (2 GB by default). For a larger base, or to move one between instances, export it with the command line in the API container:"
+    },
+    "dialog": {
+      "title": "Export {{name}}",
+      "warning": "The package holds every field of this base, including fields that roles hide from other members. Anyone who has the file can read all of its records.",
+      "excluded": "Members, secrets and history stay here: they are not in the package.",
+      "confirm": "Start export",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "phases": {
+      "schema": "Tables and fields",
+      "records": "Records",
+      "links": "Links",
+      "files": "Files",
+      "upload": "Saving the package"
+    },
+    "progress": "Export progress",
+    "percent": "{{percent}}%",
+    "state": {
+      "done": "done",
+      "active": "in progress",
+      "failed": "failed",
+      "pending": "not started"
+    },
+    "queued": "Waiting for another export of this organization to finish.",
+    "running": "You can close this window: the export goes on, and its download appears on this page.",
+    "ready": {
+      "title": "The package is ready",
+      "expires": "The link works until {{time}}. After that, export again.",
+      "download": "Download",
+      "downloadName": "Download {{name}}",
+      "keepSafe": "Keep the file safe: it holds every field of the base."
+    },
+    "counts": {
+      "tables": "Tables",
+      "fields": "Fields",
+      "records": "Records",
+      "files": "Files"
+    },
+    "failed": "The export failed.",
+    "retry": "Export again",
+    "cancelled": "The export was cancelled.",
+    "expired": "The download has expired. Export the base again to get a new one.",
+    "status": {
+      "queued": "Export waiting to start",
+      "running": "Exporting… {{percent}}",
+      "ready": "Ready to download · {{size}}",
+      "failed": "The last export failed."
+    }
   }
 }

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   History,
   Link2,
+  Package,
   Settings,
   ShieldCheck,
   Users,
@@ -56,8 +57,11 @@ const GROUPS: readonly { readonly key: string | null; readonly items: readonly N
   },
   {
     key: 'data',
-    // T716: the audit log of the base (CONTRACTS §11.4).
-    items: [{ path: 'audit', key: 'audit', icon: History, testId: 'base-settings-nav-audit' }],
+    // T1020: the `.chbase` export (CONTRACTS §12.2); T716: the audit log of the base (§11.4).
+    items: [
+      { path: 'export', key: 'export', icon: Package, testId: 'base-settings-nav-export' },
+      { path: 'audit', key: 'audit', icon: History, testId: 'base-settings-nav-audit' },
+    ],
   },
 ];
 
