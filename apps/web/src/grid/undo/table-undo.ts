@@ -2,10 +2,11 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { showToast } from '../../lib/toast/toast';
-import { UndoHistory, type UndoSnapshot } from '../commands';
+import { UndoHistory, type ReplayOutcome, type UndoSnapshot } from '../commands';
 
 import { replayCommand, type ReplayController, type ReplayProblem } from './replay';
 
+import type { EditCommand } from '../../lib/records/commands';
 import type { UndoHooks } from '../hooks';
 
 interface TableUndo {
@@ -47,6 +48,15 @@ export function resetUndoHistories(): void {
 export interface GridUndo extends UndoSnapshot {
   readonly undo: () => void;
   readonly redo: () => void;
+  /**
+   * Undoes one given change of the stack (T1011: "Undo" of the selection
+   * dock): `done`, `dropped` (refused or gone, reported), `kept` (failed for
+   * now: still on the stack), or `null` when it is no longer there or a
+   * replay is running.
+   */
+  readonly undoCommand: (command: EditCommand) => Promise<ReplayOutcome['status'] | null>;
+  /** Whether that change is still on the undo stack (not undone with Ctrl/⌘+Z meanwhile). */
+  readonly canUndoCommand: (command: EditCommand) => boolean;
 }
 
 /** Undo / redo of a table (grid, kanban): toolbar buttons and Ctrl/⌘+Z, Shift+Ctrl/⌘+Z, Ctrl+Y. */
@@ -85,5 +95,21 @@ export function useGridUndo(tableId: string, controller: ReplayController | null
     void history.redo((command) => replayCommand(controller, command, report));
   }, [history, controller, report]);
 
-  return { ...snapshot, undo, redo };
+  const undoCommand = useCallback(
+    async (command: EditCommand) => {
+      if (controller === null) return null;
+      const outcome = await history.undoCommand(command, (step) =>
+        replayCommand(controller, step, report),
+      );
+      return outcome?.status ?? null;
+    },
+    [history, controller, report],
+  );
+
+  const canUndoCommand = useCallback(
+    (command: EditCommand) => history.undoStack.includes(command),
+    [history],
+  );
+
+  return { ...snapshot, undo, redo, undoCommand, canUndoCommand };
 }

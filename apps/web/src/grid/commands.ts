@@ -110,6 +110,20 @@ export class UndoHistory {
     return this.#replay('undo', run);
   }
 
+  /**
+   * Undoes one given change wherever it is on the undo stack (T1011: the
+   * "Undo" of the grid's selection dock targets its deletion even after
+   * later edits); `null` when it is no longer there (undone already, or
+   * dropped past the limit) or a replay is running. Only the last change's
+   * undo can be redone: an older one leaves the redo stack as it is.
+   */
+  undoCommand(
+    command: EditCommand,
+    run: (command: EditCommand) => Promise<ReplayOutcome>,
+  ): Promise<ReplayOutcome | null> {
+    return this.#replay('undo', run, command);
+  }
+
   redo(run: (command: EditCommand) => Promise<ReplayOutcome>): Promise<ReplayOutcome | null> {
     return this.#replay('redo', run);
   }
@@ -135,9 +149,11 @@ export class UndoHistory {
   async #replay(
     direction: 'undo' | 'redo',
     run: (command: EditCommand) => Promise<ReplayOutcome>,
+    target?: EditCommand,
   ): Promise<ReplayOutcome | null> {
     const from = direction === 'undo' ? this.#undo : this.#redo;
-    const command = from.at(-1);
+    const last = from.at(-1);
+    const command = target === undefined ? last : from.includes(target) ? target : undefined;
     if (this.#busy || command === undefined) return null;
     this.#busy = true;
     this.#emit();
@@ -157,8 +173,8 @@ export class UndoHistory {
         if (direction === 'redo') {
           this.#undo.push(inverse);
           if (this.#undo.length > this.#limit) this.#undo.shift();
-        } else if (generation === this.#generation) {
-          // A change made while the undo ran makes redo meaningless.
+        } else if (generation === this.#generation && command === last) {
+          // A change made while the undo ran (or after the one undone) makes redo meaningless.
           this.#redo.push(inverse);
         }
       }
