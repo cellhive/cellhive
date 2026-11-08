@@ -1,7 +1,8 @@
-import { Button, FormField, Input, Spinner } from '@cellhive/ui';
+import { canonicalTimeZone, canonicalTimeZones } from '@cellhive/contracts';
+import { Button, FormField, Input, Select, Spinner } from '@cellhive/ui';
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Settings } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDocumentTitle } from '../../../lib/a11y/use-document-title';
@@ -15,15 +16,20 @@ import { Section } from '../api-tokens/components/parts';
 
 import { AdminPage, useSettingsOrg } from './shared';
 
-import type { OrganizationDetailDto, OrganizationDto } from '@cellhive/contracts';
+import type {
+  OrganizationDetailDto,
+  OrganizationDto,
+  UpdateOrganizationRequest,
+} from '@cellhive/contracts';
 
 /** The limit of the organization name (`updateOrganizationRequestSchema`). */
 const NAME_MAX = 100;
 
 /**
  * `/o/:orgSlug/settings` (FRONTEND §15.0, T830), owners/admins: the
- * organization's name (`PATCH /orgs/:id`) and its ID, slug and creation
- * date. The other pages are in the settings nav, not repeated here.
+ * organization's name and time zone (`PATCH /orgs/:id`, T1005) and its ID,
+ * slug and creation date. The other pages are in the settings nav, not
+ * repeated here.
  */
 export function OrgGeneralPage() {
   const { t } = useTranslation('orgAdmin');
@@ -33,7 +39,7 @@ export function OrgGeneralPage() {
   return (
     <AdminPage org={summary} icon={Settings} title={t('general.title')} narrow>
       {/* Saved values remount the form, so it starts clean from them. */}
-      <OrgInfoForm key={org.name} org={org} />
+      <OrgInfoForm key={`${org.name}\u0000${org.settings.timezone}`} org={org} />
       <OrgFacts org={org} />
     </AdminPage>
   );
@@ -42,21 +48,38 @@ export function OrgGeneralPage() {
 function OrgInfoForm({ org }: { readonly org: OrganizationDto }) {
   const { t } = useTranslation('orgAdmin');
   const queryClient = useQueryClient();
+  const initialZone = canonicalTimeZone(org.settings.timezone) ?? org.settings.timezone;
   const [name, setName] = useState(org.name);
+  const [timezone, setTimezone] = useState(initialZone);
+  // IANA primary names; a stored zone the list lacks (`Etc/GMT-7`) stays selectable.
+  const zones = useMemo(() => {
+    const all = canonicalTimeZones();
+    return all.includes(initialZone) ? all : [initialZone, ...all];
+  }, [initialZone]);
   const next = name.trim();
+  const changes: UpdateOrganizationRequest = {
+    ...(next === org.name || next === '' ? {} : { name: next }),
+    ...(timezone === initialZone ? {} : { settings: { timezone } }),
+  };
   const save = useMutation({
-    mutationFn: () => orgAdminApi.update(org.id, { name: next }),
+    mutationFn: () => orgAdminApi.update(org.id, changes),
     onSuccess: async (updated) => {
       // `PATCH` answers without `ai` (T912): keep the one of `GET /orgs/:id`.
       queryClient.setQueryData<OrganizationDetailDto>(keys.org(org.id), (old) =>
         old === undefined ? undefined : { ...old, ...updated },
       );
-      // The sidebar and the settings nav show the name from `GET /me`.
-      await queryClient.invalidateQueries({ queryKey: keys.me() });
+      // The sidebar and the settings nav show the name from `GET /me`; the AI
+      // usage page counts its days in the organization zone.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.me() }),
+        changes.settings === undefined
+          ? undefined
+          : queryClient.invalidateQueries({ queryKey: [...keys.org(org.id), 'ai-usage'] }),
+      ]);
       showToast({ variant: 'success', message: t('general.info.saved') });
     },
   });
-  const unchanged = next === org.name || next === '';
+  const unchanged = Object.keys(changes).length === 0;
   return (
     <Section title={t('general.info.title')}>
       <form
@@ -77,6 +100,23 @@ function OrgInfoForm({ org }: { readonly org: OrganizationDto }) {
                 setName(event.target.value);
               }}
             />
+          )}
+        </FormField>
+        <FormField label={t('general.info.timezone')} hint={t('general.info.timezoneHint')}>
+          {(control) => (
+            <Select
+              {...control}
+              value={timezone}
+              onChange={(event) => {
+                setTimezone(event.target.value);
+              }}
+            >
+              {zones.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone}
+                </option>
+              ))}
+            </Select>
           )}
         </FormField>
         {save.isError ? <ErrorAlert error={save.error} /> : null}
