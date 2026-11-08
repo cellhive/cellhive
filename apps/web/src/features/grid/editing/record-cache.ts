@@ -54,8 +54,11 @@ export function blockRecordCache(loader: RecordBlockLoader): RecordCache {
     },
     append: (record) => loader.insertAtEnd(record),
     // Rows move up in the loaded blocks (no hole), the count drops (T204).
+    // An empty list (records restored or created where the server puts them):
+    // the shown blocks are fetched again, without waiting for the realtime echo.
     remove: (recordIds) => {
-      loader.removeRecords(recordIds);
+      if (recordIds.length === 0) loader.refetchVisible(false);
+      else loader.removeRecords(recordIds);
     },
   };
 }
