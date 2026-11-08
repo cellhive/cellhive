@@ -7,8 +7,28 @@ import { countOf, type Page, type PageRequest } from '../page.js';
 import { principalMatches, type PrincipalRef } from '../principal.js';
 import { TenantRepository, type OrgScope, type TenantRepositoryContract } from '../repository.js';
 
-import type { Db } from '../create-db.js';
+import type { Db, DbExecutor } from '../create-db.js';
 import type { Base, JsonbInput } from '../schema.js';
+
+/**
+ * `id` of the hidden base `baseId` of the organization when `importJobId`
+ * is building it (CONTRACTS §12.2), as a subquery: rows of other tables are
+ * removed by a purge only through it, so a purge can never reach a base
+ * that is not being imported.
+ */
+export function importingBaseIdQuery(
+  executor: DbExecutor,
+  scope: OrgScope,
+  baseId: Id<'bse'>,
+  importJobId: Id<'job'>,
+) {
+  return executor
+    .selectFrom('meta.bases')
+    .select('meta.bases.id')
+    .where('meta.bases.organization_id', '=', scope.organizationId)
+    .where('meta.bases.id', '=', baseId)
+    .where('meta.bases.import_job_id', '=', importJobId);
+}
 
 export interface CreateBaseInput {
   readonly id?: Id<'bse'>;
@@ -18,6 +38,12 @@ export interface CreateBaseInput {
   readonly icon?: string | null;
   readonly description?: string | null;
   readonly settings?: JsonbInput;
+  /**
+   * A base built by this `base.import` job (CONTRACTS §12.2): created
+   * hidden — `deleted_at` set and `import_job_id` naming the job — until
+   * {@link BasesRepository.finishImport}.
+   */
+  readonly importJobId?: Id<'job'>;
 }
 
 export interface UpdateBaseInput {
@@ -30,7 +56,11 @@ export interface UpdateBaseInput {
 }
 
 export interface GetBaseOptions {
-  /** Also return a base in the trash (`deleted_at` set). Default `false`. */
+  /**
+   * Also return a base in the trash (`deleted_at` set). Default `false`. A
+   * base being imported (`import_job_id` set) is never returned: it is not
+   * in the trash, it does not exist yet.
+   */
   readonly includeDeleted?: boolean;
 }
 
@@ -67,6 +97,9 @@ export class BasesRepository
         icon: input.icon ?? null,
         description: input.description ?? null,
         ...(input.settings === undefined ? {} : { settings: input.settings }),
+        ...(input.importJobId === undefined
+          ? {}
+          : { import_job_id: input.importJobId, deleted_at: sql<Date>`now()` }),
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -82,7 +115,11 @@ export class BasesRepository
       .selectAll()
       .where('organization_id', '=', scope.organizationId)
       .where('id', '=', id);
-    if (options.includeDeleted !== true) query = query.where('deleted_at', 'is', null);
+    // A base being imported is always in the trash (`bases_import_hidden_check`).
+    query =
+      options.includeDeleted === true
+        ? query.where('import_job_id', 'is', null)
+        : query.where('deleted_at', 'is', null);
     return query.executeTakeFirst();
   }
 
@@ -185,13 +222,15 @@ export class BasesRepository
                   ]),
                 ]);
           if (options.includeDeleted !== true) return live;
+          // A base being imported is hidden, not in the trash (CONTRACTS §12.2).
+          const inTrash = eb.and([
+            eb('b.deleted_at', 'is not', null),
+            eb('b.import_job_id', 'is', null),
+          ]);
           const trashed =
             visibleTo === undefined
-              ? eb('b.deleted_at', 'is not', null)
-              : eb.and([
-                  eb('b.deleted_at', 'is not', null),
-                  eb('b.owner_id', '=', visibleTo.userId),
-                ]);
+              ? inTrash
+              : eb.and([inTrash, eb('b.owner_id', '=', visibleTo.userId)]);
           return eb.or([live, trashed]);
         });
     const items = await filtered()
@@ -226,7 +265,8 @@ export class BasesRepository
 
   /**
    * Takes a base out of the trash and increases its `permission_version`;
-   * `undefined` when not found in this organization or not in the trash.
+   * `undefined` when not found in this organization or not in the trash (a
+   * base being imported is not in the trash: only its job unhides it).
    */
   async restore(scope: OrgScope, id: Id<'bse'>): Promise<Base | undefined> {
     const base = await this.executor(scope)
@@ -235,10 +275,73 @@ export class BasesRepository
       .where('organization_id', '=', scope.organizationId)
       .where('id', '=', id)
       .where('deleted_at', 'is not', null)
+      .where('import_job_id', 'is', null)
       .returningAll()
       .executeTakeFirst();
     if (base !== undefined) await this.permissionChanged(scope, [base.id]);
     return base;
+  }
+
+  /**
+   * The hidden base `importJobId` is building (CONTRACTS §12.2), locked
+   * `FOR UPDATE` until the end of the scope's transaction when it has one;
+   * `undefined` when there is none in this organization. With `id`, only
+   * that base.
+   */
+  async findImporting(
+    scope: OrgScope,
+    importJobId: Id<'job'>,
+    id?: Id<'bse'>,
+  ): Promise<Base | undefined> {
+    const query = this.executor(scope)
+      .selectFrom('meta.bases')
+      .selectAll()
+      .where('organization_id', '=', scope.organizationId)
+      .where('import_job_id', '=', importJobId)
+      .$if(id !== undefined, (q) => q.where('id', '=', id as Id<'bse'>));
+    return scope.tx === undefined ? query.executeTakeFirst() : query.forUpdate().executeTakeFirst();
+  }
+
+  /**
+   * The end of an import: the hidden base of `importJobId` becomes a base
+   * like any other (`deleted_at` and `import_job_id` cleared, a new
+   * `permission_version`); `undefined` when the job has no such base here.
+   */
+  async finishImport(
+    scope: OrgScope,
+    id: Id<'bse'>,
+    importJobId: Id<'job'>,
+  ): Promise<Base | undefined> {
+    const base = await this.executor(scope)
+      .updateTable('meta.bases')
+      .set({
+        deleted_at: null,
+        import_job_id: null,
+        permission_version: sql<bigint>`permission_version + 1`,
+      })
+      .where('organization_id', '=', scope.organizationId)
+      .where('id', '=', id)
+      .where('import_job_id', '=', importJobId)
+      .returningAll()
+      .executeTakeFirst();
+    if (base !== undefined) await this.permissionChanged(scope, [base.id]);
+    return base;
+  }
+
+  /**
+   * Deletes the row of the hidden base of `importJobId` (the last step of a
+   * purge: its tables and files are gone by then); `false` when there is
+   * none here.
+   */
+  async deleteImporting(scope: OrgScope, id: Id<'bse'>, importJobId: Id<'job'>): Promise<boolean> {
+    const rows = await this.executor(scope)
+      .deleteFrom('meta.bases')
+      .where('organization_id', '=', scope.organizationId)
+      .where('id', '=', id)
+      .where('import_job_id', '=', importJobId)
+      .returning('id')
+      .execute();
+    return rows.length > 0;
   }
 
   /** IDs of bases outside the trash owned by `userId`. */

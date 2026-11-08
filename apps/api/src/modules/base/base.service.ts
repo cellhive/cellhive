@@ -1,8 +1,7 @@
 import { UNKNOWN_PRINCIPAL } from '@cellhive/contracts';
-import { systemRoleConfig, type SystemRolePresetName } from '@cellhive/permissions';
 import {
-  BaseRolesRepository,
   BasesRepository,
+  createBaseRecord,
   OrgMembersRepository,
   publishComputedLocksChanged,
   strictComputedPermissionsOf,
@@ -21,10 +20,6 @@ import {
   type BaseAccess,
   type OrgAccess,
 } from '../../common/access/access.service.js';
-import {
-  BASE_SCHEMA_META,
-  type BaseSchemaMetaLoader,
-} from '../../common/access/base-schema-meta.js';
 import { diffOf, mutationContextOf, recordChange } from '../../common/access/change-log.js';
 import { iso, offsetList, validationFailed } from '../../common/dto.js';
 import { DB } from '../../common/tokens.js';
@@ -42,13 +37,6 @@ import type {
   Id,
   UpdateBaseRequest,
 } from '@cellhive/contracts';
-
-/** The system roles every base gets, in display order (SPEC §14.1). */
-const SYSTEM_ROLES: readonly { preset: SystemRolePresetName; name: string }[] = [
-  { preset: 'admin', name: 'Admin' },
-  { preset: 'editor', name: 'Editor' },
-  { preset: 'reader', name: 'Reader' },
-];
 
 export function baseDtoOf(base: Base): BaseDto {
   return {
@@ -92,9 +80,7 @@ export class BaseService {
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(BasesRepository) private readonly bases: BasesRepository,
-    @Inject(BaseRolesRepository) private readonly baseRoles: BaseRolesRepository,
     @Inject(OrgMembersRepository) private readonly orgMembers: OrgMembersRepository,
-    @Inject(BASE_SCHEMA_META) private readonly schemaMeta: BaseSchemaMetaLoader,
     @Inject(AccessService) private readonly access: AccessService,
   ) {}
 
@@ -152,50 +138,21 @@ export class BaseService {
     meta: RequestMeta,
   ): Promise<BaseDetail> {
     const workspace = await this.access.requireWorkspace(principal, workspaceId, 'admin');
-    const organizationId = workspace.org.organizationId;
-    const base = await this.db.withTx(async (tx) => {
-      const scope = withTxScope(workspace.org.scope, tx);
-      const context = mutationContextOf(meta, principal.userId);
-      const created = await this.bases.create(scope, {
-        workspaceId,
-        ownerId: principal.userId,
-        name: input.name,
-        icon: input.icon ?? null,
-        description: input.description ?? null,
-      });
-      await recordChange(tx, {
-        type: 'base.created',
-        organizationId,
-        baseId: created.id,
-        entityType: 'base',
-        entityId: created.id,
-        context,
-        after: { ...settingsOf(created), workspace_id: workspaceId, owner_id: principal.userId },
-        data: { name: created.name, workspace_id: workspaceId },
-      });
-      const schema = await this.schemaMeta.load(scope, created.id);
-      for (const [position, role] of SYSTEM_ROLES.entries()) {
-        const config = systemRoleConfig(role.preset, schema) as unknown as JsonObject;
-        const row = await this.baseRoles.create(scope, {
-          baseId: created.id,
-          name: role.name,
-          kind: `system_${role.preset}`,
-          config,
-          position,
-        });
-        await recordChange(tx, {
-          type: 'role.created',
-          organizationId,
-          baseId: created.id,
-          entityType: 'role',
-          entityId: row.id,
-          context,
-          after: { name: row.name, kind: row.kind, config },
-          data: { name: row.name, kind: row.kind },
-        });
-      }
-      return created;
-    });
+    const base = await this.db.withTx((tx) =>
+      createBaseRecord(
+        this.db,
+        tx,
+        workspace.org.scope,
+        {
+          workspaceId,
+          ownerId: principal.userId,
+          name: input.name,
+          icon: input.icon ?? null,
+          description: input.description ?? null,
+        },
+        mutationContextOf(meta, principal.userId),
+      ),
+    );
     const access = await this.access.findBase(principal, base.id, { fresh: true });
     if (access === undefined) throw notFound();
     return baseDetailOf(access.base, access.access);
