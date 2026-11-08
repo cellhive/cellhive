@@ -1,5 +1,5 @@
 import { newId, type Id } from '@cellhive/contracts';
-import { auditExportKey, JobsRepository, type Db } from '@cellhive/server-core';
+import { auditExportKey, basePackageKey, JobsRepository, type Db } from '@cellhive/server-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createExportsCleanupTask } from '../../src/tasks/exports-cleanup.js';
@@ -68,8 +68,12 @@ describe('exports.cleanup', () => {
     const expiredA = await exportJob(ORG_A, new Date(NOW.getTime() - 60_000));
     const expiredB = await exportJob(ORG_B, new Date(NOW.getTime() - 1));
     const live = await exportJob(ORG_A, new Date(NOW.getTime() + 60_000));
-    const otherType = await exportJob(ORG_A, new Date(NOW.getTime() - 60_000), {
+    // A whole-base package (T1017) expires like an audit export.
+    const basePackage = await exportJob(ORG_B, new Date(NOW.getTime() - 60_000), {
       type: 'base.export',
+    });
+    const otherType = await exportJob(ORG_A, new Date(NOW.getTime() - 60_000), {
+      type: 'records.purge',
     });
     const deleted: string[] = [];
     const { logger } = captureLogger();
@@ -89,13 +93,19 @@ describe('exports.cleanup', () => {
     await task({}, {} as JobHelpers);
 
     expect(deleted.sort()).toEqual(
-      [auditExportKey(ORG_A, expiredA), auditExportKey(ORG_B, expiredB)].sort(),
+      [
+        auditExportKey(ORG_A, expiredA),
+        auditExportKey(ORG_B, expiredB),
+        basePackageKey(ORG_B, basePackage),
+      ].sort(),
     );
     const rows = await db.kysely.selectFrom('meta.jobs').select(['id', 'result']).execute();
     const resultOf = (id: Id<'job'>) => rows.find((row) => row.id === id)?.result;
     expect(resultOf(expiredA)).not.toHaveProperty('download_url');
     expect(resultOf(expiredA)).toMatchObject({ file_deleted: true, size: 10 });
     expect(resultOf(expiredB)).toMatchObject({ file_deleted: true });
+    expect(resultOf(basePackage)).toMatchObject({ file_deleted: true });
+    expect(resultOf(basePackage)).not.toHaveProperty('download_url');
     expect(resultOf(live)).toHaveProperty('download_url');
     expect(resultOf(otherType)).toHaveProperty('download_url');
 
