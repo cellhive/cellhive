@@ -11,6 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Project specification, API contracts, backlog, frontend guide and ADR-16 to ADR-24.
 - Monorepo foundation: pnpm workspace, Turborepo, strict TypeScript, ESLint, Prettier, shared Vitest config.
 - Community files: license (AGPL-3.0-only, Apache-2.0 for `packages/contracts`), contributing guide with DCO, code of conduct, security policy, governance, issue and pull request templates.
+- MCP schema tools (CONTRACTS §30.7, ADR-40 amendment): `create_table`, `create_field` and `update_field` for tokens with `schema:write`, behind a new organization switch `settings.mcp.allow_schema_writes` (off by default, independent of `allow_writes`; "Allow schema changes" on the API tokens page, with a confirmation, and the token preset "MCP — schema"). They go through the REST table and field services with the caller's schema rights, name fields by name, and never delete or lose data: no delete tool, no type change, no change to the primary field, select options merged by name, no link going back to one record, no AI settings. At most 30 schema tool calls a minute per token; changes are audited with `via.mcp` and sent live as `schema.changed`.
+- MCP write tools take an optional `idempotency_key` (CONTRACTS §30.5): a call resent with the same key within 24 hours answers the stored result with `replayed: true` instead of writing twice.
 
 ### Changed
 
