@@ -302,6 +302,35 @@ describe('buildViewConfig: rejected input', () => {
   });
 });
 
+describe('locked fields (T457, CONTRACTS §29.5)', () => {
+  // `status` stands for an AI select the saver is locked out of: readable, but no group.
+  const LOCKED: ViewConfigContext = { ...ADMIN, locked: new Set([F.status]) };
+
+  it.each([
+    ['kanban grouped by it', 'kanban', { kanban: { group_field: F.status } }, 'VALIDATION_FAILED'],
+    ['grouped by it', 'grid', { group: [{ field: F.status }] }, 'INVALID_SORT'],
+    [
+      'filtered on it',
+      'grid',
+      { filter: { op: 'and', items: [{ field: F.status, operator: 'is_not_empty' }] } },
+      'INVALID_FILTER',
+    ],
+  ] as const)('%s: answers like a hidden field', (_name, type, input, code) => {
+    const locked = failure(() => buildViewConfig(type, input, LOCKED, null));
+    expect(locked.code).toBe(code);
+    expect(locked.errors.map((error) => error.code)).toEqual(['UNKNOWN_FIELD']);
+    const hidden = failure(() =>
+      buildViewConfig(type, input, { ...ADMIN, readable: new Set([F.title]) }, null),
+    );
+    expect(hidden).toEqual(locked);
+  });
+
+  it('a kanban card may still show it', () => {
+    const config = buildViewConfig('kanban', { kanban: { card_fields: [F.status] } }, LOCKED, null);
+    expect(config.kanban?.card_fields).toEqual([F.status]);
+  });
+});
+
 describe('link fields in a view (T401)', () => {
   const LINK = 'fld_LinkAAAAAAAAAAAA';
   const withLink: ViewConfigContext = {
