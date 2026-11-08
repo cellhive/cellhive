@@ -90,7 +90,9 @@
       "mcpRead": "MCP — read only",
       "mcpReadHint": "For AI clients such as Claude Code, Cursor or VS Code: browse tables, query and summarize records.",
       "mcpReadWrite": "MCP — read & write",
-      "mcpReadWriteHint": "Also create and update records: up to 50 per call, never deleting."
+      "mcpReadWriteHint": "Also create and update records: up to 50 per call, never deleting.",
+      "mcpSchema": "MCP — schema",
+      "mcpSchemaHint": "For AI clients that set up tables: read the structure, create tables and fields, change fields. No record values."
     },
     "groups": {
       "records": "Records",
@@ -188,6 +190,8 @@
       "writes": "Let MCP clients create and update records",
       "writesHint": "Only for tokens that can change records: up to 50 records per call, never deleting. Off: MCP clients only read.",
       "writesNeedsMcp": "Turn on MCP clients first.",
+      "schemaWrites": "Allow schema changes (create tables/fields)",
+      "schemaWritesHint": "Only for tokens that can change structure: create tables and fields, rename fields, add select options — never deleting, never changing a field type. Off: MCP clients never change the structure.",
       "toast": {
         "enabled": {
           "on": "MCP clients allowed.",
@@ -196,6 +200,10 @@
         "allow_writes": {
           "on": "MCP clients can now create and update records.",
           "off": "MCP clients can only read now."
+        },
+        "allow_schema_writes": {
+          "on": "MCP clients can now create tables and fields.",
+          "off": "MCP clients can no longer change the structure."
         }
       },
       "confirm": {
@@ -212,8 +220,16 @@
           "lead": "Clients whose token can change records will be able to create and update records as the token's owner.",
           "point1": "Up to 50 records per call, with the owner's permissions; never deleting, never changing tables or fields. Automations run as for any API change.",
           "point2": "Records can hold text written by others, such as form submissions. A model may take it for instructions and write wrong data: keep clients asking before each change.",
-          "point3": "A call sent again after a lost connection can create the same records twice.",
+          "point3": "A call sent again after a lost connection can create the same records twice, unless the client sends an idempotency key.",
           "action": "Allow changes"
+        },
+        "allow_schema_writes": {
+          "title": "Let MCP clients change the structure?",
+          "lead": "Clients whose token can change structure will be able to create tables and fields and change fields as the token’s owner, within that person’s schema rights.",
+          "point1": "An AI client can create many tables and fields in little time, and other people’s views, formulas, lookups and automations use the fields it changes. At most 30 changes a minute per token; nothing is ever deleted and no field type changes.",
+          "point2": "Records and names can hold text written by others. A model may take it for instructions and change the structure: keep clients asking before each change.",
+          "point3": "Every change is recorded in the audit log as made through MCP and shows up at once for people who have the table open.",
+          "action": "Allow schema changes"
         }
       }
     },

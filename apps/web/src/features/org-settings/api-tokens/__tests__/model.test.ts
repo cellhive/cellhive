@@ -83,10 +83,18 @@ describe('presets', () => {
   );
 
   it.each([
-    [{ enabled: false, allow_writes: false }, []],
-    [{ enabled: false, allow_writes: true }, []],
-    [{ enabled: true, allow_writes: false }, ['mcpRead']],
-    [{ enabled: true, allow_writes: true }, ['mcpRead', 'mcpReadWrite']],
+    [{ enabled: false, allow_writes: false, allow_schema_writes: false }, []],
+    [{ enabled: false, allow_writes: true, allow_schema_writes: true }, []],
+    [{ enabled: true, allow_writes: false, allow_schema_writes: false }, ['mcpRead']],
+    [
+      { enabled: true, allow_writes: true, allow_schema_writes: false },
+      ['mcpRead', 'mcpReadWrite'],
+    ],
+    [{ enabled: true, allow_writes: false, allow_schema_writes: true }, ['mcpRead', 'mcpSchema']],
+    [
+      { enabled: true, allow_writes: true, allow_schema_writes: true },
+      ['mcpRead', 'mcpReadWrite', 'mcpSchema'],
+    ],
   ] as const)('MCP policy %j offers the MCP presets %j', (mcp, offered) => {
     expect(presetsFor(mcp)).toEqual(['read', 'readWrite', 'schema', 'automation', ...offered]);
   });
@@ -95,6 +103,14 @@ describe('presets', () => {
     for (const preset of ['read', 'readWrite', 'schema', 'automation', 'custom'] as const) {
       expect(isMcpPreset(preset)).toBe(false);
     }
+    for (const preset of ['mcpRead', 'mcpReadWrite', 'mcpSchema'] as const) {
+      expect(isMcpPreset(preset)).toBe(true);
+    }
+  });
+
+  it('"MCP — schema" is the structure only (T1014)', () => {
+    expect(scopesOfPreset('mcpSchema')).toEqual(['schema:read', 'schema:write']);
+    expect(presetOf(['schema:write', 'schema:read'])).toBe('mcpSchema');
   });
 });
 

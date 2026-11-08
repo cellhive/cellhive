@@ -156,6 +156,7 @@
     "VIEW_LOCKED": "View đang bị khoá. Hãy mở khoá trước khi đổi cài đặt.",
     "INVALID_FIELD_TYPE": "Không dùng được loại trường này ở đây.",
     "NOT_AVAILABLE_YET": "Tuỳ chọn này chưa được hỗ trợ.",
+    "NOT_AVAILABLE_OVER_MCP": "Không làm được qua MCP: hãy thay đổi trong ứng dụng Cellhive.",
     "PERSONAL_VIEW": "Không thể chia sẻ view cá nhân.",
     "EMBED_NOT_SUPPORTED": "Chỉ link công khai không có mật khẩu mới nhúng được.",
     "INVALID_ORIGIN": "Nhập trang dạng https://host[:port], không có đường dẫn.",

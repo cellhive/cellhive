@@ -40,6 +40,7 @@ export const SCOPE_PRESETS = [
   'automation',
   'mcpRead',
   'mcpReadWrite',
+  'mcpSchema',
 ] as const;
 export type ScopePreset = (typeof SCOPE_PRESETS)[number];
 
@@ -55,26 +56,28 @@ const PRESET_SCOPES: Record<ScopePreset, readonly ApiTokenScope[]> = {
   // the MCP ones also open the "Connect via MCP" box once created.
   mcpRead: ['records:read', 'schema:read'],
   mcpReadWrite: ['records:read', 'records:write', 'schema:read'],
+  // The schema tools (T1014): the structure only, no record values.
+  mcpSchema: ['schema:read', 'schema:write'],
 };
 
-/** A preset meant for an MCP client (T924). */
+/** A preset meant for an MCP client (T924, T1014). */
 export function isMcpPreset(preset: ScopePreset | 'custom'): boolean {
-  return preset === 'mcpRead' || preset === 'mcpReadWrite';
+  return preset === 'mcpRead' || preset === 'mcpReadWrite' || preset === 'mcpSchema';
 }
 
 /**
  * The presets of the create form under the organization's MCP policy
  * (CONTRACTS §30.1): the MCP ones only while MCP is on, "read & write" only
- * while MCP may write.
+ * while MCP may write records, "schema" only while MCP may change the
+ * schema (T1014).
  */
 export function presetsFor(mcp: McpPolicy): ScopePreset[] {
-  return SCOPE_PRESETS.filter((preset) =>
-    preset === 'mcpRead'
-      ? mcp.enabled
-      : preset === 'mcpReadWrite'
-        ? mcp.enabled && mcp.allow_writes
-        : true,
-  );
+  return SCOPE_PRESETS.filter((preset) => {
+    if (preset === 'mcpRead') return mcp.enabled;
+    if (preset === 'mcpReadWrite') return mcp.enabled && mcp.allow_writes;
+    if (preset === 'mcpSchema') return mcp.enabled && mcp.allow_schema_writes;
+    return true;
+  });
 }
 
 /**
