@@ -221,7 +221,9 @@ export interface PackageSpec {
   /** More entries of `files/attachments.json`, their content given in `raw`. */
   readonly fileMetas?: readonly Record<string, unknown>[];
   readonly views?: readonly unknown[];
+  readonly dashboards?: readonly unknown[];
   readonly automations?: readonly unknown[];
+  readonly roles?: readonly unknown[];
   /** Entries added as they are (unsafe names, unknown entries…). */
   readonly raw?: readonly RawEntry[];
   readonly manifest?: Record<string, unknown>;
@@ -248,9 +250,9 @@ export function packageEntries(spec: PackageSpec): RawEntry[] {
     },
     { name: 'schema/tables.json', data: json({ tables: spec.tables }) },
     { name: 'schema/views.json', data: json({ views: spec.views ?? [] }) },
-    { name: 'schema/dashboards.json', data: json({ dashboards: [] }) },
+    { name: 'schema/dashboards.json', data: json({ dashboards: spec.dashboards ?? [] }) },
     { name: 'schema/automations.json', data: json({ automations: spec.automations ?? [] }) },
-    { name: 'schema/roles.json', data: json({ roles: [] }) },
+    { name: 'schema/roles.json', data: json({ roles: spec.roles ?? [] }) },
     {
       name: 'files/attachments.json',
       data: json({
@@ -333,9 +335,11 @@ async function listFiles(dir: string): Promise<string[]> {
 }
 
 /**
- * What an import may leave behind (P125, P126): rows of the meta tables a
- * base fills, the audit log and events, `data.*` tables, stored objects and
- * temporary files — compared before and after a failed import.
+ * What an import may leave behind (P125, P126; T1019): rows of the meta
+ * tables a base fills (computed fields' dependencies, views, form covers,
+ * dashboards, automations and their email images included), the audit log
+ * and events, `data.*` tables, stored objects and temporary files —
+ * compared before and after a failed import.
  */
 export async function leftovers(
   db: Db,
@@ -349,6 +353,12 @@ export async function leftovers(
     'meta.views',
     'meta.base_roles',
     'meta.attachments',
+    'meta.form_covers',
+    'meta.email_assets',
+    'meta.dashboards',
+    'meta.dashboard_widgets',
+    'meta.automations',
+    'meta.field_dependencies',
     'meta.date_reminder_cursors',
     'meta.audit_logs',
     'meta.events',

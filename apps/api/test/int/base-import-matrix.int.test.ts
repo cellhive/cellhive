@@ -327,7 +327,9 @@ describe('base import matrix (T1018)', () => {
         .select('kind')
         .where('base_id', '=', result.base_id)
         .execute();
+      // The custom role of B (Sales) comes too (T1019), given to nobody.
       expect(roles.map((role) => role.kind).sort()).toEqual([
+        'custom',
         'system_admin',
         'system_editor',
         'system_reader',
