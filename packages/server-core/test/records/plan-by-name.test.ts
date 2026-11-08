@@ -1,9 +1,14 @@
 import { aggregatePlanSchema, type AggregatePlanType } from '@cellhive/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { widgetConfigOfPlan } from '../../src/records/dashboard-aggregate/plan-by-name.js';
+import {
+  planFieldsOf,
+  widgetConfigOfPlan,
+} from '../../src/records/dashboard-aggregate/plan-by-name.js';
 
+import type { BaseSchemaRows } from '../../src/computed/index.js';
 import type { WidgetTableMeta } from '../../src/dashboards/widget-config.js';
+import type { FieldRow } from '../../src/db/schema.js';
 
 const ORDERS = 'tbl_PlanByNameOrders';
 const F = {
@@ -243,5 +248,42 @@ describe('widgetConfigOfPlan: names → a widget config with ids (T909, T922)', 
     expect(result.problems.map((item) => [item.path, item.code])).toEqual(expected);
     // Problems name what the plan wrote, never an id.
     expect(JSON.stringify(result.problems)).not.toMatch(/(fld|tbl|opt)_/u);
+  });
+});
+
+describe('planFieldsOf: what a plan may name for one reader (CONTRACTS §29.4, §29.5)', () => {
+  const COST = 'fld_PlanByNameCost00';
+  const BAND = 'fld_PlanByNameBand00';
+  const LABEL = 'fld_PlanByNameLabel0';
+  const ai = (prompt: string) => ({
+    task: 'classify',
+    prompt,
+    instructions: null,
+    auto_update: false,
+    max_output_tokens: 300,
+  });
+  const row = (id: string, name: string, type: string, options: unknown = {}) =>
+    ({ id, table_id: ORDERS, name, type, options, deleted_at: null }) as unknown as FieldRow;
+  const rows: BaseSchemaRows = {
+    baseId: 'bse_PlanByNameBase00',
+    tables: [],
+    fields: [
+      row(F.title, 'title', 'text'),
+      row(COST, 'cost', 'number'),
+      // AI selects: one made from `cost`, one from `title`.
+      row(BAND, 'ai_band', 'select', { options: [], ai: ai(`{{ [${COST}] }}`) }),
+      row(LABEL, 'ai_label', 'select', { options: [], ai: ai(`{{ [${F.title}] }}`) }),
+    ],
+  };
+  const reader = (hidden: string[]) => ({
+    table: () => true,
+    field: (_tableId: string, id: string) => !hidden.includes(id),
+  });
+  const names = (hidden: string[]) =>
+    planFieldsOf(rows, ORDERS, reader(hidden) as never, false).map((field) => field.meta.name);
+
+  it('leaves out an AI field the reader is locked out of, like a field that does not exist', () => {
+    expect(names([])).toEqual(['title', 'cost', 'ai_band', 'ai_label']);
+    expect(names([COST])).toEqual(['title', 'ai_label']);
   });
 });

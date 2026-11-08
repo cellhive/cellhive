@@ -1,3 +1,4 @@
+import { lockedAiFieldIds } from '../../ai/generation/sources.js';
 import { isComputedRow } from '../../computed/definition/definition.js';
 import {
   buildWidgetConfig,
@@ -48,7 +49,8 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
 /**
  * The fields of `tableId` a plan may name for one reader (`readable`, the
  * base's `strict_computed_permissions`): those they read that the widget
- * engine reads for them too — no locked computed field (T457), no button or
+ * engine reads for them too — no locked computed field (T457), no AI field
+ * they are locked out of (always strict, CONTRACTS §29.5), no button or
  * parent, a link only when they read the linked table and its primary field
  * (P67). A plan on these never ends in `no_permission`; any other field,
  * hidden or not, is a field that does not exist.
@@ -60,6 +62,7 @@ export function planFieldsOf(
   strict: boolean,
 ): PlanField[] {
   const locked = lockedComputedFieldIds(rows, tableId, readable, strict);
+  const lockedAi = lockedAiFieldIds(rows, readable);
   const titleTableOf = (targetId: unknown): string | null => {
     const target = rows.tables.find((item) => item.id === targetId);
     const primary = rows.fields.find((field) => field.table_id === targetId && field.is_primary);
@@ -75,7 +78,8 @@ export function planFieldsOf(
       row.table_id !== tableId ||
       NOT_PLANNED.has(row.type) ||
       !readable.field(tableId, row.id) ||
-      (isComputedRow(row) && locked.has(row.id))
+      (isComputedRow(row) && locked.has(row.id)) ||
+      lockedAi.has(row.id)
     ) {
       return [];
     }
