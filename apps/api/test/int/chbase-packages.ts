@@ -322,6 +322,19 @@ export function thingsTable(
   };
 }
 
+/** Waits (30 s at most) until no `file.thumbnail` job is left to run. */
+async function thumbnailsRendered(db: Db): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const { rows } = await sql<{ n: string }>`
+      SELECT count(*)::text AS n FROM graphile_worker.jobs
+       WHERE task_identifier = 'file.thumbnail' AND attempts < max_attempts
+    `.execute(db.kysely);
+    if (Number(rows[0]?.n) === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 async function listFiles(dir: string): Promise<string[]> {
   try {
     const entries = await readdir(dir, { recursive: true, withFileTypes: true });
@@ -345,6 +358,9 @@ export async function leftovers(
   db: Db,
   roots: { readonly storage: string; readonly temp: string },
 ): Promise<Record<string, unknown>> {
+  // Thumbnails of files an earlier, finished import stored are rendered by
+  // the worker afterwards: the objects of a snapshot are those once it is idle.
+  await thumbnailsRendered(db);
   const out: Record<string, unknown> = {};
   for (const table of [
     'meta.bases',
