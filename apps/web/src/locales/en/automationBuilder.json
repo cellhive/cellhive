@@ -186,6 +186,19 @@
     "hint": "Tested on the trigger record when it runs. One level, no nested groups.",
     "hintChanges": "Tested on the record after the change. “Has changed”, “changed to” and “changed from” compare with the value before this change."
   },
+  "conditions": {
+    "match": "Conditions to match",
+    "all": "All",
+    "any": "Any",
+    "and": "and",
+    "or": "or",
+    "group": "Group of conditions",
+    "counting": "Counting matching records…",
+    "about": "About",
+    "matchNow_one": "record matches now",
+    "matchNow_other": "records match now",
+    "countNote": "Based on your access, on current data"
+  },
   "schedule": {
     "repeat": "Repeat",
     "kind": {

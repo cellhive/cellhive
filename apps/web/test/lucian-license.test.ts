@@ -18,6 +18,8 @@ const PORTED: Readonly<Record<string, string>> = {
   'src/features/import/components/FieldMapper.css': '#130',
   'src/features/grid/bulk/SelectionDock.tsx': '#178',
   'src/features/grid/bulk/SelectionDock.css': '#178',
+  'src/features/automation/builder/components/conditions/ConditionBranchBuilder.tsx': '#132',
+  'src/features/automation/builder/components/conditions/ConditionBranchBuilder.css': '#132',
 };
 
 const WEB = fileURLToPath(new URL('..', import.meta.url));

@@ -13,9 +13,13 @@ import { apiSignIn, collectCspViolations, expectNoSeriousA11yViolations, ok } fr
  * demo base (CONTRACTS §9): an automation "ticket turns urgent → update its
  * status" built without the mouse, an `if` that stops, a `422` pointing at
  * its step, chips following a field rename, the `run_as` band, phones.
+ * T1012: the condition branch builder (Lucian UX/UI #132) — "All" / "Any",
+ * "N records match now" as the person editing (P-test with u_sales1), no
+ * count for a `changed_to` alone, a `422` on the right rule.
  */
 
 const EDITOR_EMAIL = WORKER_ORG.email('editor');
+const SALES1_EMAIL = WORKER_ORG.email('sales1');
 const RUN = String(Date.now()).slice(-6);
 
 interface Pg {
@@ -152,6 +156,30 @@ async function createViaApi(
 async function press(page: Page, locator: ReturnType<Page['locator']>, key: string) {
   await locator.focus();
   await page.keyboard.press(key);
+}
+
+/** How many records of `tableId` match `filter` for the signed-in user (`records/query`, one row). */
+async function matchCount(page: Page, tableId: string, filter: unknown): Promise<number> {
+  const result = await ok<{ total?: number; total_estimate?: number }>(
+    page,
+    'POST',
+    `/tables/${tableId}/records/query`,
+    { filter, limit: 1, fields: [] },
+  );
+  return result.total ?? result.total_estimate ?? -1;
+}
+
+/**
+ * Filtered records queries of the page from now on: the counts of the
+ * condition builder (other parts of the builder read a record without one).
+ */
+function countQueries(page: Page): string[] {
+  const bodies: string[] = [];
+  page.on('request', (request) => {
+    const body = request.postData() ?? '';
+    if (request.url().includes('/records/query') && body.includes('"filter"')) bodies.push(body);
+  });
+  return bodies;
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -422,6 +450,248 @@ test('update_records with a value from the trigger, delay with recheck, [@previo
   });
   expect(JSON.stringify(saved.definition.actions[2])).toContain(option(status, 'Mới'));
   await context.close();
+});
+
+test('“N records match now” follows All → Any; a 422 marks its rule (T1012)', async ({
+  browser,
+}) => {
+  const { context, page } = await openAs(browser);
+  const csp = collectCspViolations(page);
+  const status = field(demo, 'Trạng thái');
+  const priority = field(demo, 'Ưu tiên');
+  const isNew = { field: status.id, operator: 'is', value: option(status, 'Mới') };
+  const isUrgent = { field: priority.id, operator: 'is', value: option(priority, 'Khẩn cấp') };
+  const automation = await ok<Automation>(page, 'POST', `/bases/${demo.baseId}/automations`, {
+    name: `E2E count ${RUN}`,
+    definition: {
+      trigger: { type: 'record.created', table_id: demo.tickets },
+      condition: { op: 'and', items: [isNew, isUrgent] },
+      actions: [
+        {
+          id: 'act_1',
+          type: 'update_record',
+          config: {
+            table_id: demo.tickets,
+            record_id: null,
+            fields: { [status.id]: { literal: option(status, 'Đang xử lý') } },
+          },
+        },
+      ],
+    },
+  });
+  const all = await matchCount(page, demo.tickets, { op: 'and', items: [isNew, isUrgent] });
+  const any = await matchCount(page, demo.tickets, { op: 'or', items: [isNew, isUrgent] });
+  expect(any).toBeGreaterThan(all);
+
+  await page.goto(`/b/${demo.baseId}/automations/${automation.id}`);
+  await press(page, page.locator('[data-step-button="condition"]'), 'Enter');
+  const conditions = page.getByTestId('condition-panel');
+  const count = conditions.getByTestId('condition-match-count');
+  await expect(count).toHaveAttribute('data-count', String(all));
+  await expect(count).toContainText('records match now');
+  await expect(count).toContainText('Based on your access, on current data');
+  const pill = conditions.getByRole('group', { name: 'Conditions to match' });
+  await expect(pill.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+  await expectNoSeriousA11yViolations(page, 'condition branch builder');
+
+  // "Any", with the keyboard: the group becomes an or, the count follows.
+  await press(page, pill.getByRole('button', { name: 'Any' }), 'Enter');
+  await expect(pill.getByRole('button', { name: 'Any' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(pill.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('step-condition')).toContainText('Any condition is true');
+  await expect(count).toHaveAttribute('data-count', String(any));
+  await expect(count).toHaveAttribute('aria-busy', 'false');
+
+  // The server refuses the second rule: that rule, not the first, says why.
+  await page.route(`**/automations/${automation.id}`, async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    return route.fulfill({
+      status: 422,
+      contentType: 'application/problem+json',
+      body: JSON.stringify({
+        type: 'about:blank',
+        title: 'Invalid automation',
+        status: 422,
+        code: 'AUTOMATION_INVALID',
+        errors: [{ path: 'definition.condition.items[1].value', code: 'UNKNOWN_OPTION' }],
+      }),
+    });
+  });
+  await page.getByTestId('builder-save').click();
+  await expect(page.getByTestId('issue-summary')).toContainText('Not saved: 1 problem');
+  const rules = conditions.getByTestId('filter-condition');
+  await expect(rules.nth(1)).toHaveAttribute('aria-invalid', 'true');
+  await expect(rules.nth(1)).toContainText('This option does not belong to the field.');
+  await expect(rules.nth(0)).not.toHaveAttribute('aria-invalid');
+  await expectNoSeriousA11yViolations(page, 'condition branch builder with a 422');
+  expect(csp).toEqual([]);
+  await context.close();
+});
+
+test('a changed_to alone shows no count; the rest of the condition is counted (T1012)', async ({
+  browser,
+}) => {
+  const { context, page } = await openAs(browser);
+  const status = field(demo, 'Trạng thái');
+  const priority = field(demo, 'Ưu tiên');
+  const automation = await ok<Automation>(page, 'POST', `/bases/${demo.baseId}/automations`, {
+    name: `E2E changed ${RUN}`,
+    definition: {
+      trigger: { type: 'record.updated', table_id: demo.tickets, watch_fields: [priority.id] },
+      condition: {
+        op: 'and',
+        items: [
+          { field: priority.id, operator: 'changed_to', value: option(priority, 'Khẩn cấp') },
+        ],
+      },
+      actions: [
+        {
+          id: 'act_1',
+          type: 'update_record',
+          config: {
+            table_id: demo.tickets,
+            record_id: null,
+            fields: { [status.id]: { literal: option(status, 'Đang xử lý') } },
+          },
+        },
+      ],
+    },
+  });
+  const isNew = await matchCount(page, demo.tickets, {
+    op: 'and',
+    items: [{ field: status.id, operator: 'is', value: option(status, 'Mới') }],
+  });
+  await page.goto(`/b/${demo.baseId}/automations/${automation.id}`);
+  const queries = countQueries(page);
+  await page.locator('[data-step-button="condition"]').click();
+  const conditions = page.getByTestId('condition-panel');
+  await expect(conditions.getByLabel('Operator for Ưu tiên')).toHaveValue('changed_to');
+  // Past the 400 ms wait: nothing counted, nothing asked.
+  await page.waitForTimeout(1_000);
+  await expect(conditions.getByTestId('condition-match-count')).toHaveCount(0);
+  expect(queries).toEqual([]);
+
+  // A plain condition next to it: its records are counted, without the changed_to.
+  await conditions.getByRole('button', { name: 'Add condition', exact: true }).click();
+  await conditions
+    .getByLabel('Field', { exact: true })
+    .nth(1)
+    .selectOption({ label: 'Trạng thái' });
+  await conditions.getByLabel('Value for Trạng thái').selectOption({ label: 'Mới' });
+  const count = conditions.getByTestId('condition-match-count');
+  await expect(count).toHaveAttribute('data-count', String(isNew));
+  expect(queries.at(-1)).not.toContain('changed_to');
+  // Removed again: the count goes away.
+  await conditions.getByRole('button', { name: 'Remove condition on Trạng thái' }).click();
+  await expect(count).toHaveCount(0);
+  await context.close();
+});
+
+test('P-test: u_sales1 managing Orders sees the count of their own records (T1012)', async ({
+  browser,
+}) => {
+  const admin = await openAs(browser);
+  const tables = await ok<{ items: { id: string; name: string }[] }>(
+    admin.page,
+    'GET',
+    `/bases/${demo.baseId}/tables`,
+  );
+  const orders = tables.items.find((table) => table.name === 'Orders')?.id ?? '';
+  const orderFields = (await ok<{ items: Field[] }>(admin.page, 'GET', `/tables/${orders}/fields`))
+    .items;
+  const ofOrders = (name: string) => {
+    const found = orderFields.find((item) => item.name === name);
+    if (found === undefined) throw new Error(`Orders has no field ${name}`);
+    return found;
+  };
+  const status = ofOrders('status');
+  const owner = ofOrders('owner');
+  const isNew = {
+    op: 'and',
+    items: [{ field: status.id, operator: 'is', value: option(status, 'Mới') }],
+  };
+  const [sales1] = await sql(`SELECT id FROM meta.users WHERE email = $1`, [SALES1_EMAIL]);
+  // Like the Sales role, but managing Orders (automations): only their own orders.
+  const role = await ok<{ id: string }>(admin.page, 'POST', `/bases/${demo.baseId}/roles`, {
+    name: `E2E own orders ${RUN}`,
+    config: {
+      base_rule: { copy: false, download: false, share_link: false },
+      tables: {
+        [orders]: {
+          perm: 'manage',
+          view_rule: { allow_edit: false, visible_views: null },
+          record_rule: {
+            operations: [],
+            edit_filter: {
+              op: 'and',
+              items: [
+                { field: owner.id, operator: 'has_any_of', value: [{ $var: 'current_user' }] },
+              ],
+            },
+            read_scope: 'editable',
+            read_filter: null,
+          },
+        },
+      },
+      dashboards: {},
+    },
+  });
+  const assignment = {
+    principal_type: 'user',
+    principal_id: String(sales1?.['id']),
+    role_id: role.id,
+  };
+  await ok(admin.page, 'PUT', `/bases/${demo.baseId}/role-assignments`, assignment);
+  const sales = await openAs(browser, { email: SALES1_EMAIL });
+  try {
+    const theirs = await matchCount(sales.page, orders, isNew);
+    const everyone = await matchCount(admin.page, orders, isNew);
+    expect(theirs).toBeGreaterThan(0);
+    expect(everyone).toBeGreaterThan(theirs);
+    const automation = await ok<Automation>(
+      sales.page,
+      'POST',
+      `/bases/${demo.baseId}/automations`,
+      {
+        name: `E2E sales count ${RUN}`,
+        definition: {
+          trigger: { type: 'record.created', table_id: orders },
+          condition: isNew,
+          actions: [
+            {
+              id: 'act_1',
+              type: 'update_record',
+              config: {
+                table_id: orders,
+                record_id: null,
+                fields: { [status.id]: { literal: option(status, 'Xong') } },
+              },
+            },
+          ],
+        },
+      },
+    );
+    await sales.page.goto(`/b/${demo.baseId}/automations/${automation.id}`);
+    await sales.page.locator('[data-step-button="condition"]').click();
+    const count = sales.page.getByTestId('condition-panel').getByTestId('condition-match-count');
+    await expect(count).toHaveAttribute('data-count', String(theirs));
+    await expect(count).toContainText('Based on your access, on current data');
+    // The base admin sees every order on the same condition.
+    await admin.page.goto(`/b/${demo.baseId}/automations/${automation.id}`);
+    await admin.page.locator('[data-step-button="condition"]').click();
+    await expect(
+      admin.page.getByTestId('condition-panel').getByTestId('condition-match-count'),
+    ).toHaveAttribute('data-count', String(everyone));
+    await ok(admin.page, 'DELETE', `/automations/${automation.id}`);
+  } finally {
+    await sales.context.close();
+    await ok(admin.page, 'DELETE', `/bases/${demo.baseId}/role-assignments`, {
+      principal_type: 'user',
+      principal_id: assignment.principal_id,
+    });
+    await ok(admin.page, 'DELETE', `/bases/${demo.baseId}/roles/${role.id}`);
+    await admin.context.close();
+  }
 });
 
 test('phones look and turn on/off only (375 px, vi)', async ({ browser }) => {

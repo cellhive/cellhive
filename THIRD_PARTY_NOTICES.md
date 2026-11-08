@@ -26,11 +26,12 @@ Cellhive bundles the following third-party data. Source code dependencies are li
 
 `apps/web` contains code adapted from [Lucian UX/UI Prompt](https://lucianlabs.dev/uxui-prompt/) by Seokwoooo, licensed under the MIT License. It is copied source, not a package, so the dependency license check does not see it: each adapted file starts with the line `/*! Lucian UX/UI Prompt #ID · MIT License (c) 2026 Seokwoooo · … */` (`apps/web/test/lucian-license.test.ts` checks it). The build may drop such comments, so the web image also serves the license text under `/licenses/lucian-uxui-prompt-MIT.txt` (from `apps/web/licenses/`). Elements were fetched with the `lucian-uxui` skill 1.2.0 (catalog `34c4b3e61d`) and adapted to Cellhive's design tokens (`docs/FRONTEND.md` §9.3).
 
-| Element                           | Id   | Element hash | Adapted in                                                                   |
-| --------------------------------- | ---- | ------------ | ---------------------------------------------------------------------------- |
-| Theme tokens and `.ux` base rules | —    | —            | `apps/web/src/styles/lucian.css`                                             |
-| CSV field mapper                  | #130 | `a0a6df398c` | `apps/web/src/features/import/components/FieldMapper.tsx`, `FieldMapper.css` |
-| Bulk selection dock               | #178 | `d65e7c7e70` | `apps/web/src/features/grid/bulk/SelectionDock.tsx`, `SelectionDock.css`     |
+| Element                           | Id   | Element hash | Adapted in                                                                                                                |
+| --------------------------------- | ---- | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Theme tokens and `.ux` base rules | —    | —            | `apps/web/src/styles/lucian.css`                                                                                          |
+| CSV field mapper                  | #130 | `a0a6df398c` | `apps/web/src/features/import/components/FieldMapper.tsx`, `FieldMapper.css`                                              |
+| Bulk selection dock               | #178 | `d65e7c7e70` | `apps/web/src/features/grid/bulk/SelectionDock.tsx`, `SelectionDock.css`                                                  |
+| Condition branch builder          | #132 | `c010ef189c` | `apps/web/src/features/automation/builder/components/conditions/ConditionBranchBuilder.tsx`, `ConditionBranchBuilder.css` |
 
 ```text
 MIT License

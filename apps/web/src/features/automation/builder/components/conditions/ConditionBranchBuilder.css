@@ -1,0 +1,269 @@
+/*! Lucian UX/UI Prompt #132 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#132 */
+/*
+ * #132 "Condition branch builder" (element c010ef189c, catalog 34c4b3e61d),
+ * ported to the conditions of the automation builder (FRONTEND §13.2,
+ * §9.3 "Lucian UX/UI"). Kept: the vertical bar with its accent on the left
+ * (`.logic`), the AND/OR pill between the first two rules (`[data-mode]`),
+ * the rules in between, the count under the bar (`.out`) that slides 5 px
+ * when it changes (ConditionBranchBuilder.tsx). Adapted to FRONTEND §9.3:
+ * Cellhive tokens through `--ux-*` (styles/lucian.css), text 12–13 px with
+ * the count at the title size (20 px, 600) instead of 32 px/750, the 4 px
+ * grid (20 px bar padding → 16 px, 13 px pill margin → 8 px), the app font
+ * in the pill (not monospace), selects and buttons from `@cellhive/ui`
+ * (the pattern's own control styles are dropped), no shadow. Nested groups
+ * of the filter DSL (`find_records`, `update_records`, `if`) are bars inside
+ * the bar, indented by its padding.
+ */
+
+/* Fluid: the pattern's 370 px cap is its gallery card; here it fills the panel. */
+.u132 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  font-size: var(--font-size-body);
+  line-height: 20px;
+  color: var(--ux-ink);
+}
+
+/* A group: its name, then the bar. */
+.u132 .branch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.u132 .branch-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+.u132 .branch-label {
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+  font-weight: 500;
+  line-height: 16px;
+}
+.u132 .branch-head > :last-child:not(:first-child) {
+  margin-left: auto;
+}
+
+/*
+ * The bar (`.logic`): 2 px of accent on the left. A nested group's bar is the
+ * control border until the group is worked on (hover, focus), then accent.
+ */
+.u132 .logic {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--ux-accent);
+}
+.u132 .branch[data-depth='nested'] > .logic {
+  border-left-color: var(--ux-line-2);
+  transition: border-color 220ms var(--ux-ease);
+}
+.u132 .branch[data-depth='nested']:is(:hover, :focus-within) > .logic {
+  border-left-color: var(--ux-accent);
+}
+
+.u132 .rules {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.u132 .rules > li {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/*
+ * A rule: field and operator share the first line with ×, the value takes
+ * the second one (the 440 px panel; the pattern's one-line rule needs
+ * ~560 px with real field names).
+ */
+.u132 .rule {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 0;
+}
+.u132 .rule-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px;
+  align-items: start;
+  gap: 4px 8px;
+}
+.u132 .rule-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  grid-column: 1 / span 2;
+  min-width: 0;
+}
+.u132 .rule-value:empty {
+  display: none;
+}
+.u132 .rule-value :is(input, select) {
+  max-width: 100%;
+}
+.u132 .rule-line > .remove {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* A rule the server or the check refused: its stretch of the bar turns red. */
+.u132 .rule[aria-invalid='true']::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -18px;
+  width: 2px;
+  background: var(--ux-danger);
+  content: '';
+}
+.u132 .issue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--ux-danger);
+  font-size: var(--font-size-label);
+  line-height: 16px;
+}
+.u132 .issue svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.u132 .pending {
+  margin: 0;
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+  line-height: 16px;
+}
+
+.u132 .raw {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ux-ink-2);
+}
+
+/*
+ * The pill (`[data-mode]`): the pattern's one AND/OR button becomes two
+ * pressed-or-not halves ("All" / "Any", `aria-pressed`) — a toggle whose
+ * name changed with its state would not say what pressing it does. The
+ * accent-soft thumb slides under the half that is on (220 ms, `--ux-ease`).
+ */
+.u132 [data-mode] {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  align-self: flex-start;
+  margin: 4px 0;
+  padding: 2px;
+  border-radius: 9999px;
+  background: var(--ux-surface-2);
+}
+.u132 [data-mode]::before {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 9999px;
+  background: var(--ux-accent-soft);
+  content: '';
+  transition: transform 220ms var(--ux-ease);
+}
+.u132 [data-mode='or']::before {
+  transform: translateX(100%);
+}
+.u132 [data-mode] button {
+  position: relative;
+  min-width: 64px;
+  min-height: calc(var(--control-height) - 4px);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+  font-weight: 500;
+  line-height: 16px;
+}
+.u132 [data-mode] button[aria-pressed='true'] {
+  color: var(--ux-accent);
+  font-weight: 600;
+  cursor: default;
+}
+
+/* "and" / "or" between the following rules: what the pill chose, not a control. */
+.u132 .joint {
+  display: block;
+  padding: 4px 0;
+  color: var(--ux-accent);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.u132 .empty {
+  margin: 0;
+  padding: 4px 0;
+  color: var(--ux-ink-2);
+}
+
+.u132 .adds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: -8px;
+}
+
+/* The count (`.out`): under the bar, aligned with the rules. */
+.u132 .out {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 0 18px;
+}
+.u132 .out output {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  color: var(--ux-ink-2);
+}
+.u132 .out .num {
+  display: inline-block;
+  color: var(--ux-accent);
+  font-size: var(--font-size-title);
+  font-weight: 600;
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+}
+.u132 .out .num[data-loading] {
+  width: 32px;
+  height: 20px;
+  align-self: center;
+  border-radius: var(--radius-chip);
+  background: var(--ux-surface-2);
+}
+.u132 .out .note {
+  margin: 0;
+  color: var(--ux-ink-2);
+  font-size: var(--font-size-label);
+  line-height: 16px;
+}
