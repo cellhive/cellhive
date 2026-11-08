@@ -33,21 +33,59 @@ export interface McpToolDeps {
   ): Promise<{ readonly baseId: Id<'bse'> | undefined } | undefined>;
   /** `ApiRateLimits.hitBase` (20 calls/s per token and base, SPEC §13.1). */
   hitBase(principalKey: string, baseId: Id<'bse'>): Promise<void>;
+  /** `ApiRateLimits.hitMcpSchema` (30 schema tool calls a minute per token, CONTRACTS §30.6). */
+  hitSchema(tokenId: Id<'tok'>): Promise<void>;
+  /**
+   * `IdempotencyService.run` for the `idempotency_key` of a write tool
+   * (CONTRACTS §30.5, §30.7): keyed per token for 24 hours, fingerprinted by
+   * the tool and its arguments without the key; a stored result comes back
+   * with `replayed`, another call with the key → `IDEMPOTENCY_KEY_REUSED`.
+   */
+  idempotent(
+    principal: ApiTokenPrincipal,
+    request: IdempotentToolCall,
+    execute: () => Promise<Record<string, unknown>>,
+  ): Promise<{ readonly result: Record<string, unknown>; readonly replayed: boolean }>;
   /** Metrics: one finished call. */
   observe(tool: string, status: 'ok' | 'error', seconds: number): void;
   /** Logs an unexpected failure (never the arguments). */
   onUnexpected(tool: string, error: unknown): void;
 }
 
+/** A write tool call with an `idempotency_key`: what its fingerprint is made of. */
+export interface IdempotentToolCall {
+  readonly key: string;
+  readonly tool: string;
+  /** The parsed arguments without `idempotency_key`. */
+  readonly input: unknown;
+}
+
+/** The `idempotency_key` of a write tool's parsed input and the input without it. */
+export function idempotencyOf(
+  input: unknown,
+): { readonly key: string; readonly rest: Record<string, unknown> } | undefined {
+  if (typeof input !== 'object' || input === null || !('idempotency_key' in input)) {
+    return undefined;
+  }
+  const { idempotency_key: key, ...rest } = input as Record<string, unknown>;
+  return typeof key === 'string' ? { key, rest } : undefined;
+}
+
 /**
  * `tools/call`: the checks every tool gets, in this order, before its `run`
  * (CONTRACTS §30.1, research MCP §6.7 risk 5):
- * 1. listed for this context (`listedTools`: scope + `allow_writes`), else
- *    JSON-RPC `-32602` — an unknown tool and a forbidden one look the same;
+ * 1. listed for this context (`listedTools`: scope + the policy switch of
+ *    its write kind), else JSON-RPC `-32602` — an unknown tool and a
+ *    forbidden one look the same;
  * 2. the token scope again (`requireTokenScope`, second layer);
- * 3. the input schema (`VALIDATION_FAILED` with paths);
- * 4. the base the call acts on: reachable (`NOT_FOUND`) and the per-base
- *    rate limit.
+ * 3. schema tools: 30 calls a minute per token (`RATE_LIMITED`), whatever
+ *    the arguments;
+ * 4. the input schema (`VALIDATION_FAILED` with paths);
+ * 5. the base the call acts on: reachable (`NOT_FOUND`) and the per-base
+ *    rate limit;
+ * 6. a write tool with an `idempotency_key`: the stored result of the same
+ *    call (`replayed: true`) instead of running, `IDEMPOTENCY_KEY_REUSED`
+ *    for another call with that key or one still running.
  * Failures from 2 on are results with `isError` (`tool-errors.ts`).
  */
 export async function callTool(
@@ -65,6 +103,7 @@ export async function callTool(
   const seconds = () => (performance.now() - started) / 1000;
   try {
     requireTokenScope(context.principal, tool.scope);
+    if (tool.writes === 'schema') await deps.hitSchema(context.principal.tokenId);
     const parsed = tool.input.safeParse(args ?? {}, { reportInput: true });
     if (!parsed.success) {
       throw new AppError('VALIDATION_FAILED', {
@@ -78,7 +117,20 @@ export async function callTool(
       if (baseId === undefined) throw new AppError('NOT_FOUND');
       await deps.hitBase(context.principal.tokenId, baseId);
     }
-    const result = dataResult(await tool.run(parsed.data, { ...context, baseId }));
+    const execute = () => tool.run(parsed.data, { ...context, baseId });
+    const idempotency = tool.writes === false ? undefined : idempotencyOf(parsed.data);
+    let data: Record<string, unknown>;
+    if (idempotency === undefined) {
+      data = await execute();
+    } else {
+      const outcome = await deps.idempotent(
+        context.principal,
+        { key: idempotency.key, tool: tool.name, input: idempotency.rest },
+        execute,
+      );
+      data = outcome.replayed ? { ...outcome.result, replayed: true } : outcome.result;
+    }
+    const result = dataResult(data);
     deps.observe(tool.name, 'ok', seconds());
     return result;
   } catch (error) {

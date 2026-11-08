@@ -13,7 +13,8 @@
  * and `mcp.int.test.ts` — row numbers have two or three digits. The S9 rows
  * (P103–P127) join as their tasks land: P111, P112 (BACKLOG T1006) with
  * `permissions-s9-ai-matrix.int.test.ts`; P113–P117 (BACKLOG T1007) with the
- * same file and the regression cases of `ai-field.int.test.ts`.
+ * same file and the regression cases of `ai-field.int.test.ts`; P103–P108
+ * (BACKLOG T1014, MCP schema tools) with `mcp-schema.int.test.ts`.
  *
  * Extra arguments go to Vitest.
  */
@@ -25,6 +26,12 @@ import { join } from 'node:path';
 const REQUIRED = [
   ...Array.from({ length: 102 }, (_v, index) => index + 1),
   // S9 (BACKLOG "Phụ lục ma trận quyền S9"), by task.
+  103,
+  104,
+  105,
+  106,
+  107,
+  108,
   111,
   112,
   113,

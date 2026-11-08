@@ -317,6 +317,7 @@ describe('MCP endpoint (T920)', () => {
     expect(organizationSchema.parse(org.json()).settings.mcp).toEqual({
       enabled: false,
       allow_writes: false,
+      allow_schema_writes: false,
     });
     expect((await setMcp({ enabled: true }, 'u_sales1')).statusCode).toBe(403);
 
@@ -326,13 +327,18 @@ describe('MCP endpoint (T920)', () => {
     expect(organizationSchema.parse(on.json()).settings.mcp).toEqual({
       enabled: true,
       allow_writes: false,
+      allow_schema_writes: false,
     });
     const { rows } = await sql<{ after: { settings: Record<string, unknown> } }>`
       SELECT after FROM meta.audit_logs
        WHERE organization_id = ${fx.orgId} AND action = 'org.updated'
        ORDER BY created_at DESC, id DESC LIMIT 1
     `.execute(db.kysely);
-    expect(rows[0]?.after.settings['mcp']).toEqual({ enabled: true, allow_writes: false });
+    expect(rows[0]?.after.settings['mcp']).toEqual({
+      enabled: true,
+      allow_writes: false,
+      allow_schema_writes: false,
+    });
 
     const listed = await post(bearer(tk.sales_r));
     expect(listed.status).toBe(200);

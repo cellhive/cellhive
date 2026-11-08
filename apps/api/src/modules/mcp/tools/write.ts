@@ -19,7 +19,8 @@ const WRITE_PARAMS = { field_key_type: 'name', typecast: false } as const;
 const WRITE_NOTE =
   'Use the field names and select options of describe_table; values are not converted and ' +
   'options are never created. On an error, nothing is written and each error names its ' +
-  'records[i] path.';
+  'records[i] path. Send an idempotency_key so that a call resent after a lost connection ' +
+  'writes nothing twice.';
 
 /** The written records the caller still reads, cut like a read (CONTRACTS §30.3). */
 function writeResultOf(response: RecordsResponse): WriteRecordsResult {
@@ -47,7 +48,7 @@ export function createRecordsTool(records: RecordService): McpTool {
       `Creates 1–${String(MCP_WRITE_RECORDS_MAX)} records in a table, all or none. ${WRITE_NOTE} ` +
       `Returns the new records. ${DATA_NOTE}`,
     scope: 'records:write',
-    writes: true,
+    writes: 'records',
     input: createRecordsInputSchema,
     // A write can start automations that send email or call out.
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
@@ -75,7 +76,7 @@ export function updateRecordsTool(records: RecordService): McpTool {
       `id, all or none; other fields keep their value. ${WRITE_NOTE} Returns the records ` +
       `as they are now. ${DATA_NOTE}`,
     scope: 'records:write',
-    writes: true,
+    writes: 'records',
     input: updateRecordsInputSchema,
     annotations: {
       readOnlyHint: false,

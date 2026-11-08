@@ -2,6 +2,7 @@ import {
   AppError,
   GroupMembersRepository,
   isAppError,
+  orgScope,
   RecordQueryService,
   type AppConfig,
   type Db,
@@ -13,6 +14,7 @@ import { AccessService } from '../../common/access/access.service.js';
 import { RouteScopeService } from '../../common/access/route-scope.service.js';
 import { principalKeyOf } from '../../common/auth/principal.js';
 import { requestMetaOf } from '../../common/auth/request-meta.js';
+import { IdempotencyService } from '../../common/idempotency/idempotency.service.js';
 import { AppLogger } from '../../common/logging/app-logger.js';
 import { ApiRateLimits } from '../../common/rate-limit/api-rate-limits.js';
 import { SchemaAccess } from '../../common/schema/schema-access.js';
@@ -92,6 +94,7 @@ export class McpService implements OnApplicationShutdown {
     @Inject(GroupMembersRepository) groupMembers: GroupMembersRepository,
     @Inject(RecordQueryService) recordQuery: RecordQueryService,
     @Inject(WidgetQueryLimiter) limiter: WidgetQueryLimiter,
+    @Inject(IdempotencyService) idempotency: IdempotencyService,
     @Inject(MetricsService) metrics: MetricsService,
     @Inject(AppLogger) logger: AppLogger,
   ) {
@@ -129,10 +132,22 @@ export class McpService implements OnApplicationShutdown {
       groupMembers,
       recordQuery,
       limiter,
+      logger,
     });
     this.endpoint = new McpEndpoint(tools, {
       resolve: (principal, params) => scopes.resolve(principal, params),
       hitBase: (principalKey, baseId) => limits.hitBase(principalKey, baseId),
+      hitSchema: (tokenId) => limits.hitMcpSchema(tokenId),
+      // The key space of the token's `Idempotency-Key` header, with a URL no route has.
+      idempotent: async (principal, call, execute) => {
+        const outcome = await idempotency.run(
+          orgScope(principal.organizationId),
+          principalKeyOf(principal),
+          { key: call.key, method: 'MCP', url: `mcp:tools/call/${call.tool}`, body: call.input },
+          async () => ({ status: 200, body: await execute() }),
+        );
+        return { result: outcome.body ?? {}, replayed: outcome.replayed };
+      },
       observe: (tool, status, seconds) => {
         calls.inc({ tool, status });
         duration.observe({ tool }, seconds);

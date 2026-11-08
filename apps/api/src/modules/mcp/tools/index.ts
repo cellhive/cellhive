@@ -1,10 +1,12 @@
 import { aggregateRecordsTool } from './aggregate.js';
 import { listBasesTool } from './bases.js';
 import { getRecordsTool, queryRecordsTool } from './records.js';
+import { schemaTools } from './schema.js';
 import { describeTableTool, listTablesTool } from './tables.js';
 import { createRecordsTool, updateRecordsTool } from './write.js';
 
 import type { AccessService } from '../../../common/access/access.service.js';
+import type { AppLogger } from '../../../common/logging/app-logger.js';
 import type { SchemaAccess } from '../../../common/schema/schema-access.js';
 import type { BaseService } from '../../base/base.service.js';
 import type { WidgetQueryLimiter } from '../../dashboard/widget-query-limiter.js';
@@ -37,23 +39,27 @@ export interface McpToolServices {
   readonly groupMembers: GroupMembersRepository;
   readonly recordQuery: RecordQueryService;
   readonly limiter: WidgetQueryLimiter;
+  /** Schema tools: a failed clean-up (ids only). */
+  readonly logger?: AppLogger;
 }
 
 /**
- * Every MCP tool, in `tools/list` order (CONTRACTS §30). A new tool declares
- * its scope, `writes` and resource in its definition and gets a row in the
- * tool × scope lock (`test/unit/mcp-tools.test.ts`).
+ * Every MCP tool, in `tools/list` order (CONTRACTS §30): reads, record
+ * writes, schema writes (T1014). A new tool declares its scope, `writes`
+ * kind and resource in its definition and gets a row in the tool × scope ×
+ * write kind lock (`test/unit/mcp-tools.test.ts`).
  */
 export function mcpTools(services: McpToolServices): McpTool[] {
   const { db, access, tables, records } = services;
   return [
     listBasesTool(services.workspaces, services.bases),
     listTablesTool(access, tables),
-    describeTableTool(access, tables, services.fields, services.views),
+    describeTableTool(services),
     queryRecordsTool(records, db),
     getRecordsTool(records, db),
     aggregateRecordsTool(services),
     createRecordsTool(records),
     updateRecordsTool(records),
+    ...schemaTools(services),
   ];
 }
