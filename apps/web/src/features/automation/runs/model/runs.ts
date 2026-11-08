@@ -117,6 +117,28 @@ export interface TimelineItem {
   readonly action: AutomationAction | null;
   /** Latest step of this action (`null`: did not run). */
   readonly step: AutomationRunStepDto | null;
+  /**
+   * When the step's latest attempt started and ended, in epoch ms (the run
+   * tape, T1013); `null` when it did not run, or has not ended (`finishedAt`).
+   */
+  readonly startedAt: number | null;
+  readonly finishedAt: number | null;
+}
+
+/** Epoch ms of an ISO instant, `null` when missing or unreadable. */
+export function instantOf(value: string | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function timesOf(
+  step: AutomationRunStepDto | null,
+): Pick<TimelineItem, 'startedAt' | 'finishedAt'> {
+  return {
+    startedAt: instantOf(step?.started_at),
+    finishedAt: instantOf(step?.finished_at),
+  };
 }
 
 function numbered(definition: Pick<AutomationDefinition, 'actions'>) {
@@ -140,7 +162,8 @@ function numbered(definition: Pick<AutomationDefinition, 'actions'>) {
  * The steps of a run in the order of the definition it used (board "S5 ·
  * Run history": actions that did not run read "Did not run"); steps whose
  * action is not in the snapshot (it no longer parses) follow in the order
- * they started.
+ * they started. Each item carries the times of its step (epoch ms) for the
+ * run tape (T1013).
  */
 export function timelineOf(
   definition: Pick<AutomationDefinition, 'actions'> | null,
@@ -152,23 +175,20 @@ export function timelineOf(
   const seen = new Set<string>();
   for (const { action, number } of definition === null ? [] : numbered(definition)) {
     seen.add(action.id);
-    items.push({
-      actionId: action.id,
-      number,
-      type: action.type,
-      action,
-      step: byAction.get(action.id) ?? null,
-    });
+    const step = byAction.get(action.id) ?? null;
+    items.push({ actionId: action.id, number, type: action.type, action, step, ...timesOf(step) });
   }
   for (const step of steps) {
     if (seen.has(step.action_id)) continue;
     seen.add(step.action_id);
+    const latest = byAction.get(step.action_id) ?? step;
     items.push({
       actionId: step.action_id,
       number: null,
       type: step.action_type,
       action: null,
-      step: byAction.get(step.action_id) ?? step,
+      step: latest,
+      ...timesOf(latest),
     });
   }
   return items;

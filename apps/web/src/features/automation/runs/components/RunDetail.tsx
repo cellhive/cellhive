@@ -1,7 +1,7 @@
 import { Button, cn, Dialog, Skeleton } from '@cellhive/ui';
 import { useQuery } from '@tanstack/react-query';
 import { CircleAlert, History, Info, RotateCcw, Square } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -21,6 +21,7 @@ import {
   timelineOf,
   type TimelineItem,
 } from '../model/runs';
+import { tapeOf } from '../model/tape';
 import { StepDetail } from '../steps/registry';
 import { useRecordTitles, type RecordTitle } from '../use-record-titles';
 
@@ -31,7 +32,9 @@ import {
   runLabelText,
   StatusBadge,
   StepIcon,
+  stepTitleOf,
 } from './RunBits';
+import { RunTape } from './RunTape';
 import { RejectedRecipients } from './StepOutput';
 
 import type { RunAction } from './RunActions';
@@ -59,15 +62,20 @@ function Meta({ label, children }: { readonly label: string; readonly children: 
   );
 }
 
-/** One line of the timeline: number, action, status, duration, error, output. */
+/**
+ * One line of the timeline: number, action, status, duration, error, output.
+ * `current`: the step under the playhead of the run tape (T1013).
+ */
 function StepLine({
   item,
   last,
+  current,
   baseId,
   userName,
 }: {
   readonly item: TimelineItem;
   readonly last: boolean;
+  readonly current: boolean;
   readonly baseId: string;
   readonly userName: (userId: string) => string | null;
 }) {
@@ -75,11 +83,7 @@ function StepLine({
   const format = useFormatters();
   const step = item.step;
   const type = item.type ?? step?.action_type ?? null;
-  const name =
-    type === null
-      ? item.actionId
-      : t(`automationBuilder:actionType.${type}`, { defaultValue: type });
-  const title = item.number === null ? name : t('detail.stepTitle', { number: item.number, name });
+  const title = stepTitleOf(item, t);
   const ms = step === null ? null : elapsedMs(step.started_at, step.finished_at);
   const retryAt = step === null ? null : retryAtOf(step.error);
   // T556 (QA S5 L1): who refused a failed email, masked, with the server's codes.
@@ -94,6 +98,8 @@ function StepLine({
       className="relative flex gap-3 pb-4"
       data-testid={`run-step-${item.actionId}`}
       data-step-status={step?.status ?? 'not_run'}
+      data-action-id={item.actionId}
+      aria-current={current ? 'step' : undefined}
     >
       {last ? null : (
         <span aria-hidden="true" className="absolute top-6 -bottom-1 left-[9px] w-px bg-line" />
@@ -101,7 +107,13 @@ function StepLine({
       <span className="relative flex bg-surface">
         <StepIcon status={step?.status ?? null} />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div
+        className={cn(
+          // The step under the playhead is tinted; the tint reaches into the gap on the left only.
+          '-my-1 -ml-2 flex min-w-0 flex-1 flex-col gap-2 rounded-md px-2 py-1 transition-colors duration-200',
+          current && 'bg-accent-soft',
+        )}
+      >
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className={cn('font-medium', step === null ? 'text-fg-muted' : 'text-fg')}>
             {title}
@@ -193,6 +205,7 @@ function StepLine({
 
 function Body({
   run,
+  readAt,
   baseId,
   userName,
   pendingId,
@@ -201,11 +214,36 @@ function Body({
   title,
 }: Omit<RunDetailProps, 'runId' | 'tables' | 'onClose'> & {
   readonly run: AutomationRunDetailDto;
+  /** When the run was read (its last poll): the end of the tape of a run still going. */
+  readonly readAt: number;
   readonly title: RecordTitle | null;
 }) {
   const { t } = useTranslation('automationRuns');
   const format = useFormatters();
-  const timeline = timelineOf(run.definition, run.steps);
+  const timeline = useMemo(
+    () => timelineOf(run.definition, run.steps),
+    [run.definition, run.steps],
+  );
+  // T1013: the run tape over the step list, and the step under its playhead.
+  const tape = useMemo(
+    () =>
+      tapeOf({
+        items: timeline,
+        run: { status: run.status, started_at: run.started_at, finished_at: run.finished_at },
+        now: readAt,
+      }),
+    [timeline, run.status, run.started_at, run.finished_at, readAt],
+  );
+  const [selected, setSelected] = useState<string | null>(null);
+  const list = useRef<HTMLOListElement>(null);
+  const rowOf = useCallback(
+    (actionId: string) =>
+      [...(list.current?.children ?? [])].find(
+        (row): row is HTMLElement =>
+          row instanceof HTMLElement && row.dataset['actionId'] === actionId,
+      ) ?? null,
+    [],
+  );
   const rerunActive = hasActiveRerun(run.reruns);
   const blockedId = useId();
   const pending = pendingId === run.id;
@@ -388,15 +426,19 @@ function Body({
         {run.definition === null ? (
           <p className="text-label font-normal text-fg-muted">{t('detail.noDefinition')}</p>
         ) : null}
+        {tape === null ? null : (
+          <RunTape tape={tape} userName={userName} onSelect={setSelected} rowOf={rowOf} />
+        )}
         {timeline.length === 0 ? (
           <p className="text-label font-normal text-fg-muted">{t('detail.noSteps')}</p>
         ) : (
-          <ol className="m-0 list-none p-0">
+          <ol ref={list} className="m-0 list-none p-0">
             {timeline.map((item, index) => (
               <StepLine
                 key={item.actionId}
                 item={item}
                 last={index === timeline.length - 1}
+                current={selected === item.actionId}
                 baseId={baseId}
                 userName={userName}
               />
@@ -413,7 +455,8 @@ function Body({
  * - 375 px"): status, times, re-run / cancel, the error as a sentence, the
  * trigger, the definition version at run time against the current one
  * (Quyết định S5 thiết kế #4), re-runs, and each step of the definition —
- * status, attempt, duration, error, output with hidden values. Polls while
+ * status, attempt, duration, error, output with hidden values — under the
+ * run tape of the steps' times (T1013, Lucian UX/UI #191). Polls while
  * the run (or a re-run of it) has not ended — no realtime for runs (C§21);
  * a status change is announced politely.
  */
@@ -477,7 +520,7 @@ export function RunDetail(props: RunDetailProps) {
       </div>
     );
   } else {
-    body = <Body {...props} run={run} title={title} />;
+    body = <Body key={run.id} {...props} run={run} readAt={detail.dataUpdatedAt} title={title} />;
   }
 
   return (

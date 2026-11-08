@@ -108,6 +108,20 @@
     "rejectedMore_other": "và {{count, number}} người khác không liệt kê",
     "acceptedBefore_other": "{{count, number}} người nhận đã được máy chủ chấp nhận trước khi lỗi — thư không tới ai trong số họ."
   },
+  "tape": {
+    "label": "Băng thời gian của lần chạy",
+    "position": "Vị trí phát lại",
+    "valueText": "{{step}}, {{status}}, {{time}} trên {{total}}",
+    "output": "{{time}} / {{total}}",
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "start": "Về đầu",
+    "next": "Sự kiện kế tiếp",
+    "speed": "Tốc độ phát {{speed}}×",
+    "startedAt": "Bắt đầu tại {{time}}",
+    "soFar": "{{duration}} đến lúc này",
+    "retry": "Thử lại"
+  },
   "duration": {
     "ms": "{{value}} ms",
     "s": "{{value}} giây",

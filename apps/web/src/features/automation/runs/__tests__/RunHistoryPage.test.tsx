@@ -622,6 +622,41 @@ describe('RunHistoryPage (T523)', () => {
     ).toBeVisible();
   });
 
+  it('the run tape over the steps: the slider names the step, its row follows (T1013)', async () => {
+    serve('admin');
+    await renderApp(`${PAGE}?run=${FAILED.id}`);
+    const detail = await screen.findByTestId('run-detail');
+    const tape = within(detail).getByTestId('run-tape');
+    expect(within(tape).getByTestId('run-tape-segment-act_find')).toHaveAttribute(
+      'data-status',
+      'succeeded',
+    );
+    expect(within(tape).getByTestId('run-tape-segment-act_fix')).toHaveAttribute(
+      'data-status',
+      'failed',
+    );
+    // The step that did not run is not on the tape; the playhead starts at the end.
+    expect(within(tape).queryByTestId('run-tape-segment-act_tell')).toBeNull();
+    expect(within(tape).getByTestId('run-tape-card')).toHaveTextContent('Step 2 · Update record');
+    expect(within(detail).getByTestId('run-step-act_fix')).not.toHaveAttribute('aria-current');
+
+    const slider = within(tape).getByRole('slider', { name: 'Playback position' });
+    slider.focus();
+    await userEvent.keyboard('{Home}');
+    expect(slider).toHaveAttribute(
+      'aria-valuetext',
+      'Step 1 · Find records, Succeeded, 0 ms of 0 ms',
+    );
+    expect(within(detail).getByTestId('run-step-act_find')).toHaveAttribute('aria-current', 'step');
+    await userEvent.keyboard('{ArrowRight}');
+    expect(within(tape).getByTestId('run-tape-card')).toHaveTextContent(
+      'The record to update could not be found from the value given.',
+    );
+    expect(within(detail).getByTestId('run-step-act_fix')).toHaveAttribute('aria-current', 'step');
+    expect(within(detail).getByTestId('run-step-act_find')).not.toHaveAttribute('aria-current');
+    expect(await axeViolations(document.body)).toEqual([]);
+  });
+
   it('lists the refused recipients of a failed email step, masked, with SMTP codes (T556)', async () => {
     serve('admin');
     await renderApp(`${PAGE}?run=${EMAIL_FAILED.id}`);

@@ -32,6 +32,7 @@ Cellhive bundles the following third-party data. Source code dependencies are li
 | CSV field mapper                  | #130 | `a0a6df398c` | `apps/web/src/features/import/components/FieldMapper.tsx`, `FieldMapper.css`                                              |
 | Bulk selection dock               | #178 | `d65e7c7e70` | `apps/web/src/features/grid/bulk/SelectionDock.tsx`, `SelectionDock.css`                                                  |
 | Condition branch builder          | #132 | `c010ef189c` | `apps/web/src/features/automation/builder/components/conditions/ConditionBranchBuilder.tsx`, `ConditionBranchBuilder.css` |
+| Event replay tape                 | #191 | `1f44267b9d` | `apps/web/src/features/automation/runs/components/RunTape.tsx`, `RunTape.css`                                             |
 
 ```text
 MIT License
