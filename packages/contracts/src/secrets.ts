@@ -70,6 +70,43 @@ export function isHostBoundSecretKind(kind: SecretKind): boolean {
   return (HOST_BOUND_SECRET_KINDS as readonly string[]).includes(kind);
 }
 
+/**
+ * Host-bound kinds whose value itself is sent to the allowed hosts (an
+ * HTTP header value, an AI provider key — T1008): a list that adds a host
+ * needs the value again (`SECRET_VALUE_REQUIRED`). A `webhook_signing`
+ * secret only signs: its value never leaves the server.
+ */
+export const VALUE_SENT_SECRET_KINDS = [
+  'http_header',
+  'ai_api_key',
+] as const satisfies readonly SecretKind[];
+
+export function isValueSentSecretKind(kind: SecretKind): boolean {
+  return (VALUE_SENT_SECRET_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Whether `next` (canonical patterns, {@link canonicalAllowedHosts}) lets
+ * a secret reach a host its current policy does not: a pattern that is not
+ * on the current list. A secret still in its transition period (an empty
+ * list, `legacy_hosts_until` ahead) is sent to any host, so any list only
+ * narrows it; once that period is over it reaches none (CONTRACTS §24).
+ */
+export function allowedHostsAddHost(
+  current: {
+    readonly allowed_hosts: readonly string[];
+    readonly legacy_hosts_until: Date | string | null;
+  },
+  next: readonly string[],
+  now: Date,
+): boolean {
+  if (current.allowed_hosts.length === 0 && current.legacy_hosts_until !== null) {
+    const until = new Date(current.legacy_hosts_until).getTime();
+    if (until > now.getTime()) return false;
+  }
+  return next.some((pattern) => !current.allowed_hosts.includes(pattern));
+}
+
 /** Most entries of `allowed_hosts` (CONTRACTS §24). */
 export const SECRET_MAX_ALLOWED_HOSTS = 20;
 /**
@@ -303,7 +340,8 @@ export const updateSecretRequestSchema = z
         '`http_header` / `webhook_signing` / `ai_api_key` only (another kind: ' +
         '`UNRECOGNIZED_KEY`): replaces ' +
         'the list and ends the transition period of a secret stored before the list existed ' +
-        '(`legacy_hosts_until` becomes `null`)',
+        '(`legacy_hosts_until` becomes `null`). For `http_header` and `ai_api_key`, a list ' +
+        'that adds a host needs a new `value` in the same request (`SECRET_VALUE_REQUIRED`)',
     }),
   })
   .refine(
@@ -467,6 +505,12 @@ export const SECRET_IN_USE = 'SECRET_IN_USE';
 export const SECRET_HOSTS_REQUIRED = 'SECRET_HOSTS_REQUIRED';
 /** `VALIDATION_FAILED` detail (path `allowed_hosts`): more than 20 hosts. */
 export const TOO_MANY_ALLOWED_HOSTS = 'TOO_MANY_ALLOWED_HOSTS';
+/**
+ * `VALIDATION_FAILED` detail (path `value`, T1008): `allowed_hosts` of an
+ * `http_header` or `ai_api_key` secret adds a host without a new `value`
+ * in the same request — the value is only ever sent where it was entered for.
+ */
+export const SECRET_VALUE_REQUIRED = 'SECRET_VALUE_REQUIRED';
 /**
  * `422 AUTOMATION_INVALID` detail (path `…auth.secret_id` or
  * `…signing_secret_id`): the literal URL of the step names a host the secret

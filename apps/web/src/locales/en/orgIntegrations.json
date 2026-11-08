@@ -114,7 +114,8 @@
         "format_webhook_signing": "Paste a value of the form whsec_… (base64 of 24 to 64 bytes).",
         "hosts_required": "List at least one host.",
         "hosts_too_many": "At most 20 hosts.",
-        "hosts_invalid": "Each entry must be a host name (api.example.com), *.example.com or host:port — no IP address, scheme or path."
+        "hosts_invalid": "Each entry must be a host name (api.example.com), *.example.com or host:port — no IP address, scheme or path.",
+        "hosts_need_value": "A new host needs the value again: tick “Replace the value” and enter it. The value is only sent to the hosts it was entered for."
       },
       "allowedHosts": "Allowed hosts",
       "allowedHostsHint": "Automations send this secret only to these hosts.",

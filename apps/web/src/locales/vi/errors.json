@@ -316,6 +316,7 @@
     "SECRET_HOSTS_REQUIRED": "Nhập ít nhất một host mà secret này được gửi tới.",
     "TOO_MANY_ALLOWED_HOSTS": "Một secret có tối đa 20 host được phép.",
     "SECRET_HOST_NOT_ALLOWED": "Secret này không được gửi tới host của URL này (URL http thường cần host được phép có cổng). Dùng một host được phép, hoặc thêm host này vào secret trong cài đặt tổ chức.",
+    "SECRET_VALUE_REQUIRED": "Hãy nhập lại giá trị để gửi nó tới host khác: secret chỉ đi tới những host nó được nhập cho.",
     "SECRET_HOST_NOT_ALLOWED_legacy_expired": "Secret được tạo trước khi có host được phép và đã hết hạn chuyển đổi: hãy đặt host được phép cho secret trong cài đặt tổ chức.",
     "INVALID_ALLOWLIST_PATTERN": "Nhập tên host như n8n.internal hoặc *.corp.example, có thể kèm cổng (n8n.internal:5678). Không nhận địa chỉ IP hay dải IP.",
     "ALLOWLIST_ENTRY_EXISTS": "Host này đã có trong danh sách cho phép.",
@@ -372,6 +373,7 @@
     "AI_NOT_CONFIGURED": "AI chưa được cài đặt hoặc đang tắt ở tổ chức này.",
     "AI_RECORD_DATA_DISABLED": "Tổ chức này không cho AI xem giá trị bản ghi.",
     "RECORD_DATA_NOT_CONFIRMED": "Hãy xác nhận cho phép gửi giá trị bản ghi tới nhà cung cấp AI.",
+    "INSECURE_KEY_NOT_CONFIRMED": "URL dùng http: key sẽ đi không mã hoá tới {{host}}. Hãy dùng URL https, hoặc xác nhận cho phép gửi key qua http.",
     "AI_GENERATION_RUNNING": "Một yêu cầu khác đang sinh field này. Các ô của nó hiện tiến độ."
   },
   "retryAfter_other": "Hãy thử lại sau {{count, number}} giây.",

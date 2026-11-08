@@ -459,6 +459,8 @@ export const EMAIL_SETTINGS_DETAIL_CODES = [
  * `TOO_MANY_ALLOWED_HOSTS` (path `allowed_hosts`; a bad entry is
  * `INVALID_ALLOWLIST_PATTERN`) on saves, `SECRET_HOST_NOT_ALLOWED` under
  * `AUTOMATION_INVALID` (a literal URL the secret may not be sent to).
+ * `SECRET_VALUE_REQUIRED` (T1008, path `value`): new allowed hosts of an
+ * `http_header` or `ai_api_key` secret without a new value.
  */
 export const SECRET_DETAIL_CODES = [
   'SECRET_NAME_TAKEN',
@@ -472,6 +474,7 @@ export const SECRET_DETAIL_CODES = [
   'SECRET_HOSTS_REQUIRED',
   'TOO_MANY_ALLOWED_HOSTS',
   'SECRET_HOST_NOT_ALLOWED',
+  'SECRET_VALUE_REQUIRED',
 ] as const;
 
 /**
@@ -646,7 +649,10 @@ export const AI_DETAIL_CODES = [
  * for an IP address (`SECRET_HOST_NOT_ALLOWED`, path `api_key`); a
  * `secret_id` that is not an `ai_api_key` secret of the organization
  * (`UNKNOWN_SECRET`, path `api_key.secret_id`); a usage range that is
- * reversed or longer than 90 days (`OUT_OF_RANGE`, path `from`).
+ * reversed or longer than 90 days (`OUT_OF_RANGE`, path `from`). T1008: a
+ * key sent over plain `http` to a host that is not an allowlist entry
+ * resolving to internal addresses, without `confirm_insecure: true`
+ * (`INSECURE_KEY_NOT_CONFIRMED`, path `confirm_insecure`, `params.host`).
  */
 export const AI_SETTINGS_DETAIL_CODES = [
   'RECORD_DATA_NOT_CONFIRMED',
@@ -656,6 +662,7 @@ export const AI_SETTINGS_DETAIL_CODES = [
   'SECRET_HOST_NOT_ALLOWED',
   'UNKNOWN_SECRET',
   'OUT_OF_RANGE',
+  'INSECURE_KEY_NOT_CONFIRMED',
 ] as const;
 
 /**

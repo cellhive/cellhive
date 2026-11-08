@@ -43,6 +43,12 @@ export interface FakeOpenAiCapabilities {
   delayMs: number;
   /** Key required as `Authorization: Bearer`; `null`: none (a local provider). */
   apiKey: string | null;
+  /**
+   * (T1008) The answer of `GET /v1/models` instead of the model list —
+   * `status`, `headers`, `raw` body (another shape, a redirect…); `null`:
+   * the list.
+   */
+  models: FakeOpenAiReply | null;
 }
 
 export interface FakeOpenAiRequest {
@@ -185,6 +191,7 @@ export async function startFakeOpenAiServer(
     failWith: null,
     delayMs: 0,
     apiKey: null,
+    models: null,
     ...options.capabilities,
   };
   const requests: FakeOpenAiRequest[] = [];
@@ -283,6 +290,16 @@ export async function startFakeOpenAiServer(
       return;
     }
     if (method === 'GET' && path === '/v1/models') {
+      const reply = capabilities.models;
+      if (reply !== null) {
+        await delay(reply.delayMs ?? 0);
+        response.writeHead(reply.status ?? 200, {
+          'content-type': 'application/json',
+          ...reply.headers,
+        });
+        response.end(reply.raw ?? '');
+        return;
+      }
       sendJson(response, 200, {
         object: 'list',
         data: [{ id: 'fake-model', object: 'model', created: 0, owned_by: 'cellhive-test' }],

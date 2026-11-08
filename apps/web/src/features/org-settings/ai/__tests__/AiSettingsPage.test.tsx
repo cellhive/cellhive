@@ -115,7 +115,8 @@ function serve(
   options: {
     settings?: AiSettingsDto;
     tests?: AiSettingsTestResult[];
-    putProblem?: () => Response;
+    /** A problem answer of `PUT`; `undefined`: saved. */
+    putProblem?: () => Response | undefined;
     role?: 'owner' | 'member';
   } = {},
 ) {
@@ -135,7 +136,8 @@ function serve(
       [`PUT /orgs/${ORG.id}/ai-settings`]: (init) => {
         const sent = body(init) as Record<string, unknown>;
         calls.push({ route: 'put', body: sent });
-        if (options.putProblem !== undefined) return options.putProblem();
+        const problem = options.putProblem?.();
+        if (problem !== undefined) return problem;
         const next = { ...settings, ...sent, updated_at: NOW } as Record<string, unknown>;
         delete next['confirm'];
         if ('api_key' in sent) {
@@ -361,6 +363,77 @@ describe('AiSettingsPage (T912)', () => {
     });
     expect(await screen.findByText(message)).toBeVisible();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('T1008: a key over plain http shows the warning; the server asks for the confirmation under it', async () => {
+    let refuse = true;
+    const calls = serve({
+      putProblem: () =>
+        !refuse
+          ? undefined
+          : json(
+              {
+                type: 'https://cellhive.io/errors/VALIDATION_FAILED',
+                title: 'VALIDATION_FAILED',
+                status: 422,
+                code: 'VALIDATION_FAILED',
+                errors: [
+                  {
+                    path: 'confirm_insecure',
+                    code: 'INSECURE_KEY_NOT_CONFIRMED',
+                    message: 'The key would travel unencrypted over http.',
+                    params: { host: 'llm.example.com' },
+                  },
+                ],
+              },
+              422,
+            ),
+    });
+    await renderApp(PATH);
+    await userEvent.type(await screen.findByTestId('ai-base-url'), 'https://llm.example.com/v1');
+    await userEvent.type(screen.getByTestId('ai-model'), 'm');
+    await userEvent.type(screen.getByTestId('ai-key-input'), FAKE_KEY);
+    // https: nothing to warn about.
+    expect(screen.queryByTestId('ai-insecure')).toBeNull();
+    await userEvent.clear(screen.getByTestId('ai-base-url'));
+    await userEvent.type(screen.getByTestId('ai-base-url'), 'http://llm.example.com/v1');
+    const note = await screen.findByTestId('ai-insecure');
+    expect(note).toHaveTextContent('The key will travel unencrypted');
+    expect(note).toHaveTextContent('llm.example.com');
+    expect(await axeViolations(document.body)).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => {
+      expect(calls).toHaveLength(1);
+    });
+    expect(calls[0]?.body).not.toHaveProperty('confirm_insecure');
+    expect(await screen.findByTestId('ai-insecure-error')).toHaveTextContent(
+      'the key would travel unencrypted to llm.example.com',
+    );
+    expect(screen.getByTestId('ai-insecure-confirm')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    refuse = false;
+    await userEvent.click(screen.getByTestId('ai-insecure-confirm'));
+    expect(screen.queryByTestId('ai-insecure-error')).toBeNull();
+    // "Test connection" of the unsaved values carries it too.
+    await userEvent.click(screen.getByTestId('ai-test'));
+    await waitFor(() => {
+      expect(calls.filter((call) => call.route === 'test')).toHaveLength(1);
+    });
+    expect(calls.at(-1)?.body).toMatchObject({
+      settings: { provider_base_url: 'http://llm.example.com/v1', api_key: { value: FAKE_KEY } },
+      confirm_insecure: true,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => {
+      expect(calls.filter((call) => call.route === 'put')).toHaveLength(2);
+    });
+    expect(calls.at(-1)?.body).toMatchObject({
+      provider_base_url: 'http://llm.example.com/v1',
+      api_key: { value: FAKE_KEY },
+      confirm_insecure: true,
+    });
   });
 
   it('turning record values on asks first, naming the host and the features', async () => {

@@ -147,6 +147,7 @@ describe('LlmClient with the fake provider (T905)', () => {
       failWith: null,
       delayMs: 0,
       apiKey: null,
+      models: null,
     });
   });
 
@@ -800,6 +801,82 @@ describe('LlmClient with the fake provider (T905)', () => {
       } finally {
         await slow.close();
       }
+    });
+  });
+
+  /**
+   * T1008 (CONTRACTS §29.1): "Test connection" lists models only from an
+   * OpenAI-shaped answer — `object: "list"` and `data[].id` strings — at
+   * most `max` ids of at most 200 characters; anything else is
+   * `invalid_response` (the test then shows `models: null`).
+   */
+  describe('GET /models (T1008)', () => {
+    const list = (max = 200) =>
+      client().listModels({
+        organizationId: ORG,
+        settings: settings(),
+        deadline: createDeadline(),
+        max,
+      });
+    const answer = (body: unknown, status = 200) => {
+      fake.capabilities.models = { status, raw: JSON.stringify(body) };
+    };
+
+    it.each([
+      [
+        'an OpenAI list',
+        { object: 'list', data: [{ id: 'a' }, { id: 'b', owned_by: 'x' }] },
+        ['a', 'b'],
+      ],
+      ['an empty list', { object: 'list', data: [] }, []],
+      [
+        'ids longer than 200 characters or empty are left out',
+        { object: 'list', data: [{ id: 'x'.repeat(201) }, { id: '' }, { id: 'y'.repeat(200) }] },
+        ['y'.repeat(200)],
+      ],
+    ])('%s', async (_name, body, expected) => {
+      answer(body);
+      expect(await list()).toEqual(expected);
+    });
+
+    it('returns at most max ids, in the provider order', async () => {
+      answer({
+        object: 'list',
+        data: Array.from({ length: 5_000 }, (_, i) => ({ id: `m${String(i)}` })),
+      });
+      const models = await list();
+      expect(models).toHaveLength(200);
+      expect(models.slice(0, 3)).toEqual(['m0', 'm1', 'm2']);
+      expect(await list(2)).toEqual(['m0', 'm1']);
+    });
+
+    it.each([
+      ['no object', { data: [{ id: 'a' }] }],
+      ['another object', { object: 'page', data: [{ id: 'a' }] }],
+      ['ids that are not strings', { object: 'list', data: [{ id: 42 }] }],
+      ['entries without an id', { object: 'list', data: [{ name: 'a' }] }],
+      ['data that is not a list', { object: 'list', data: { id: 'a' } }],
+      ['a list at the top', [{ id: 'a' }]],
+      ['the status page of another service', { status: 'ok', version: '1.2.3', uptime: 1 }],
+    ])('refuses %s (invalid_response)', async (_name, body) => {
+      answer(body);
+      await expect(list()).rejects.toMatchObject({
+        code: 'AI_PROVIDER_ERROR',
+        params: { reason: 'invalid_response' },
+      });
+    });
+
+    it('refuses a body that is not JSON, and never follows a redirect', async () => {
+      fake.capabilities.models = { raw: '<html>Router login</html>' };
+      await expect(list()).rejects.toMatchObject({ params: { reason: 'invalid_response' } });
+      fake.capabilities.models = {
+        status: 302,
+        headers: { location: `${other.baseUrl}/models` },
+      };
+      await expect(list()).rejects.toMatchObject({
+        params: { reason: 'http_status', status: 302 },
+      });
+      expect(other.requests).toEqual([]);
     });
   });
 });

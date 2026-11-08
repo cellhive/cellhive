@@ -1,6 +1,8 @@
 import {
+  allowedHostsAddHost,
   canonicalAllowedHosts,
   isValidSecretValue,
+  isValueSentSecretKind,
   parseAllowlistPattern,
   SECRET_MAX_ALLOWED_HOSTS,
   type CreateSecretInput,
@@ -181,11 +183,14 @@ export function initialSecretForm(editing: SecretDto | null): SecretFormState {
  * is "selected bases"; 1–20 allowed hosts, each a host pattern (T701,
  * CONTRACTS §24 — `hosts_required`, `hosts_too_many`, `hosts_invalid`). A
  * secret stored before lists existed may keep an empty list (its transition
- * period). Changing a secret sends only what changed.
+ * period). A host added to a header value needs the value again (T1008,
+ * `hosts_need_value` — the server's `SECRET_VALUE_REQUIRED`). Changing a
+ * secret sends only what changed.
  */
 export function secretRequestOf(
   form: SecretFormState,
   editing: SecretDto | null,
+  now: Date = new Date(),
 ):
   | { readonly ok: true; readonly create: CreateSecretInput }
   | { readonly ok: true; readonly update: UpdateSecretRequest | null }
@@ -208,6 +213,14 @@ export function secretRequestOf(
     errors.allowed_hosts = 'hosts_too_many';
   } else if (hosts.some((host) => parseAllowlistPattern(host) === null)) {
     errors.allowed_hosts = 'hosts_invalid';
+  } else if (
+    // T1008 (CONTRACTS §24): a header value goes to a new host only when entered again.
+    editing !== null &&
+    form.valueMode === 'keep' &&
+    isValueSentSecretKind(editing.kind) &&
+    allowedHostsAddHost(editing, canonicalAllowedHosts(hosts), now)
+  ) {
+    errors.allowed_hosts = 'hosts_need_value';
   }
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 

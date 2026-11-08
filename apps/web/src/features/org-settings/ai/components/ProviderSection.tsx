@@ -3,8 +3,8 @@ import {
   type AiSettingsDto,
   type AiSettingsTestResult,
 } from '@cellhive/contracts';
-import { Button, cn, FormField, Input, Skeleton, Spinner } from '@cellhive/ui';
-import { Info, KeyRound, PlugZap, TriangleAlert } from 'lucide-react';
+import { Button, Checkbox, cn, FormField, Input, Skeleton, Spinner } from '@cellhive/ui';
+import { Info, KeyRound, LockOpen, PlugZap, TriangleAlert } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +13,7 @@ import { NoteBox, SettingsSection } from '../../email/components/SettingsSection
 import { useTestAiSettings } from '../api';
 import {
   displayHostOf,
+  insecureKeyHostOf,
   keyHostMismatch,
   presetOf,
   PROVIDER_PRESETS,
@@ -169,6 +170,50 @@ function KeyField({
 }
 
 /**
+ * (T1008, CONTRACTS §29.1) A key that would go over plain `http`: the
+ * warning, and the confirmation the server asks for (`confirm_insecure`)
+ * unless the host is an allowlist entry on the internal network.
+ */
+function InsecureKeyNote({
+  host,
+  confirmed,
+  error,
+  onChange,
+}: {
+  readonly host: string;
+  readonly confirmed: boolean;
+  readonly error: string | undefined;
+  readonly onChange: (patch: Partial<AiDraft>) => void;
+}) {
+  const { t } = useTranslation('orgAi');
+  const errorId = useId();
+  return (
+    <div className="motion-safe:animate-reveal" data-testid="ai-insecure">
+      <NoteBox tone="warning" icon={<LockOpen />} title={t('provider.insecure.title')}>
+        <div className="flex flex-col gap-2">
+          <p>{t('provider.insecure.body', { host })}</p>
+          <Checkbox
+            label={t('provider.insecure.confirm', { host })}
+            checked={confirmed}
+            data-testid="ai-insecure-confirm"
+            aria-invalid={error === undefined ? undefined : true}
+            aria-describedby={error === undefined ? undefined : errorId}
+            onChange={(event) => {
+              onChange({ confirmInsecure: event.target.checked });
+            }}
+          />
+          {error === undefined ? null : (
+            <p id={errorId} className="font-normal text-danger" data-testid="ai-insecure-error">
+              {error}
+            </p>
+          )}
+        </div>
+      </NoteBox>
+    </div>
+  );
+}
+
+/**
  * The provider (CONTRACTS §29.1): base URL with presets, model (suggested
  * from the models the last test found), the write-only key, and "Test
  * connection" — it tries the draft as is, saved or not.
@@ -197,6 +242,9 @@ export function ProviderSection({
   const [allowing, setAllowing] = useState<string | null>(null);
   const preset = presetOf(draft.baseUrl);
   const host = displayHostOf(draft.baseUrl.trim());
+  // The server's verdict shows under the confirmation even when the page could not foresee it.
+  const insecureHost =
+    insecureKeyHostOf(settings, draft) ?? (errors.insecure === undefined ? null : host);
   const models = last?.result.models ?? [];
   const canTest =
     host !== null &&
@@ -323,6 +371,14 @@ export function ProviderSection({
         </datalist>
       ) : null}
       <KeyField settings={settings} draft={draft} error={errors.key} onChange={onChange} />
+      {insecureHost === null ? null : (
+        <InsecureKeyNote
+          host={insecureHost}
+          confirmed={draft.confirmInsecure}
+          error={errors.insecure}
+          onChange={onChange}
+        />
+      )}
 
       <div className="flex flex-col gap-3 border-t border-line pt-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

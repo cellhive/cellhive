@@ -64,6 +64,7 @@ export {
 } from './lookup.js';
 export { recordSsrfBlocked, ssrfBlockedCounts } from './metrics.js';
 export {
+  isAllowlistedInternalHost,
   resolveOutboundTarget,
   type OutboundAllowlistEntry,
   type OutboundAllowlistSource,

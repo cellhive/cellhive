@@ -1,15 +1,18 @@
 import {
+  allowedHostsAddHost,
   BOT_IN_USE,
   canonicalAllowedHosts,
   INVALID_BOT_TOKEN,
   isHostBoundSecretKind,
   INVALID_SECRET_VALUE,
   isValidSecretValue,
+  isValueSentSecretKind,
   newId,
   SECRET_IN_USE,
   SECRET_LIMIT_REACHED,
   SECRET_NAME_TAKEN,
   SECRET_ROTATION_OVERLAP_HOURS,
+  SECRET_VALUE_REQUIRED,
   SECRETS_MAX_PER_ORG,
   type BaseSecretList,
   type BaseSecretListQuery,
@@ -108,7 +111,10 @@ const ROTATION_OVERLAP_MS = SECRET_ROTATION_OVERLAP_HOURS * 60 * 60 * 1000;
  * puts members' Telegram channels in `error` (`bot_changed`). HTTP secrets
  * carry the hosts they may be sent to (`allowed_hosts`, T701, ADR-36 §4):
  * required when created; setting them ends the transition period of a
- * secret stored before lists existed (`legacy_hosts_until`).
+ * secret stored before lists existed (`legacy_hosts_until`). A list that
+ * adds a host to an `http_header` or `ai_api_key` secret needs a new value
+ * in the same request (T1008, `SECRET_VALUE_REQUIRED`): a value is only
+ * ever sent to the hosts it was entered for.
  */
 @Injectable()
 export class SecretService {
@@ -252,6 +258,18 @@ export class SecretService {
     if (baseScope !== current.base_scope) patch.base_scope = baseScope;
     if (body.allowed_hosts !== undefined) {
       const hosts = canonicalAllowedHosts(body.allowed_hosts);
+      // (T1008) A value goes only where it was entered for: a new host needs it again.
+      if (
+        newValue === undefined &&
+        isValueSentSecretKind(current.kind) &&
+        allowedHostsAddHost(current, hosts, new Date())
+      ) {
+        throw invalidField(
+          'value',
+          SECRET_VALUE_REQUIRED,
+          'Enter the value again to send it to another host.',
+        );
+      }
       if (hosts.join(',') !== current.allowed_hosts.join(',')) patch.allowed_hosts = hosts;
       // A list ends the transition period of a secret stored before lists existed.
       if (current.legacy_hosts_until !== null) {

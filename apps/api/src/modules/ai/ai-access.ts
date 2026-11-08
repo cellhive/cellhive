@@ -16,6 +16,7 @@ import {
   createValkeyCallSlots,
   httpAllowlistSource,
   isAiQuotaExceeded,
+  isAllowlistedInternalHost,
   LlmClient,
   parseOutboundUrl,
   recordAiRequest,
@@ -35,6 +36,7 @@ import {
   type CallSlots,
   type Db,
   type HostLookup,
+  type OutboundUrl,
 } from '@cellhive/server-core';
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -167,6 +169,21 @@ export class AiAccess {
       ...(this.lookup === null ? {} : { lookup: this.lookup }),
       now: () => this.now(),
       logger: this.logger,
+    });
+  }
+
+  /**
+   * (T1008) Whether a key may go over plain `http` to `url` without the
+   * person confirming it: an allowlist entry of the organization opens the
+   * host and it resolves to internal addresses only — through the same
+   * allowlist, `HTTP_PRIVATE_ALLOWLIST` and resolver as the calls.
+   */
+  isInternalHost(organizationId: Id<'org'>, url: OutboundUrl): Promise<boolean> {
+    return isAllowlistedInternalHost(url, {
+      organizationId,
+      allowlist: httpAllowlistSource(this.db),
+      privateAllowlist: this.config.outboundHttp.privateAllowlist,
+      ...(this.lookup === null ? {} : { lookup: this.lookup }),
     });
   }
 

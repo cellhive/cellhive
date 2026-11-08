@@ -63,6 +63,11 @@
       "undo": "Undo",
       "hostMismatch": "The saved key is only sent to {{saved}}. Enter the key again for {{next}}."
     },
+    "insecure": {
+      "title": "The key will travel unencrypted",
+      "body": "This URL uses http, so anyone on the network between Cellhive and {{host}} can read the key. Use an https URL if the provider offers one. A host of the organization's allowlist on your internal network needs no confirmation.",
+      "confirm": "Send the key to {{host}} over http anyway"
+    },
     "test": "Test connection",
     "testing": "Testing…",
     "testHint": "Tries the values above, saved or not, with one short request ({{tokens, number}} tokens at most).",

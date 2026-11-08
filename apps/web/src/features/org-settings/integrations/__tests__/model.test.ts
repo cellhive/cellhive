@@ -198,6 +198,82 @@ describe('secretRequestOf (change)', () => {
   });
 });
 
+/** T1008 (CONTRACTS §24): a header value goes to a new host only when it is entered again. */
+describe('secretRequestOf (allowed hosts of a header value)', () => {
+  const header: SecretDto = {
+    ...saved,
+    kind: 'http_header',
+    name: 'CRM',
+    base_scope: 'all',
+    base_ids: [],
+    allowed_hosts: ['api.crm.example'],
+  };
+  const NOW = new Date('2026-11-08T00:00:00.000Z');
+
+  it.each([
+    ['another host', ['api.evil.example'], 'hosts_need_value'],
+    ['a host added', ['api.crm.example', 'api.evil.example'], 'hosts_need_value'],
+    ['a wildcard instead', ['*.crm.example'], 'hosts_need_value'],
+  ] as const)('%s without the value → %s', (_label, hosts, code) => {
+    expect(
+      secretRequestOf({ ...initialSecretForm(header), allowedHosts: hosts }, header, NOW),
+    ).toEqual({ ok: false, errors: { allowed_hosts: code } });
+  });
+
+  it('sends a new host with the value; a host removed or a signing secret needs none', () => {
+    expect(
+      secretRequestOf(
+        {
+          ...initialSecretForm(header),
+          allowedHosts: ['api.evil.example'],
+          valueMode: 'enter',
+          value: 'Bearer x',
+        },
+        header,
+        NOW,
+      ),
+    ).toEqual({
+      ok: true,
+      update: { value: 'Bearer x', allowed_hosts: ['api.evil.example'] },
+    });
+    const two = { ...header, allowed_hosts: ['api.crm.example', 'hooks.crm.example'] };
+    expect(
+      secretRequestOf({ ...initialSecretForm(two), allowedHosts: ['api.crm.example'] }, two, NOW),
+    ).toEqual({ ok: true, update: { allowed_hosts: ['api.crm.example'] } });
+    expect(
+      secretRequestOf(
+        { ...initialSecretForm(saved), allowedHosts: ['n8n2.example.com'] },
+        saved,
+        NOW,
+      ),
+    ).toEqual({ ok: true, update: { allowed_hosts: ['n8n2.example.com'] } });
+  });
+
+  it('a legacy header value: a list narrows it during the transition period, not after', () => {
+    const legacy = (until: string): SecretDto => ({
+      ...header,
+      allowed_hosts: [],
+      legacy_hosts_until: until,
+    });
+    const pending = legacy('2026-11-18T00:00:00.000Z');
+    expect(
+      secretRequestOf(
+        { ...initialSecretForm(pending), allowedHosts: ['api.crm.example'] },
+        pending,
+        NOW,
+      ),
+    ).toEqual({ ok: true, update: { allowed_hosts: ['api.crm.example'] } });
+    const stopped = legacy('2026-11-01T00:00:00.000Z');
+    expect(
+      secretRequestOf(
+        { ...initialSecretForm(stopped), allowedHosts: ['api.crm.example'] },
+        stopped,
+        NOW,
+      ),
+    ).toEqual({ ok: false, errors: { allowed_hosts: 'hosts_need_value' } });
+  });
+});
+
 describe('allowlistPreview', () => {
   it.each([
     ['n8n.internal:5678', 'n8n.internal:5678'],
