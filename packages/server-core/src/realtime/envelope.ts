@@ -12,6 +12,8 @@ import {
 } from '@cellhive/contracts';
 import { z } from 'zod';
 
+import { HARD_MAX_FIELDS_PER_TABLE } from '../schema/policy.js';
+
 /**
  * Messages on the realtime bus between processes (SPEC §15): api and worker
  * publish, every api instance receives and routes them to its local
@@ -61,6 +63,12 @@ export const schemaChangedEnvelopeSchema = z.object({
   owner_id: idOf('usr').nullable().optional(),
   /** AI fields only (T910): queue counts after a pause or resume of the whole field. */
   ai_state: aiFieldStateSchema.optional(),
+  /**
+   * With `ai_state`: the active fields flowing into the prompt. Receivers
+   * send `ai_state` only to subscribers who manage the table and read each
+   * one; an envelope without the list gives it to nobody.
+   */
+  ai_config_field_ids: z.array(idOf('fld')).max(HARD_MAX_FIELDS_PER_TABLE).optional(),
 });
 
 /**

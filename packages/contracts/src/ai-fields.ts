@@ -92,6 +92,55 @@ export type AiFieldOptions = z.output<typeof aiFieldOptionsSchema>;
 /** Stored prompts name fields by id (`{{ [fld_…] }}`), longer than the names typed. */
 export const AI_FIELD_MAX_STORED_PROMPT_LENGTH = 32_000;
 
+/**
+ * `options.ai` of an AI field as the field API returns it to a reader who
+ * manages its table and reads every field that flows into the prompt
+ * (CONTRACTS §13, §29.5): the whole configuration, the prompt with the
+ * reader's field names.
+ */
+export const aiFieldConfigSchema = z
+  .strictObject({
+    task: z.enum(AI_FIELD_TASKS),
+    prompt: z.string().meta({
+      description:
+        'The template with current field names (`{{ [Field] }}`); a field deleted since shows as ' +
+        '`#REF[fld_…]`',
+    }),
+    instructions: z.string().nullable(),
+    auto_update: z.boolean(),
+    max_output_tokens: z.int().min(AI_FIELD_MIN_OUTPUT_TOKENS).max(AI_FIELD_MAX_OUTPUT_TOKENS),
+  })
+  .meta({ id: 'AiFieldConfig' });
+export type AiFieldConfig = z.infer<typeof aiFieldConfigSchema>;
+
+/**
+ * `options.ai` of an AI field for every other reader (CONTRACTS §29.5):
+ * only what the prompt was written for, so that the field shows as an AI
+ * field (read-only cells, icon). No prompt, instructions or settings.
+ */
+export const aiFieldRedactedOptionsSchema = z
+  .strictObject({ task: z.enum(AI_FIELD_TASKS) })
+  .meta({ id: 'AiFieldRedactedOptions' });
+export type AiFieldRedactedOptions = z.infer<typeof aiFieldRedactedOptionsSchema>;
+
+/**
+ * `options.ai` in a field DTO (`Field.options.ai` of a `text`/`select`
+ * field): `AiFieldConfig` with `prompt` for a reader who manages the table
+ * (base admin or table `manage`) and reads every field flowing into the
+ * prompt, else `AiFieldRedactedOptions` (`{ task }`) — told apart by
+ * `prompt`. `ai_state` comes with the first one only.
+ */
+export const aiFieldReaderOptionsSchema = z
+  .union([aiFieldConfigSchema, aiFieldRedactedOptionsSchema])
+  .meta({
+    id: 'AiFieldReaderOptions',
+    description:
+      '`options.ai` of an AI field in the field API: the whole configuration (`AiFieldConfig`, ' +
+      'with `prompt`) for table managers who read every field flowing into the prompt; ' +
+      '`{ task }` (`AiFieldRedactedOptions`) for everyone else (CONTRACTS §29.5)',
+  });
+export type AiFieldReaderOptions = z.infer<typeof aiFieldReaderOptionsSchema>;
+
 /** `options.ai` as `meta.fields` stores it (field-types parses stored options with it). */
 export const aiFieldStoredOptionsSchema = aiFieldOptionsSchema.extend({
   prompt: z.string().min(1).max(AI_FIELD_MAX_STORED_PROMPT_LENGTH),
@@ -153,7 +202,11 @@ export const AI_FAILURE_REASONS = [
 ] as const;
 export type AiFailureReason = (typeof AI_FAILURE_REASONS)[number];
 
-/** Counts of the queue of an AI field (field DTO, `schema.changed`), never record ids. */
+/**
+ * Counts of the queue of an AI field (field DTO, `schema.changed`), never
+ * record ids. Only for readers who get the whole `options.ai`
+ * (`AiFieldConfig`); other readers get no `ai_state` key.
+ */
 export const aiFieldStateSchema = z
   .strictObject({
     queued: z.int().min(0).meta({ description: 'Rows waiting or being generated' }),

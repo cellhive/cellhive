@@ -4,7 +4,6 @@ import {
   type ConvertFieldPreviewRequest,
   type ConvertFieldRequest,
   type ConvertFieldResponse,
-  type FieldConversionState,
   type FieldDependent,
   type FieldDto,
   type FieldTypeName,
@@ -40,8 +39,6 @@ import {
   edgesOf,
   FieldConversionsRepository,
   FieldDependenciesRepository,
-  FieldsRepository,
-  strictComputedPermissionsOf,
   TablesRepository,
   fieldConvertingError,
   fieldDependents,
@@ -84,19 +81,16 @@ import { mutationContextOf } from '../../common/access/change-log.js';
 import { recordAccessContextOf } from '../../common/access/record-access-context.js';
 import { firstTimeZone, settingOf } from '../../common/access/time-zone.js';
 import { SchemaAccess } from '../../common/schema/schema-access.js';
-import { fieldDtoOf } from '../../common/schema/schema-dto.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
 
 import {
   computedDependentsOf,
-  computedDtoPart,
-  loadErrorRefs,
-  type ComputedDtoPart,
   definitionVisible,
   organizationTimeZone,
   readabilityOf,
   requireAiFieldUnlocked,
 } from './computed-fields.js';
+import { FieldDtoService } from './field-dto.service.js';
 import { LinkConversionService } from './link-conversion.service.js';
 
 import type { Principal } from '../../common/auth/principal.js';
@@ -211,43 +205,20 @@ export class FieldConversionService {
     @Inject(BaseRolesRepository) private readonly roles: BaseRolesRepository,
     @Inject(GroupMembersRepository) private readonly groupMembers: GroupMembersRepository,
     @Inject(LinkConversionService) private readonly links: LinkConversionService,
+    @Inject(FieldDtoService) private readonly dtos: FieldDtoService,
   ) {
     this.members = new MemberDirectoryRepository(db);
   }
 
   // --- Field DTOs ----------------------------------------------------------------
 
-  /** Conversion state of the fields of a table (CONTRACTS §13 `conversion`). */
-  async statesOf(scope: OrgScope, tableId: Id<'tbl'>): Promise<Map<string, FieldConversionState>> {
-    const states = new Map<string, FieldConversionState>();
-    const now = Date.now();
-    for (const row of await this.conversions.listLiveByTable(scope, tableId)) {
-      if (row.status === 'succeeded' && row.expires_at.getTime() <= now) continue;
-      states.set(row.field_id, stateOf(row));
-    }
-    return states;
-  }
-
-  /** A field DTO with its conversion state (and computed part, T463: formula/lookup again). */
-  async dtoOf(base: BaseAccess, field: FieldRow): Promise<FieldDto> {
-    const scope = base.org.scope;
-    const states = await this.statesOf(scope, field.table_id);
-    let computed: ComputedDtoPart | undefined;
-    if (isComputedRow(field)) {
-      const rows = await loadBaseSchemaRows(this.db, scope, base.base.id);
-      const inactive = await loadErrorRefs(scope, rows, [field], {
-        fields: new FieldsRepository(this.db),
-        tables: new TablesRepository(this.db),
-      });
-      computed = computedDtoPart(
-        field,
-        rows,
-        base.access,
-        strictComputedPermissionsOf(base.base.settings),
-        inactive,
-      );
-    }
-    return fieldDtoOf(field, undefined, states.get(field.id) ?? null, computed);
+  /**
+   * The field of a conversion response (`202` of `PUT`, revert) for the
+   * caller: the same serializer as every field endpoint (CONTRACTS §13,
+   * §29.5 — an AI field's prompt in names, for those who may see it).
+   */
+  private dtoOf(base: BaseAccess, field: FieldRow): Promise<FieldDto> {
+    return this.dtos.one(base, field);
   }
 
   // --- Preview and conversion ----------------------------------------------------
@@ -1104,16 +1075,4 @@ function isComputedConversion(row: FieldConversionRow): boolean {
     (computedDefinitionOf(row.from_definition) !== null ||
       computedDefinitionOf(row.to_definition) !== null)
   );
-}
-
-function stateOf(row: FieldConversionRow): FieldConversionState {
-  return {
-    job_id: row.job_id,
-    status: row.status === 'running' ? 'running' : 'succeeded',
-    from_type: definitionTypeOf(row.from_definition) as FieldTypeName,
-    to_type: definitionTypeOf(row.to_definition) as FieldTypeName,
-    revertible_until: row.expires_at.toISOString(),
-    // T404: a link conversion keeps the type.
-    ...(row.kind === 'column' ? {} : { link_change: row.kind }),
-  };
 }

@@ -8,6 +8,7 @@ import {
 } from '@cellhive/contracts';
 import {
   AiFieldGenerator,
+  aiFieldStateSchemaChange,
   AiGenerationQueueRepository,
   createAiKeySource,
   httpAllowlistSource,
@@ -94,15 +95,7 @@ describe('AI field queues and provider errors (T1002)', () => {
         : {
             onStateChange: async (changes) => {
               for (const change of changes) {
-                await publisher.publish({
-                  organization_id: change.organizationId,
-                  base_id: change.baseId,
-                  table_id: change.tableId,
-                  entity: 'field',
-                  entity_id: change.fieldId,
-                  action: 'updated',
-                  ai_state: change.state,
-                });
+                await publisher.publish(aiFieldStateSchemaChange(change));
               }
             },
           }),

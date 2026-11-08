@@ -227,6 +227,96 @@ describe('schemaChangedDelivery', () => {
   });
 });
 
+/** Access of a reader of TBL with `perm` on it, `no_perm` on `hidden` fields. */
+function tableAccess(
+  perm: 'manage' | 'edit' | 'read_only',
+  fields: readonly string[],
+  hidden: readonly string[] = [],
+): BaseAccess {
+  return {
+    access: {
+      is_admin: false,
+      tables: {
+        [TBL]: {
+          perm,
+          fields: Object.fromEntries<string>([
+            ...fields.map((field): [string, string] => [field, 'read']),
+            ...hidden.map((field): [string, string] => [field, 'no_perm']),
+          ]),
+        },
+      },
+    },
+  } as unknown as BaseAccess;
+}
+
+describe('schemaChangedDelivery: ai_state (T1006)', () => {
+  const SOURCE: Id<'fld'> = 'fld_S1b2C3d4E5f6G7h8';
+  const STATE = {
+    queued: 0,
+    failed: 0,
+    paused: 3,
+    paused_reason: 'provider_error',
+    paused_detail: 'unauthorized',
+    retry_at: null,
+  } as const;
+  const envelope = (configFieldIds?: Id<'fld'>[]) => ({
+    ...schemaEnvelope('field', FLD),
+    ai_state: STATE,
+    ...(configFieldIds === undefined ? {} : { ai_config_field_ids: configFieldIds }),
+  });
+
+  it.each<[string, ReturnType<typeof envelope>, Subscriber, boolean]>([
+    // Admins resolve to every field of every table (`resolveBaseAccess`).
+    [
+      'a base admin',
+      envelope([SOURCE]),
+      subscriber('t', access({ [TBL]: [FLD, SOURCE] }, true)),
+      true,
+    ],
+    [
+      'a table manager who reads every source',
+      envelope([SOURCE]),
+      subscriber('t', tableAccess('manage', [FLD, SOURCE])),
+      true,
+    ],
+    [
+      'a table manager locked out of a source',
+      envelope([SOURCE]),
+      subscriber('t', tableAccess('manage', [FLD], [SOURCE])),
+      false,
+    ],
+    [
+      'an editor who reads every source',
+      envelope([SOURCE]),
+      subscriber('t', tableAccess('edit', [FLD, SOURCE])),
+      false,
+    ],
+    [
+      'a reader who reads every source',
+      envelope([SOURCE]),
+      subscriber('t', tableAccess('read_only', [FLD, SOURCE])),
+      false,
+    ],
+    [
+      'an envelope without the list of sources (older publisher): nobody',
+      envelope(),
+      subscriber('t', access({ [TBL]: [FLD, SOURCE] }, true)),
+      false,
+    ],
+  ])('%s', async (_name, message, target, withState) => {
+    const deliveries = await schemaChangedDelivery.deliver(message, [target]);
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]?.message).toEqual({
+      type: 'schema.changed',
+      channel: target.channel,
+      entity: 'field',
+      entity_id: FLD,
+      action: 'updated',
+      ...(withState ? { ai_state: STATE } : {}),
+    });
+  });
+});
+
 describe('schemaChangedDelivery for views (T301)', () => {
   const VIW: Id<'viw'> = 'viw_A1b2C3d4E5f6G7h8';
   const OTHER_VIW: Id<'viw'> = 'viw_Z1b2C3d4E5f6G7h8';

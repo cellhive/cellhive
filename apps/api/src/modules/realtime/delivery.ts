@@ -6,6 +6,10 @@ import {
   type RealtimeServerMessage,
 } from '@cellhive/contracts';
 import { isViewVisible } from '@cellhive/permissions';
+import { aiConfigVisible } from '@cellhive/server-core';
+
+import { canManageTable } from '../../common/schema/schema-access.js';
+import { readabilityOf } from '../field/computed-fields.js';
 
 import { computedRecomputingDelivery } from './computed-recomputing-delivery.js';
 import { dashboardChangedDelivery, DashboardDataChangedStrategy } from './dashboard-delivery.js';
@@ -86,6 +90,24 @@ function viewVisible(
 }
 
 /**
+ * Whether a subscriber gets the `ai_state` of an AI field (CONTRACTS §7,
+ * §29.5): like its whole `options.ai` — schema rights on the table and
+ * every field flowing into the prompt readable (the envelope names them;
+ * without the list, nobody).
+ */
+function aiStateVisible(base: BaseAccess | null, envelope: SchemaChangedEnvelope): boolean {
+  if (base === null || envelope.ai_config_field_ids === undefined) return false;
+  return aiConfigVisible(
+    {
+      canManage: canManageTable(base.access, envelope.table_id),
+      readable: readabilityOf(base.access),
+    },
+    envelope.table_id,
+    envelope.ai_config_field_ids,
+  );
+}
+
+/**
  * `schema.changed` (CONTRACTS §7) on `table:<id>`, and for table-level
  * changes on `base:<id>` too. The message is the same for everyone, but a
  * subscriber only receives it when the table (or field) is visible to them
@@ -93,7 +115,8 @@ function viewVisible(
  * hidden tables and `no_perm` fields are never named. Creating, deleting
  * and restoring tables and fields also bump `permission_version`; that
  * re-check reaches the router first because both are published in commit
- * order on the same bus.
+ * order on the same bus. `ai_state` (an AI field's queue counts) goes only
+ * to subscribers who may read the field's whole configuration.
  */
 export const schemaChangedDelivery: DeliveryStrategy<SchemaChangedEnvelope> = {
   type: 'schema.changed',
@@ -127,7 +150,9 @@ export const schemaChangedDelivery: DeliveryStrategy<SchemaChangedEnvelope> = {
           entity: envelope.entity,
           entity_id: envelope.entity_id,
           action: envelope.action,
-          ...(envelope.ai_state === undefined ? {} : { ai_state: envelope.ai_state }),
+          ...(envelope.ai_state === undefined || !aiStateVisible(subscriber.base, envelope)
+            ? {}
+            : { ai_state: envelope.ai_state }),
         },
       }));
   },

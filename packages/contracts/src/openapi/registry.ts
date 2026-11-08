@@ -1,5 +1,6 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 
+import { aiFieldReaderOptionsSchema } from '../ai-fields.js';
 import { API_TOKEN_ROUTE_SCOPES, type ApiTokenRouteEntry } from '../api-token-scopes.js';
 import { n8nWorkflowPayloadSchema } from '../automation-actions/run-n8n-workflow.js';
 import { formulaFieldOptionsSchema, lookupFieldOptionsSchema } from '../computed-fields.js';
@@ -33,14 +34,17 @@ const COMMON_COMPONENTS: CommonComponents = { problemDetails: problemDetailsSche
 /**
  * Component schemas no route names: `FieldOptions` is a generic object (the
  * server validates it per field type), so the options of these types are
- * published as their own components (T471, CONTRACTS §13). `N8nWorkflowPayload`
- * is the body Cellhive sends (`run_n8n_workflow`, T607, CONTRACTS §21), not a route.
+ * published as their own components (T471, CONTRACTS §13) — with `ai` of an
+ * AI field as returned to each reader (`AiFieldReaderOptions`, T1006).
+ * `N8nWorkflowPayload` is the body Cellhive sends (`run_n8n_workflow`, T607,
+ * CONTRACTS §21), not a route.
  */
 export const STANDALONE_SCHEMAS: readonly ZodType[] = [
   linkFieldOptionsSchema,
   parentFieldOptionsSchema,
   formulaFieldOptionsSchema,
   lookupFieldOptionsSchema,
+  aiFieldReaderOptionsSchema,
   dateReminderOptionSchema,
   n8nWorkflowPayloadSchema,
 ];

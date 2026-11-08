@@ -20,6 +20,13 @@ export interface SchemaChange {
   readonly action: SchemaChangeAction;
   /** An AI field whose queue was paused or resumed as a whole (T910): its counts. */
   readonly ai_state?: AiFieldStateDto;
+  /**
+   * With `ai_state`: the active fields flowing into the prompt. The
+   * gateway sends `ai_state` only to subscribers with schema rights on the
+   * table who read each one (CONTRACTS §7, §29.5); without the list, to
+   * nobody.
+   */
+  readonly ai_config_field_ids?: readonly Id<'fld'>[];
 }
 
 /**

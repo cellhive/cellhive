@@ -1,4 +1,4 @@
-import { aiFieldStateChanges } from '@cellhive/server-core';
+import { aiFieldStateChanges, aiFieldStateSchemaChange } from '@cellhive/server-core';
 
 import type { AppLogger } from '../../common/logging/app-logger.js';
 import type { Id } from '@cellhive/contracts';
@@ -24,15 +24,7 @@ export async function announceAiFieldStates(
   if (fieldIds.length === 0) return;
   try {
     for (const change of await aiFieldStateChanges(deps.db, scope, fieldIds)) {
-      await deps.publisher.publish({
-        organization_id: change.organizationId,
-        base_id: change.baseId,
-        table_id: change.tableId,
-        entity: 'field',
-        entity_id: change.fieldId,
-        action: 'updated',
-        ai_state: change.state,
-      });
+      await deps.publisher.publish(aiFieldStateSchemaChange(change));
     }
   } catch (error) {
     deps.logger.warn({ err: error }, 'ai state publish failed');
