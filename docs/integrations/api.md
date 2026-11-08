@@ -642,7 +642,7 @@ curl -sS "$CELLHIVE_URL/api/v1/jobs/job_…" -H "Authorization: Bearer $CELLHIVE
 
 ### 12.3 Limits, errors and retries
 
-- **10 AI requests per minute per person**, at most 2 at once per person and 8 per API instance (formula, draft, Ask AI, previews; your tokens and sessions together) → `429 RATE_LIMITED` with `Retry-After`. Generating is not counted there.
+- **10 AI requests per minute per person**, at most 2 at once per person and 8 at once per organization across every API instance (formula, draft, Ask AI, previews; your tokens and sessions together) → `429 RATE_LIMITED` with `Retry-After`. Generating is not counted there. Closing the request aborts the call to the provider and frees its slots.
 - **Quota**: `429 AI_QUOTA_EXCEEDED` with `Retry-After` until midnight in the organization's time zone and `errors[0].params.reset_at`. Do not retry before.
 - **Time**: one request may take up to 90 seconds (`504 AI_TIMEOUT` after that). Give your HTTP client a timeout above 90 seconds.
 - `422 AI_NOT_CONFIGURED` (AI off or not set up), `422 AI_RECORD_DATA_DISABLED` (the route sends record values and the organization does not allow it), `422 AI_INVALID_OUTPUT` (the model's answer was still wrong after 2 repair rounds; rephrase), `502 AI_PROVIDER_ERROR` (`errors[0].params.reason`, plus `status` for `http_status`). A `502` caused by a refused key or a blocked address does not fix itself: tell an organization admin. The full list is in [ai.md](ai.md) §9.
@@ -705,4 +705,4 @@ The same tab holds the **MCP clients** switches (`organizations.settings.mcp`, o
 | Groups of one widget query | 1,000 (`422 WIDGET_TOO_LARGE`) |
 | Records behind a widget | 50 per page by default, at most 200; `offset` up to 100,000 |
 | Live filters per widget request | 50 |
-| AI requests (formula, draft, Ask AI, AI field preview) | 10 per minute per person, 2 at once per person; 90 s each (`504 AI_TIMEOUT`); daily token quota of the organization (`429 AI_QUOTA_EXCEEDED`) |
+| AI requests (formula, draft, Ask AI, AI field preview) | 10 per minute per person, 2 at once per person, 8 at once per organization; 90 s each (`504 AI_TIMEOUT`); daily token quota of the organization, checked before every provider call (`429 AI_QUOTA_EXCEEDED`) |
