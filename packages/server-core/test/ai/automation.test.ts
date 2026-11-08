@@ -5,11 +5,14 @@ import {
   AUTOMATION_DIGEST_MAX_TABLES,
   automationDigestJson,
   automationDraftDigest,
+  automationDraftInputSchema,
   automationDraftMessages,
+  automationDraftOfInput,
   automationDraftSchema,
   automationDraftTypes,
   automationValidationProblems,
   compileAutomationDraft,
+  literalChatWarnings,
   type AutomationDraft,
   type AutomationDraftDigest,
   type AutomationDraftSources,
@@ -779,5 +782,163 @@ describe('AI actions in a draft (T911, T908 hand-off)', () => {
       { path: 'actions[0].prompt', code: 'REQUIRED' },
       { path: 'actions[0].target_field', code: 'REQUIRED' },
     ]);
+  });
+});
+
+/**
+ * BACKLOG T1015 (CONTRACTS §30.8): the draft an MCP client writes — the
+ * T908 shape by name, static (no enum of names), unused keys optional —
+ * compiled against the caller's digest like the model's; steps drafts
+ * never have are `UNSUPPORTED_ACTION`; a chat id written in the draft is a
+ * warning, for the AI's drafts too.
+ */
+describe('automation drafts of a client (T1015)', () => {
+  const MILESTONE_INPUT = {
+    name: MILESTONE.name,
+    trigger: { type: 'record.updated', watch_fields: ['Trạng thái'], changed_to: 'Đã xong' },
+    actions: [
+      {
+        type: 'send_notification',
+        recipients: ['Phụ trách'],
+        title: 'Ticket {{ [Tiêu đề] }} đã xong',
+        text: 'Hạn: {{ [Hạn] }}',
+      },
+    ],
+    explanation: MILESTONE.explanation,
+  };
+  const inputOf = (value: unknown) => automationDraftInputSchema.parse(value);
+  const draftOf = (value: unknown, digest: AutomationDraftDigest = digestOf()) => {
+    const result = automationDraftOfInput(inputOf(value), digest);
+    if (!result.ok) throw new Error(JSON.stringify(result.problems));
+    return result.draft;
+  };
+
+  it('is a static JSON Schema: no name of anyone’s base, unused keys optional', () => {
+    const schema = JSON.stringify(automationDraftInputSchema.toJSONSchema({ io: 'input' }));
+    for (const name of ['Tickets', 'Trạng thái', 'Phụ trách', 'Bot nhóm', 'http_request']) {
+      expect(schema).not.toContain(`"${name}"`);
+    }
+    // The trigger types are a fixed list; the action type is a string checked when compiled.
+    expect(schema).toContain('"record.date_reached"');
+    const parsed = inputOf({ name: 'x', trigger: { type: 'record.created' }, actions: [] });
+    expect(parsed).toEqual({
+      name: 'x',
+      trigger: {
+        type: 'record.created',
+        table: null,
+        watch_fields: null,
+        changed_to: null,
+        form: null,
+        cron: null,
+        date_field: null,
+        offset_minutes: null,
+      },
+      condition: null,
+      actions: [],
+      explanation: '',
+    });
+  });
+
+  it.each([
+    ['an unknown key', { ...MILESTONE_INPUT, warnings: [] }],
+    ['six actions', { ...MILESTONE_INPUT, actions: Array(6).fill(MILESTONE_INPUT.actions[0]) }],
+    ['a trigger drafts do not have', { ...MILESTONE_INPUT, trigger: { type: 'button.clicked' } }],
+    [
+      'a condition operator outside the tuple filter',
+      {
+        ...MILESTONE_INPUT,
+        condition: { conditions: [['Trạng thái', 'is', 'Mới']] },
+      },
+    ],
+  ])('refuses %s', (_case, value) => {
+    expect(automationDraftInputSchema.safeParse(value).success).toBe(false);
+  });
+
+  it('compiles the milestone written by a client to the definition of the model’s draft', () => {
+    const digest = digestOf({ currentTableId: TICKETS });
+    // `trigger.table` left out: the table of `table_id`.
+    const draft = draftOf(MILESTONE_INPUT, digest);
+    expect(draft.trigger.table).toBe('Tickets');
+    const fromClient = compileAutomationDraft(draft, digest);
+    const fromModel = compileAutomationDraft(MILESTONE, digest);
+    expect(fromClient).toEqual(fromModel);
+    expect(fromClient.ok).toBe(true);
+  });
+
+  it('reads a condition pair as a null value', () => {
+    const draft = draftOf({
+      ...MILESTONE_INPUT,
+      trigger: { type: 'record.created', table: 'Tickets' },
+      condition: { conditions: [['Ghi chú', 'empty']] },
+    });
+    expect(draft.condition).toEqual({ logic: 'and', conditions: [['Ghi chú', 'empty', null]] });
+    expect(compiled(draft).condition).toEqual({
+      op: 'and',
+      items: [{ field: F.note, operator: 'is_empty' }],
+    });
+  });
+
+  it.each([
+    'http_request',
+    'run_n8n_workflow',
+    'update_records',
+    'delete_record',
+    'find_records',
+    'if',
+    'sms',
+  ])('answers UNSUPPORTED_ACTION for a %s step, at its path', (type) => {
+    const result = automationDraftOfInput(
+      inputOf({
+        ...MILESTONE_INPUT,
+        actions: [MILESTONE_INPUT.actions[0], { type, text: 'x' }],
+      }),
+      digestOf(),
+    );
+    expect(result.ok ? [] : result.problems.map(({ path, code }) => ({ path, code }))).toEqual([
+      { path: 'actions[1].type', code: 'UNSUPPORTED_ACTION' },
+    ]);
+  });
+
+  it('names a field the caller cannot read exactly like one that does not exist', () => {
+    const problemsFor = (field: string) =>
+      problemsOf(
+        draftOf({
+          ...MILESTONE_INPUT,
+          trigger: { type: 'record.updated', table: 'Tickets', watch_fields: [field] },
+        }),
+      );
+    expect(problemsFor('Bí mật')).toEqual(problemsFor('xyz'));
+    expect(problemsFor('Bí mật')).toEqual([
+      {
+        path: 'trigger.watch_fields[0]',
+        code: 'UNKNOWN_FIELD',
+        message: 'Not a field of this table',
+      },
+    ]);
+  });
+
+  it('warns about a chat id written in the draft, not about a chat field', () => {
+    const definition = compiled(
+      draftOf({
+        ...MILESTONE_INPUT,
+        trigger: { ...MILESTONE_INPUT.trigger, table: 'Tickets' },
+        actions: [
+          { type: 'send_telegram', bot: 'Bot nhóm', chat_id: '-1001234567890', text: 'Xong' },
+          { type: 'send_telegram', bot: 'Bot nhóm', chat_field: 'Chat', text: 'Xong' },
+          { type: 'send_telegram', bot: 'Bot nhóm', chat_id: '@kenh_ban', text: 'Xong' },
+        ],
+      }),
+    );
+    expect(literalChatWarnings(definition)).toEqual([
+      {
+        code: 'literal_chat_id',
+        message:
+          'Step act_1 posts to the Telegram chat -1001234567890 written in the draft, not ' +
+          'taken from a field: save it only if this group or channel is yours.',
+        action_id: 'act_1',
+      },
+      expect.objectContaining({ code: 'literal_chat_id', action_id: 'act_3' }),
+    ]);
+    expect(literalChatWarnings(compiled(MILESTONE))).toEqual([]);
   });
 });

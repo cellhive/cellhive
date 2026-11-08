@@ -3,14 +3,18 @@ import {
   AI_AUTOMATION_MAX_EXPLANATION_LENGTH,
   AI_AUTOMATION_MAX_WARNING_LENGTH,
   AI_AUTOMATION_MAX_WARNINGS,
-  AI_AUTOMATION_WARNING_CODES,
+  AI_AUTOMATION_MODEL_WARNING_CODES,
   automationDefinitionSchema,
   MAX_AUTOMATION_NAME_LENGTH,
   MAX_DATE_OFFSET_MINUTES,
   MAX_DELAY_MINUTES,
   MAX_NOTIFICATION_RECIPIENT_VALUES,
+  MAX_SCHEMA_NAME_LENGTH,
+  MAX_TELEGRAM_CHAT_ID_LENGTH,
+  MAX_TEMPLATE_LENGTH,
   MAX_WATCH_FIELDS,
   MIN_DELAY_MINUTES,
+  type AiAutomationWarning,
   type AutomationDefinition,
   type AutomationDefinitionInput,
   type Id,
@@ -406,7 +410,7 @@ export function automationDraftSchema(digest: AutomationDraftDigest): z.ZodType<
     warnings: z
       .array(
         z.strictObject({
-          code: z.enum(AI_AUTOMATION_WARNING_CODES),
+          code: z.enum(AI_AUTOMATION_MODEL_WARNING_CODES),
           message: z.string().trim().min(1).max(AI_AUTOMATION_MAX_WARNING_LENGTH),
         }),
       )
@@ -449,9 +453,248 @@ export interface AutomationDraft {
   }[];
   readonly explanation: string;
   readonly warnings: readonly {
-    readonly code: (typeof AI_AUTOMATION_WARNING_CODES)[number];
+    readonly code: (typeof AI_AUTOMATION_MODEL_WARNING_CODES)[number];
     readonly message: string;
   }[];
+}
+
+// --- Drafts written by a client (MCP `draft_automation`, T1015) -------------------------
+
+const draftNameSchema = z.string().trim().min(1).max(MAX_SCHEMA_NAME_LENGTH);
+/** A name of the digest, or `null` (the key may be left out). */
+const optionalNameSchema = (description: string) =>
+  draftNameSchema.nullable().default(null).meta({ description });
+const textSchema = (description: string) =>
+  z.string().max(MAX_TEMPLATE_LENGTH).nullable().default(null).meta({ description });
+const draftValueSchema = z.union([z.string().max(MAX_TEMPLATE_LENGTH), z.number(), z.boolean()]);
+const conditionValueSchema = z
+  .union([draftValueSchema, z.array(z.string().max(MAX_TEMPLATE_LENGTH))])
+  .nullable();
+
+/** `[field, operator]` or `[field, operator, value]`; the pair reads as a `null` value. */
+const draftTupleSchema = z
+  .union([
+    z.tuple([draftNameSchema, z.enum(TUPLE_OPERATORS)]),
+    z.tuple([draftNameSchema, z.enum(TUPLE_OPERATORS), conditionValueSchema]),
+  ])
+  .transform(([field, operator, value]) => [field, operator, value ?? null] as const);
+
+const ACTION_TYPES_TEXT = AUTOMATION_DRAFT_ACTION_TYPES.join(', ');
+
+/**
+ * The draft an MCP client writes (`draft_automation`, CONTRACTS §30.8,
+ * BACKLOG T1015): the flat draft of T908 (CONTRACTS §29.3) by name, but
+ * static — no enum of names, since the tool list is the same for everyone —
+ * and with the keys a trigger or action type does not use optional
+ * (`null`). Names, the action types and every rule are checked when the
+ * draft is compiled against the caller's digest
+ * ({@link automationDraftOfInput}, {@link compileAutomationDraft}); the
+ * action type is a string so that a step drafts never have answers
+ * `UNSUPPORTED_ACTION` rather than a bare enum error. The model's
+ * `warnings` are not part of it: the server adds its own.
+ */
+export const automationDraftInputSchema = z.strictObject({
+  name: z.string().trim().min(1).max(MAX_AUTOMATION_NAME_LENGTH),
+  trigger: z.strictObject({
+    type: z.enum(AUTOMATION_DRAFT_TRIGGER_TYPES),
+    table: optionalNameSchema(
+      'The table whose records trigger it, by name (`list_tables`); every type but ' +
+        '`schedule`. Left out: the table of `table_id`',
+    ),
+    watch_fields: z
+      .array(draftNameSchema)
+      .min(1)
+      .max(MAX_WATCH_FIELDS)
+      .nullable()
+      .default(null)
+      .meta({ description: '`record.updated`: the fields whose change triggers it' }),
+    changed_to: draftValueSchema
+      .nullable()
+      .default(null)
+      .meta({
+        description:
+          '`record.updated`: the value the first watched field changes to (an option name ' +
+          'for a select)',
+      }),
+    form: optionalNameSchema('`form.submitted`: a shared form view of the table, by name'),
+    cron: z
+      .string()
+      .trim()
+      .max(100)
+      .nullable()
+      .default(null)
+      .meta({
+        description:
+          '`schedule` (base admins): five fields "minute hour day-of-month month day-of-week" ' +
+          'in the organization time zone, at most every 5 minutes',
+      }),
+    date_field: optionalNameSchema('`record.date_reached`: a date field of the table'),
+    offset_minutes: z
+      .int()
+      .min(-MAX_DATE_OFFSET_MINUTES)
+      .max(MAX_DATE_OFFSET_MINUTES)
+      .nullable()
+      .default(null)
+      .meta({ description: '`record.date_reached`: minutes after the date (negative = before)' }),
+  }),
+  condition: z
+    .strictObject({
+      logic: z.enum(['and', 'or']).default('and'),
+      conditions: z.array(draftTupleSchema).min(1).max(AUTOMATION_DRAFT_MAX_CONDITIONS),
+    })
+    .nullable()
+    .default(null)
+    .meta({
+      description:
+        'On fields of the trigger record: `[field, operator, value]` with the operators ' +
+        '== != > >= < <= intersects disjoint empty non_empty; a select value is an option ' +
+        'name; dates as "ExactDate(YYYY-MM-DD)" or "Today"',
+    }),
+  actions: z
+    .array(
+      z.strictObject({
+        type: z
+          .string()
+          .trim()
+          .min(1)
+          .max(64)
+          .meta({ description: `One of ${ACTION_TYPES_TEXT}` }),
+        table: optionalNameSchema('`create_record`: the table of the new record'),
+        fields: z
+          .array(
+            z.strictObject({
+              field: draftNameSchema,
+              value: draftValueSchema.nullable().default(null),
+            }),
+          )
+          .max(AUTOMATION_DRAFT_MAX_FIELD_VALUES)
+          .nullable()
+          .default(null)
+          .meta({ description: '`update_record`, `create_record`: `{ field, value }` by name' }),
+        recipients: z
+          .array(draftNameSchema)
+          .min(1)
+          .max(MAX_NOTIFICATION_RECIPIENT_VALUES)
+          .nullable()
+          .default(null)
+          .meta({
+            description:
+              '`send_notification`: user fields of the trigger record; `send_email`: user or ' +
+              'email fields',
+          }),
+        title: textSchema('Notification title, email subject'),
+        text: textSchema(
+          'Notification body, email body, Telegram message; values of the trigger record ' +
+            'as {{ [Field name] }}',
+        ),
+        bot: optionalNameSchema('`send_telegram`: a Telegram bot of the organization, by name'),
+        chat_id: z
+          .string()
+          .trim()
+          .max(MAX_TELEGRAM_CHAT_ID_LENGTH)
+          .nullable()
+          .default(null)
+          .meta({
+            description:
+              '`send_telegram`: a group or channel (-1001234567890, @channel_name); written ' +
+              'here it comes back as a `literal_chat_id` warning',
+          }),
+        chat_field: optionalNameSchema(
+          '`send_telegram`: a field of the trigger record holding the chat',
+        ),
+        minutes: z
+          .int()
+          .min(MIN_DELAY_MINUTES)
+          .max(MAX_DELAY_MINUTES)
+          .nullable()
+          .default(null)
+          .meta({ description: '`delay`: minutes to wait' }),
+        prompt: textSchema('`ai_generate_text`, `ai_classify`: the request to the AI'),
+        target_field: optionalNameSchema('`ai_generate_text`, `ai_classify`: the field set'),
+      }),
+    )
+    .max(AI_AUTOMATION_MAX_ACTIONS),
+  explanation: z
+    .string()
+    .trim()
+    .max(AI_AUTOMATION_MAX_EXPLANATION_LENGTH)
+    .default('')
+    .meta({ description: 'What the draft does, shown to the person who reviews it' }),
+});
+export type AutomationDraftInput = z.output<typeof automationDraftInputSchema>;
+
+const ACTION_TYPE_SET: ReadonlySet<string> = new Set(AUTOMATION_DRAFT_ACTION_TYPES);
+
+/**
+ * A client's draft ({@link automationDraftInputSchema}) as the compiler
+ * takes it (BACKLOG T1015): a step type drafts never have (`http_request`,
+ * `run_n8n_workflow`, `update_records`, `delete_record`, `find_records`,
+ * `if`, or an unknown one) → `UNSUPPORTED_ACTION` at `actions[i].type`;
+ * a trigger without `table` takes the digest's current table (`table_id`
+ * of the call). No warnings of its own: the server adds them after the
+ * check ({@link literalChatWarnings}).
+ */
+export function automationDraftOfInput(
+  input: AutomationDraftInput,
+  digest: AutomationDraftDigest,
+):
+  | { readonly ok: true; readonly draft: AutomationDraft }
+  | { readonly ok: false; readonly problems: AiOutputProblem[] } {
+  const problems = input.actions.flatMap((action, index): AiOutputProblem[] =>
+    ACTION_TYPE_SET.has(action.type)
+      ? []
+      : [
+          {
+            path: `actions[${String(index)}].type`,
+            code: 'UNSUPPORTED_ACTION',
+            message:
+              `A draft has no ${action.type} step; it may use ${ACTION_TYPES_TEXT}. Leave it ` +
+              'out: the person can add other steps in the builder',
+          },
+        ],
+  );
+  if (problems.length > 0) return { ok: false, problems };
+  const { trigger } = input;
+  const table =
+    trigger.table === null && trigger.type !== 'schedule' ? digest.currentTable : trigger.table;
+  return {
+    ok: true,
+    draft: {
+      name: input.name,
+      trigger: { ...trigger, table },
+      condition: input.condition,
+      actions: input.actions.map((action) => ({
+        ...action,
+        type: action.type as AutomationDraftActionType,
+      })),
+      explanation: input.explanation,
+      warnings: [],
+    },
+  };
+}
+
+/**
+ * Warnings the server adds to a checked draft (BACKLOG T1015) —
+ * of the AI (T908) and of an MCP client alike: each `send_telegram` step
+ * whose chat is written in the draft (`literal_chat_id`, its `action_id`),
+ * since a name or a value written by someone else may have steered the
+ * draft to a chat that is not the person's. A warning, not a refusal: the
+ * person checks the chat before saving.
+ */
+export function literalChatWarnings(definition: AutomationDefinition): AiAutomationWarning[] {
+  return definition.actions.flatMap((action): AiAutomationWarning[] => {
+    if (action.type !== 'send_telegram' || !('literal' in action.config.chat_id)) return [];
+    return [
+      {
+        code: 'literal_chat_id',
+        message:
+          `Step ${action.id} posts to the Telegram chat ${String(action.config.chat_id.literal)} ` +
+          'written in the draft, not taken from a field: save it only if this group or ' +
+          'channel is yours.',
+        action_id: action.id,
+      },
+    ];
+  });
 }
 
 const TRIGGER_HELP: Record<AutomationDraftTriggerType, string> = {
