@@ -90,6 +90,13 @@ export function aiQuotaExceeded(dailyTokenLimit: number, quotaDay: QuotaDay, now
   });
 }
 
+/** Whether `error` is the `429 AI_QUOTA_EXCEEDED` of {@link aiQuotaExceeded}. */
+export function isAiQuotaExceeded(
+  error: unknown,
+): error is AppError & { readonly code: 'AI_QUOTA_EXCEEDED' } {
+  return error instanceof AppError && error.code === 'AI_QUOTA_EXCEEDED';
+}
+
 export interface AiQuotaContext {
   readonly organizationId: Id<'org'>;
   /** The organization time zone (its `settings.timezone`, else the instance default). */
@@ -98,11 +105,13 @@ export interface AiQuotaContext {
 }
 
 /**
- * Daily token quota of an organization (BACKLOG T906, ADR-39 §6, Quyết
- * định S8 #13): checked **before** every call, recorded **after** it from
- * the provider's `usage` (estimated without one) — failed calls that
- * reported usage too. Check-then-record: the overshoot is at most the calls
- * in flight × their `max_tokens`, accepted instead of reservations.
+ * Daily token quota of an organization (BACKLOG T906, T1004, ADR-39 §6,
+ * Quyết định S8 #13): checked **before** every provider call — callers pass
+ * {@link check} as the `beforeCall` of `LlmClient`, so each rung, resend
+ * and repair round is checked, one `SELECT` each — and recorded **after**
+ * it from the provider's `usage` (clamped; estimated without one), failed
+ * calls that reported usage too. Check-then-record, no reservation: only
+ * calls already in flight when the limit is reached still finish.
  */
 export class AiUsageLedger {
   private readonly usage: AiUsageRepository;

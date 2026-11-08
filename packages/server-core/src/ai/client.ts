@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import { z } from 'zod';
 
 import { AppError } from '../errors/app-error.js';
@@ -16,6 +18,7 @@ import { secretHostDecision, type SecretHostPolicy } from '../secrets/allowed-ho
 import { remainingOrTimeout, type AiDeadline } from './deadline.js';
 import { aiInvalidOutput, aiProviderError, aiTimeout } from './errors.js';
 import { dropNullOptionals, llmJsonSchema, type LlmJsonSchema } from './json-schema.js';
+import { recordAiUsageClamped } from './metrics.js';
 import {
   extractJsonObject,
   lowerOutputMode,
@@ -69,18 +72,31 @@ export interface AiUsage {
   readonly estimated: boolean;
 }
 
-export interface AiCompleteRequest {
+/** What a caller hooks into every provider call of one request (CONTRACTS §29.7). */
+export interface AiCallHooks {
+  /**
+   * Usage of every answer read — refused or truncated ones too, and error
+   * answers that report it — for the quota ledger, before the outcome is
+   * known.
+   */
+  readonly onUsage?: (usage: AiUsage) => void | Promise<void>;
+  /**
+   * Runs before **every** HTTP call to the provider (each rung, the resend
+   * of a reasoning model, each repair round, `GET /models`): the quota
+   * check. Throwing stops the request before anything is sent.
+   */
+  readonly beforeCall?: () => void | Promise<void>;
+  /** The caller gave up (the client closed its request): the call in flight is aborted. */
+  readonly signal?: AbortSignal;
+}
+
+export interface AiCompleteRequest extends AiCallHooks {
   readonly organizationId: Id<'org'>;
   readonly settings: AiProviderSettings;
   readonly messages: readonly AiChatMessage[];
   readonly output: AiOutput;
   readonly maxOutputTokens: number;
   readonly deadline: AiDeadline;
-  /**
-   * Usage of every answer read — refused or truncated ones too — for the
-   * quota ledger, before the outcome is known.
-   */
-  readonly onUsage?: (usage: AiUsage) => void | Promise<void>;
 }
 
 export interface AiCompletion {
@@ -112,6 +128,11 @@ export interface AiKeySource {
   value(organizationId: Id<'org'>, secretId: Id<'sec'>): Promise<string | null>;
 }
 
+/** Where the client warns (pino-compatible); it never logs anything else. */
+export interface AiClientLogger {
+  warn(fields: Record<string, unknown>, message: string): void;
+}
+
 export interface LlmClientOptions {
   readonly allowlist: OutboundAllowlistSource;
   readonly privateAllowlist: PrivateAllowlistMode;
@@ -119,6 +140,8 @@ export interface LlmClientOptions {
   /** DNS; the system resolver by default (tests inject one). */
   readonly lookup?: HostLookup;
   readonly now?: () => Date;
+  /** Warnings about provider answers (a `usage` out of bounds), without any value. */
+  readonly logger?: AiClientLogger;
 }
 
 export const AI_USER_AGENT = 'Cellhive/0.1';
@@ -152,14 +175,39 @@ const chatResponseSchema = z.object({
       }),
     )
     .min(1),
-  usage: z
-    .object({
-      prompt_tokens: z.int().nonnegative(),
-      completion_tokens: z.int().nonnegative(),
-    })
-    .nullish()
-    .catch(null),
 });
+
+/** A token count as a provider may write it; anything else counts as no `usage`. */
+const tokenCountSchema = z.number().nonnegative();
+const usageSchema = z.object({
+  prompt_tokens: tokenCountSchema,
+  completion_tokens: tokenCountSchema,
+});
+
+/** The body as JSON, `undefined` when it is not. */
+function jsonOf(body: Buffer): unknown {
+  try {
+    return JSON.parse(body.toString('utf8')) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Bytes of a `400` read for {@link mentionsResponseFormat}: provider error
+ * messages are short, the rest of a large body is never looked at.
+ */
+const ERROR_SCAN_BYTES = 16_384;
+
+/**
+ * Whether a `400` is about `response_format` (the rung is not supported):
+ * its body names `response_format` or `json_schema`. Only read here, never
+ * copied into an error or a log.
+ */
+function mentionsResponseFormat(body: Buffer): boolean {
+  const text = body.subarray(0, ERROR_SCAN_BYTES).toString('utf8').toLowerCase();
+  return text.includes('response_format') || text.includes('json_schema');
+}
 
 const isRecordValue = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -254,9 +302,11 @@ function withInstruction(
  * the URL vetted by the SSRF core (organization allowlist,
  * `HTTP_PRIVATE_ALLOWLIST`), the key sent only to its allowed hosts (checked
  * before it is unsealed), no redirect followed, a 1 MiB answer cap, the
- * time limited by `min(request_timeout, deadline left)`. No `temperature`,
- * `top_p`, `seed`, `n` or `stream_options` is ever sent. Nothing is logged:
- * errors name the provider host only.
+ * time limited by `min(request_timeout, deadline left)`, the caller's
+ * `beforeCall` (the quota) first and its abort signal through. No
+ * `temperature`, `top_p`, `seed`, `n` or `stream_options` is ever sent.
+ * Nothing is logged but a warning without values for a `usage` out of
+ * bounds: errors name the provider host only.
  */
 export class LlmClient {
   private readonly now: () => Date;
@@ -280,9 +330,12 @@ export class LlmClient {
 
   /**
    * One answer. A JSON output starts at `settings.outputMode` and steps one
-   * rung down when the provider answers `400` to a `response_format`; the
-   * rung that answered is returned. Throws `AI_PROVIDER_ERROR`
-   * (`params.reason`) or `AI_TIMEOUT`.
+   * rung down when the provider answers `400` about `response_format`
+   * (its body names `response_format` or `json_schema`; any other `400` is
+   * an error); the rung that answered is returned. Every HTTP call —
+   * each rung, the resend of a reasoning model — runs `beforeCall` first.
+   * Throws `AI_PROVIDER_ERROR` (`params.reason`), `AI_TIMEOUT`, what
+   * `beforeCall` throws, or the abort reason of `signal`.
    */
   async complete(request: AiCompleteRequest): Promise<AiCompletion> {
     const { settings } = request;
@@ -314,28 +367,27 @@ export class LlmClient {
         [settings.tokenParam]: request.maxOutputTokens + allowance,
         ...(responseFormat === undefined ? {} : { response_format: responseFormat }),
       });
-      let response: GuardedResponse;
-      try {
-        response = await guardedRequest(target, {
-          method: 'POST',
-          headers: { ...headers, 'content-type': 'application/json' },
-          body,
-          timeoutMs: Math.min(
-            settings.requestTimeoutSeconds * 1000,
-            remainingOrTimeout(request.deadline, host),
-          ),
-        });
-      } catch (error) {
-        throw providerFailure(error, host);
-      }
+      const response = await this.send(target, request, host, {
+        method: 'POST',
+        headers: { ...headers, 'content-type': 'application/json' },
+        body,
+      });
+      const json = jsonOf(response.body);
+      const sent = { messages, bytes: Buffer.byteLength(body) };
       const lower = mode === null ? null : lowerOutputMode(mode);
-      if (response.status === 400 && responseFormat !== undefined && lower !== null) {
+      if (
+        response.status === 400 &&
+        responseFormat !== undefined &&
+        lower !== null &&
+        mentionsResponseFormat(response.body)
+      ) {
         // `response_format` not supported: one rung down, same deadline.
+        await this.reportErrorUsage(json, request, sent, host);
         mode = lower;
         continue;
       }
       try {
-        return await this.read(response, request, messages, mode, host, key);
+        return await this.read(response, json, request, sent, mode, host, key);
       } catch (error) {
         if (allowance === 0 && isReasoningCutOff(error)) {
           allowance = AI_REASONING_ALLOWANCE_TOKENS;
@@ -349,35 +401,25 @@ export class LlmClient {
   /**
    * The model ids of `GET {base}/models` ("Test connection", T906), at most
    * `max`, in the provider's order — through the same door as `complete`
-   * (allowlist, key host check, no redirect, 1 MiB). Throws
+   * (allowlist, key host check, `beforeCall`, no redirect, 1 MiB). Throws
    * `AI_PROVIDER_ERROR` (`http_status` for a provider without the route)
    * or `AI_TIMEOUT`.
    */
-  async listModels(request: {
-    readonly organizationId: Id<'org'>;
-    readonly settings: AiProviderSettings;
-    readonly deadline: AiDeadline;
-    readonly max: number;
-  }): Promise<string[]> {
+  async listModels(
+    request: {
+      readonly organizationId: Id<'org'>;
+      readonly settings: AiProviderSettings;
+      readonly deadline: AiDeadline;
+      readonly max: number;
+    } & Pick<AiCallHooks, 'beforeCall' | 'signal'>,
+  ): Promise<string[]> {
     const { target, headers, host } = await this.connect(
       request.organizationId,
       request.settings,
       '/models',
       request.deadline,
     );
-    let response: GuardedResponse;
-    try {
-      response = await guardedRequest(target, {
-        method: 'GET',
-        headers,
-        timeoutMs: Math.min(
-          request.settings.requestTimeoutSeconds * 1000,
-          remainingOrTimeout(request.deadline, host),
-        ),
-      });
-    } catch (error) {
-      throw providerFailure(error, host);
-    }
+    const response = await this.send(target, request, host, { method: 'GET', headers });
     if (response.status < 200 || response.status > 299) {
       throw aiProviderError('http_status', { host, status: response.status });
     }
@@ -387,6 +429,101 @@ export class LlmClient {
     } catch {
       throw aiProviderError('invalid_response', { host });
     }
+  }
+
+  /**
+   * One HTTP call: `beforeCall` first (the quota — it may refuse), then
+   * the request with the time left and the caller's abort signal. A caller
+   * that gave up gets its own abort reason back, never a provider error.
+   */
+  private async send(
+    target: OutboundTarget,
+    request: Pick<AiCompleteRequest, 'settings' | 'deadline'> &
+      Pick<AiCallHooks, 'beforeCall' | 'signal'>,
+    host: string,
+    options: { method: string; headers: Record<string, string>; body?: string },
+  ): Promise<GuardedResponse> {
+    request.signal?.throwIfAborted();
+    await request.beforeCall?.();
+    request.signal?.throwIfAborted();
+    try {
+      return await guardedRequest(target, {
+        ...options,
+        timeoutMs: Math.min(
+          request.settings.requestTimeoutSeconds * 1000,
+          remainingOrTimeout(request.deadline, host),
+        ),
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+      });
+    } catch (error) {
+      if (request.signal?.aborted === true) throw request.signal.reason;
+      throw providerFailure(error, host);
+    }
+  }
+
+  /**
+   * `usage` of an answer within what the call could have used: prompt
+   * tokens at most the UTF-8 bytes sent (a token is at least a byte),
+   * answer tokens at most `max_output_tokens` plus the reasoning allowance.
+   * A count past either bound is a provider bug or a hostile answer: it is
+   * cut to the bound, with a warning (no value) and `ai_usage_clamped_total`.
+   */
+  private clamped(
+    usage: AiUsage,
+    request: AiCompleteRequest,
+    bytes: number,
+    host: string,
+  ): AiUsage {
+    const maxCompletion = request.maxOutputTokens + AI_REASONING_ALLOWANCE_TOKENS;
+    const prompt = Math.ceil(usage.promptTokens);
+    const completion = Math.ceil(usage.completionTokens);
+    const kinds: ('prompt' | 'completion')[] = [];
+    if (prompt > bytes) kinds.push('prompt');
+    if (completion > maxCompletion) kinds.push('completion');
+    for (const kind of kinds) {
+      recordAiUsageClamped(kind);
+      this.options.logger?.warn(
+        { provider_host: host, kind },
+        'ai usage out of bounds: counted at its bound',
+      );
+    }
+    return {
+      promptTokens: Math.min(prompt, bytes),
+      completionTokens: Math.min(completion, maxCompletion),
+      estimated: usage.estimated,
+    };
+  }
+
+  /** The `usage` an answer reports (clamped), `null` without a readable one. */
+  private reportedUsage(
+    json: unknown,
+    request: AiCompleteRequest,
+    bytes: number,
+    host: string,
+  ): AiUsage | null {
+    const usage = usageSchema.safeParse(isRecordValue(json) ? json['usage'] : undefined);
+    if (!usage.success) return null;
+    return this.clamped(
+      {
+        promptTokens: usage.data.prompt_tokens,
+        completionTokens: usage.data.completion_tokens,
+        estimated: false,
+      },
+      request,
+      bytes,
+      host,
+    );
+  }
+
+  /** An error answer that reports `usage` (it was billed): into the ledger before the error. */
+  private async reportErrorUsage(
+    json: unknown,
+    request: AiCompleteRequest,
+    sent: { readonly bytes: number },
+    host: string,
+  ): Promise<void> {
+    const usage = this.reportedUsage(json, request, sent.bytes, host);
+    if (usage !== null) await request.onUsage?.(usage);
   }
 
   /**
@@ -489,15 +626,23 @@ export class LlmClient {
     }
   }
 
+  /**
+   * An answer: its `usage` is read **first** — before the status and the
+   * shape of `choices` are judged — so every billed answer reaches the
+   * ledger (clamped, see {@link clamped}); without one, a readable answer
+   * is estimated.
+   */
   private async read(
     response: GuardedResponse,
+    json: unknown,
     request: AiCompleteRequest,
-    sent: readonly AiChatMessage[],
+    sent: { readonly messages: readonly AiChatMessage[]; readonly bytes: number },
     mode: AiOutputMode | null,
     host: string,
     modelKey: string,
   ): Promise<AiCompletion> {
     if (response.status < 200 || response.status > 299) {
+      await this.reportErrorUsage(json, request, sent, host);
       // A 3xx is never followed: the provider URL must be the final one.
       const retryAfter = response.headers['retry-after'];
       throw aiProviderError('http_status', {
@@ -506,31 +651,29 @@ export class LlmClient {
         retryAfter: typeof retryAfter === 'string' ? retryAfter : (retryAfter?.[0] ?? null),
       });
     }
-    let parsed: z.infer<typeof chatResponseSchema>;
-    let reasoned: boolean;
-    try {
-      const json: unknown = JSON.parse(response.body.toString('utf8'));
-      parsed = chatResponseSchema.parse(json);
-      reasoned = showsReasoning(json);
-    } catch {
+    const reported = this.reportedUsage(json, request, sent.bytes, host);
+    const parsed = chatResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      if (reported !== null) await request.onUsage?.(reported);
       throw aiProviderError('invalid_response', { host });
     }
+    const reasoned = showsReasoning(json);
     if (reasoned) this.rememberReasoning(modelKey);
-    const [choice] = parsed.choices;
+    const [choice] = parsed.data.choices;
     const content = choice?.message.content ?? null;
     const refusal = choice?.message.refusal ?? null;
     const usage: AiUsage =
-      parsed.usage === null || parsed.usage === undefined
-        ? {
-            promptTokens: estimateTokens(sent.map((message) => message.content).join('\n')),
-            completionTokens: estimateTokens(content ?? refusal ?? ''),
-            estimated: true,
-          }
-        : {
-            promptTokens: parsed.usage.prompt_tokens,
-            completionTokens: parsed.usage.completion_tokens,
-            estimated: false,
-          };
+      reported ??
+      this.clamped(
+        {
+          promptTokens: estimateTokens(sent.messages.map((message) => message.content).join('\n')),
+          completionTokens: estimateTokens(content ?? refusal ?? ''),
+          estimated: true,
+        },
+        request,
+        sent.bytes,
+        host,
+      );
     await request.onUsage?.(usage);
     if (refusal !== null && refusal !== '') throw aiProviderError('refused', { host });
     if (choice?.finish_reason === 'length') {

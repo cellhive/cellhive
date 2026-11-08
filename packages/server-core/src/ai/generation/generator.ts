@@ -35,7 +35,7 @@ import {
 import { recordAiRequest } from '../metrics.js';
 import { AiSettingsRepository } from '../settings/ai-settings.repository.js';
 import { requireAi, type AiSettingsState } from '../settings/settings.js';
-import { AiUsageLedger, type AiQuotaContext } from '../usage/quota.js';
+import { AiUsageLedger, isAiQuotaExceeded, type AiQuotaContext } from '../usage/quota.js';
 
 import { enqueueAiGeneration } from './jobs.js';
 import { aiOptionsOf, aiSourcesOf } from './options.js';
@@ -58,7 +58,7 @@ import type { Causation } from '../../events/event.js';
 import type { RecordMutationService } from '../../records/record-mutation.service.js';
 import type { RecordQueryService } from '../../records/record-query.service.js';
 import type { RecordAccessContext } from '../../records/types.js';
-import type { AiProviderSettings, AiUsage, LlmClient } from '../client.js';
+import type { AiCallHooks, AiProviderSettings, AiUsage, LlmClient } from '../client.js';
 import type { AiDeadline } from '../deadline.js';
 import type { FormulaRecord } from '@cellhive/formula-engine';
 
@@ -75,8 +75,12 @@ export function aiTargetOf(field: {
   };
 }
 
-/** What one provider call needs (the API's `AiCall`, or the worker's own). */
-export interface AiValueCall {
+/**
+ * What one provider call needs (the API's `AiCall`, or the worker's own),
+ * with the hooks of every HTTP call: the usage ledger, the quota check
+ * before each call (`beforeCall`), the caller's abort signal.
+ */
+export interface AiValueCall extends AiCallHooks {
   readonly llm: LlmClient;
   readonly organizationId: Id<'org'>;
   readonly settings: AiProviderSettings;
@@ -102,6 +106,8 @@ export async function generateAiValue(
     maxOutputTokens: ai.max_output_tokens,
     deadline: call.deadline,
     onUsage: call.onUsage,
+    ...(call.beforeCall === undefined ? {} : { beforeCall: call.beforeCall }),
+    ...(call.signal === undefined ? {} : { signal: call.signal }),
   };
   if (target.kind === 'select') {
     if (target.options.length === 0) throw aiInvalidOutput(0);
@@ -241,7 +247,8 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
  * provider call per record, values written through `RecordMutationService`
  * only when the record did not change since it was read. AI off or record
  * data off → the organization's queued rows `paused`; quota used up (checked
- * before every call) → `paused quota`; the provider rejecting the
+ * before every provider call, repair rounds and resends included — the
+ * refused call is never sent) → `paused quota`; the provider rejecting the
  * configuration → `paused provider_error` (BACKLOG T1002); a `429` or five
  * temporary errors in a row → the organization backs off; other temporary
  * errors retried after 30 s, 2 and 10 minutes, then `failed`. One
@@ -299,7 +306,7 @@ export class AiFieldGenerator {
       await this.ledger.check(this.quota(scope, timeZone), limit);
       return false;
     } catch (error) {
-      if (error instanceof AppError && error.code === 'AI_QUOTA_EXCEEDED') return true;
+      if (isAiQuotaExceeded(error)) return true;
       throw error;
     }
   }
@@ -401,6 +408,9 @@ export class AiFieldGenerator {
     const records = new Map(found.map((record) => [record.id as string, record]));
     const snapshot = snapshotOfBase(rows, table.id);
     const target = aiTargetOf(field);
+    // The day of each call (a batch may run past midnight in the organization's zone).
+    const quota = () => this.quota(scope, context.timeZone);
+    const limit = settings.daily_token_limit === null ? null : Number(settings.daily_token_limit);
     let usage: AiUsage = NO_USAGE;
     let calls = 0;
     const done: TakenAiRow[] = [];
@@ -421,11 +431,9 @@ export class AiFieldGenerator {
         done.push(row);
         continue;
       }
-      // Before every call after the first: AI or record data turned off meanwhile, or the quota.
+      // Before the record of every call after the first: AI or record data turned off meanwhile.
       if (calls > 0) {
-        const stopped =
-          (await this.stopReason(scope)) ??
-          ((await this.quotaUsedUp(scope, context.timeZone, settings)) ? 'quota' : null);
+        const stopped = await this.stopReason(scope);
         if (stopped !== null) {
           left = taken.slice(index);
           stop = { kind: 'pause', reason: stopped };
@@ -433,6 +441,8 @@ export class AiFieldGenerator {
         }
       }
       const formulaRow: FormulaRecord = { id: record.id, fields: record.fields };
+      // Provider calls of this record (repair rounds, resends): each one passed the quota first.
+      let sent = 0;
       try {
         if (crossRecord) throw new AiRenderError('A source reads another record or table');
         const input = renderAiInput(ai.prompt, snapshot, formulaRow, {
@@ -446,13 +456,18 @@ export class AiFieldGenerator {
             organizationId: scope.organizationId,
             settings: provider,
             deadline: createDeadline(provider.requestTimeoutSeconds * 1000),
+            // The quota before every call: used up → the batch stops before it is sent.
+            beforeCall: async () => {
+              await this.ledger.check(quota(), limit);
+              sent += 1;
+            },
             onUsage: async (call) => {
               usage = {
                 promptTokens: usage.promptTokens + call.promptTokens,
                 completionTokens: usage.completionTokens + call.completionTokens,
                 estimated: usage.estimated || call.estimated,
               };
-              await this.ledger.record(this.quota(scope, context.timeZone), 'field', call);
+              await this.ledger.record(quota(), 'field', call);
             },
           },
           ai,
@@ -463,6 +478,13 @@ export class AiFieldGenerator {
         temporaryInRow = 0;
         values.push({ recordId: row.recordId, version: record.version, value: result.value });
       } catch (error) {
+        if (isAiQuotaExceeded(error)) {
+          // The refused call was never sent; this row and the rest wait for the quota.
+          calls += sent - 1;
+          left = taken.slice(index);
+          stop = { kind: 'pause', reason: 'quota' };
+          break;
+        }
         // `AI_INVALID_OUTPUT` after repair rounds: every call counts.
         const attempts = error instanceof AppError ? error.params?.['attempts'] : undefined;
         if (typeof attempts === 'number' && attempts > 1) calls += attempts - 1;

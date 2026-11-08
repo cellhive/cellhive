@@ -5,15 +5,15 @@ import {
   type AiFormulaRequest,
   type Id,
 } from '@cellhive/contracts';
-import { Body, Controller, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 
 import { CurrentPrincipal, type Principal } from '../../common/auth/principal.js';
-import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { ZodValidationPipe } from '../../common/validation/zod-validation.pipe.js';
 
 import { AiFormulaService } from './ai-formula.service.js';
+import { aiRequestMetaOf } from './client-abort.js';
 
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 /** "Write the formula with AI" of a table (CONTRACTS §29.2, BACKLOG T907). */
 @Controller('tables/:tableId/ai')
@@ -27,7 +27,8 @@ export class AiFormulaController {
     @Body(new ZodValidationPipe(aiFormulaRequestSchema)) body: AiFormulaRequest,
     @CurrentPrincipal() principal: Principal,
     @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<AiFormula> {
-    return this.formulas.generate(principal, tableId, body, requestMetaOf(request));
+    return this.formulas.generate(principal, tableId, body, aiRequestMetaOf(request, reply));
   }
 }

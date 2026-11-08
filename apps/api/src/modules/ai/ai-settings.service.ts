@@ -65,7 +65,7 @@ import { AppLogger } from '../../common/logging/app-logger.js';
 import { SCHEMA_CHANGE_PUBLISHER } from '../../common/schema/schema-core.module.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
 
-import { AiAccess, type AiCall } from './ai-access.js';
+import { AiAccess, type AiCall, type AiRequestMeta } from './ai-access.js';
 import { announceAiFieldStates } from './ai-provider-resume.js';
 
 import type { Principal } from '../../common/auth/principal.js';
@@ -302,7 +302,7 @@ export class AiSettingsService {
     principal: Principal,
     organizationId: Id<'org'>,
     body: TestAiSettingsRequest,
-    meta: RequestMeta,
+    meta: AiRequestMeta,
   ): Promise<AiSettingsTestResult> {
     const org = await this.access.requireOrgAdmin(principal, organizationId);
     const saved = await this.settings.find(org.scope);
@@ -607,6 +607,8 @@ async function probe(call: AiCall): Promise<ProbeResult> {
       settings: call.settings,
       deadline: call.deadline,
       max: AI_TEST_MAX_MODELS,
+      beforeCall: call.hooks.beforeCall,
+      ...(call.hooks.signal === undefined ? {} : { signal: call.hooks.signal }),
     });
   } catch (error) {
     const failure = errorOf(error);
@@ -626,7 +628,7 @@ async function probe(call: AiCall): Promise<ProbeResult> {
         output: { kind: 'json', schema: probeSchema, name: 'connection_test' },
         maxOutputTokens: AI_TEST_MAX_OUTPUT_TOKENS,
         deadline: call.deadline,
-        onUsage: call.onUsage,
+        ...call.hooks,
       });
       const used = completion.outputMode ?? rung;
       if (probeSchema.safeParse(extractJsonObject(completion.content)).success) {

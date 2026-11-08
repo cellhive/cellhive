@@ -13,6 +13,14 @@ export {
   type AddressClass,
 } from './address-class.js';
 export {
+  createValkeyCallSlots,
+  type CallSlot,
+  type CallSlotDecision,
+  type CallSlotLease,
+  type CallSlots,
+  type ValkeyCallSlotsOptions,
+} from './call-slots.js';
+export {
   isOutboundHttpError,
   OutboundHttpError,
   SSRF_BLOCK_REASONS,

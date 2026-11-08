@@ -7,6 +7,7 @@ import {
   aiRequestCounts,
   aiRetryCounts,
   aiTokenCounts,
+  aiUsageClampedCounts,
   AppError,
   buildProblem,
   causationRejectedCounts,
@@ -201,6 +202,16 @@ export class MetricsService implements OnApplicationBootstrap, OnApplicationShut
       collect() {
         this.reset();
         this.inc(aiQuotaExhaustedCount());
+      },
+    });
+    new Counter({
+      name: 'ai_usage_clamped_total',
+      help: 'Provider token counts past what the call could have used, counted at their bound, by kind',
+      labelNames: ['kind'],
+      registers: [this.registry],
+      collect() {
+        this.reset();
+        for (const [kind, count] of aiUsageClampedCounts()) this.inc({ kind }, count);
       },
     });
     const aiDuration = new Histogram({

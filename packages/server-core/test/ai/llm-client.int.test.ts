@@ -1,4 +1,6 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { Buffer } from 'node:buffer';
+
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import {
@@ -7,6 +9,7 @@ import {
 } from '../../src/ai/testing/fake-openai-server.js';
 import {
   AI_REASONING_ALLOWANCE_TOKENS,
+  aiUsageClampedCounts,
   AppError,
   createDeadline,
   LlmClient,
@@ -105,7 +108,12 @@ describe('LlmClient with the fake provider (T905)', () => {
   const structured = (
     llm: LlmClient,
     patch: Partial<AiProviderSettings> = {},
-    extra: { deadlineMs?: number; onUsage?: (usage: AiUsage) => void } = {},
+    extra: {
+      deadlineMs?: number;
+      onUsage?: (usage: AiUsage) => void;
+      beforeCall?: () => void | Promise<void>;
+      signal?: AbortSignal;
+    } = {},
   ) =>
     llm.completeStructured({
       organizationId: ORG,
@@ -115,6 +123,8 @@ describe('LlmClient with the fake provider (T905)', () => {
       maxOutputTokens: 300,
       deadline: createDeadline(extra.deadlineMs),
       ...(extra.onUsage === undefined ? {} : { onUsage: extra.onUsage }),
+      ...(extra.beforeCall === undefined ? {} : { beforeCall: extra.beforeCall }),
+      ...(extra.signal === undefined ? {} : { signal: extra.signal }),
     });
 
   beforeAll(async () => {
@@ -570,6 +580,226 @@ describe('LlmClient with the fake provider (T905)', () => {
       });
       expect(response.status).toBe(204);
       expect((await structured(client())).value.formula).toBe('QUEUED');
+    });
+  });
+  /**
+   * BACKLOG T1004 (CONTRACTS §29.7): the hooks of every HTTP call — the
+   * quota's `beforeCall` before each rung, resend, repair round and
+   * `GET /models`, the caller's abort signal —, `usage` read before
+   * `choices` (error answers too) and kept within what the call could have
+   * used, and a `400` stepping down only when it is about `response_format`.
+   */
+  describe('every call (T1004)', () => {
+    const reasoningCutOff = JSON.stringify({
+      choices: [{ message: { content: '', reasoning_content: 'Hmm…' }, finish_reason: 'length' }],
+      usage: { prompt_tokens: 50, completion_tokens: 300 },
+    });
+    const valid = '{"formula":"1","explanation":"x"}';
+
+    it('beforeCall runs before each rung, the reasoning resend and each repair round', async () => {
+      fake.capabilities.jsonSchema = false;
+      // json_schema (400) → json_object: cut off reasoning → resend: invalid → repair: valid.
+      fake.script({ raw: reasoningCutOff }, { content: 'not JSON' }, { content: valid });
+      let checks = 0;
+      const result = await structured(client(), {}, { beforeCall: () => void (checks += 1) });
+      expect(result.value).toEqual({ formula: '1', explanation: 'x' });
+      expect(fake.chatRequests()).toHaveLength(4);
+      expect(checks).toBe(4);
+    });
+
+    it('GET /models goes through beforeCall too', async () => {
+      let checks = 0;
+      const models = await client().listModels({
+        organizationId: ORG,
+        settings: settings(),
+        deadline: createDeadline(),
+        max: 10,
+        beforeCall: () => void (checks += 1),
+      });
+      expect(models).toEqual(['fake-model']);
+      expect(checks).toBe(1);
+      const refused = new AppError('AI_QUOTA_EXCEEDED');
+      await expect(
+        client().listModels({
+          organizationId: ORG,
+          settings: settings(),
+          deadline: createDeadline(),
+          max: 10,
+          beforeCall: () => Promise.reject(refused),
+        }),
+      ).rejects.toBe(refused);
+      expect(fake.requests.filter((request) => request.path === '/v1/models')).toHaveLength(1);
+    });
+
+    it('a beforeCall that refuses between two calls: the next call never reaches the provider', async () => {
+      fake.script({ content: 'not JSON' });
+      const refused = new AppError('AI_QUOTA_EXCEEDED');
+      let checks = 0;
+      const usages: AiUsage[] = [];
+      const error = await structured(
+        client(),
+        {},
+        {
+          onUsage: (usage) => usages.push(usage),
+          beforeCall: () => {
+            checks += 1;
+            if (checks > 1) throw refused;
+          },
+        },
+      ).catch((caught: unknown) => caught);
+      expect(error).toBe(refused);
+      expect(fake.chatRequests()).toHaveLength(1);
+      expect(usages).toHaveLength(1);
+    });
+
+    it('a 400 that is not about response_format: one call, http_status, the body never echoed', async () => {
+      fake.script({
+        status: 400,
+        raw: JSON.stringify({
+          error: { message: "This model's maximum context length is 8192 tokens", code: null },
+        }),
+      });
+      const error = await failure(structured(client()));
+      expect(error.params).toMatchObject({ reason: 'http_status', status: 400 });
+      expect(fake.chatRequests()).toHaveLength(1);
+      expect(JSON.stringify([error.message, error.params, error.errors])).not.toContain('8192');
+    });
+
+    it.each([
+      ['response_format', { error: { message: 'Unsupported value', param: 'response_format' } }],
+      ['json_schema', { error: { message: "'json_schema' is not supported with this model" } }],
+    ])('a 400 naming %s steps one rung down', async (_name, body) => {
+      fake.script({ status: 400, raw: JSON.stringify(body) }, { content: valid });
+      const result = await structured(client());
+      expect(result.outputMode).toBe('json_object');
+      expect(fake.chatRequests()).toHaveLength(2);
+    });
+
+    it('usage past what the call could use is cut to its bound: a warning without values, a metric', async () => {
+      const warnings: { fields: Record<string, unknown>; message: string }[] = [];
+      const logger = {
+        warn: (fields: Record<string, unknown>, message: string) =>
+          warnings.push({ fields, message }),
+      };
+      const before = { ...Object.fromEntries(aiUsageClampedCounts()) };
+      fake.script({
+        raw: JSON.stringify({
+          choices: [{ message: { content: valid }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 9e15, completion_tokens: 1e300 },
+        }),
+      });
+      const usages: AiUsage[] = [];
+      const result = await structured(
+        client({ logger }),
+        {},
+        {
+          onUsage: (usage) => usages.push(usage),
+        },
+      );
+      const bytes = Buffer.byteLength(JSON.stringify(fake.chatRequests()[0]?.body));
+      expect(usages).toEqual([
+        {
+          promptTokens: bytes,
+          completionTokens: 300 + AI_REASONING_ALLOWANCE_TOKENS,
+          estimated: false,
+        },
+      ]);
+      expect(result.usage).toEqual(usages[0]);
+      expect(Object.fromEntries(aiUsageClampedCounts())).toEqual({
+        prompt: (before['prompt'] ?? 0) + 1,
+        completion: (before['completion'] ?? 0) + 1,
+      });
+      expect(warnings.map((warning) => warning.fields)).toEqual([
+        { provider_host: `localhost:${String(fake.port)}`, kind: 'prompt' },
+        { provider_host: `localhost:${String(fake.port)}`, kind: 'completion' },
+      ]);
+      expect(JSON.stringify(warnings)).not.toMatch(/9e\+?15|9000000000000000|1e\+?300/u);
+    });
+
+    it('usage within bounds is kept as reported; a count that is not a number is estimated', async () => {
+      fake.script(
+        {
+          raw: JSON.stringify({
+            choices: [{ message: { content: valid } }],
+            usage: { prompt_tokens: 12, completion_tokens: 7 },
+          }),
+        },
+        {
+          raw: JSON.stringify({
+            choices: [{ message: { content: valid } }],
+            usage: { prompt_tokens: -1, completion_tokens: 'many' },
+          }),
+        },
+      );
+      expect((await structured(client())).usage).toEqual({
+        promptTokens: 12,
+        completionTokens: 7,
+        estimated: false,
+      });
+      expect((await structured(client())).usage).toMatchObject({ estimated: true });
+    });
+
+    it('choices: [] with usage: the usage is counted, then invalid_response', async () => {
+      fake.script({
+        raw: JSON.stringify({ choices: [], usage: { prompt_tokens: 40, completion_tokens: 9 } }),
+      });
+      const usages: AiUsage[] = [];
+      const error = await failure(
+        structured(client(), {}, { onUsage: (usage) => usages.push(usage) }),
+      );
+      expect(error.params).toMatchObject({ reason: 'invalid_response' });
+      expect(usages).toEqual([{ promptTokens: 40, completionTokens: 9, estimated: false }]);
+    });
+
+    it('an error answer that reports usage is counted before the http_status error', async () => {
+      fake.script({
+        status: 500,
+        raw: JSON.stringify({
+          error: { message: 'upstream failed' },
+          usage: { prompt_tokens: 30, completion_tokens: 2 },
+        }),
+      });
+      const usages: AiUsage[] = [];
+      const error = await failure(
+        structured(client(), { outputMode: 'prompt' }, { onUsage: (usage) => usages.push(usage) }),
+      );
+      expect(error.params).toMatchObject({ reason: 'http_status', status: 500 });
+      expect(usages).toEqual([{ promptTokens: 30, completionTokens: 2, estimated: false }]);
+    });
+
+    it('an aborted signal closes the socket at once and rejects with its reason', async () => {
+      // A provider of its own: the sockets other tests left are not counted.
+      const slow = await startFakeOpenAiServer({ capabilities: { delayMs: 10_000 } });
+      try {
+        const llm = client({
+          allowlist: [{ host: 'localhost', wildcard: false, port: slow.port }],
+        });
+        const abort = new AbortController();
+        const reason = new Error('aborted');
+        const pending = structured(llm, { baseUrl: slow.baseUrl }, { signal: abort.signal }).catch(
+          (caught: unknown) => caught,
+        );
+        await vi.waitFor(() => {
+          expect(slow.chatRequests()).toHaveLength(1);
+        });
+        expect(slow.openConnections()).toBe(1);
+        const started = performance.now();
+        abort.abort(reason);
+        expect(await pending).toBe(reason);
+        await vi.waitFor(
+          () => {
+            expect(slow.openConnections()).toBe(0);
+          },
+          { timeout: 1_000 },
+        );
+        expect(performance.now() - started).toBeLessThan(1_000);
+        // Aborted before the call: nothing is sent.
+        const again = structured(llm, { baseUrl: slow.baseUrl }, { signal: abort.signal });
+        expect(await again.catch((caught: unknown) => caught)).toBe(reason);
+        expect(slow.requests).toHaveLength(1);
+      } finally {
+        await slow.close();
+      }
     });
   });
 });

@@ -25,10 +25,9 @@ import { APP_CONFIG, DB } from '../../common/tokens.js';
 import { organizationTimeZone, readabilityOf } from '../field/computed-fields.js';
 import { editedComputedField, prepareLikeSave } from '../field/computed-preview.service.js';
 
-import { AiAccess } from './ai-access.js';
+import { AiAccess, type AiRequestMeta } from './ai-access.js';
 
 import type { Principal } from '../../common/auth/principal.js';
-import type { RequestMeta } from '../../common/auth/request-meta.js';
 
 /**
  * `POST /tables/:tableId/ai/formula` (CONTRACTS §29.2, BACKLOG T907): a
@@ -52,7 +51,7 @@ export class AiFormulaService {
     principal: Principal,
     tableId: Id<'tbl'>,
     body: AiFormulaRequest,
-    meta: RequestMeta,
+    meta: AiRequestMeta,
   ): Promise<AiFormula> {
     const { base, table } = await this.schemaAccess.requireTable(principal, tableId, 'manage');
     const scope = base.org.scope;
@@ -115,7 +114,7 @@ export class AiFormulaService {
             output: { kind: 'json', schema: aiFormulaAnswerSchema, name: 'formula' },
             maxOutputTokens: AI_FORMULA_MAX_OUTPUT_TOKENS,
             deadline: call.deadline,
-            onUsage: call.onUsage,
+            ...call.hooks,
           },
           check,
         );

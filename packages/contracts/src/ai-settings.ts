@@ -53,8 +53,13 @@ export const AI_TEST_MAX_MODELS = 200;
 export const AI_TEST_MAX_OUTPUT_TOKENS = 50;
 /** Interactive AI requests per user per minute (`429 RATE_LIMITED`). */
 export const AI_REQUESTS_PER_MINUTE = 10;
-/** Interactive AI requests in flight per user, and per API instance. */
+/**
+ * Interactive AI requests in flight per user and per organization — across
+ * every API instance (Valkey leases) — and per API process (a resource
+ * ceiling).
+ */
 export const AI_CONCURRENT_PER_USER = 2;
+export const AI_CONCURRENT_PER_ORG = 8;
 export const AI_CONCURRENT_PER_INSTANCE = 8;
 /** `input` / `output` of an `ai.requested` audit entry when `log_prompts` (UTF-8 bytes each). */
 export const AI_AUDIT_TEXT_MAX_BYTES = 4_096;

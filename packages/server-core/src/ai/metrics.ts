@@ -25,6 +25,7 @@ const requests = new Map<string, number>();
 const tokens = new Map<string, number>();
 const retries = new Map<AiFeature, number>();
 let quotaExhausted = 0;
+const clamped = new Map<'prompt' | 'completion', number>();
 let durationObserver: ((feature: AiFeature, seconds: number) => void) | null = null;
 
 const add = <K>(map: Map<K, number>, key: K, count: number) => {
@@ -43,6 +44,11 @@ export function recordAiRequest(outcome: AiRequestOutcome): void {
 /** A call refused because the daily token quota was used up. */
 export function recordAiQuotaExhausted(): void {
   quotaExhausted += 1;
+}
+
+/** A provider `usage` count past what the call could have used, cut to its bound. */
+export function recordAiUsageClamped(kind: 'prompt' | 'completion'): void {
+  add(clamped, kind, 1);
 }
 
 /** The process exposing `/metrics` observes durations in its histogram. */
@@ -81,4 +87,9 @@ export function aiRetryCounts(): ReadonlyMap<AiFeature, number> {
 /** `ai_quota_exhausted_total` so far in this process. */
 export function aiQuotaExhaustedCount(): number {
   return quotaExhausted;
+}
+
+/** `ai_usage_clamped_total{kind}` so far in this process. */
+export function aiUsageClampedCounts(): ReadonlyMap<'prompt' | 'completion', number> {
+  return clamped;
 }

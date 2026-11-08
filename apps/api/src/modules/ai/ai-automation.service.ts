@@ -29,10 +29,9 @@ import { AccessService, notFound, permissionDenied } from '../../common/access/a
 import { APP_CONFIG } from '../../common/tokens.js';
 import { AutomationService } from '../automation/automation.service.js';
 
-import { AiAccess } from './ai-access.js';
+import { AiAccess, type AiRequestMeta } from './ai-access.js';
 
 import type { Principal } from '../../common/auth/principal.js';
-import type { RequestMeta } from '../../common/auth/request-meta.js';
 
 function cannotManage(): AppError {
   return permissionDenied(
@@ -66,7 +65,7 @@ export class AiAutomationService {
     principal: Principal,
     baseId: Id<'bse'>,
     body: AiAutomationDraftRequest,
-    meta: RequestMeta,
+    meta: AiRequestMeta,
   ): Promise<AiAutomationDraft> {
     const base = await this.access.requireBase(principal, baseId, 'read');
     if (!managesAnyAutomation(base.access)) throw cannotManage();
@@ -156,7 +155,7 @@ export class AiAutomationService {
             },
             maxOutputTokens: AI_AUTOMATION_MAX_OUTPUT_TOKENS,
             deadline: call.deadline,
-            onUsage: call.onUsage,
+            ...call.hooks,
           },
           check,
         );

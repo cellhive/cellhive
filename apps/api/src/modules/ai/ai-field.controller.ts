@@ -8,15 +8,15 @@ import {
   type AiFieldPreviewRequest,
   type Id,
 } from '@cellhive/contracts';
-import { Body, Controller, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 
 import { CurrentPrincipal, type Principal } from '../../common/auth/principal.js';
-import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { ZodValidationPipe } from '../../common/validation/zod-validation.pipe.js';
 
 import { AiFieldService } from './ai-field.service.js';
+import { aiRequestMetaOf } from './client-abort.js';
 
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 /** AI fields: preview on 5 records and generation of the values (CONTRACTS §29.5, BACKLOG T910). */
 @Controller()
@@ -30,8 +30,9 @@ export class AiFieldController {
     @Body(new ZodValidationPipe(aiFieldPreviewRequestSchema)) body: AiFieldPreviewRequest,
     @CurrentPrincipal() principal: Principal,
     @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<AiFieldPreview> {
-    return this.fields.preview(principal, tableId, body, requestMetaOf(request));
+    return this.fields.preview(principal, tableId, body, aiRequestMetaOf(request, reply));
   }
 
   @Post('fields/:fieldId/ai/generate')
