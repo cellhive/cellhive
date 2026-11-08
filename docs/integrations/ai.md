@@ -44,7 +44,7 @@ Open **Organization settings** → **AI** (`/o/<organization>/settings/ai`). Onl
    - **Model**: the model name exactly as your provider writes it (at most 200 characters). After a successful test, the field suggests the models the provider lists.
    - **API key** (optional): leave it empty for a provider that needs none, such as a local Ollama.
 2. Click **Save changes**.
-3. Click **Test connection**. Cellhive asks the provider for its models, then sends one short request (a fixed question about the colour of the sky, at most 50 answer tokens, none of your data) and finds the best answer format the provider supports (§2.1). If Cellhive may not reach the host, the result offers **Allow `host:port`**, which adds the entry to the organization's HTTP allowlist and tests again (§3). The test works on unsaved values too, and counts against the quota and the rate limit like any AI request.
+3. Click **Test connection**. Cellhive asks the provider for its models (it shows them only when the answer is an OpenAI model list: `"object": "list"` with string ids, at most 200 ids of at most 200 characters), then sends one short request (a fixed question about the colour of the sky, at most 50 answer tokens, none of your data) and finds the best answer format the provider supports (§2.1). If Cellhive may not reach the host, the result offers **Allow `host:port`**, which adds the entry to the organization's HTTP allowlist and tests again (§3). The test works on unsaved values too, and counts against the quota and the rate limit like any AI request.
 4. Turn on **Use AI in this organization**. The switch applies at once; it stays disabled until a base URL and a model are saved.
 5. Optional: **Let AI see record values** (§4.2). AI fields and AI steps need it, and Ask AI writes a short summary only with it.
 
@@ -52,6 +52,8 @@ Open **Organization settings** → **AI** (`/o/<organization>/settings/ai`). Onl
 
 - Changing the base URL to **another host** does not take the key along: until you enter the key again, every call fails with `AI_PROVIDER_ERROR` / `secret_host_not_allowed`, and the key is neither decrypted nor sent. The page warns about this before you save.
 - A base URL that is an IP address cannot hold a key (`SECRET_HOST_NOT_ALLOWED`): use the provider's host name.
+- **A key over plain `http`** crosses the network unencrypted. Cellhive accepts it without asking only when the host is an entry of the organization's HTTP allowlist that resolves to internal addresses only (§3: a model on your own network). For any other `http` URL, the page shows **The key will travel unencrypted** and asks you to tick **Send the key to … over http anyway** before it saves or tests (API: `422 INSECURE_KEY_NOT_CONFIRMED` until the request sends `"confirm_insecure": true`). Prefer the provider's `https` URL.
+- The key's allowed hosts (`PATCH /api/v1/secrets/:id`) only gain a host together with a new value: a request that adds a host without `value` is refused with `SECRET_VALUE_REQUIRED`, so a key is only ever sent where it was entered for. Removing a host needs no value. The same holds for HTTP header secrets ([webhooks.md](webhooks.md)).
 - The key is not listed with the HTTP secrets under **Integrations**, cannot be picked in automation steps, and cannot be deleted while the AI settings use it (`409 SECRET_IN_USE`).
 
 **Turning AI off** hides every AI entry point at once and sends nothing more. AI fields keep their values and pause (§6.6); automations with AI steps stay on, but those steps fail with `ai_unavailable` until AI is back (§7).
@@ -239,7 +241,7 @@ On such an instance:
 
 There is no instance-wide provider that the operator configures once for every organization; it was left out of the first AI release.
 
-**Why `off` exists.** With `org`, an organization admin can allowlist any internal host name the Cellhive containers resolve and point the AI settings at it; **Test connection** then shows whether something answers there (HTTP status, model list). This is the same trust as for HTTP steps: choose `off` when organizations sharing the instance do not trust each other, and whenever `ALLOW_ORG_CREATION=true`. The setting is read at start-up: change `.env`, then restart the `api` and `worker` (or `app`) containers.
+**Why `off` exists.** With `org`, an organization admin can allowlist any internal host name the Cellhive containers resolve and point the AI settings at it; **Test connection** then shows whether something answers there (an HTTP status, the response time, and the model ids when the service answers like an OpenAI model list). This is the same trust as for HTTP steps. **An instance that hosts several organizations should run `off`** — always when `ALLOW_ORG_CREATION=true`, and whenever the organizations sharing the instance do not trust each other with your internal network. The setting is read at start-up: change `.env`, then restart the `api` and `worker` (or `app`) containers.
 
 ---
 
@@ -485,8 +487,10 @@ The same applies to members' MCP clients, with more at stake because those clien
 | `422 AI_NOT_CONFIGURED` | Same cause: AI is off for the organization, or has no base URL or model. |
 | `422 AI_RECORD_DATA_DISABLED`; "AI field (needs record values)" disabled | The feature sends record values and **Let AI see record values** is off (§4.2). |
 | `422 VALIDATION_FAILED` / `RECORD_DATA_NOT_CONFIRMED` | API only: send `"confirm": true` with `"allow_record_data": true`. |
-| `422 VALIDATION_FAILED` / `INVALID_URL` on the base URL | Not `http`/`https`, or contains a user name, query or fragment. Longer than 2,048 characters is `TOO_BIG`. |
+| `422 VALIDATION_FAILED` / `INVALID_URL` on the base URL | Not `http`/`https`, or contains a user name, query or fragment (`params.reason`: `query_or_fragment`). Longer than 2,048 characters is `TOO_BIG`. |
 | `422 VALIDATION_FAILED` / `SECRET_HOST_NOT_ALLOWED` on the key | The base URL is an IP address, which cannot hold a key: use a host name. |
+| `422 VALIDATION_FAILED` / `INSECURE_KEY_NOT_CONFIRMED` | The key would go over plain `http` to a host that is not an allowlisted internal one (§1). Use the `https` URL, or tick **Send the key to … over http anyway** (API: `"confirm_insecure": true`). |
+| `422 VALIDATION_FAILED` / `SECRET_VALUE_REQUIRED` | The key's allowed hosts gained a host without a new value: send the value with the new list, or save the AI settings with the key again (§1). |
 | Test: "Cellhive may not call …" (`ssrf_blocked`) | The host needs an allowlist entry: click **Allow `host:port`** (§3). If it says internal addresses are closed, the instance runs `HTTP_PRIVATE_ALLOWLIST=off` (§3.1). If the entry exists already, the address is one Cellhive never calls, or the name does not resolve from the Cellhive containers. |
 | Test: "Cellhive could not reach the provider" (`network`) | Wrong host or port, the server is down, or it listens on `127.0.0.1` only (Ollama: `OLLAMA_HOST=0.0.0.0:11434`, §2.4). In Docker, `localhost` is the container itself (§3). |
 | Test: "The provider refused the key" (HTTP `401`/`403`) | Wrong or expired key: **Replace key**. |
