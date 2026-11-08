@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { AUTOMATION_STEP_ERROR_CODES } from '../src/automation-runs.js';
 import { ERROR_DETAIL_CODES, SECRET_DETAIL_CODES } from '../src/error-details.js';
 import {
+  allowedHostsAddHost,
   createSecretRequestSchema,
+  isValueSentSecretKind,
   SECRET_HOST_NOT_ALLOWED,
   SECRET_HOSTS_REQUIRED,
   SECRET_MAX_ALLOWED_HOSTS,
+  SECRET_VALUE_REQUIRED,
   TOO_MANY_ALLOWED_HOSTS,
   updateSecretRequestSchema,
 } from '../src/secrets.js';
@@ -102,5 +105,42 @@ describe('secret allowed_hosts (T701)', () => {
       expect(ERROR_DETAIL_CODES).toContain(code);
     }
     expect(AUTOMATION_STEP_ERROR_CODES).toContain('secret_host_not_allowed');
+  });
+});
+
+const NOW = new Date('2026-11-08T10:00:00Z');
+
+/**
+ * BACKLOG T1008 (CONTRACTS §24): a new `allowed_hosts` list of a secret
+ * whose value is sent (`http_header`, `ai_api_key`) needs the value again
+ * when it lets the secret reach a host it could not reach.
+ */
+describe('allowed hosts that add a host (T1008)', () => {
+  it.each([
+    ['the same list', ['api.crm.test'], ['api.crm.test'], null, false],
+    ['the same list, reordered', ['a.test', 'b.test'], ['b.test', 'a.test'], null, false],
+    ['a host removed', ['a.test', 'b.test'], ['a.test'], null, false],
+    ['another host', ['a.test'], ['evil.test'], null, true],
+    ['a host added', ['a.test'], ['a.test', 'evil.test'], null, true],
+    ['a port added', ['a.test'], ['a.test:80'], null, true],
+    ['a wildcard instead of the host', ['api.crm.test'], ['*.crm.test'], null, true],
+    // Transition period: sent to any host until it ends, so a list only narrows it.
+    ['a list during the transition period', [], ['a.test'], '2026-11-20T00:00:00Z', false],
+    // After it, the secret reaches no host: a list adds hosts.
+    ['a list after the transition period', [], ['a.test'], '2026-11-01T00:00:00Z', true],
+    ['a list without a transition period', [], ['a.test'], null, true],
+  ] as const)('%s → %s', (_name, current, next, until, expected) => {
+    expect(
+      allowedHostsAddHost({ allowed_hosts: current, legacy_hosts_until: until }, next, NOW),
+    ).toBe(expected);
+  });
+
+  it('applies to the kinds whose value is sent, not to signing secrets or bots', () => {
+    expect(isValueSentSecretKind('http_header')).toBe(true);
+    expect(isValueSentSecretKind('ai_api_key')).toBe(true);
+    expect(isValueSentSecretKind('webhook_signing')).toBe(false);
+    expect(isValueSentSecretKind('telegram_bot')).toBe(false);
+    expect(SECRET_DETAIL_CODES).toContain(SECRET_VALUE_REQUIRED);
+    expect(ERROR_DETAIL_CODES).toContain(SECRET_VALUE_REQUIRED);
   });
 });

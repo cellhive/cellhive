@@ -68,6 +68,8 @@ export interface AiDraft {
   readonly structuredOutput: AiStructuredOutput;
   readonly tokenParam: AiTokenParam;
   readonly timeout: string;
+  /** (T1008) The person accepts that the key goes over plain `http` (`confirm_insecure`). */
+  readonly confirmInsecure: boolean;
 }
 
 /** The draft of saved settings: nothing changed yet; the quota shown with `formatCount` ("1,000,000"). */
@@ -84,6 +86,7 @@ export function draftOf(
     structuredOutput: settings.structured_output,
     tokenParam: settings.token_param,
     timeout: String(settings.request_timeout_seconds),
+    confirmInsecure: false,
   };
 }
 
@@ -156,13 +159,34 @@ export function keyHostMismatch(
   return { saved, next };
 }
 
+/**
+ * (T1008, CONTRACTS §29.1) The host a key would reach over plain `http`
+ * with the draft — a key typed, or the saved key kept when it is bound to
+ * the draft's host — or `null` (an `https` URL, no key, a key that stays
+ * behind). The server asks for `confirm_insecure` unless the host is an
+ * allowlist entry on the internal network, which the page cannot tell:
+ * the warning shows for every such host.
+ */
+export function insecureKeyHostOf(settings: AiSettingsDto, draft: AiDraft): string | null {
+  const url = parseHttpUrl(draft.baseUrl);
+  if (url === null || url.protocol !== 'http:') return null;
+  const typed = draft.key.mode === 'replace' && draft.key.value.trim() !== '';
+  const kept =
+    draft.key.mode === 'keep' &&
+    settings.api_key !== null &&
+    keyHostMismatch(settings, draft) === null;
+  if (!typed && !kept) return null;
+  // A key cannot go to an IP address at all (`keyIp`).
+  return keyHostOf(draft.baseUrl) === null ? null : url.host;
+}
+
 /** A number typed with or without separators ("1,000,000", "1.000.000"); `null` when not one. */
 export function parseCount(text: string): number | null {
   const digits = text.replace(/[\s.,_]/gu, '');
   return /^[0-9]{1,12}$/u.test(digits) ? Number(digits) : null;
 }
 
-export type DraftField = 'baseUrl' | 'model' | 'key' | 'limit' | 'timeout';
+export type DraftField = 'baseUrl' | 'model' | 'key' | 'insecure' | 'limit' | 'timeout';
 /** Reason keys of `orgAi:errors.*`. */
 export type DraftError =
   'url' | 'urlTooLong' | 'modelTooLong' | 'keyFormat' | 'keyIp' | 'limit' | 'timeout';
@@ -174,6 +198,7 @@ export const SERVER_PATHS: Readonly<Record<string, DraftField>> = {
   api_key: 'key',
   'api_key.value': 'key',
   'api_key.secret_id': 'key',
+  confirm_insecure: 'insecure',
   daily_token_limit: 'limit',
   request_timeout_seconds: 'timeout',
 };
@@ -232,20 +257,37 @@ function providerChanges(settings: AiSettingsDto, draft: AiDraft): ProviderChang
   return body;
 }
 
-/** The `PUT` body of the form: changed keys only, `null` when nothing changed. */
+/** `confirm_insecure: true` when the person ticked it and a key would go over `http`. */
+function insecureConfirmation(
+  settings: AiSettingsDto,
+  draft: AiDraft,
+): { readonly confirm_insecure?: true } {
+  return draft.confirmInsecure && insecureKeyHostOf(settings, draft) !== null
+    ? { confirm_insecure: true }
+    : {};
+}
+
+/**
+ * The `PUT` body of the form: changed keys only, `null` when nothing
+ * changed (the `http` confirmation alone is no change).
+ */
 export function changesOf(settings: AiSettingsDto, draft: AiDraft): UpdateAiSettingsRequest | null {
   const body: UpdateAiSettingsRequest = { ...providerChanges(settings, draft) };
   const limit = draft.unlimited ? null : parseCount(draft.limit);
   if (limit !== settings.daily_token_limit && (draft.unlimited || limit !== null)) {
     body.daily_token_limit = limit;
   }
-  return Object.keys(body).length === 0 ? null : body;
+  return Object.keys(body).length === 0
+    ? null
+    : { ...body, ...insecureConfirmation(settings, draft) };
 }
 
 /** The `POST …/test` body: the unsaved provider changes, if any. */
 export function testRequestOf(settings: AiSettingsDto, draft: AiDraft): TestAiSettingsRequest {
   const changes = providerChanges(settings, draft);
-  return Object.keys(changes).length === 0 ? {} : { settings: changes };
+  return Object.keys(changes).length === 0
+    ? {}
+    : { settings: changes, ...insecureConfirmation(settings, draft) };
 }
 
 /** What a test result says: the message keys of `orgAi:test.*` and whether the allowlist helps. */

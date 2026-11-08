@@ -95,10 +95,46 @@ export async function resolveOutboundTarget(
   }
 }
 
+/**
+ * Whether `url` names a host that an allowlist entry of the organization
+ * opens and that resolves to internal addresses only — private, loopback,
+ * link-local, ULA… (CONTRACTS §29.1, T1008): where an API key may travel
+ * over plain `http` without the caller confirming it, since it never
+ * crosses a public network. `false` for an IP literal, a host without an
+ * applicable entry, any public or never-reachable address, a lookup that
+ * fails, and always with `HTTP_PRIVATE_ALLOWLIST=off` (no entry opens a
+ * private address there). A check, not a call: nothing is counted in
+ * `http_ssrf_blocked_total`.
+ */
+export async function isAllowlistedInternalHost(
+  input: string | OutboundUrl,
+  options: ResolveOutboundOptions,
+): Promise<boolean> {
+  try {
+    const { addresses } = await vet(input, options);
+    // Every address passed the rules above: a private one only through an entry.
+    return addresses.every((address) => classifyAddress(address) === 'private');
+  } catch (error) {
+    if (error instanceof OutboundHttpError || isLookupQueueTimeout(error)) return false;
+    throw error;
+  }
+}
+
 async function resolve(
   input: string | OutboundUrl,
   options: ResolveOutboundOptions,
 ): Promise<OutboundTarget> {
+  const { url, addresses } = await vet(input, options);
+  const [address = ''] = addresses;
+  const family = isIP(address);
+  return { url, address, family: family === 6 ? 6 : 4 };
+}
+
+/** The URL and every address of its host, each one allowed by the rules of {@link resolveOutboundTarget}. */
+async function vet(
+  input: string | OutboundUrl,
+  options: ResolveOutboundOptions,
+): Promise<{ url: OutboundUrl; addresses: string[] }> {
   const url = typeof input === 'string' ? parseOutboundUrl(input) : input;
   let entries: readonly OutboundAllowlistEntry[] | null = null;
   const loadEntries = async (): Promise<readonly OutboundAllowlistEntry[]> => {
@@ -134,9 +170,7 @@ async function resolve(
       : opening.length > 0;
     if (!opens) throw ssrfBlocked('private_address');
   }
-  const [address = ''] = addresses;
-  const family = isIP(address);
-  return { url, address, family: family === 6 ? 6 : 4 };
+  return { url, addresses };
 }
 
 async function addressesOf(url: OutboundUrl, options: ResolveOutboundOptions): Promise<string[]> {

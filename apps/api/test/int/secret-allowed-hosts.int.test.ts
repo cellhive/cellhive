@@ -293,8 +293,15 @@ describe('secret allowed hosts (T701, P64)', () => {
       'VALIDATION_FAILED',
     );
 
+    // T1008: a host added needs the value again; nothing changes without it.
+    const withoutValue = await fx.call('owner', 'PATCH', `/secrets/${header.id}`, {
+      allowed_hosts: ['api.crm.test', 'hooks.crm.test:8443'],
+    });
+    expectProblem(withoutValue, 422, 'VALIDATION_FAILED');
+    expect(codes(withoutValue)).toEqual([{ path: 'value', code: 'SECRET_VALUE_REQUIRED' }]);
     const patched = await fx.call('owner', 'PATCH', `/secrets/${header.id}`, {
       allowed_hosts: ['api.crm.test', 'hooks.crm.test:8443'],
+      value: AUTH_CANARY,
     });
     expect(patched.statusCode, patched.body).toBe(200);
     expect(secretSchema.parse(patched.json()).allowed_hosts).toEqual([
@@ -315,7 +322,7 @@ describe('secret allowed hosts (T701, P64)', () => {
     });
     expect(rows[1]).toMatchObject({
       before: { allowed_hosts: ['api.crm.test', '*.xn--bcher-kva.example:8443'] },
-      after: { allowed_hosts: ['api.crm.test', 'hooks.crm.test:8443'] },
+      after: { allowed_hosts: ['api.crm.test', 'hooks.crm.test:8443'], value_replaced: true },
     });
     expect(JSON.stringify(rows)).not.toContain(AUTH_CANARY);
 

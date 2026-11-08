@@ -49,6 +49,8 @@ export const AI_USAGE_RETENTION_DAYS = 400;
 export const AI_USAGE_MAX_DAYS = 90;
 /** Model ids returned by "Test connection". */
 export const AI_TEST_MAX_MODELS = 200;
+/** Longest model id "Test connection" returns (a longer one is left out, T1008). */
+export const AI_TEST_MAX_MODEL_ID_LENGTH = 200;
 /** `max_output_tokens` of the "Test connection" call. */
 export const AI_TEST_MAX_OUTPUT_TOKENS = 50;
 /** Interactive AI requests per user per minute (`429 RATE_LIMITED`). */
@@ -74,7 +76,8 @@ const providerBaseUrlSchema = z
       'OpenAI-compatible base URL (`http`/`https`, no user info), e.g. ' +
       '`https://api.openai.com/v1` or `http://ollama:11434/v1`; `/chat/completions` and ' +
       '`/models` are appended. A loopback or private host needs an HTTP allowlist entry ' +
-      '(CONTRACTS §25.4)',
+      '(CONTRACTS §25.4). With a key, a plain `http` URL needs `confirm_insecure: true` ' +
+      'unless an allowlist entry opens its host and it resolves to internal addresses only',
     example: 'https://api.openai.com/v1',
   });
 
@@ -103,7 +106,8 @@ export const aiApiKeyInputSchema = z
     description:
       '`{ value }` stores the key as an `ai_api_key` secret (replacing the value of the ' +
       'current one) with `allowed_hosts` = the host (and port) of the provider URL; ' +
-      '`{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key',
+      '`{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key. ' +
+      'A key sent over plain `http` needs `confirm_insecure` (`INSECURE_KEY_NOT_CONFIRMED`)',
   });
 export type AiApiKeyInput = z.infer<typeof aiApiKeyInputSchema>;
 
@@ -130,6 +134,22 @@ const providerFields = {
     .optional(),
 };
 
+/**
+ * Accepts a key travelling over plain `http` (T1008): needed when the
+ * provider URL is `http`, a key would be sent to it and its host is not
+ * an allowlist entry resolving to internal addresses only — else
+ * `INSECURE_KEY_NOT_CONFIRMED` (path `confirm_insecure`, `params.host`).
+ */
+const confirmInsecureSchema = z
+  .literal(true)
+  .optional()
+  .meta({
+    description:
+      'Send the key over plain `http` anyway: needed for an `http` provider URL with a key ' +
+      'unless an allowlist entry opens its host and it resolves to internal addresses only ' +
+      '(`INSECURE_KEY_NOT_CONFIRMED`)',
+  });
+
 const dailyTokenLimitSchema = z
   .int()
   .min(AI_MIN_DAILY_TOKEN_LIMIT)
@@ -148,6 +168,7 @@ export const updateAiSettingsRequestSchema = z
       description: 'Turning it on needs `confirm: true` (`RECORD_DATA_NOT_CONFIRMED`)',
     }),
     confirm: z.literal(true).optional(),
+    confirm_insecure: confirmInsecureSchema,
     log_prompts: z.boolean().optional(),
     daily_token_limit: dailyTokenLimitSchema.optional(),
   })
@@ -193,6 +214,7 @@ export const testAiSettingsRequestSchema = z
     settings: z.strictObject(providerFields).optional().meta({
       description: 'Unsaved provider settings to try; keys left out are the saved ones',
     }),
+    confirm_insecure: confirmInsecureSchema,
   })
   .meta({ id: 'TestAiSettingsRequest' });
 export type TestAiSettingsRequest = z.infer<typeof testAiSettingsRequestSchema>;
@@ -211,7 +233,10 @@ export const aiSettingsTestResultSchema = z
       .array(z.string())
       .nullable()
       .meta({
-        description: `Model ids of \`GET /models\` (at most ${String(AI_TEST_MAX_MODELS)}); \`null\` when the provider has none`,
+        description:
+          `Model ids of \`GET /models\` (at most ${String(AI_TEST_MAX_MODELS)}, each at most ` +
+          `${String(AI_TEST_MAX_MODEL_ID_LENGTH)} characters); \`null\` when the provider has ` +
+          'none or answers anything but an OpenAI model list (`object: "list"`, `data[].id` strings)',
       }),
     structured_output: z.enum(AI_OUTPUT_RUNGS).nullable().meta({
       description: 'Best rung the provider answered correctly; `null` when none did',
@@ -282,3 +307,12 @@ export type OrganizationAi = z.infer<typeof organizationAiSchema>;
 
 /** `VALIDATION_FAILED` detail (path `confirm`): `allow_record_data` turned on without `confirm: true`. */
 export const RECORD_DATA_NOT_CONFIRMED = 'RECORD_DATA_NOT_CONFIRMED';
+/**
+ * `VALIDATION_FAILED` detail (path `confirm_insecure`, T1008): a key would
+ * be sent over plain `http` to a host that is not an allowlist entry
+ * resolving to internal addresses, without `confirm_insecure: true` —
+ * `params.host` = the host (and port) of the provider URL.
+ */
+export const INSECURE_KEY_NOT_CONFIRMED = 'INSECURE_KEY_NOT_CONFIRMED';
+/** `params.reason` of `INVALID_URL` (path `provider_base_url`) for a URL with a query or fragment. */
+export const AI_BASE_URL_QUERY_OR_FRAGMENT = 'query_or_fragment';

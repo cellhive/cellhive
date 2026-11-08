@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 
+import { AI_TEST_MAX_MODEL_ID_LENGTH, type Id } from '@cellhive/contracts';
 import { z } from 'zod';
 
 import { AppError } from '../errors/app-error.js';
@@ -33,8 +34,6 @@ import {
   zodProblems,
   type AiValidation,
 } from './repair.js';
-
-import type { Id } from '@cellhive/contracts';
 
 /** The provider part of an organization's AI settings (`meta.ai_settings`). */
 export interface AiProviderSettings {
@@ -244,9 +243,15 @@ function isReasoningCutOff(error: unknown): boolean {
   );
 }
 
-/** `GET /models` of OpenAI-compatible servers (OpenAI, Ollama, vLLM, llama.cpp, LiteLLM). */
+/**
+ * `GET /models` of OpenAI-compatible servers (OpenAI, Ollama, vLLM,
+ * llama.cpp, LiteLLM): `{ "object": "list", "data": [{ "id": "…" }, …] }`.
+ * Any other answer is not a model list (T1008): "Test connection" shows no
+ * models rather than what some other service answered.
+ */
 const modelsResponseSchema = z.object({
-  data: z.array(z.object({ id: z.string().min(1).max(500) })),
+  object: z.literal('list'),
+  data: z.array(z.object({ id: z.string() })),
 });
 
 const schemaCache = new WeakMap<z.ZodType, LlmJsonSchema>();
@@ -401,9 +406,12 @@ export class LlmClient {
   /**
    * The model ids of `GET {base}/models` ("Test connection", T906), at most
    * `max`, in the provider's order — through the same door as `complete`
-   * (allowlist, key host check, `beforeCall`, no redirect, 1 MiB). Throws
-   * `AI_PROVIDER_ERROR` (`http_status` for a provider without the route)
-   * or `AI_TIMEOUT`.
+   * (allowlist, key host check, `beforeCall`, no redirect, 1 MiB). Only an
+   * OpenAI-shaped list counts (`object: "list"`, `data[].id` strings); ids
+   * that are empty or longer than {@link AI_TEST_MAX_MODEL_ID_LENGTH} are
+   * left out. Throws `AI_PROVIDER_ERROR` (`http_status` for a provider
+   * without the route, `invalid_response` for another answer) or
+   * `AI_TIMEOUT`.
    */
   async listModels(
     request: {
@@ -425,7 +433,10 @@ export class LlmClient {
     }
     try {
       const parsed = modelsResponseSchema.parse(JSON.parse(response.body.toString('utf8')));
-      return parsed.data.slice(0, request.max).map((model) => model.id);
+      return parsed.data
+        .map((model) => model.id)
+        .filter((id) => id !== '' && id.length <= AI_TEST_MAX_MODEL_ID_LENGTH)
+        .slice(0, request.max);
     } catch {
       throw aiProviderError('invalid_response', { host });
     }

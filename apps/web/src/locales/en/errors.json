@@ -316,6 +316,7 @@
     "SECRET_HOSTS_REQUIRED": "List at least one host this secret may be sent to.",
     "TOO_MANY_ALLOWED_HOSTS": "A secret can list at most 20 allowed hosts.",
     "SECRET_HOST_NOT_ALLOWED": "This secret may not be sent to the host of this URL (a plain http URL needs an allowed host with its port). Use an allowed host, or add this host to the secret in the organization settings.",
+    "SECRET_VALUE_REQUIRED": "Enter the value again to send it to another host: a secret only goes to the hosts it was entered for.",
     "SECRET_HOST_NOT_ALLOWED_legacy_expired": "The secret was created before allowed hosts existed and its transition period is over: set its allowed hosts in the organization settings.",
     "INVALID_ALLOWLIST_PATTERN": "Enter a host name such as n8n.internal or *.corp.example, optionally with a port (n8n.internal:5678). IP addresses and ranges are not accepted.",
     "ALLOWLIST_ENTRY_EXISTS": "This host is already in the allowlist.",
@@ -372,6 +373,7 @@
     "AI_NOT_CONFIGURED": "AI is not set up or is turned off for this organization.",
     "AI_RECORD_DATA_DISABLED": "This organization does not let AI see record values.",
     "RECORD_DATA_NOT_CONFIRMED": "Confirm that record values may be sent to the AI provider.",
+    "INSECURE_KEY_NOT_CONFIRMED": "The URL uses http: the key would travel unencrypted to {{host}}. Use an https URL, or confirm that the key may be sent over http.",
     "AI_GENERATION_RUNNING": "Another request is generating this field. Its cells show their progress."
   },
   "retryAfter_one": "Try again in {{count, number}} second.",

@@ -114,7 +114,8 @@
         "format_webhook_signing": "Dán giá trị dạng whsec_… (base64 của 24 đến 64 byte).",
         "hosts_required": "Nhập ít nhất một host.",
         "hosts_too_many": "Tối đa 20 host.",
-        "hosts_invalid": "Mỗi mục phải là tên host (api.example.com), *.example.com hoặc host:cổng — không địa chỉ IP, scheme hay đường dẫn."
+        "hosts_invalid": "Mỗi mục phải là tên host (api.example.com), *.example.com hoặc host:cổng — không địa chỉ IP, scheme hay đường dẫn.",
+        "hosts_need_value": "Host mới cần nhập lại giá trị: chọn “Thay giá trị” rồi nhập. Giá trị chỉ được gửi tới những host nó được nhập cho."
       },
       "allowedHosts": "Host được phép",
       "allowedHostsHint": "Automation chỉ gửi secret này tới các host này.",

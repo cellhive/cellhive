@@ -5,6 +5,7 @@ import {
   changesOf,
   draftErrors,
   draftOf,
+  insecureKeyHostOf,
   keyHostMismatch,
   keyHostOf,
   parseCount,
@@ -190,6 +191,92 @@ describe('the draft', () => {
       keyHostMismatch(OPENAI, { ...draft, key: { mode: 'replace', value: 'sk-x' } }),
     ).toBeNull();
     expect(keyHostMismatch(NOT_SET, draftOf(NOT_SET))).toBeNull();
+  });
+});
+
+/** T1008 (CONTRACTS §29.1): a key over plain http asks for `confirm_insecure`. */
+describe('a key over plain http (T1008)', () => {
+  const HTTP_KEY: AiSettingsDto = {
+    ...OPENAI,
+    provider_base_url: 'http://llm.example.com/v1',
+    api_key: {
+      ...(OPENAI.api_key as NonNullable<AiSettingsDto['api_key']>),
+      allowed_hosts: ['llm.example.com:80'],
+    },
+  };
+  const typed = { mode: 'replace', value: 'sk-test' } as const;
+
+  it.each([
+    [
+      'https with a typed key',
+      NOT_SET,
+      { baseUrl: 'https://llm.example.com/v1', key: typed },
+      null,
+    ],
+    [
+      'http with a typed key',
+      NOT_SET,
+      { baseUrl: 'http://llm.example.com/v1', key: typed },
+      'llm.example.com',
+    ],
+    [
+      'http with a port',
+      NOT_SET,
+      { baseUrl: 'http://gpu1.lan:11434/v1', key: typed },
+      'gpu1.lan:11434',
+    ],
+    ['http without a key', NOT_SET, { baseUrl: 'http://llm.example.com/v1' }, null],
+    [
+      'http with an empty key',
+      NOT_SET,
+      { baseUrl: 'http://ollama:11434/v1', key: { mode: 'replace', value: ' ' } },
+      null,
+    ],
+    [
+      'http to an IP address (no key can go there)',
+      NOT_SET,
+      { baseUrl: 'http://10.0.0.5/v1', key: typed },
+      null,
+    ],
+    ['the saved key kept on its http host', HTTP_KEY, {}, 'llm.example.com'],
+    ['the saved key removed', HTTP_KEY, { key: { mode: 'none' } }, null],
+    [
+      'the saved https key left behind by an http URL',
+      OPENAI,
+      { baseUrl: 'http://llm.example.com/v1' },
+      null,
+    ],
+  ] as const)('%s → %s', (_name, settings, patch, expected) => {
+    expect(insecureKeyHostOf(settings, { ...draftOf(settings), ...patch })).toBe(expected);
+  });
+
+  it('sends confirm_insecure with the changes when ticked, never alone', () => {
+    const draft = {
+      ...draftOf(NOT_SET),
+      baseUrl: 'http://llm.example.com/v1',
+      model: 'm',
+      key: typed,
+    };
+    expect(changesOf(NOT_SET, draft)).not.toHaveProperty('confirm_insecure');
+    expect(changesOf(NOT_SET, { ...draft, confirmInsecure: true })).toMatchObject({
+      provider_base_url: 'http://llm.example.com/v1',
+      api_key: { value: 'sk-test' },
+      confirm_insecure: true,
+    });
+    expect(testRequestOf(NOT_SET, { ...draft, confirmInsecure: true })).toMatchObject({
+      settings: { api_key: { value: 'sk-test' } },
+      confirm_insecure: true,
+    });
+    // Ticked, then the URL went back to https: nothing to confirm.
+    expect(
+      changesOf(NOT_SET, {
+        ...draft,
+        baseUrl: 'https://llm.example.com/v1',
+        confirmInsecure: true,
+      }),
+    ).not.toHaveProperty('confirm_insecure');
+    expect(changesOf(HTTP_KEY, { ...draftOf(HTTP_KEY), confirmInsecure: true })).toBeNull();
+    expect(testRequestOf(HTTP_KEY, { ...draftOf(HTTP_KEY), confirmInsecure: true })).toEqual({});
   });
 });
 

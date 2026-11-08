@@ -216,7 +216,7 @@
             "type": "null"
           }
         ],
-        "description": "`{ value }` stores the key as an `ai_api_key` secret (replacing the value of the current one) with `allowed_hosts` = the host (and port) of the provider URL; `{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key"
+        "description": "`{ value }` stores the key as an `ai_api_key` secret (replacing the value of the current one) with `allowed_hosts` = the host (and port) of the provider URL; `{ secret_id }` uses an `ai_api_key` secret of the organization; `null`: no key. A key sent over plain `http` needs `confirm_insecure` (`INSECURE_KEY_NOT_CONFIRMED`)"
       },
       "AiAsk": {
         "oneOf": [
@@ -1299,7 +1299,7 @@
             "type": "integer"
           },
           "models": {
-            "description": "Model ids of `GET /models` (at most 200); `null` when the provider has none",
+            "description": "Model ids of `GET /models` (at most 200, each at most 200 characters); `null` when the provider has none or answers anything but an OpenAI model list (`object: \"list\"`, `data[].id` strings)",
             "items": {
               "type": "string"
             },
@@ -18855,6 +18855,13 @@
       "TestAiSettingsRequest": {
         "additionalProperties": false,
         "properties": {
+          "confirm_insecure": {
+            "description": "Send the key over plain `http` anyway: needed for an `http` provider URL with a key unless an allowlist entry opens its host and it resolves to internal addresses only (`INSECURE_KEY_NOT_CONFIRMED`)",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
           "settings": {
             "additionalProperties": false,
             "description": "Unsaved provider settings to try; keys left out are the saved ones",
@@ -18871,7 +18878,7 @@
                 ]
               },
               "provider_base_url": {
-                "description": "OpenAI-compatible base URL (`http`/`https`, no user info), e.g. `https://api.openai.com/v1` or `http://ollama:11434/v1`; `/chat/completions` and `/models` are appended. A loopback or private host needs an HTTP allowlist entry (CONTRACTS §25.4)",
+                "description": "OpenAI-compatible base URL (`http`/`https`, no user info), e.g. `https://api.openai.com/v1` or `http://ollama:11434/v1`; `/chat/completions` and `/models` are appended. A loopback or private host needs an HTTP allowlist entry (CONTRACTS §25.4). With a key, a plain `http` URL needs `confirm_insecure: true` unless an allowlist entry opens its host and it resolves to internal addresses only",
                 "example": "https://api.openai.com/v1",
                 "maxLength": 2048,
                 "minLength": 1,
@@ -19350,6 +19357,13 @@
             ],
             "type": "boolean"
           },
+          "confirm_insecure": {
+            "description": "Send the key over plain `http` anyway: needed for an `http` provider URL with a key unless an allowlist entry opens its host and it resolves to internal addresses only (`INSECURE_KEY_NOT_CONFIRMED`)",
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
           "daily_token_limit": {
             "description": "Tokens (prompt + completion) per day in the organization time zone; `null`: no limit",
             "maximum": 1000000000,
@@ -19374,7 +19388,7 @@
             ]
           },
           "provider_base_url": {
-            "description": "OpenAI-compatible base URL (`http`/`https`, no user info), e.g. `https://api.openai.com/v1` or `http://ollama:11434/v1`; `/chat/completions` and `/models` are appended. A loopback or private host needs an HTTP allowlist entry (CONTRACTS §25.4)",
+            "description": "OpenAI-compatible base URL (`http`/`https`, no user info), e.g. `https://api.openai.com/v1` or `http://ollama:11434/v1`; `/chat/completions` and `/models` are appended. A loopback or private host needs an HTTP allowlist entry (CONTRACTS §25.4). With a key, a plain `http` URL needs `confirm_insecure: true` unless an allowlist entry opens its host and it resolves to internal addresses only",
             "example": "https://api.openai.com/v1",
             "maxLength": 2048,
             "minLength": 1,
@@ -20591,7 +20605,7 @@
         "description": "Changing the scope does not touch automations: a step of a base left out fails with `secret_unavailable` when it runs. A new value (or `generate: true`) of a `webhook_signing` secret keeps the previous one signing for 24 hours (`previous_value_expires_at`)",
         "properties": {
           "allowed_hosts": {
-            "description": "`http_header` / `webhook_signing` / `ai_api_key` only (another kind: `UNRECOGNIZED_KEY`): replaces the list and ends the transition period of a secret stored before the list existed (`legacy_hosts_until` becomes `null`)",
+            "description": "`http_header` / `webhook_signing` / `ai_api_key` only (another kind: `UNRECOGNIZED_KEY`): replaces the list and ends the transition period of a secret stored before the list existed (`legacy_hosts_until` becomes `null`). For `http_header` and `ai_api_key`, a list that adds a host needs a new `value` in the same request (`SECRET_VALUE_REQUIRED`)",
             "example": [
               "api.crm.example",
               "*.hooks.example:8443"

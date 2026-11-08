@@ -1,8 +1,10 @@
 import {
+  AI_BASE_URL_QUERY_OR_FRAGMENT,
   AI_PROVIDER_ERROR_REASONS,
   AI_TEST_MAX_MODELS,
   AI_TEST_MAX_OUTPUT_TOKENS,
   AI_USAGE_MAX_DAYS,
+  INSECURE_KEY_NOT_CONFIRMED,
   INVALID_SECRET_VALUE,
   isValidSecretValue,
   newId,
@@ -28,6 +30,7 @@ import {
   AppError,
   AuditWriter,
   DEFAULT_AI_SETTINGS,
+  DEFAULT_OUTBOUND_PORTS,
   deriveSecretKey,
   extractJsonObject,
   isOutboundHttpError,
@@ -39,6 +42,8 @@ import {
   quotaDayOf,
   resumeAiProviderPause,
   sealSecret,
+  secretHostDecision,
+  secretHostPolicyOf,
   SecretsRepository,
   transientAiKeySource,
   type AiProviderSettings,
@@ -118,24 +123,66 @@ function snapshotOf(state: AiSettingsState): JsonObject {
   );
 }
 
-/** The provider URL as the AI core will call it, or `422 INVALID_URL` (never echoed). */
+function invalidBaseUrl(reason: string): AppError {
+  return invalidField(
+    'provider_base_url',
+    'INVALID_URL',
+    'Enter the http(s) base URL of an OpenAI-compatible API, without user info, query or fragment.',
+    { reason },
+  );
+}
+
+/**
+ * The provider URL as the AI core will call it, or `422 INVALID_URL`
+ * (never echoed): `params.reason` is `query_or_fragment` for a query or a
+ * fragment — they would end up before `/chat/completions` — else the
+ * reason of the SSRF core.
+ */
 function parseBaseUrl(baseUrl: string): OutboundUrl {
+  if (/[?#]/u.test(baseUrl)) throw invalidBaseUrl(AI_BASE_URL_QUERY_OR_FRAGMENT);
   try {
-    // A query or fragment would end up before `/chat/completions`.
-    if (/[?#]/u.test(baseUrl)) throw new Error('query or fragment');
     return parseOutboundUrl(baseUrl);
   } catch (error) {
-    const reason = isOutboundHttpError(error)
-      ? String(error.params['reason'] ?? 'invalid_url')
-      : 'invalid_url';
-    throw invalidField(
-      'provider_base_url',
-      'INVALID_URL',
-      'Enter the http(s) base URL of an OpenAI-compatible API, without user info, query or fragment.',
-      { reason },
+    throw invalidBaseUrl(
+      isOutboundHttpError(error) ? String(error.params['reason'] ?? 'invalid_url') : 'invalid_url',
     );
   }
 }
+
+/** Where a save or a test would send the key: the provider URL and a typed value or a secret. */
+interface KeyTransport {
+  readonly baseUrl: string;
+  readonly key: 'value' | Id<'sec'>;
+}
+
+/**
+ * (T1008) The key and the URL it would go to, when a save or a test moves
+ * either — a new URL takes the saved key along in this check (the calls
+ * then refuse a host the key is not bound to), a key input names its own
+ * — and both are set; `null` when neither moves.
+ */
+function keyTransportOf(
+  saved: Pick<AiSettingsState, 'provider_base_url' | 'api_key_secret_id'>,
+  input: {
+    readonly provider_base_url?: string | null | undefined;
+    readonly api_key?: AiApiKeyInput | undefined;
+  },
+): KeyTransport | null {
+  const baseUrl =
+    input.provider_base_url === undefined ? saved.provider_base_url : input.provider_base_url;
+  let key: KeyTransport['key'] | null;
+  if (input.api_key === undefined) {
+    key = baseUrl === saved.provider_base_url ? null : saved.api_key_secret_id;
+  } else if (input.api_key === null) {
+    key = null;
+  } else {
+    key = 'value' in input.api_key ? 'value' : input.api_key.secret_id;
+  }
+  return baseUrl === null || key === null ? null : { baseUrl, key };
+}
+
+const sameTransport = (a: KeyTransport | null, b: KeyTransport | null) =>
+  a?.baseUrl === b?.baseUrl && a?.key === b?.key;
 
 /** The `allowed_hosts` entry of a key for `baseUrl`, or `422 SECRET_HOST_NOT_ALLOWED` (an IP address). */
 function keyHostOf(baseUrl: string | null): string {
@@ -182,7 +229,9 @@ const audit = new AuditWriter();
  * members `403`, other organizations `404`. The key is an `ai_api_key`
  * secret (§24) bound to the host of the provider URL — created or replaced
  * in the transaction that saves the settings, never returned, logged or
- * audited. Saves are audited (`ai_settings.updated`).
+ * audited. Saves are audited (`ai_settings.updated`). A key that would go
+ * over plain `http` to a host that is not an allowlisted internal one needs
+ * `confirm_insecure: true` (T1008), on a save and on a test alike.
  */
 @Injectable()
 export class AiSettingsService {
@@ -219,12 +268,24 @@ export class AiSettingsService {
     if (body.api_key !== undefined && body.api_key !== null && 'value' in body.api_key) {
       assertKeyValue(body.api_key.value);
     }
+    const confirmed = body.confirm_insecure === true;
+    // (T1008) The key over plain http: checked before the transaction (it may resolve the host).
+    const checked = keyTransportOf(
+      (await this.settings.find(org.scope)) ?? DEFAULT_AI_SETTINGS,
+      body,
+    );
+    await this.assertKeyTransport(org.scope, checked, confirmed);
     const context = mutationContextOf(meta, principal.userId);
     let resumed: Id<'fld'>[] = [];
     const saved = await this.db.withTx(async (tx) => {
       const scope = orgScope(organizationId, tx);
       const stored = await this.settings.find(scope, { forUpdate: true });
       const before: AiSettingsState = stored ?? DEFAULT_AI_SETTINGS;
+      // Another save in between moved the URL or the key: check what this one now does.
+      const transport = keyTransportOf(before, body);
+      if (!sameTransport(transport, checked)) {
+        await this.assertKeyTransport(scope, transport, confirmed);
+      }
       const next: AiSettingsState = { ...before };
       if (body.enabled !== undefined) next.enabled = body.enabled;
       if (body.provider_base_url !== undefined) next.provider_base_url = body.provider_base_url;
@@ -336,6 +397,11 @@ export class AiSettingsService {
         state.api_key_secret_id = newId('sec');
       }
     }
+    await this.assertKeyTransport(
+      org.scope,
+      keyTransportOf(saved ?? DEFAULT_AI_SETTINGS, overrides),
+      body.confirm_insecure === true,
+    );
     const configured = providerSettingsOf(state);
     if (configured === null) throw aiNotConfigured();
     // Probe from the top for `auto` (the detected rung may be stale), else from the chosen rung.
@@ -434,6 +500,46 @@ export class AiSettingsService {
   }
 
   // --- Internals ---------------------------------------------------------
+
+  /**
+   * (T1008) `422 INSECURE_KEY_NOT_CONFIRMED` (path `confirm_insecure`)
+   * unless confirmed, when the key would cross the network in clear text:
+   * the URL is plain `http`, the key may be sent there (a typed value is
+   * bound to that host; a secret only when its allowed hosts take it) and
+   * the host is not an allowlist entry resolving to internal addresses only.
+   * A key for an IP address is refused by {@link keyHostOf} instead.
+   */
+  private async assertKeyTransport(
+    scope: OrgScope,
+    transport: KeyTransport | null,
+    confirmed: boolean,
+  ): Promise<void> {
+    if (transport === null || confirmed) return;
+    const url = parseBaseUrl(transport.baseUrl);
+    if (url.protocol !== 'http:') return;
+    if (transport.key === 'value') {
+      if (keyHostPatternOf(url) === null) return;
+    } else {
+      const secret = await this.secrets.findById(scope, transport.key);
+      // Not a key (`UNKNOWN_SECRET` follows), or never sent there (`secret_host_not_allowed`).
+      if (
+        secret?.kind !== 'ai_api_key' ||
+        !secretHostDecision(secretHostPolicyOf(secret), url, this.ai.now()).allowed
+      ) {
+        return;
+      }
+    }
+    if (await this.ai.isInternalHost(scope.organizationId, url)) return;
+    const host = DEFAULT_OUTBOUND_PORTS.has(url.port)
+      ? url.host
+      : `${url.host}:${String(url.port)}`;
+    throw invalidField(
+      'confirm_insecure',
+      INSECURE_KEY_NOT_CONFIRMED,
+      'The key would travel unencrypted over http: use an https URL, or confirm it (confirm_insecure: true).',
+      { host },
+    );
+  }
 
   /** An `ai_api_key` secret of the organization, or `422 UNKNOWN_SECRET`. */
   private async aiKeySecret(scope: OrgScope, secretId: Id<'sec'>): Promise<SecretRow> {

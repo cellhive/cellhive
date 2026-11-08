@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isAllowlistedInternalHost,
   OutboundHttpError,
   parseOutboundUrl,
   resolveOutboundTarget,
@@ -316,5 +317,70 @@ describe('resolveOutboundTarget (ADR-35 §3, BACKLOG T600)', () => {
       expect(String(error)).not.toContain('secret-token-abc');
       expect(JSON.stringify(error)).not.toContain('secret-token-abc');
     }
+  });
+});
+
+/**
+ * T1008 (CONTRACTS §29.1): the hosts where a key may travel over plain
+ * `http` without confirming it — an allowlist entry opens the host and
+ * every address is internal.
+ */
+describe('isAllowlistedInternalHost (T1008)', () => {
+  const internalDns = dns({
+    'n8n.internal': ['10.0.0.20'],
+    'ula.corp.example': ['fd12::1'],
+    'redis.internal': ['127.0.0.1'],
+    'api.example.com': ['93.184.216.34'],
+    'mixed.example.com': ['10.0.0.5', '93.184.216.34'],
+    'metadata.example.com': ['169.254.169.254'],
+    'wireserver.example.com': ['168.63.129.16'],
+    'mapped.example.com': ['::ffff:169.254.169.254'],
+  });
+
+  it.each([
+    // Internal, with an entry naming the host (and the port for loopback).
+    ['http://n8n.internal:5678/v1', [entry('n8n.internal', 5678)], 'org', true],
+    ['http://n8n.internal/v1', [entry('n8n.internal')], 'org', true],
+    ['http://ula.corp.example/v1', [entry('corp.example', null, true)], 'org', true],
+    ['http://redis.internal:8080/v1', [entry('redis.internal', 8080)], 'org', true],
+    // Loopback needs the exact host and port; a wildcard or a portless entry is not enough.
+    ['http://redis.internal/v1', [entry('redis.internal')], 'org', false],
+    // No entry: the call itself would be refused.
+    ['http://n8n.internal/v1', [], 'org', false],
+    // A public host, with or without an entry for another port.
+    ['http://api.example.com/v1', [], 'org', false],
+    ['http://api.example.com:8080/v1', [entry('api.example.com', 8080)], 'org', false],
+    // One public address is enough to cross a public network.
+    ['http://mixed.example.com/v1', [entry('mixed.example.com')], 'org', false],
+    // Never reachable, entry or not.
+    ['http://metadata.example.com/v1', [entry('metadata.example.com')], 'org', false],
+    ['http://wireserver.example.com/v1', [entry('wireserver.example.com')], 'org', false],
+    ['http://mapped.example.com/v1', [entry('mapped.example.com')], 'org', false],
+    // IP literals never match an entry.
+    ['http://10.0.0.20/v1', [entry('n8n.internal')], 'org', false],
+    // Unknown names.
+    ['http://nowhere.internal/v1', [entry('nowhere.internal')], 'org', false],
+    // `HTTP_PRIVATE_ALLOWLIST=off`: no entry opens a private address.
+    ['http://n8n.internal:5678/v1', [entry('n8n.internal', 5678)], 'off', false],
+  ] as const)('%s with %o (%s) → %s', async (url, allowlist, privateAllowlist, expected) => {
+    expect(
+      await isAllowlistedInternalHost(url, {
+        organizationId: ORG,
+        allowlist,
+        privateAllowlist,
+        lookup: internalDns,
+      }),
+    ).toBe(expected);
+  });
+
+  it('is a check: it never counts an SSRF block', async () => {
+    const before = ssrfBlockedCounts();
+    await isAllowlistedInternalHost('http://metadata.example.com/', {
+      organizationId: ORG,
+      allowlist: [entry('metadata.example.com')],
+      privateAllowlist: 'org',
+      lookup: internalDns,
+    });
+    expect(ssrfBlockedCounts()).toEqual(before);
   });
 });

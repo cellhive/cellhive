@@ -62,6 +62,11 @@
       "undo": "Hoàn tác",
       "hostMismatch": "Key đã lưu chỉ được gửi tới {{saved}}. Hãy nhập lại key cho {{next}}."
     },
+    "insecure": {
+      "title": "Key sẽ đi không mã hoá",
+      "body": "URL này dùng http, nên bất kỳ ai trên đường mạng giữa Cellhive và {{host}} đều đọc được key. Hãy dùng URL https nếu nhà cung cấp có. Host nằm trong danh sách cho phép của tổ chức và ở mạng nội bộ thì không cần xác nhận.",
+      "confirm": "Vẫn gửi key tới {{host}} qua http"
+    },
     "test": "Kiểm tra kết nối",
     "testing": "Đang kiểm tra…",
     "testHint": "Thử các giá trị ở trên, đã lưu hay chưa, bằng một request ngắn (tối đa {{tokens, number}} token).",
