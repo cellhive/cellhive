@@ -1,3 +1,5 @@
+import { isUtcOffset } from '@cellhive/contracts';
+
 /**
  * Time zone arithmetic on top of `Intl.DateTimeFormat` only (no date
  * library, no fixed offsets), so DST rules come from the runtime's tz data.
@@ -35,12 +37,17 @@ function formatter(timeZone: string): Intl.DateTimeFormat {
   return dtf;
 }
 
-/** True when the runtime knows this IANA zone. */
+/**
+ * True when the runtime knows this IANA zone and it is not a UTC offset
+ * (`+07:00`, `UTC+7`): `timeZoneProblem(timeZone) === null` of
+ * `@cellhive/contracts`, the one check of every time zone value, with the
+ * formatter kept for the arithmetic below.
+ */
 export function isValidTimeZone(timeZone: string): boolean {
-  if (timeZone === '') return false;
+  if (timeZone === '' || isUtcOffset(timeZone)) return false;
   try {
-    formatter(timeZone);
-    return true;
+    // ICU writes every offset it accepts as `±HH:MM`.
+    return !isUtcOffset(formatter(timeZone).resolvedOptions().timeZone);
   } catch {
     return false;
   }

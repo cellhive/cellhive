@@ -1,4 +1,8 @@
-import { canonicalTimeZone, dateReminderOptionSchema } from '@cellhive/contracts';
+import {
+  canonicalTimeZone,
+  dateReminderOptionSchema,
+  timeZoneRefinement,
+} from '@cellhive/contracts';
 import { z } from 'zod';
 
 import {
@@ -35,8 +39,10 @@ export function isDateOnlyFormat(format: DatetimeFormat): boolean {
 
 export const timeZoneSchema = z
   .string()
-  .refine(isValidTimeZone, { message: 'Unknown IANA time zone' })
-  // The IANA primary name PostgreSQL knows (`Asia/Saigon` → `Asia/Ho_Chi_Minh`, T819).
+  // `INVALID_TIME_ZONE` + `params.hint`; a UTC offset (`+07:00`) is refused, never converted.
+  .refine(isValidTimeZone, timeZoneRefinement)
+  // The IANA primary name PostgreSQL knows (`Asia/Saigon` → `Asia/Ho_Chi_Minh`, T819;
+  // `EST5EDT` → `America/New_York`).
   .overwrite((zone) => canonicalTimeZone(zone) ?? zone);
 
 const datetimeFormatSchema = z.enum(DATETIME_FORMATS);

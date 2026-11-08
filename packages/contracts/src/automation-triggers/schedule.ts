@@ -9,7 +9,11 @@ export const SCHEDULE_MIN_INTERVAL_MINUTES = 5;
 export const INVALID_CRON = 'INVALID_CRON';
 /** Detail code (`AUTOMATION_INVALID`): fires more often than every 5 minutes (`params.min_interval_minutes`). */
 export const CRON_TOO_FREQUENT = 'CRON_TOO_FREQUENT';
-/** Detail code (`AUTOMATION_INVALID`): `timezone` is not an IANA zone the server knows. */
+/**
+ * Detail code (`AUTOMATION_INVALID`, and `VALIDATION_FAILED` of every other
+ * time zone value): `timezone` is not an IANA zone the server knows, or is a
+ * UTC offset (`+07:00`, `UTC+7`); `params.hint` says what to send.
+ */
 export const INVALID_TIME_ZONE = 'INVALID_TIME_ZONE';
 
 /**
@@ -43,7 +47,8 @@ export const scheduleTriggerSchema = z
       .default(null)
       .meta({
         description:
-          'IANA time zone, an alias replaced by its IANA primary name; `null` = the organization’s',
+          'IANA time zone name, an alias or legacy name replaced by its IANA primary name; ' +
+          '`null` = the organization’s. UTC offsets (`+07:00`, `UTC+7`) are not accepted',
         example: 'Asia/Ho_Chi_Minh',
       }),
   })
@@ -51,7 +56,7 @@ export const scheduleTriggerSchema = z
     id: 'ScheduleTrigger',
     description:
       'Fires at the cron times in `timezone` (IANA; `null` = the organization’s), at most ' +
-      'every 5 minutes (`CRON_TOO_FREQUENT`; bad cron `INVALID_CRON`, unknown zone ' +
-      '`INVALID_TIME_ZONE`). One run per fire time (`fired_at`); after a downtime only the ' +
+      'every 5 minutes (`CRON_TOO_FREQUENT`; bad cron `INVALID_CRON`, unknown zone or UTC ' +
+      'offset `INVALID_TIME_ZONE`). One run per fire time (`fired_at`); after a downtime only the ' +
       'latest missed time fires. Base admins only',
   });

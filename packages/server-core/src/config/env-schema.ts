@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { domainToASCII } from 'node:url';
 
+import { timeZoneProblem } from '@cellhive/contracts';
 import { z } from 'zod';
 
 import { parseCidr, type Cidr } from './cidr.js';
@@ -156,13 +157,9 @@ function toOrigin(value: string): string | null {
   return url.origin;
 }
 
+/** An IANA zone the runtime knows; a UTC offset (`+07:00`) is not one (the check of every zone). */
 function isTimeZone(value: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en', { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
+  return timeZoneProblem(value) === null;
 }
 
 function canonicalLocale(value: string): string | null {
@@ -349,7 +346,10 @@ export const envSchema = z.object({
   DEFAULT_LOCALE: text()
     .refine((value) => canonicalLocale(value) !== null, 'must be a BCP 47 language tag')
     .transform((value) => canonicalLocale(value) ?? value),
-  DEFAULT_TIMEZONE: text().refine(isTimeZone, 'must be an IANA time zone'),
+  DEFAULT_TIMEZONE: text().refine(
+    isTimeZone,
+    'must be an IANA time zone name such as Asia/Ho_Chi_Minh or UTC (not a UTC offset)',
+  ),
   DEFAULT_CURRENCY: text().refine(
     (value) => currencies.has(value),
     'must be an upper-case ISO 4217 currency code',

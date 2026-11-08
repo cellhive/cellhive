@@ -18,6 +18,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Upgrade notes
 
+#### Migration 0058 (`time_zone_offsets`): time zones are IANA names, never UTC offsets
+
+- **Refused, never converted**: every time zone Cellhive takes — setup (also `cellhive setup --timezone`), invitations, the profile, organization create and settings, `options.timezone` of date fields, `schedule` triggers, widget data and exports, share link exports, Ask AI and the MCP tool `aggregate_records` — is an IANA time zone name. A UTC offset such as `+07:00`, `-0530`, `UTC+7` or `GMT+07:00` answers `422` with the detail code `INVALID_TIME_ZONE` and a `params.hint` (MCP: `isError` with `VALIDATION_FAILED`, path `timezone`). `UTC`, `Etc/UTC` and the fixed zones `Etc/GMT-14` … `Etc/GMT+12` are accepted; their names use the POSIX sign, so UTC+7 is `Etc/GMT-7`. `DEFAULT_TIMEZONE` set to an offset stops the server at start. Update API clients and scripts that send offsets.
+- **Legacy names**: `CST6CDT`, `EST5EDT`, `MST7MDT`, `PST8PDT`, `EST`, `MST`, `HST` (links of the tzdata `backward` file) and the 13 `SystemV/*` names are stored by their IANA primary name (`EST5EDT` → `America/New_York`, `SystemV/AST4` → `Etc/GMT+4`; the full table is in CONTRACTS §1.1).
+- **Migration 0058** rewrites stored values in users, organization and base settings, date field options and `schedule` triggers, deleted rows included: legacy names become primary names, whole-hour offsets become `Etc/GMT∓N` (`+07:00` → `Etc/GMT-7`), and any other offset (`+05:30`) is reset — a user gets no zone of their own (the organization's applies), everything else `UTC`. The PostgreSQL log gets one `WARNING` with the number of reset values, never a value; if you see it, choose those zones again (an owner or admin now sets the organization's under Organization settings › General). Cell values do not change and nothing is recomputed. Small tables only: no maintenance window. Forward-only: no down migration.
+
 #### AI and MCP (migrations 0054 and 0056): off by default, a second worker job runner, token caps of reasoning models
 
 - **Migrations**: 0054 (`ai_settings`, T906) adds `meta.ai_settings`, `meta.ai_usage_daily` and the `ai_api_key` secret kind (it replaces two `CHECK` constraints of `meta.secrets`); 0056 (`ai_generation_queue`, T910) adds `meta.ai_generation_queue`. New tables only, no rewrite of existing data: no maintenance window. Forward-only: no down migration.

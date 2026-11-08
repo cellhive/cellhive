@@ -6,6 +6,9 @@ import {
   INVALID_CRON,
   INVALID_TIME_ZONE,
   SCHEDULE_MIN_INTERVAL_MINUTES,
+  TIME_ZONE_HINT,
+  timeZoneProblem,
+  timeZoneProblemMessage,
   DUPLICATE_ACTION_ID,
   EMAIL_BODY_DIGEST_REFERENCE,
   EMAIL_REPLY_TO_INVALID,
@@ -583,7 +586,13 @@ class DefinitionChecker {
       }
     }
     if (trigger.timezone !== null && !isValidTimeZone(trigger.timezone)) {
-      this.add(join(path, 'timezone'), INVALID_TIME_ZONE, 'Unknown time zone');
+      // A UTC offset (`+07:00`) is refused like an unknown name, never converted.
+      this.add(
+        join(path, 'timezone'),
+        INVALID_TIME_ZONE,
+        timeZoneProblemMessage(timeZoneProblem(trigger.timezone) ?? 'unknown'),
+        { hint: TIME_ZONE_HINT },
+      );
     }
   }
 

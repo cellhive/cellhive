@@ -26,7 +26,7 @@
             "type": "string"
           },
           "timezone": {
-            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
             "example": "Asia/Ho_Chi_Minh",
             "maxLength": 64,
             "minLength": 1,
@@ -15499,7 +15499,7 @@
       },
       "ScheduleTrigger": {
         "additionalProperties": false,
-        "description": "Fires at the cron times in `timezone` (IANA; `null` = the organization’s), at most every 5 minutes (`CRON_TOO_FREQUENT`; bad cron `INVALID_CRON`, unknown zone `INVALID_TIME_ZONE`). One run per fire time (`fired_at`); after a downtime only the latest missed time fires. Base admins only",
+        "description": "Fires at the cron times in `timezone` (IANA; `null` = the organization’s), at most every 5 minutes (`CRON_TOO_FREQUENT`; bad cron `INVALID_CRON`, unknown zone or UTC offset `INVALID_TIME_ZONE`). One run per fire time (`fired_at`); after a downtime only the latest missed time fires. Base admins only",
         "properties": {
           "cron": {
             "description": "Five-field cron expression",
@@ -15510,7 +15510,7 @@
           },
           "timezone": {
             "default": null,
-            "description": "IANA time zone, an alias replaced by its IANA primary name; `null` = the organization’s",
+            "description": "IANA time zone name, an alias or legacy name replaced by its IANA primary name; `null` = the organization’s. UTC offsets (`+07:00`, `UTC+7`) are not accepted",
             "example": "Asia/Ho_Chi_Minh",
             "maxLength": 64,
             "minLength": 1,
@@ -19733,7 +19733,7 @@
             "type": "string"
           },
           "timezone": {
-            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
             "example": "Asia/Ho_Chi_Minh",
             "maxLength": 64,
             "minLength": 1,
@@ -19925,7 +19925,7 @@
                 "$ref": "#/components/schemas/PublicSharingPolicy"
               },
               "timezone": {
-                "description": "IANA time zone; an alias is replaced by its IANA primary name",
+                "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
                 "example": "Asia/Ho_Chi_Minh",
                 "maxLength": 64,
                 "minLength": 1,
@@ -21615,7 +21615,7 @@
             "type": "string"
           },
           "timezone": {
-            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
             "example": "Asia/Ho_Chi_Minh",
             "maxLength": 64,
             "minLength": 1,
@@ -21770,7 +21770,7 @@
             ]
           },
           "timezone": {
-            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
             "example": "Asia/Ho_Chi_Minh",
             "maxLength": 64,
             "minLength": 1,
@@ -46354,12 +46354,12 @@
             }
           },
           {
-            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
             "in": "query",
             "name": "timezone",
             "required": false,
             "schema": {
-              "description": "IANA time zone; an alias is replaced by its IANA primary name",
+              "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
               "example": "Asia/Ho_Chi_Minh",
               "maxLength": 64,
               "minLength": 1,
@@ -53643,12 +53643,12 @@
             }
           },
           {
-            "description": "IANA time zone; an alias is replaced by its IANA primary name",
+            "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
             "in": "query",
             "name": "timezone",
             "required": false,
             "schema": {
-              "description": "IANA time zone; an alias is replaced by its IANA primary name",
+              "description": "IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets (`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)",
               "example": "Asia/Ho_Chi_Minh",
               "maxLength": 64,
               "minLength": 1,

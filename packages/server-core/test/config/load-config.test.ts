@@ -162,6 +162,11 @@ describe('loadConfig: rejects invalid environments and names the variables', () 
       variables: ['DEFAULT_TIMEZONE'],
     },
     {
+      name: 'a UTC offset as the time zone (T1005)',
+      env: { ...BASE, DEFAULT_TIMEZONE: '+07:00' },
+      variables: ['DEFAULT_TIMEZONE'],
+    },
+    {
       name: 'lower-case currency',
       env: { ...BASE, DEFAULT_CURRENCY: 'vnd' },
       variables: ['DEFAULT_CURRENCY'],

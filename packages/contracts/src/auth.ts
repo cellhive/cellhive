@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { isoDateTimeSchema } from './common.js';
 import { idOf } from './ids.js';
 import { authProviderSchema } from './oidc.js';
-import { canonicalTimeZone } from './time-zones.js';
+import {
+  canonicalTimeZone,
+  TIME_ZONE_HINT,
+  timeZoneProblem,
+  timeZoneProblemMessage,
+} from './time-zones.js';
 
 /**
  * First-time setup, sessions, `GET /me` and password reset (SPEC §13.1,
@@ -54,8 +59,19 @@ function isLocale(value: string): boolean {
   }
 }
 
+/**
+ * The refinement of every time zone value (`timeZoneSchema`, the date
+ * field's `options.timezone`): `INVALID_TIME_ZONE` with `params.hint`, the
+ * message saying when the value is a UTC offset (CONTRACTS §1.1).
+ */
+export const timeZoneRefinement = {
+  error: (issue: { readonly input?: unknown }): string =>
+    timeZoneProblemMessage(timeZoneProblem(issue.input) ?? 'unknown'),
+  params: { code: 'INVALID_TIME_ZONE', hint: TIME_ZONE_HINT },
+} as const;
+
 function isTimeZone(value: string): boolean {
-  return canonicalTimeZone(value) !== null;
+  return timeZoneProblem(value) === null;
 }
 
 export const localeSchema = z
@@ -72,14 +88,15 @@ export const timeZoneSchema = z
   .string()
   .min(1)
   .max(64)
-  .refine(isTimeZone, {
-    message: 'Must be an IANA time zone',
-    params: { code: 'INVALID_TIME_ZONE' },
-  })
+  // A UTC offset (`+07:00`, `UTC+7`) is refused, never converted.
+  .refine(isTimeZone, timeZoneRefinement)
   // Stored and used as the IANA primary name PostgreSQL knows (`Asia/Saigon` → `Asia/Ho_Chi_Minh`).
   .overwrite((zone) => canonicalTimeZone(zone) ?? zone)
   .meta({
-    description: 'IANA time zone; an alias is replaced by its IANA primary name',
+    description:
+      'IANA time zone name (`Asia/Ho_Chi_Minh`, `UTC`, `Etc/GMT-7`); an alias or legacy name ' +
+      'is replaced by its IANA primary name (`EST5EDT` → `America/New_York`). UTC offsets ' +
+      '(`+07:00`, `UTC+7`) are not accepted (`INVALID_TIME_ZONE`)',
     example: 'Asia/Ho_Chi_Minh',
   });
 

@@ -22,6 +22,8 @@ describe('cellhive CLI arguments', () => {
     [['migrate']],
     [['setup', '--email', 'a@example.com', '--org', 'Acme']],
     [['setup', '--email', 'a@example.com', '--org', 'Acme', '--timezone', 'Asia/Ho_Chi_Minh']],
+    [['setup', '--email', 'a@example.com', '--org', 'Acme', '--timezone', 'Etc/GMT-7']],
+    [['setup', '--email', 'a@example.com', '--org', 'Acme', '--timezone', 'EST5EDT']],
     [['org', 'create', '--name', 'Acme', '--owner-email', 'a@example.com']],
     [['user', 'reset-password', '--email', 'a@example.com']],
     [['user', 'reset-password', '--email', 'a@example.com', '--keep-tokens']],
@@ -37,6 +39,11 @@ describe('cellhive CLI arguments', () => {
     [['setup', '--org', 'Acme'], '--email is required'],
     [['setup', '--email', 'not-an-email', '--org', 'Acme'], '--email:'],
     [['setup', '--email', 'a@example.com', '--org', 'A', '--timezone', 'Mars/Base'], '--timezone:'],
+    // T1005: the INVALID_TIME_ZONE refinement of `timeZoneSchema` — an offset is never converted.
+    ...['+07:00', '-0530', '+7', 'UTC+7', 'GMT+07:00'].map((zone): [string[], string] => [
+      ['setup', '--email', 'a@example.com', '--org', 'A', `--timezone=${zone}`],
+      '--timezone: A UTC offset is not a time zone: use an IANA time zone name',
+    ]),
     [
       ['setup', '--email', 'a@example.com', '--org', 'A', '--password', 'x'],
       "Unknown option '--password'",
