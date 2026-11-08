@@ -207,6 +207,7 @@ export {
   withoutLockedAiFields,
   lockedAiFieldIds,
   aiFieldLockedFor,
+  aiPromptReadFieldIds,
   aiReadFieldIds,
   loadAiLockRule,
   type AiLockRule,

@@ -6,10 +6,11 @@ import {
   type Id,
 } from '@cellhive/contracts';
 
-import { aiSourceFieldIds } from '../../../ai/generation/options.js';
+import { aiPromptReadFieldIds } from '../../../ai/generation/sources.js';
 import { checkAutomationTemplate } from '../../values/check.js';
 import { automationSnapshot } from '../../values/snapshot.js';
 
+import type { BaseSchemaRows } from '../../../computed/definition/schema-rows.js';
 import type { AutomationValidationContext } from '../../definition/validate.js';
 import type { TemplateSources } from '../../values/references.js';
 
@@ -91,21 +92,28 @@ export function notificationReferences(
 /**
  * The text of an `ai_generate_text` step (`[act_…]`, T911) was generated
  * from fields of the trigger record: a recipient of a text that places it
- * must read the trigger record and every field its prompt reads, like
- * fields the text placed itself.
+ * must read the trigger record and every field flowing into its prompt
+ * (`aiPromptReadFieldIds`: the fields it names and, through a formula or
+ * lookup it names, what that one reads on the same record, transitively —
+ * AI values are always strict, CONTRACTS §29.5), like fields the text
+ * placed itself. `rows`: the base, for the computed sources.
  */
 export function withTextStepSources(
   references: NotificationReferences,
   actions: readonly (AutomationAction | AutomationBranchAction)[],
   triggerTableId: Id<'tbl'> | null,
+  rows: BaseSchemaRows,
 ): NotificationReferences {
   const fields = new Map(references.fields);
+  const tableOf = new Map<string, Id<'tbl'>>(rows.fields.map((row) => [row.id, row.table_id]));
   let triggerRecord = references.triggerRecord;
   for (const action of actions) {
     if (action.type !== 'ai_generate_text' || !references.steps.has(action.id)) continue;
     if (triggerTableId === null) continue;
     triggerRecord = true;
-    for (const id of aiSourceFieldIds(action.config.prompt)) fields.set(id, triggerTableId);
+    for (const id of aiPromptReadFieldIds(action.config.prompt, rows)) {
+      fields.set(id, tableOf.get(id) ?? triggerTableId);
+    }
   }
   return { ...references, fields, triggerRecord };
 }

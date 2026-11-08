@@ -5,7 +5,11 @@ export {
 } from './message-quota.repository.js';
 export { canonicalJson, permissionProfileKey } from './permission-profile.js';
 export { checkSendNotificationRecipients, sendNotificationSteps } from './recipients-check.js';
-export { notificationReferences, type NotificationReferences } from './references.js';
+export {
+  notificationReferences,
+  withTextStepSources,
+  type NotificationReferences,
+} from './references.js';
 export {
   createSendNotificationAction,
   type SendNotificationActionDeps,
