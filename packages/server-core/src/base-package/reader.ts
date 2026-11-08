@@ -19,6 +19,8 @@ import { packageLimitProblem, packageLinePath, packageProblem, PackageProblems }
 import { decodePackageText, parsePackageJson, parsePackageShape } from './json.js';
 import {
   DEFAULT_BASE_PACKAGE_LIMITS,
+  exceedsEntryRatio,
+  maxEntryRatioOf,
   maxUncompressedBytes,
   type BasePackageLimits,
 } from './limits.js';
@@ -53,8 +55,10 @@ import type { z } from 'zod';
  *   allowlist of `entries.ts` is accepted and the manifest must list
  *   exactly the other entries;
  * - caps of `limits.ts` on the central directory (entries, declared sizes,
- *   ratio) and again while inflating (an entry never yields more bytes than
- *   it declared, CRC-32 and SHA-256 are checked before its end);
+ *   the compression ratio of each entry — 200× for NDJSON, 20× for JSON
+ *   and files — and the total) and again while inflating (an entry never
+ *   yields more bytes than it declared, CRC-32 and SHA-256 are checked
+ *   before its end);
  * - entries are never written to disk by name: callers get parsed values
  *   or a byte stream of one allowed entry.
  */
@@ -433,7 +437,7 @@ export async function openBasePackage(
     reader.on('error', () => undefined);
     zip = await openZip(reader, size);
     zip.on('error', () => undefined);
-    const entries = await scanEntries(zip, size, limits);
+    const entries = await scanEntries(zip, limits);
     const opened = new BasePackageReader(zip, entries, limits);
     await opened.loadManifest();
     return opened;
@@ -454,7 +458,6 @@ function closeZip(zip: ZipFile): void {
 
 async function scanEntries(
   zip: ZipFile,
-  fileSize: number,
   limits: BasePackageLimits,
 ): Promise<ReadonlyMap<string, ScannedEntry>> {
   if (!Number.isSafeInteger(zip.entryCount) || zip.entryCount > limits.maxEntries) {
@@ -465,7 +468,7 @@ async function scanEntries(
       'The package has more entries than allowed.',
     );
   }
-  const maxTotal = maxUncompressedBytes(limits, fileSize);
+  const maxTotal = maxUncompressedBytes(limits);
   const scanned: { name: string; entry: Entry; kind: PackageEntryKind | null }[] = [];
   const normalized = new Set<string>();
   const offsets = new Set<number>();
@@ -508,6 +511,15 @@ async function scanEntries(
       );
     }
     const kind = classifyEntry(name);
+    if (exceedsEntryRatio(limits, kind, entry.compressedSize, entry.uncompressedSize)) {
+      const ratio = maxEntryRatioOf(limits, kind);
+      throw packageLimitProblem(
+        kind === null ? at : name,
+        'entry_ratio',
+        ratio,
+        `${kind === null ? 'An entry' : name} compresses more than ${String(ratio)}×.`,
+      );
+    }
     if (kind !== null && isJsonEntry(kind) && entry.uncompressedSize > limits.maxJsonEntryBytes) {
       throw packageLimitProblem(
         name,

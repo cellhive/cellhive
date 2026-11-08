@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { Readable, Transform, type TransformCallback } from 'node:stream';
+import { deflateRawSync } from 'node:zlib';
 
 import { ZipFile } from 'yazl';
 
@@ -10,6 +11,9 @@ import { packageLimitProblem, packageTooLarge } from './errors.js';
 import { jsonNestsDeeperThan } from './json.js';
 import {
   DEFAULT_BASE_PACKAGE_LIMITS,
+  deflateStaysWithinRatio,
+  exceedsEntryRatio,
+  maxEntryRatioOf,
   maxUncompressedBytes,
   type BasePackageLimits,
 } from './limits.js';
@@ -23,15 +27,18 @@ import {
  * Streaming writer of a `.chbase` package (ADR-24 §1, CONTRACTS §12.2):
  * entries go out one after another through `yazl` (ZIP64 when needed) into
  * a file — the export spools it to a temporary file, then stores it with
- * its exact length. JSON and NDJSON entries are deflated; files already
- * compressed (images, PDF, archives, Office documents…) are stored. The
+ * its exact length. JSON and NDJSON entries are deflated (a JSON entry that
+ * would deflate past its ratio is stored); files already compressed
+ * (images, PDF, archives, Office documents…) are stored. The
  * SHA-256 of every entry is computed while it is written and
  * `manifest.json`, holding them all, is written last.
  *
  * The caps of the reader apply here too (`BASE_PACKAGE_MAX_BYTES`, a JSON
- * entry, an NDJSON line, JSON nesting), so an export never produces a
- * package an import refuses: over `BASE_PACKAGE_MAX_BYTES` the writer fails
- * with `VALIDATION_FAILED` `PACKAGE_TOO_LARGE`.
+ * entry, an NDJSON line, JSON nesting, the compression ratio of each entry
+ * and the uncompressed total), so an export never produces a package an
+ * import refuses: over `BASE_PACKAGE_MAX_BYTES` the writer fails with
+ * `VALIDATION_FAILED` `PACKAGE_TOO_LARGE`, over another cap with
+ * `INVALID_PACKAGE` `ARCHIVE_LIMIT_EXCEEDED`.
  */
 
 export interface BasePackageWriterOptions {
@@ -120,6 +127,8 @@ export class BasePackageWriter {
   private busy = false;
   private finished = false;
   private uncompressed = 0;
+  /** Entries of `zip.entries` whose ratio was checked. */
+  private ratiosChecked = 0;
 
   private constructor(
     path: string,
@@ -173,8 +182,34 @@ export class BasePackageWriter {
     this.file.destroy();
   }
 
+  /**
+   * The reader's ratio per entry (200× NDJSON, 20× JSON and files) for the
+   * entries whose compressed data is complete; yazl knows a compressed
+   * size once the entry's data is written.
+   */
+  private checkRatios(): void {
+    const entries = this.zip.entries;
+    while (this.ratiosChecked < entries.length) {
+      const entry = entries[this.ratiosChecked];
+      if (entry?.compressedSize == null || entry.uncompressedSize == null) return;
+      this.ratiosChecked += 1;
+      const name = entry.utf8FileName.toString('utf8');
+      const kind = classifyEntry(name);
+      if (exceedsEntryRatio(this.limits, kind, entry.compressedSize, entry.uncompressedSize)) {
+        const ratio = maxEntryRatioOf(this.limits, kind);
+        throw packageLimitProblem(
+          name,
+          'entry_ratio',
+          ratio,
+          `${name} compresses more than ${String(ratio)}×.`,
+        );
+      }
+    }
+  }
+
   private begin(name: string): void {
     if (this.failure !== null) throw this.failure;
+    this.checkRatios();
     if (this.finished) throw new PackageWriteError('The package is finished');
     if (this.busy) throw new PackageWriteError('One entry at a time');
     if (this.checksums.has(name)) throw new PackageWriteError(`Entry written twice: ${name}`);
@@ -216,6 +251,7 @@ export class BasePackageWriter {
     const written: WrittenEntry = { name, sha256: hasher.digest(), size: hasher.bytes };
     this.checksums.set(name, written.sha256);
     this.uncompressed += written.size;
+    this.checkTotal();
     return written;
   }
 
@@ -258,7 +294,15 @@ export class BasePackageWriter {
       this.busy = false;
       throw error;
     }
-    return this.pump(name, Readable.from([bytes]), true, new EntryHasher());
+    // Deflated unless that would pass the ratio a reader allows (repetitive
+    // schema): then stored, which any reader takes.
+    const compress = deflateStaysWithinRatio(
+      this.limits,
+      classifyEntry(name),
+      deflateRawSync(bytes, { level: 6 }).length,
+      bytes.length,
+    );
+    return this.pump(name, Readable.from([bytes]), compress, new EntryHasher());
   }
 
   /**
@@ -339,18 +383,24 @@ export class BasePackageWriter {
     this.zip.end();
     await Promise.race([this.closed, this.failedPromise]);
     if (this.failure !== null) throw this.failure;
-    // The reader's cap on the whole package (ratio and total): never hand out
-    // a package an import refuses.
-    const limit = maxUncompressedBytes(this.limits, this.limiter.bytes);
+    // The reader's caps on each entry and on the whole package: never hand
+    // out a package an import refuses.
+    this.checkRatios();
+    this.checkTotal();
+    return { bytes: this.limiter.bytes, checksums: manifest.checksums, manifest };
+  }
+
+  /** All entries together inflate to at most 4 × `BASE_PACKAGE_MAX_BYTES`. */
+  private checkTotal(): void {
+    const limit = maxUncompressedBytes(this.limits);
     if (this.uncompressed > limit) {
       throw packageLimitProblem(
         '',
         'uncompressed_bytes',
         limit,
-        'The base compresses more than a package may.',
+        'The base inflates to more than a package may.',
       );
     }
-    return { bytes: this.limiter.bytes, checksums: manifest.checksums, manifest };
   }
 
   /** Stops writing (the caller removes the file); later calls fail. */

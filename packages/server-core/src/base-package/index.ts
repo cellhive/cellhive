@@ -52,6 +52,9 @@ export { jsonNestsDeeperThan } from './json.js';
 export {
   basePackageLimits,
   DEFAULT_BASE_PACKAGE_LIMITS,
+  deflateStaysWithinRatio,
+  exceedsEntryRatio,
+  maxEntryRatioOf,
   maxUncompressedBytes,
   type BasePackageLimits,
 } from './limits.js';

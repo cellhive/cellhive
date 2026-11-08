@@ -12,6 +12,8 @@ import {
   jsonNestsDeeperThan,
   linksEntry,
   MAX_PACKAGE_PROBLEMS,
+  exceedsEntryRatio,
+  maxEntryRatioOf,
   maxUncompressedBytes,
   packageIdPrefixOf,
   packageLinePath,
@@ -72,16 +74,35 @@ describe('entries allowlist (T1016)', () => {
 });
 
 describe('limits', () => {
-  it('uncompressed ≤ min(20 × package, 4 × cap)', () => {
+  it('per entry: NDJSON ≤ 200×, JSON and files ≤ 20×; all entries ≤ 4 × cap', () => {
     const limits = basePackageLimits(1000);
     expect(limits).toMatchObject({ ...DEFAULT_BASE_PACKAGE_LIMITS, maxPackageBytes: 1000 });
-    expect(maxUncompressedBytes(limits, 10)).toBe(200);
-    expect(maxUncompressedBytes(limits, 500)).toBe(4000);
-    expect(maxUncompressedBytes(limits, 0)).toBe(20);
+    expect(maxUncompressedBytes(limits)).toBe(4000);
+    const data = classifyEntry('data/tbl_0123456789abcdef.ndjson');
+    const links = classifyEntry('links/fld_0123456789abcdef.ndjson');
+    const json = classifyEntry('schema/tables.json');
+    const file = classifyEntry('files/att_0123456789abcdef');
+    const table = [
+      [data, 200],
+      [links, 200],
+      [json, 20],
+      [file, 20],
+      [classifyEntry('manifest.json'), 20],
+      [null, 20],
+    ] as const;
+    for (const [kind, ratio] of table) {
+      expect(maxEntryRatioOf(limits, kind)).toBe(ratio);
+      expect(exceedsEntryRatio(limits, kind, 10, 10 * ratio)).toBe(false);
+      expect(exceedsEntryRatio(limits, kind, 10, 10 * ratio + 1)).toBe(true);
+    }
+    // An empty compressed stream counts as one byte.
+    expect(exceedsEntryRatio(limits, json, 0, 20)).toBe(false);
+    expect(exceedsEntryRatio(limits, json, 0, 21)).toBe(true);
     expect(DEFAULT_BASE_PACKAGE_LIMITS).toEqual({
       maxPackageBytes: 2 * 1024 ** 3,
       maxEntries: 100_000,
-      maxCompressionRatio: 20,
+      maxEntryRatio: 20,
+      maxNdjsonEntryRatio: 200,
       maxUncompressedFactor: 4,
       maxJsonEntryBytes: 64 * 1024 ** 2,
       maxNdjsonLineBytes: 16 * 1024 ** 2,

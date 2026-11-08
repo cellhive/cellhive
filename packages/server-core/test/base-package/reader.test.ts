@@ -15,6 +15,7 @@ import { AppError } from '../../src/errors/app-error.js';
 import {
   ATT_ID,
   buildZip,
+  FIELD_ID,
   manifestFor,
   packageOf,
   scratch,
@@ -220,14 +221,104 @@ describe('poisoned packages (T1016)', () => {
     });
   });
 
-  it('compression ratio over 20 → ARCHIVE_LIMIT_EXCEEDED (uncompressed_bytes)', async () => {
+  it('a file compressed past 20× → ARCHIVE_LIMIT_EXCEEDED (entry_ratio 20)', async () => {
     const bomb = Buffer.alloc(10 * 1024 * 1024);
     const problem = await problemOf(
       withPackage((entries) => [...entries, { name: 'files/att_bomb000000000000', data: bomb }]),
     );
     expect(problem).toMatchObject({
       code: 'ARCHIVE_LIMIT_EXCEEDED',
-      params: { reason: 'uncompressed_bytes' },
+      path: 'files/att_bomb000000000000',
+      params: { reason: 'entry_ratio', limit: 20 },
+    });
+  });
+
+  it('a JSON entry compressed past 20× → ARCHIVE_LIMIT_EXCEEDED (entry_ratio 20)', async () => {
+    const base = Buffer.from(
+      JSON.stringify({
+        name: 'Sales',
+        description: 'x'.repeat(200_000),
+        icon: null,
+        settings: {},
+        missing_ids: [],
+      }),
+    );
+    expect(base.length / deflateRawSync(base).length).toBeGreaterThan(20);
+    const problem = await problemOf(
+      withPackage((entries) =>
+        entries.map((entry) =>
+          entry.name === 'schema/base.json' ? { ...entry, data: base } : entry,
+        ),
+      ),
+    );
+    expect(problem).toMatchObject({
+      code: 'ARCHIVE_LIMIT_EXCEEDED',
+      path: 'schema/base.json',
+      params: { reason: 'entry_ratio', limit: 20 },
+    });
+  });
+
+  /** `count` record lines of the same long text (ids differ), as a repetitive base exports. */
+  function repeatedRecords(count: number, text: string): Buffer {
+    const lines: string[] = [];
+    for (let index = 0; index < count; index += 1) {
+      lines.push(
+        JSON.stringify({
+          id: `rec_${String(index).padStart(16, '0')}`,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+          created_by_email: 'an@example.com',
+          updated_by_email: 'an@example.com',
+          auto: index + 1,
+          fields: { [FIELD_ID]: text },
+        }),
+      );
+    }
+    return Buffer.from(`${lines.join('\n')}\n`);
+  }
+
+  const withData = (data: Buffer) =>
+    withPackage((entries) =>
+      entries.map((entry) =>
+        entry.name === `data/${TABLE_ID}.ndjson` ? { ...entry, data } : entry,
+      ),
+    );
+
+  it('an NDJSON entry compressed past 200× → ARCHIVE_LIMIT_EXCEEDED (entry_ratio 200)', async () => {
+    const data = repeatedRecords(400, 'x'.repeat(50_000));
+    expect(data.length / deflateRawSync(data).length).toBeGreaterThan(200);
+    const problem = await problemOf(withData(data));
+    expect(problem).toMatchObject({
+      code: 'ARCHIVE_LIMIT_EXCEEDED',
+      path: `data/${TABLE_ID}.ndjson`,
+      params: { reason: 'entry_ratio', limit: 200 },
+    });
+  });
+
+  it('an NDJSON entry compressed about 60× (a base of repeated text) is read', async () => {
+    const data = repeatedRecords(
+      4_000,
+      'Đơn hàng giao trong ngày, khách đã thanh toán đủ'.repeat(4),
+    );
+    const ratio = data.length / deflateRawSync(data).length;
+    expect(ratio).toBeGreaterThan(40);
+    expect(ratio).toBeLessThan(200);
+    await expect(readAll(withData(data))).resolves.toBeUndefined();
+  });
+
+  it('all entries together past 4 × BASE_PACKAGE_MAX_BYTES → ARCHIVE_LIMIT_EXCEEDED (uncompressed_bytes)', async () => {
+    // A cap of 10 MiB × 0.001: about 10 KiB in all, whatever the package's own size.
+    const limits = basePackageLimits(10 * 1024 * 1024, { maxUncompressedFactor: 0.001 });
+    const problem = await problemOf(
+      withPackage((entries) => [
+        ...entries,
+        { name: 'files/att_large00000000000', data: randomBytes(20_000), method: 0 },
+      ]),
+      limits,
+    );
+    expect(problem).toMatchObject({
+      code: 'ARCHIVE_LIMIT_EXCEEDED',
+      params: { reason: 'uncompressed_bytes', limit: 10 * 1024 * 1024 * 0.001 },
     });
   });
 

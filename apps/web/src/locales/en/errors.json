@@ -179,6 +179,7 @@
     "ARCHIVE_LIMIT_EXCEEDED_package_bytes": "The package is larger than allowed: at most {{limit, number}} bytes.",
     "ARCHIVE_LIMIT_EXCEEDED_entries": "The package has more than {{limit, number}} files inside.",
     "ARCHIVE_LIMIT_EXCEEDED_uncompressed_bytes": "The package decompresses to more than allowed.",
+    "ARCHIVE_LIMIT_EXCEEDED_entry_ratio": "A part of the package compresses more than {{limit, number}}× and would decompress to too much.",
     "ARCHIVE_LIMIT_EXCEEDED_json_entry_bytes": "A part of the package is larger than {{limit, number}} bytes.",
     "ARCHIVE_LIMIT_EXCEEDED_ndjson_line_bytes": "A line of the package is longer than {{limit, number}} bytes.",
     "ARCHIVE_LIMIT_EXCEEDED_json_depth": "A part of the package is nested more than {{limit, number}} levels deep.",

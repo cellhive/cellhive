@@ -101,7 +101,8 @@ describe('BasePackageWriter → openBasePackage', () => {
   it('round-trips every kind of entry, checksums computed while writing', async () => {
     const path = nextPath();
     const photo = randomBytes(40_000);
-    const note = Buffer.from('plain text note, compressible '.repeat(200));
+    // Compressible, but under the 20× a file may deflate to.
+    const note = Buffer.from(randomBytes(225).toString('base64').repeat(10));
     const records = Array.from({ length: 1000 }, (_value, index) => record(index));
     const base = { name: 'Sales', description: null, icon: null, settings: {}, missing_ids: [] };
     const tables = { tables: [] };
@@ -291,9 +292,9 @@ describe('BasePackageWriter → openBasePackage', () => {
     json.abort();
   });
 
-  it('refuses a package compressing past the ratio the reader allows', async () => {
+  it('refuses an NDJSON entry compressing past the ratio the reader allows', async () => {
     const writer = await BasePackageWriter.create(nextPath(), {
-      limits: basePackageLimits(undefined, { maxCompressionRatio: 2 }),
+      limits: basePackageLimits(undefined, { maxNdjsonEntryRatio: 2 }),
     });
     await writer.addNdjson(
       dataEntry(TABLE),
@@ -301,8 +302,90 @@ describe('BasePackageWriter → openBasePackage', () => {
     );
     await expect(writer.finish(MANIFEST)).rejects.toMatchObject({
       code: 'INVALID_PACKAGE',
+      errors: [
+        {
+          code: 'ARCHIVE_LIMIT_EXCEEDED',
+          path: dataEntry(TABLE),
+          params: { reason: 'entry_ratio', limit: 2 },
+        },
+      ],
+    });
+  });
+
+  it('stores a JSON entry that deflating would take past 20×; the reader takes it', async () => {
+    const path = nextPath();
+    const writer = await BasePackageWriter.create(path);
+    const base = {
+      name: 'Sales',
+      description: 'x'.repeat(90_000),
+      icon: null,
+      settings: {},
+      missing_ids: [],
+    };
+    await writer.addJson(SCHEMA_ENTRIES.base, base);
+    await writer.finish(MANIFEST);
+    const listing = await centralDirectory(path);
+    expect(listing.find((entry) => entry.name === SCHEMA_ENTRIES.base)).toMatchObject({
+      method: 0,
+    });
+    const reader = await openBasePackage(path);
+    try {
+      await reader.verifyAll();
+      expect(await reader.readJson(SCHEMA_ENTRIES.base, packageBaseSchema)).toEqual(base);
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('refuses a file compressing past 20× (the caller deflated it)', async () => {
+    const writer = await BasePackageWriter.create(nextPath());
+    await writer.addFile(fileEntry(NOTE), Readable.from([Buffer.alloc(100_000, 'a')]), {
+      compress: true,
+    });
+    await expect(writer.finish(MANIFEST)).rejects.toMatchObject({
+      code: 'INVALID_PACKAGE',
+      errors: [
+        {
+          code: 'ARCHIVE_LIMIT_EXCEEDED',
+          path: fileEntry(NOTE),
+          params: { reason: 'entry_ratio', limit: 20 },
+        },
+      ],
+    });
+  });
+
+  it('writes an NDJSON entry compressing about 60× (a base of repeated text), read back', async () => {
+    const path = nextPath();
+    const writer = await BasePackageWriter.create(path);
+    const text = 'Đơn hàng giao trong ngày, khách đã thanh toán đủ'.repeat(4);
+    await writer.addNdjson(
+      dataEntry(TABLE),
+      Array.from({ length: 4000 }, (_, index) => ({ ...record(index), fields: { [FIELD]: text } })),
+    );
+    await writer.finish(MANIFEST);
+    const reader = await openBasePackage(path);
+    try {
+      await reader.verifyAll();
+      const entry = reader.entry(dataEntry(TABLE));
+      const ratio = (entry?.uncompressedSize ?? 0) / (entry?.compressedSize ?? 1);
+      expect(ratio).toBeGreaterThan(40);
+      expect(ratio).toBeLessThan(200);
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('refuses entries inflating past 4 × BASE_PACKAGE_MAX_BYTES in all', async () => {
+    const writer = await BasePackageWriter.create(nextPath(), {
+      limits: basePackageLimits(10 * 1024 * 1024, { maxUncompressedFactor: 0.001 }),
+    });
+    await expect(
+      writer.addFile(fileEntry(PHOTO), Readable.from([randomBytes(20_000)]), { compress: false }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_PACKAGE',
       errors: [{ code: 'ARCHIVE_LIMIT_EXCEEDED', params: { reason: 'uncompressed_bytes' } }],
     });
+    writer.abort();
   });
 
   it('refuses more entries than a package may hold', async () => {
