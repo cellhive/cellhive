@@ -317,6 +317,7 @@ export function buildTaskList(deps: TaskDeps): TaskList {
     allowlist: httpAllowlistSource(deps.db),
     privateAllowlist: deps.config.outboundHttp.privateAllowlist,
     keys: createAiKeySource(deps.db, deps.config.security.appMasterKey),
+    logger: deps.logger,
     ...(deps.ai?.lookup === undefined ? {} : { lookup: deps.ai.lookup }),
     ...(deps.ai?.now === undefined ? {} : { now: deps.ai.now }),
   });

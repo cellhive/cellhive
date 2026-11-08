@@ -52,6 +52,12 @@ export interface GuardedRequestOptions {
    * still checked against `servername`, T605).
    */
   readonly ca?: string | Buffer | readonly (string | Buffer)[];
+  /**
+   * Aborts the call (its socket is destroyed at once): the promise rejects
+   * with `signal.reason`, not an {@link OutboundHttpError} — the caller
+   * gave up, nothing failed on the way.
+   */
+  readonly signal?: AbortSignal;
 }
 
 export interface GuardedResponse {
@@ -92,7 +98,8 @@ function decoderOf(encoding: string): Transform | null {
  *   **and** after gzip/deflate/br decompression, then the call is aborted
  *   (`http_response_too_large`);
  * - other failures are `http_network`. Errors carry no URL, address,
- *   header or body.
+ *   header or body;
+ * - an aborted `signal` destroys the socket and rejects with its reason.
  */
 export function guardedRequest(
   target: OutboundTarget,
@@ -157,19 +164,23 @@ export function guardedRequest(
   // `all: true`, or an IP literal) as an uncaught exception instead of a
   // request error — that would take the worker process down.
   if (blocked) return Promise.reject(new OutboundHttpError('http_network'));
+  const { signal } = options;
+  if (signal?.aborted === true) return Promise.reject(signal.reason as Error);
 
   return new Promise<GuardedResponse>((resolve, reject) => {
     let settled = false;
     let connectTimer: NodeJS.Timeout | null = null;
     const streams: Readable[] = [];
-    const finish = (error: OutboundHttpError | null, response?: GuardedResponse) => {
+    const finish = (error: Error | null, response?: GuardedResponse) => {
       if (settled) return;
       settled = true;
       clearTimeout(totalTimer);
       if (connectTimer !== null) clearTimeout(connectTimer);
+      signal?.removeEventListener('abort', onAbort);
       if (error !== null) {
         request.destroy();
         for (const stream of streams) stream.destroy();
+        // An `OutboundHttpError`, or the abort reason the caller chose.
         reject(error);
       } else if (response !== undefined) {
         resolve(response);
@@ -178,6 +189,10 @@ export function guardedRequest(
     };
     const fail = (error: OutboundHttpError) => {
       finish(error);
+    };
+    const onAbort = () => {
+      const reason: unknown = signal?.reason;
+      finish(reason instanceof Error ? reason : new OutboundHttpError('http_network'));
     };
 
     const request = (secure ? https : http).request(requestOptions);
@@ -246,6 +261,7 @@ export function guardedRequest(
       });
     });
 
+    signal?.addEventListener('abort', onAbort, { once: true });
     request.end(body ?? undefined);
   });
 }

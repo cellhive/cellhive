@@ -17,6 +17,7 @@ import {
   type WidgetDataDto,
   type WidgetSort,
 } from '@cellhive/contracts';
+import { numberStyleSchema, type NumberStyle } from '@cellhive/field-types';
 import { TUPLE_OPERATORS } from '@cellhive/filter-dsl';
 import { z } from 'zod';
 
@@ -325,30 +326,241 @@ export function askInterpretation(plan: AskPlan, digest: AskDigest): AiAskInterp
 
 // --- Narrative -------------------------------------------------------------------------
 
+/** What the narrative block is written for: the asker's locale and today in the question's zone. */
+export interface AskResultContext {
+  /** BCP 47 locale of the asker (`vi`, `en`…): labels and numbers are written for them. */
+  readonly locale: string;
+  /** `YYYY-MM-DD` today in the time zone of the question (its date buckets and periods). */
+  readonly today: string;
+  /** The digest of the question: the number style (currency) of the metric field. */
+  readonly digest: AskDigest;
+}
+
+const formatCache = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat>();
+
+function numberFormat(locale: string, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const key = `n|${locale}|${JSON.stringify(options)}`;
+  let format = formatCache.get(key) as Intl.NumberFormat | undefined;
+  if (format === undefined) {
+    format = new Intl.NumberFormat(locale, options);
+    formatCache.set(key, format);
+  }
+  return format;
+}
+
+function dateFormat(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `d|${locale}|${JSON.stringify(options)}`;
+  let format = formatCache.get(key) as Intl.DateTimeFormat | undefined;
+  if (format === undefined) {
+    format = new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' });
+    formatCache.set(key, format);
+  }
+  return format;
+}
+
+const isVietnamese = (locale: string) => locale.toLowerCase().startsWith('vi');
+
+/** `YYYY-MM-DD` (the first ten characters of a bucket value) as a UTC date, else `null`. */
+function civilDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/u.exec(value);
+  if (match === null) return null;
+  const [, y, m, d] = match;
+  return new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+}
+
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+
+/** The first day of the bucket of `day` (weeks start on Monday, like `date_trunc`). */
+function bucketStart(day: Date, bucket: DateBucket): Date {
+  const y = day.getUTCFullYear();
+  const m = day.getUTCMonth();
+  switch (bucket) {
+    case 'day':
+      return day;
+    case 'week':
+      return new Date(day.getTime() - ((day.getUTCDay() + 6) % 7) * 86_400_000);
+    case 'month':
+      return new Date(Date.UTC(y, m, 1));
+    case 'quarter':
+      return new Date(Date.UTC(y, m - (m % 3), 1));
+    case 'year':
+      return new Date(Date.UTC(y, 0, 1));
+  }
+}
+
+/** The bucket before the one starting at `start`. */
+function previousBucket(start: Date, bucket: DateBucket): Date {
+  const y = start.getUTCFullYear();
+  const m = start.getUTCMonth();
+  switch (bucket) {
+    case 'day':
+      return new Date(start.getTime() - 86_400_000);
+    case 'week':
+      return new Date(start.getTime() - 7 * 86_400_000);
+    case 'month':
+      return new Date(Date.UTC(y, m - 1, 1));
+    case 'quarter':
+      return new Date(Date.UTC(y, m - 3, 1));
+    case 'year':
+      return new Date(Date.UTC(y - 1, 0, 1));
+  }
+}
+
 /**
- * The aggregated result the narrative call reads (BACKLOG T909): column
- * names, at most {@link AI_ASK_MAX_GROUPS} rows of labels and numbers,
- * "Other", totals and the KPI comparison — no record id, no record.
+ * A date bucket as a reader of `locale` writes it (BACKLOG T1004): `vi`
+ * "tháng 8/2026", "quý 3/2026", "tuần từ 10/08/2026", "15/08/2026"; other
+ * locales through `Intl` — "August 2026", "Q3 2026", "week of Aug 10,
+ * 2026", "Aug 15, 2026". Never the ISO key the model would copy.
  */
-export function askResultJson(interpretation: AiAskInterpretation, data: WidgetDataDto): string {
+export function askBucketLabel(start: Date, bucket: DateBucket, locale: string): string {
+  const year = start.getUTCFullYear();
+  const month = start.getUTCMonth() + 1;
+  const quarter = Math.floor(start.getUTCMonth() / 3) + 1;
+  if (isVietnamese(locale)) {
+    const day = dateFormat('vi', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+      start,
+    );
+    switch (bucket) {
+      case 'day':
+        return day;
+      case 'week':
+        return `tuần từ ${day}`;
+      case 'month':
+        return `tháng ${String(month)}/${String(year)}`;
+      case 'quarter':
+        return `quý ${String(quarter)}/${String(year)}`;
+      case 'year':
+        return String(year);
+    }
+  }
+  switch (bucket) {
+    case 'day':
+      return dateFormat(locale, { dateStyle: 'medium' }).format(start);
+    case 'week':
+      return `week of ${dateFormat(locale, { dateStyle: 'medium' }).format(start)}`;
+    case 'month':
+      return dateFormat(locale, { month: 'long', year: 'numeric' }).format(start);
+    case 'quarter':
+      return `Q${String(quarter)} ${String(year)}`;
+    case 'year':
+      return String(year);
+  }
+}
+
+/** The number style of a field (`options.style`), `null` when it has none. */
+function numberStyleOf(options: unknown): NumberStyle | null {
+  const style = isRecord(options) ? options['style'] : undefined;
+  const parsed = numberStyleSchema.safeParse(style);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * A metric value as the reader writes it: counts as whole numbers, a sum,
+ * average, minimum or maximum in the field's currency (or as a percentage)
+ * when it has one, always with the locale's digit grouping — never the raw
+ * `1019375000` the model would copy.
+ */
+function metricText(
+  value: unknown,
+  aggregation: MetricAggregation,
+  style: NumberStyle | null,
+  locale: string,
+): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  if (aggregation === 'count' || aggregation === 'count_distinct') {
+    return numberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+  }
+  if (style?.type === 'currency') {
+    return numberFormat(locale, {
+      style: 'currency',
+      currency: style.currency_code,
+      ...(style.precision === undefined
+        ? {}
+        : { minimumFractionDigits: style.precision, maximumFractionDigits: style.precision }),
+    }).format(value);
+  }
+  if ((style?.type === 'plain' || style?.type === 'progress') && style.percentage) {
+    return numberFormat(locale, { style: 'percent', maximumFractionDigits: 2 }).format(value);
+  }
+  return numberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+}
+
+/**
+ * The aggregated result the narrative call reads (BACKLOG T909, T1004):
+ * column names, at most {@link AI_ASK_MAX_GROUPS} rows of labels and numbers
+ * **as the asker reads them** (`context.locale`: date buckets by name,
+ * amounts in the metric field's currency with digit grouping), "Other",
+ * totals and the KPI comparison with both periods named; and
+ * `unfinished_period` when the result holds the period that contains today
+ * (its numbers are so far, not final). No record id, no record.
+ */
+export function askResultJson(
+  interpretation: AiAskInterpretation,
+  data: WidgetDataDto,
+  context: AskResultContext,
+): string {
+  const { locale } = context;
+  const today = civilDate(context.today) ?? new Date(0);
   const metricName =
     interpretation.field === null
       ? interpretation.metric
       : `${interpretation.metric} of ${interpretation.field.name}`;
+  const metricField = context.digest.fields.find(
+    (field) => field.meta.id === interpretation.field?.id,
+  );
+  const style = numberStyleOf(metricField?.meta.options);
+  const metric = (value: unknown) => metricText(value, interpretation.metric, style, locale);
   const nameOf = (column: WidgetDataDto['columns'][number]) =>
     column.role === 'metric'
       ? metricName
       : column.role === 'dimension'
         ? (interpretation.dimension?.name ?? column.role)
         : (interpretation.series?.name ?? column.role);
+  // The period that contains today, when the result holds it (set while reading the rows).
+  const found: { unfinished: string | null } = { unfinished: null };
+  const groupText = (cell: unknown, column: WidgetDataDto['columns'][number] | undefined) => {
+    const label = groupLabelOf(cell);
+    const bucket = column?.date_bucket ?? null;
+    const start = bucket === null ? null : civilDate(label);
+    if (bucket === null || start === null) {
+      return typeof label === 'number' ? metricText(label, 'sum', null, locale) : label;
+    }
+    const text = askBucketLabel(start, bucket, locale);
+    if (isoDay(bucketStart(today, bucket)) === isoDay(start)) found.unfinished = text;
+    return text;
+  };
   const rowsOf = (rows: readonly (readonly unknown[])[]) =>
-    rows
-      .slice(0, AI_ASK_MAX_GROUPS)
-      .map((row) =>
-        row.map((cell, index) =>
-          data.columns[index]?.role === 'metric' ? cell : groupLabelOf(cell),
-        ),
-      );
+    rows.slice(0, AI_ASK_MAX_GROUPS).map((row) =>
+      row.map((cell, index) => {
+        const column = data.columns[index];
+        return column?.role === 'metric' ? metric(cell) : groupText(cell, column);
+      }),
+    );
+  const rows = rowsOf(data.rows);
+  const range = interpretation.compare;
+  let compare: Readonly<Record<string, unknown>> = {};
+  if (data.compare !== undefined && range !== null) {
+    // The current period always holds today: a comparison of a period still running.
+    const current = bucketStart(today, range);
+    const currentLabel = askBucketLabel(current, range, locale);
+    found.unfinished = currentLabel;
+    compare = {
+      current_period: currentLabel,
+      previous_period: {
+        label: askBucketLabel(previousBucket(current, range), range, locale),
+        value: metric(data.compare.previous),
+        change:
+          data.compare.change === null
+            ? null
+            : numberFormat(locale, {
+                style: 'percent',
+                maximumFractionDigits: 1,
+                signDisplay: 'exceptZero',
+              }).format(data.compare.change),
+      },
+    };
+  }
   return JSON.stringify({
     understood_as: {
       metric: metricName,
@@ -366,19 +578,16 @@ export function askResultJson(interpretation: AiAskInterpretation, data: WidgetD
       compared_with_previous: interpretation.compare,
     },
     columns: data.columns.map(nameOf),
-    rows: rowsOf(data.rows),
+    rows,
     ...(data.rows.length > AI_ASK_MAX_GROUPS
       ? { more_rows: data.rows.length - AI_ASK_MAX_GROUPS }
       : {}),
     ...(data.other === undefined
       ? {}
       : { other: { groups: data.other.groups, rows: rowsOf(data.other.rows) } }),
-    ...(data.total === undefined ? {} : { total: data.total }),
-    ...(data.compare === undefined
-      ? {}
-      : {
-          previous_period: { value: data.compare.previous, change: data.compare.change },
-        }),
+    ...(data.total === undefined ? {} : { total: data.total.map(metric) }),
+    ...compare,
+    ...(found.unfinished === null ? {} : { unfinished_period: found.unfinished }),
   });
 }
 
@@ -389,6 +598,7 @@ export function narrativeMessages(input: {
 }): AiChatMessage[] {
   const system = [
     'You explain the answer to a question about a table of Cellhive in at most three short sentences, from the result block: numbers the application computed with the permissions of the person asking, and how it understood the question. Use only these numbers and never invent one; say so when the result does not answer the question. Plain text only: no Markdown, no list, no link. Write in the language of the question.',
+    'Labels and numbers in the result block are already written for the reader (periods by name, amounts with their currency): copy them as they are, never as dates like 2026-05 or digits without grouping. When the block has unfinished_period, that period has not ended yet: say its figures are so far, not final.',
     UNTRUSTED_DATA_INSTRUCTIONS,
     'In the result block, "ˆ" stands for a space.',
   ].join('\n\n');

@@ -68,6 +68,8 @@ export interface FakeOpenAiServer {
   chatRequests(): FakeOpenAiRequest[];
   /** TCP connections accepted so far. */
   connections(): number;
+  /** TCP connections still open (a client that aborted its call closed its socket). */
+  openConnections(): number;
   /** Answers of the next chat calls, in order (also `POST /__script` with one reply or a list). */
   script(...replies: FakeOpenAiReply[]): void;
   /** Answers every chat call whose last message contains `marker`. */
@@ -321,6 +323,7 @@ export async function startFakeOpenAiServer(
     chatRequests: () =>
       requests.filter((entry) => entry.method === 'POST' && entry.path === '/v1/chat/completions'),
     connections: () => connections,
+    openConnections: () => sockets.size,
     script: (...replies) => {
       queue.push(...replies);
     },

@@ -632,6 +632,53 @@ describe('AI actions (T911)', () => {
       }
     });
 
+    it('quota reached by the first call: the repair round is never sent, ai_quota_exceeded (T1004)', async () => {
+      const limited = await settings({ daily_token_limit: 10_000 });
+      expect(limited.statusCode, limited.body).toBe(200);
+      const day = { organizationId: fx.orgId, timeZone: 'Asia/Ho_Chi_Minh', now: new Date() };
+      const ledger = new AiUsageLedger(db);
+      await sql`DELETE FROM meta.ai_usage_daily WHERE organization_id = ${fx.orgId}`.execute(
+        db.kysely,
+      );
+      // One token left: the first call passes the quota, its usage reaches it.
+      await ledger.record(day, 'ask', {
+        promptTokens: 9_999,
+        completionTokens: 0,
+        estimated: false,
+      });
+      try {
+        const recordId = await createTicket({ [fld('ticketTitle')]: 'Quota giữa hai lời gọi' });
+        const runId = await queuedRun([classify()], recordId);
+        // An option outside the field: the next call would be a repair round.
+        fake.script({ content: JSON.stringify({ option: 'Không có' }) });
+        expect(await execute(runId)).toEqual({
+          status: 'failed',
+          code: 'ai_quota_exceeded',
+          step: 'act_cls',
+        });
+        const [step] = await stepsOf(runId);
+        expect(step?.error).toMatchObject({
+          code: 'ai_quota_exceeded',
+          params: { reset_at: expect.any(String) as string },
+        });
+        expect(step?.error).not.toHaveProperty('retry_at');
+        expect(chats()).toHaveLength(1);
+        // The call that was sent has its audit entry.
+        const audit = await sql<{ after: Record<string, unknown> }>`
+          SELECT after FROM meta.audit_logs
+           WHERE organization_id = ${fx.orgId} AND action = 'ai.requested'
+           ORDER BY created_at DESC, id DESC LIMIT 1`.execute(db.kysely);
+        expect(audit.rows[0]?.after).toMatchObject({
+          feature: 'action',
+          status: 'ai_quota_exceeded',
+          attempts: 1,
+        });
+      } finally {
+        const unlimited = await settings({ daily_token_limit: null });
+        expect(unlimited.statusCode, unlimited.body).toBe(200);
+      }
+    });
+
     it('a record outside the edit rule of run_as is left alone: skipped_not_editable', async () => {
       const statuses = (
         fx.fld['ticketStatus']?.options as { options: { id: Id<'opt'>; name: string }[] }

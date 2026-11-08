@@ -315,7 +315,9 @@ describe('AI Q&A on a table (T909)', () => {
       expect(narrative['response_format']).toBeUndefined();
       const text = JSON.stringify(narrative);
       expect(lastUserMessage(1)).toMatch(/<<DATA result [0-9a-f]{16}>>/u);
-      expect(text).toContain('2026-10-01');
+      // (T1004) Labels and numbers as the asker reads them (vi): months by name, digit grouping.
+      expect(text).toContain('thángˆ10/2026'); // datamarked: a space is ˆ
+      expect(text).not.toContain('2026-10-01');
       expect(text).toContain('400');
       for (const id of ['fld_', 'tbl_', 'opt_', 'rec_', 'usr_']) expect(text).not.toContain(id);
       for (const title of ['r1', 'r2', 'r3']) expect(text).not.toContain(`"${title}"`);

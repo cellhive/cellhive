@@ -21,6 +21,7 @@ import {
   estimateTokens,
   generateAiValue,
   GroupMembersRepository,
+  isAiQuotaExceeded,
   JobsRepository,
   loadBaseSchemaRows,
   prepareAiOptions,
@@ -44,10 +45,9 @@ import { SchemaAccess } from '../../common/schema/schema-access.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
 import { readabilityOf } from '../field/computed-fields.js';
 
-import { AiAccess } from './ai-access.js';
+import { AiAccess, type AiRequestMeta } from './ai-access.js';
 
 import type { Principal } from '../../common/auth/principal.js';
-import type { RequestMeta } from '../../common/auth/request-meta.js';
 
 /** Ids read per query while a generate request collects its rows (never every id at once). */
 const AI_GENERATE_ID_BATCH = 5_000;
@@ -110,7 +110,7 @@ export class AiFieldService {
     principal: Principal,
     tableId: Id<'tbl'>,
     body: AiFieldPreviewRequest,
-    meta: RequestMeta,
+    meta: AiRequestMeta,
   ): Promise<AiFieldPreview> {
     const { base, table } = await this.schemaAccess.requireTable(principal, tableId, 'manage');
     const scope = base.org.scope;
@@ -192,9 +192,10 @@ export class AiFieldService {
                 organizationId: call.organizationId,
                 settings: call.settings,
                 deadline: call.deadline,
+                ...call.hooks,
                 onUsage: async (usage) => {
                   tokens += usage.promptTokens + usage.completionTokens;
-                  await call.onUsage(usage);
+                  await call.hooks.onUsage(usage);
                 },
               },
               prepared.ai,
@@ -209,6 +210,8 @@ export class AiFieldService {
               error: null,
             });
           } catch (error) {
+            // The quota used up meanwhile ends the request (`429`): no call for the other records.
+            if (isAiQuotaExceeded(error)) throw error;
             if (!(error instanceof AppError) || !error.code.startsWith('AI_')) throw error;
             calls += 1;
             const reason = error.params?.['reason'];

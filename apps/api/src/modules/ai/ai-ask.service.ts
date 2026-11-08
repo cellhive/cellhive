@@ -38,10 +38,9 @@ import { SchemaAccess } from '../../common/schema/schema-access.js';
 import { APP_CONFIG, DB } from '../../common/tokens.js';
 import { WidgetQueryLimiter, withRetryAfter } from '../dashboard/widget-query-limiter.js';
 
-import { AiAccess, type AiCall } from './ai-access.js';
+import { AiAccess, type AiCall, type AiRequestMeta } from './ai-access.js';
 
 import type { Principal } from '../../common/auth/principal.js';
-import type { RequestMeta } from '../../common/auth/request-meta.js';
 
 const UNANSWERABLE: AiAsk = { status: 'unanswerable' };
 
@@ -73,7 +72,7 @@ export class AiAskService {
     principal: Principal,
     tableId: Id<'tbl'>,
     body: AiAskRequest,
-    meta: RequestMeta,
+    meta: AiRequestMeta,
   ): Promise<AiAsk> {
     const { base, table } = await this.schemaAccess.requireTable(principal, tableId, 'read');
     const scope = base.org.scope;
@@ -104,6 +103,7 @@ export class AiAskService {
         : { ok: false, problems: askProblems(built.problems) };
     };
 
+    const today = quotaDayOf(this.ai.now(), timeZone).day;
     return this.ai.run(
       principal,
       base.org,
@@ -124,13 +124,13 @@ export class AiAskService {
             messages: askMessages({
               digest,
               question: body.question,
-              today: quotaDayOf(this.ai.now(), timeZone).day,
+              today,
               timeZone,
             }),
             output: { kind: 'json', schema: askPlanSchema(digest), name: 'ask_plan' },
             maxOutputTokens: AI_ASK_PLAN_MAX_OUTPUT_TOKENS,
             deadline: call.deadline,
-            onUsage: call.onUsage,
+            ...call.hooks,
           },
           check,
         );
@@ -165,7 +165,11 @@ export class AiAskService {
           data,
           narrative:
             call.allowRecordData && data.status === 'ok'
-              ? await narrative(call, body.question, askResultJson(interpretation, data))
+              ? await narrative(
+                  call,
+                  body.question,
+                  askResultJson(interpretation, data, { locale: access.locale, today, digest }),
+                )
               : null,
         };
       },
@@ -175,7 +179,8 @@ export class AiAskService {
 
 /**
  * The narrative of the numbers (only with `allow_record_data`): `null` when
- * the provider fails or the budget is spent — the numbers stand without it.
+ * the provider fails, the budget is spent or the quota was used up by the
+ * plan (the call is then never sent) — the numbers stand without it.
  */
 async function narrative(call: AiCall, question: string, result: string): Promise<string | null> {
   try {
@@ -186,12 +191,15 @@ async function narrative(call: AiCall, question: string, result: string): Promis
       output: { kind: 'text' },
       maxOutputTokens: AI_ASK_NARRATIVE_MAX_OUTPUT_TOKENS,
       deadline: call.deadline,
-      onUsage: call.onUsage,
+      ...call.hooks,
     });
     const text = completion.content.trim();
     return text === '' ? null : text;
   } catch (error) {
-    if (error instanceof AppError && ['AI_PROVIDER_ERROR', 'AI_TIMEOUT'].includes(error.code)) {
+    if (
+      error instanceof AppError &&
+      ['AI_PROVIDER_ERROR', 'AI_TIMEOUT', 'AI_QUOTA_EXCEEDED'].includes(error.code)
+    ) {
       return null;
     }
     throw error;

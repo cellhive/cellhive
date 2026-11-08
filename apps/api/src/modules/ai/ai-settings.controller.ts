@@ -22,6 +22,7 @@ import {
   Put,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
 
 import { CurrentPrincipal, type Principal } from '../../common/auth/principal.js';
@@ -29,8 +30,9 @@ import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { ZodValidationPipe } from '../../common/validation/zod-validation.pipe.js';
 
 import { AiSettingsService } from './ai-settings.service.js';
+import { aiRequestMetaOf } from './client-abort.js';
 
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 const orgIdPipe = new ZodValidationPipe(idOf('org'));
 
@@ -65,8 +67,9 @@ export class AiSettingsController {
     body: TestAiSettingsRequest,
     @CurrentPrincipal() principal: Principal,
     @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<AiSettingsTestResult> {
-    return this.settings.test(principal, orgId, body, requestMetaOf(request));
+    return this.settings.test(principal, orgId, body, aiRequestMetaOf(request, reply));
   }
 
   @Get('ai-usage')

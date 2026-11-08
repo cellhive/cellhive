@@ -5,15 +5,15 @@ import {
   type AiAskRequest,
   type Id,
 } from '@cellhive/contracts';
-import { Body, Controller, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 
 import { CurrentPrincipal, type Principal } from '../../common/auth/principal.js';
-import { requestMetaOf } from '../../common/auth/request-meta.js';
 import { ZodValidationPipe } from '../../common/validation/zod-validation.pipe.js';
 
 import { AiAskService } from './ai-ask.service.js';
+import { aiRequestMetaOf } from './client-abort.js';
 
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 /** "Ask AI" about a table (CONTRACTS §29.4, BACKLOG T909). */
 @Controller('tables/:tableId/ai')
@@ -27,7 +27,8 @@ export class AiAskController {
     @Body(new ZodValidationPipe(aiAskRequestSchema)) body: AiAskRequest,
     @CurrentPrincipal() principal: Principal,
     @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<AiAsk> {
-    return this.asks.ask(principal, tableId, body, requestMetaOf(request));
+    return this.asks.ask(principal, tableId, body, aiRequestMetaOf(request, reply));
   }
 }

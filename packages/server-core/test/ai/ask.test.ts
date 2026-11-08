@@ -8,6 +8,7 @@ import {
   askInterpretation,
   askMessages,
   askPlanSchema,
+  askBucketLabel,
   askProblems,
   askResultJson,
   narrativeMessages,
@@ -319,6 +320,7 @@ describe('plan → widget config, problems, interpretation (T909)', () => {
 });
 
 describe('the narrative call (T909)', () => {
+  const en = { locale: 'en', today: '2026-10-31', digest };
   const interpretation = askInterpretation(
     plan({ dimension: { field: 'customer', date_bucket: null }, filter: null, chart: 'bar' }),
     digest,
@@ -359,28 +361,185 @@ describe('the narrative call (T909)', () => {
   };
 
   it('reads labels and numbers, at most 50 rows, never an id', () => {
-    const result = JSON.parse(askResultJson(interpretation, data)) as Record<string, unknown>;
+    const result = JSON.parse(askResultJson(interpretation, data, en)) as Record<string, unknown>;
     expect(result['columns']).toEqual(['customer', 'sum of amount']);
     const lines = result['rows'] as unknown[][];
     expect(lines).toHaveLength(AI_ASK_MAX_GROUPS);
     expect(lines.slice(0, 3)).toEqual([
-      ['An Phát', 300],
-      [null, 200],
-      [null, 100],
+      ['An Phát', '300'],
+      [null, '200'],
+      [null, '100'],
     ]);
     expect(result['more_rows']).toBe(13);
-    expect(result['total']).toEqual([600]);
-    expect(askResultJson(interpretation, data)).not.toMatch(/(rec|fld|tbl|opt|usr)_/u);
+    expect(result['total']).toEqual(['600']);
+    expect(result).not.toHaveProperty('unfinished_period');
+    expect(askResultJson(interpretation, data, en)).not.toMatch(/(rec|fld|tbl|opt|usr)_/u);
   });
 
   it('puts the result in a data block and the question last', () => {
     const [system, user] = narrativeMessages({
       question: 'Ai mua nhiều nhất?',
-      result: askResultJson(interpretation, data),
+      result: askResultJson(interpretation, data, en),
     });
     expect(system?.content).toContain(UNTRUSTED_DATA_INSTRUCTIONS);
     expect(user?.content).toMatch(/<<DATA result [0-9a-f]{16}>>/u);
     expect(user?.content).toContain('Anˆ' + 'Phát');
     expect(user?.content.endsWith('Question:\nAi mua nhiều nhất?')).toBe(true);
+  });
+});
+
+/**
+ * BACKLOG T1004 (QA S8 L16): the result block of the narrative is written
+ * for the asker — date buckets by name in their locale, amounts in the
+ * metric field's currency with digit grouping — and names the period that
+ * contains today as unfinished, so the model never copies `2026-05` or
+ * `1019375000` and never presents a running month as final.
+ */
+describe('the narrative block in the locale of the asker (T1004)', () => {
+  const VND = { style: { type: 'currency', currency_code: 'VND' } };
+  const priced = askDigest(
+    {
+      ...rows,
+      fields: rows.fields.map((row) => (row.id === F.amount ? { ...row, options: VND } : row)),
+    },
+    ORDERS,
+    sales,
+    true,
+  );
+  const monthly = askInterpretation(plan({ filter: null }), priced);
+  const bucket = (value: string) => ({ value, label: null });
+  const column = (role: 'dimension' | 'metric') =>
+    role === 'dimension'
+      ? {
+          key: 'dimension',
+          role,
+          field_id: F.date,
+          field_type: 'datetime',
+          aggregation: null,
+          date_bucket: 'month' as const,
+          bucket_width: null,
+        }
+      : {
+          key: 'm1',
+          role,
+          field_id: F.amount,
+          field_type: 'number',
+          aggregation: 'sum' as const,
+          date_bucket: null,
+          bucket_width: null,
+        };
+  const months: WidgetDataDto = {
+    status: 'ok',
+    columns: [column('dimension'), column('metric')],
+    rows: [
+      [bucket('2026-10-01'), 1_019_375_000],
+      [bucket('2026-11-01'), 250_000],
+    ],
+    total: [1_019_625_000],
+    computed_at: '2026-11-08T00:00:00.000Z',
+    cache: 'miss',
+    ignored_filters: [],
+  };
+  const read = (
+    data: WidgetDataDto,
+    locale: string,
+    today = '2026-11-08',
+    interpretation = monthly,
+  ) =>
+    JSON.parse(askResultJson(interpretation, data, { locale, today, digest: priced })) as Record<
+      string,
+      unknown
+    >;
+  const vnd = (value: number) =>
+    new Intl.NumberFormat('vi', { style: 'currency', currency: 'VND' }).format(value);
+
+  it('vi: months by name, amounts in đồng with grouping; the running month is unfinished', () => {
+    const result = read(months, 'vi');
+    expect(result['rows']).toEqual([
+      ['tháng 10/2026', vnd(1_019_375_000)],
+      ['tháng 11/2026', vnd(250_000)],
+    ]);
+    expect(vnd(1_019_375_000)).toMatch(/^1\.019\.375\.000\s₫$/u);
+    expect(result['total']).toEqual([vnd(1_019_625_000)]);
+    expect(result['unfinished_period']).toBe('tháng 11/2026');
+    const text = JSON.stringify(result);
+    expect(text).not.toMatch(/2026-1[01]|1019375000/u);
+  });
+
+  it('en: "October 2026", the field currency in the en format', () => {
+    const result = read(months, 'en');
+    expect(result['rows']).toEqual([
+      ['October 2026', '₫1,019,375,000'],
+      ['November 2026', '₫250,000'],
+    ]);
+    expect(result['unfinished_period']).toBe('November 2026');
+  });
+
+  it('no unfinished period once today is past every bucket', () => {
+    expect(read(months, 'vi', '2026-12-02')).not.toHaveProperty('unfinished_period');
+  });
+
+  it('a KPI comparison names both periods; the current one is unfinished', () => {
+    const kpi = askInterpretation(
+      plan({
+        chart: 'kpi',
+        dimension: null,
+        filter: null,
+        compare: { date_field: 'Ngày đặt', range: 'month' },
+      }),
+      priced,
+    );
+    const data: WidgetDataDto = {
+      status: 'ok',
+      columns: [column('metric')],
+      rows: [[450_000]],
+      compare: {
+        previous: 400_000,
+        change: 0.125,
+        current_period: { from: '2026-11-01', to: '2026-12-01' },
+        previous_period: { from: '2026-10-01', to: '2026-11-01' },
+      },
+      computed_at: '2026-11-08T00:00:00.000Z',
+      cache: 'miss',
+      ignored_filters: [],
+    };
+    const result = read(data, 'vi', '2026-11-08', kpi);
+    expect(result).toMatchObject({
+      rows: [[vnd(450_000)]],
+      current_period: 'tháng 11/2026',
+      previous_period: { label: 'tháng 10/2026', value: vnd(400_000) },
+      unfinished_period: 'tháng 11/2026',
+    });
+    expect((result['previous_period'] as { change: string }).change).toMatch(/^\+12,5\s?%$/u);
+  });
+
+  it('counts are whole numbers with grouping, whatever the field', () => {
+    const counted = askInterpretation(
+      plan({ metric: { aggregation: 'count', field: null }, filter: null }),
+      priced,
+    );
+    const data = { ...months, rows: [[bucket('2026-10-01'), 12_345]], total: [12_345] };
+    expect(read(data, 'vi', '2026-11-08', counted)['rows']).toEqual([['tháng 10/2026', '12.345']]);
+  });
+
+  it.each([
+    ['2026-08-15', 'day', 'vi', '15/08/2026'],
+    ['2026-08-10', 'week', 'vi', 'tuần từ 10/08/2026'],
+    ['2026-08-01', 'month', 'vi', 'tháng 8/2026'],
+    ['2026-07-01', 'quarter', 'vi', 'quý 3/2026'],
+    ['2026-01-01', 'year', 'vi', '2026'],
+    ['2026-08-15', 'day', 'en', 'Aug 15, 2026'],
+    ['2026-08-10', 'week', 'en', 'week of Aug 10, 2026'],
+    ['2026-08-01', 'month', 'en', 'August 2026'],
+    ['2026-07-01', 'quarter', 'en', 'Q3 2026'],
+    ['2026-01-01', 'year', 'en', '2026'],
+  ] as const)('%s by %s in %s → %s', (day, by, locale, expected) => {
+    expect(askBucketLabel(new Date(`${day}T00:00:00Z`), by, locale)).toBe(expected);
+  });
+
+  it('the system prompt says the labels are written for the reader and what unfinished means', () => {
+    const [system] = narrativeMessages({ question: 'Doanh thu?', result: '{}' });
+    expect(system?.content).toContain('unfinished_period');
+    expect(system?.content).toContain('copy them as they are');
   });
 });

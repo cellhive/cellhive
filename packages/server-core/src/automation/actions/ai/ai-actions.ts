@@ -15,7 +15,7 @@ import { AiRenderError, renderAiInput, type AiFieldTarget } from '../../../ai/ge
 import { recordAiRequest } from '../../../ai/metrics.js';
 import { AiSettingsRepository } from '../../../ai/settings/ai-settings.repository.js';
 import { requireAi } from '../../../ai/settings/settings.js';
-import { AiUsageLedger } from '../../../ai/usage/quota.js';
+import { AiUsageLedger, isAiQuotaExceeded } from '../../../ai/usage/quota.js';
 import { AppError } from '../../../errors/app-error.js';
 import { aiPromptSnapshot, isMultipleSelect } from '../../definition/validate.js';
 import { AutomationStepError } from '../../engine/errors.js';
@@ -42,7 +42,9 @@ import type {
  * 3. the prompt's fields of the trigger record read through
  *    `RecordQueryService` with `run_as`'s access, each value in an untrusted
  *    data block (`renderAiInput`, the AI field's renderer);
- * 4. the daily quota, else `ai_quota_exceeded` — never retried;
+ * 4. the daily quota, else `ai_quota_exceeded` — never retried; checked
+ *    again before every provider call of the step (repair rounds, resends):
+ *    used up meanwhile → `ai_quota_exceeded` too, the call never sent;
  * 5. one provider call (`generateAiValue`: text, or an `enum` of the
  *    option names with ≤ 2 repair rounds), usage under feature `action`;
  *    `429`/`5xx`/timeout/network → `temporary_error` (the engine retries),
@@ -109,10 +111,18 @@ function causeOf(error: AppError): AutomationTemporaryCause {
   return error.params?.['status'] === 429 ? 'rate_limited' : 'server_error';
 }
 
+/** `ai_quota_exceeded` (never retried) with the reset time of the quota. */
+function quotaStepError(error: AppError): AutomationStepError {
+  return new AutomationStepError('ai_quota_exceeded', 'The AI quota of today is used up', {
+    params: { reset_at: error.errors?.[0]?.params?.['reset_at'] ?? null },
+  });
+}
+
 /** A failed call as the step error the engine knows (or the error itself). */
 function stepErrorOf(error: unknown, promptKey: string): unknown {
   if (error instanceof AiRenderError) return invalidValue(promptKey, 'UNKNOWN_FIELD');
   if (!(error instanceof AppError)) return error;
+  if (isAiQuotaExceeded(error)) return quotaStepError(error);
   if (isTemporaryAiError(error)) {
     const cause = causeOf(error);
     return new AutomationStepError('temporary_error', 'The AI provider failed for now', {
@@ -231,15 +241,15 @@ export function createAiActions(deps: AiActionDeps): ReadonlyMap<string, Automat
     try {
       await ledger.check(quota, limit);
     } catch (error) {
-      if (!(error instanceof AppError) || error.code !== 'AI_QUOTA_EXCEEDED') throw error;
-      throw new AutomationStepError('ai_quota_exceeded', 'The AI quota of today is used up', {
-        params: { reset_at: error.errors?.[0]?.params?.['reset_at'] ?? null },
-      });
+      if (!isAiQuotaExceeded(error)) throw error;
+      throw quotaStepError(error);
     }
 
     const started = performance.now();
     let usage = NO_USAGE;
     let attempts = 1;
+    // Provider calls sent: each one passed the quota first.
+    let sent = 0;
     let durationMs = 0;
     /** Metrics once the call is over; the audit entry is written by whoever ends the step. */
     const measure = (status: string) => {
@@ -277,6 +287,10 @@ export function createAiActions(deps: AiActionDeps): ReadonlyMap<string, Automat
           organizationId: scope.organizationId,
           settings: provider,
           deadline: createDeadline(provider.requestTimeoutSeconds * 1000),
+          beforeCall: async () => {
+            await ledger.check({ ...quota, now: context.now() }, limit);
+            sent += 1;
+          },
           onUsage: async (call) => {
             usage = {
               promptTokens: usage.promptTokens + call.promptTokens,
@@ -304,6 +318,9 @@ export function createAiActions(deps: AiActionDeps): ReadonlyMap<string, Automat
       const failure = stepErrorOf(error, step.promptKey);
       const counted = error instanceof AppError ? error.params?.['attempts'] : undefined;
       if (typeof counted === 'number') attempts = counted;
+      else if (isAiQuotaExceeded(error)) attempts = sent;
+      // Nothing was sent (the quota was used up before the first call): no entry, like step 4.
+      if (attempts === 0) throw failure;
       const status = failure instanceof AutomationStepError ? failure.code : 'internal_error';
       measure(status);
       await deps.db.withTx((tx) => audit(tx, status));

@@ -295,6 +295,38 @@ describe('guardedRequest (ADR-35 §3, BACKLOG T600)', () => {
     );
   });
 
+  it('an aborted signal destroys the call at once and rejects with its reason (T1004)', async () => {
+    let closed = false;
+    internal.handler = (req, res) => {
+      req.socket.once('close', () => {
+        closed = true;
+      });
+      setTimeout(() => res.end('late'), 5_000).unref();
+    };
+    const vetted = await target(
+      `http://n8n.internal:${String(internal.port)}/`,
+      answers(['127.0.0.1']),
+      allowInternal(),
+    );
+    const abort = new AbortController();
+    const reason = new Error('the caller left');
+    const pending = guardedRequest(vetted, { method: 'GET', signal: abort.signal }).catch(
+      (error: unknown) => error,
+    );
+    while (internal.requests.length === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+    abort.abort(reason);
+    expect(await pending).toBe(reason);
+    await expect.poll(() => closed, { timeout: 1_000 }).toBe(true);
+    // Already aborted: no connection at all.
+    internal.connections = 0;
+    expect(
+      await guardedRequest(vetted, { method: 'GET', signal: abort.signal }).catch(
+        (e: unknown) => e,
+      ),
+    ).toBe(reason);
+    expect(internal.connections).toBe(0);
+  });
+
   it('a closed port is http_network', async () => {
     const closed = await startServer();
     const port = closed.port;
