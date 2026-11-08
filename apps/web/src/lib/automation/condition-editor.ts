@@ -1,7 +1,8 @@
 /**
  * The condition editor the automation builder (T521, `features/automation`)
- * gets from the route (FRONTEND §1.2): the view filter builder of T311
- * (`features/view/toolbar`) in automation mode — `changed`, `changed_to`,
+ * gets from the route (FRONTEND §1.2): (T1012) the condition branch builder
+ * (Lucian UX/UI #132) on the model of the view filter builder of T311
+ * (`features/view/toolbar`, `condition-kit.ts`) — `changed`, `changed_to`,
  * `changed_from` for a `record.updated` trigger (SPEC §11.3).
  */
 

@@ -513,6 +513,8 @@ export function IfPanel({ action, scope, onChange }: ActionPanelProps<'if'>) {
                         tableId={scope.triggerTableId}
                         orgId={env.orgId}
                         value={Object.keys(condition.filter).length === 0 ? null : condition.filter}
+                        // (T1012) Nested groups, indented in the branch builder.
+                        nested
                         issues={filterIssues(step, `${path}.filter`, env.issues)}
                         label={t('if.recordWhere')}
                         emptyText={t('if.recordEmpty')}

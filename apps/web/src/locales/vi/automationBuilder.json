@@ -183,6 +183,18 @@
     "hint": "Kiểm tra trên bản ghi kích hoạt lúc chạy. Một cấp, không lồng nhóm.",
     "hintChanges": "Kiểm tra trên bản ghi sau khi sửa. “Đã đổi”, “đổi thành”, “đổi từ” so với giá trị trước lần sửa này."
   },
+  "conditions": {
+    "match": "Điều kiện cần khớp",
+    "all": "Tất cả",
+    "any": "Bất kỳ",
+    "and": "và",
+    "or": "hoặc",
+    "group": "Nhóm điều kiện",
+    "counting": "Đang đếm bản ghi khớp…",
+    "about": "Khoảng",
+    "matchNow_other": "bản ghi khớp lúc này",
+    "countNote": "Theo quyền của bạn, trên dữ liệu hiện tại"
+  },
   "schedule": {
     "repeat": "Lặp lại",
     "kind": {
